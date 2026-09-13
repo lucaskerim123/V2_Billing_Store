@@ -31,16 +31,4 @@ export async function masterCaptureRelease(kind:"base"|"update",input:any={}){re
 export async function masterUpdateRelease(id:string,input:any){return masterRequest(`/api/release-control?id=${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(input)},"billing");}
 export const masterLatestRelease=()=>masterRequest("/api/releases/latest",{method:"GET"});
 
-/** Verify the currently logged-in Billing user against License Master/Supabase. */
-export async function masterBillingIdentity(userAccessToken:string){
-  const cfg=requireConfig("billing");
-  const headers=new Headers({authorization:`Bearer ${cfg.token}`});
-  if(userAccessToken) headers.set("x-orbitfs-user-token",userAccessToken);
-  const response=await fetch(`${cfg.url}/api/billing`,{method:"GET",headers,cache:"no-store"});
-  const text=await response.text();
-  let data:any={};try{data=text?JSON.parse(text):{}}catch{data={error:text||"Master API returned an invalid response"};}
-  if(!response.ok)throw Object.assign(new Error(data?.error||`Master API request failed (${response.status})`),{status:response.status,code:data?.code});
-  return data;
-}
-
 export const licensingAuthority="orbitfs-license-master-v2";
