@@ -1,5 +1,5 @@
 import {createClient} from "@supabase/supabase-js";
-import {masterRequest} from "@/lib/master-api";
+import {masterBillingIdentity,masterRequest} from "@/lib/master-api";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const SUPABASE_PUBLISHABLE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -25,6 +25,11 @@ export async function PATCH(req:Request){return forward(req,"PATCH")}
 async function forward(req:Request,method:"GET"|"POST"|"PATCH"){
   if(!await authorize(req))return Response.json({error:"Unauthorized"},{status:401});
   const path=new URL(req.url).searchParams.get("path")||"";
+  const userToken=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
+  if(path==="/api/billing"&&method==="GET"){
+    try{return Response.json(await masterBillingIdentity(userToken),{headers:{"cache-control":"no-store"}})}
+    catch(e){return Response.json({error:e instanceof Error?e.message:"License Master identity check failed"},{status:502,headers:{"cache-control":"no-store"}})}
+  }
   if(!allowed(path))return Response.json({error:"License Master path is not allowed"},{status:400});
   const role=path.startsWith("/api/deployments")?"deployer":"billing";
   try{const init:RequestInit={method};if(method!=="GET")init.body=await req.text();const data=await masterRequest(path,init,role);return Response.json(data,{headers:{"cache-control":"no-store"}})}catch(e){return Response.json({error:e instanceof Error?e.message:"License Master request failed"},{status:502,headers:{"cache-control":"no-store"}})}
