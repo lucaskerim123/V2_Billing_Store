@@ -4,7 +4,13 @@ import {createClient} from "@/lib/supabase";
 import Link from "next/link";
 import "../licensing/licensing.css";
 
-const source=(r:any)=>String(r?.component||"")==="orbitfs_base"?"V1-vercel-base / base-release":"V1-vercel-engine / release-updates";
+const RELEASE_SOURCES:Record<string,string>=Object.freeze({
+ orbitfs_base:"V1-vercel-base / base-release",
+ orbitfs_mcp:"V1-vercel-engine / release-updates",
+ orbitfs_apex:"V1-vercel-engine / release-updates",
+ orbitfs_studio:"V1-vercel-engine / release-updates"
+});
+const source=(r:any)=>RELEASE_SOURCES[String(r?.component||"")]||"V1-vercel-engine / release-updates";
 const rolloutLabel=(v:string)=>v==="public"?"Customer visible":v==="beta"?"Beta customers":"Internal only";
 export default function AdminReleaseManager(){
  const sb=useMemo(()=>createClient(),[]),[releases,setReleases]=useState<any[]>([]),[loading,setLoading]=useState(true),[msg,setMsg]=useState(""),[busy,setBusy]=useState(""),[drafts,setDrafts]=useState<Record<string,any>>({});
