@@ -4,7 +4,7 @@ import {masterRequest} from "@/lib/master-api";
 export const dynamic="force-dynamic";
 
 async function masterCatalog(){
-  const master=await masterRequest("/api/v1/products",{method:"GET"});
+  const master=await masterRequest("/api/products",{method:"GET"});
   return Array.isArray(master?.products)?master.products:[];
 }
 function merge(master:any,local:any){return {...local,id:local?.id||null,master_id:master.id,master_code:master.code,name:master.name,slug:master.slug,description:master.description,short_description:master.shortDescription,price_cents:Math.round(Number(master.priceAmount||0)*100),currency:master.priceCurrency||"AUD",active:!!master.active,purchasable:!!master.purchasable,public:!!master.public,license_product_key:master.code,metadata:{...(local?.metadata||{}),...(master.metadata||{}),component:master.componentKey||local?.metadata?.component||null},master};}
