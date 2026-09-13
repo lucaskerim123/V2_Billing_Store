@@ -1,0 +1,13 @@
+import {cors,reply} from "@/lib/license-api";
+
+export async function GET(){
+  try{
+    const base=String(process.env.MASTER_API_URL||"").replace(/\/$/,"");
+    if(!base)throw Object.assign(new Error("MASTER_API_URL is not configured"),{status:503});
+    const response=await fetch(`${base}/api/license/public-key`,{cache:"no-store"});
+    const key=await response.text();
+    if(!response.ok)throw Object.assign(new Error(key||"Master public key unavailable"),{status:response.status});
+    return new Response(key,{status:200,headers:{...cors,"content-type":"text/plain; charset=utf-8"}});
+  }catch(e:any){return reply({error:e?.message||"Master public key unavailable",code:"MASTER_PUBLIC_KEY_UNAVAILABLE"},e?.status||502)}
+}
+export async function OPTIONS(){return new Response(null,{status:204,headers:cors})}
