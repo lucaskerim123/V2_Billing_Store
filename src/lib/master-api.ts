@@ -29,5 +29,12 @@ export async function masterSyncDeployment(input:any){return masterRequest("/api
 export async function masterCaptureRelease(kind:"base"|"update",input:any={}){return masterRequest(`/api/release-capture`,{method:"POST",body:JSON.stringify({kind,...input})},"billing");}
 export async function masterUpdateRelease(id:string,input:any){return masterRequest(`/api/release-control?id=${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(input)},"billing");}
 export const masterLatestRelease=()=>masterRequest("/api/releases/latest",{method:"GET"});
+export const masterReleaseDrafts=()=>masterRequest("/api/release-handoff?action=drafts",{method:"GET"},"billing");
+export const masterFinalizeRelease=(id:string,automatic=false)=>masterRequest(`/api/release-handoff?action=${automatic?"auto-finalize":"finalize"}&id=${encodeURIComponent(id)}`,{method:"POST"},"billing");
+export const masterPublishStoreRelease=(id:string)=>masterRequest(`/api/release-handoff?action=publish&id=${encodeURIComponent(id)}`,{method:"POST"},"billing");
+export const masterRetryStoreRelease=(id:string)=>masterRequest(`/api/release-handoff?action=retry&id=${encodeURIComponent(id)}`,{method:"POST"},"billing");
+export const masterReleaseArtifactUrl=(id:string)=>masterRequest(`/api/release-handoff?action=artifact-url&id=${encodeURIComponent(id)}`,{method:"GET"},"billing");
+export const masterReleaseAutomationSettings=()=>masterRequest("/api/release-automation-settings",{method:"GET"},"billing");
+export const masterUpdateReleaseAutomationSettings=(input:any)=>masterRequest("/api/release-automation-settings",{method:"PATCH",body:JSON.stringify(input)},"billing");
 export async function masterReleaseHandoff(action:string,id?:string,body:any={}){return masterRequest(`/api/release-handoff?action=${encodeURIComponent(action)}${id?`&id=${encodeURIComponent(id)}`:""}`,{method:action==="drafts"?"GET":"POST",body:action==="drafts"?undefined:JSON.stringify(body)},"billing");}
 export const licensingAuthority="orbitfs-license-master-v2";
