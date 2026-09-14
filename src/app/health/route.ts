@@ -1,1 +1,1 @@
-export {GET,OPTIONS} from "../api/license/v1/health/route";
+export {GET,OPTIONS} from "../api/license/health/route";

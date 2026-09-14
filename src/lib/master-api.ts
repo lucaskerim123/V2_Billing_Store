@@ -36,4 +36,5 @@ export const masterRetryStoreRelease=(id:string)=>masterRequest(`/api/release-ha
 export const masterReleaseArtifactUrl=(id:string)=>masterRequest(`/api/release-handoff?action=artifact-url&id=${encodeURIComponent(id)}`,{method:"GET"},"billing");
 export const masterReleaseAutomationSettings=()=>masterRequest("/api/release-automation-settings",{method:"GET"},"billing");
 export const masterUpdateReleaseAutomationSettings=(input:any)=>masterRequest("/api/release-automation-settings",{method:"PATCH",body:JSON.stringify(input)},"billing");
+export async function masterReleaseHandoff(action:string,id?:string,body:any={}){return masterRequest(`/api/release-handoff?action=${encodeURIComponent(action)}${id?`&id=${encodeURIComponent(id)}`:""}`,{method:action==="drafts"?"GET":"POST",body:action==="drafts"?undefined:JSON.stringify(body)},"billing");}
 export const licensingAuthority="orbitfs-license-master-v2";
