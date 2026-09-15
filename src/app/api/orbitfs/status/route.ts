@@ -2,38 +2,67 @@ import {createClient} from "@supabase/supabase-js";
 
 export const dynamic="force-dynamic";
 
-const supabaseUrl=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
-const supabaseKey=()=>String(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"");
-const masterBase=()=>String(process.env.MASTER_API_URL||"").replace(/\/+$/,"" ).replace(/\/api$/i,"");
-const timeoutMs=()=>Math.max(1000,Number(process.env.MASTER_API_TIMEOUT_MS||10000));
+const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
+const key=()=>String(process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"");
+
+async function withTimeout<T>(promise:Promise<T>,ms=6000):Promise<T>{
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  try{return await Promise.race([promise,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Object.assign(new Error("Billing Store database request timed out"),{status:504})),ms)})])}
+  finally{if(timer)clearTimeout(timer)}
+}
 
 async function currentUser(req:Request){
   const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
-  if(!token||!supabaseUrl()||!supabaseKey())throw Object.assign(new Error("Authentication is unavailable"),{status:401});
-  const sb=createClient(supabaseUrl(),supabaseKey(),{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}});
-  const {data,error}=await sb.auth.getUser(token);
-  if(error||!data.user)throw Object.assign(new Error("Unauthorized"),{status:401});
-  return data.user;
+  if(!token||!url()||!key())throw Object.assign(new Error("Authentication is unavailable"),{status:401});
+  const sb=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}});
+  const result:any=await withTimeout(sb.auth.getUser(token) as any,6000);
+  if(result.error||!result.data?.user)throw Object.assign(new Error("Unauthorized"),{status:401});
+  return result.data.user;
 }
 
 export async function GET(req:Request){
   try{
-    const user=await currentUser(req),base=masterBase(),billingToken=String(process.env.BILLING_API_TOKEN||"").trim();
-    if(!base)throw Object.assign(new Error("MASTER_API_URL is not configured"),{status:503});
-    if(!billingToken)throw Object.assign(new Error("BILLING_API_TOKEN is not configured"),{status:503});
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs());
-    try{
-      const response=await fetch(`${base}/api/orbitfs/status`,{method:"GET",headers:{authorization:`Bearer ${billingToken}`,"x-orbit-user-id":user.id},cache:"no-store",signal:controller.signal});
-      const text=await response.text();
-      let data:any={};
-      try{data=text?JSON.parse(text):{}}catch{data={error:text||"License Master returned an invalid response"};}
-      if(!response.ok)throw Object.assign(new Error(data?.error||`License Master request failed (${response.status})`),{status:response.status});
-      return Response.json(data,{headers:{"cache-control":"no-store"}});
-    }catch(error:any){
-      if(error?.name==="AbortError")throw Object.assign(new Error(`License Master status request timed out after ${timeoutMs()}ms`),{status:504});
-      throw error;
-    }finally{clearTimeout(timer)}
-  }catch(e:any){
-    return Response.json({error:e?.message||"License Master unavailable"},{status:Number(e?.status)||503,headers:{"cache-control":"no-store"}});
-  }
+    const user=await currentUser(req),db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}});
+    const q=<T extends {data:any,error:any}>(p:any)=>withTimeout(p as Promise<T>,6000).catch(()=>({data:null,error:{}} as T));
+    const [bindings,connections,installations,settings,releases]=await Promise.all([
+      q(db.from("license_bindings").select("*").eq("auth_user_id",user.id).is("archived_at",null).order("created_at",{ascending:false})),
+      q(db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
+      q(db.from("orbitfs_installations").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
+      q(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle()),
+      q(db.from("orbitfs_release_bundles").select("id,version,channel,status,title,description,changelog,customer_notes,severity,required,rollout,minimum_version,rollback_version,schema_version,checkpoint_required,components,published_at,updated_at").eq("status","published").order("published_at",{ascending:false}).limit(50))
+    ]);
+    const installationRows=installations.data||[],bindingRows=bindings.data||[];
+    let connectionRows=(connections.data||[]).map((x:any)=>({...x,metadata:{...(x.metadata||{})}}));
+    const base=bindingRows.find((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel)||bindingRows[0]||null;
+    const install=base?installationRows.find((x:any)=>x.license_binding_id===base.id):null;
+    if(install?.vercel_project_id)connectionRows=connectionRows.map((x:any)=>x.provider==="vercel"?{...x,team_id:install.vercel_team_id||x.team_id,metadata:{...(x.metadata||{}),team_id:install.vercel_team_id||x.metadata?.team_id||null,team_locked:true}}:x);
+    const eventRows=install?await q(db.from("orbitfs_deployment_events").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)):({data:[],error:null} as any);
+    const installReleaseRows=install?await q(db.from("orbitfs_installation_releases").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)):({data:[],error:null} as any);
+    const bundles=releases.data||[];
+    const latestBase=bundles.find((r:any)=>r.channel==="base")||null;
+    const latestUpdate=bundles.find((r:any)=>r.channel==="update")||null;
+    const s=settings.data||{};
+    return Response.json({
+      settings:{
+        enabled:s.enabled!==false,
+        customer_deploy_enabled:s.customer_deploy_enabled!==false,
+        customer_updates_enabled:s.customer_updates_enabled!==false,
+        customer_rollbacks_enabled:s.customer_rollbacks_enabled!==false,
+        supabase_oauth_enabled:s.supabase_oauth_enabled!==false,
+        vercel_oauth_enabled:s.vercel_oauth_enabled!==false,
+        allow_existing_supabase_project:s.allow_existing_supabase_project!==false,
+        allow_create_supabase_project:s.allow_create_supabase_project!==false,
+        schema_version:s.schema_version||"1",
+        release_channel:s.release_channel||"stable"
+      },
+      bindings:bindingRows,
+      connections:connectionRows,
+      installations:installationRows,
+      events:eventRows.data||[],
+      releases:installReleaseRows.data||[],
+      latestRelease:latestUpdate||latestBase,
+      latestBase,
+      latestUpdate
+    },{headers:{"cache-control":"no-store"}});
+  }catch(e:any){return Response.json({error:e?.message||"Could not load OrbitFS status"},{status:Number(e?.status)||500,headers:{"cache-control":"no-store"}})}
 }
