@@ -1,7 +1,7 @@
 import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
-async function bounded<T>(promise:PromiseLike<T>,fallback:T,ms=6000):Promise<T>{
+async function bounded<T>(promise:PromiseLike<T>,fallback:T,ms=2500):Promise<T>{
   let timer:ReturnType<typeof setTimeout>|undefined;
   try{return await Promise.race([Promise.resolve(promise),new Promise<T>(resolve=>{timer=setTimeout(()=>resolve(fallback),ms)})])}
   finally{if(timer)clearTimeout(timer)}
