@@ -1,11 +1,23 @@
 import {licenseDb} from "@/lib/license-api";
-import {httpError,releaseSettings,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
+import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
 async function bounded<T>(promise:Promise<T>,fallback:T,ms=6000):Promise<T>{
   let timer:ReturnType<typeof setTimeout>|undefined;
   try{return await Promise.race([promise,new Promise<T>(resolve=>{timer=setTimeout(()=>resolve(fallback),ms)})])}
   finally{if(timer)clearTimeout(timer)}
 }
+
+function normalizeRelease(r:any){return r?{
+  ...r,
+  releaseId:r.releaseId||r.release_id||r.id,
+  sourceCommit:r.sourceCommit||r.base_source_commit||r.engine_source_commit||null,
+  schemaVersion:r.schemaVersion||r.schema_version||null,
+  minimumVersion:r.minimumVersion||r.minimum_version||null,
+  publishedAt:r.publishedAt||r.published_at||null,
+  updatedAt:r.updatedAt||r.updated_at||null,
+  required:r.required===true,
+  components:Array.isArray(r.components)?r.components:[]
+}:null}
 
 export async function GET(req:Request){
   try{
@@ -15,16 +27,16 @@ export async function GET(req:Request){
       bounded(db.from("orbitfs_installations").select("*").order("created_at",{ascending:false}),{data:[],error:null} as any),
       bounded(db.from("user_profiles").select("id,display_name,company_name,email,status"),{data:[],error:null} as any),
       bounded(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle(),{data:null,error:null} as any),
-      bounded(db.from("orbitfs_release_bundles").select("id,version,channel,status,title,description,changelog,base_source_commit,engine_source_commit,schema_version,published_at,rollout,components,updated_at").order("updated_at",{ascending:false}).limit(100),{data:[],error:null} as any)
+      bounded(db.from("orbitfs_release_bundles").select("*").order("updated_at",{ascending:false}).limit(100),{data:[],error:null} as any)
     ]);
     const installations=inst.data||[],profileMap=new Map((profiles.data||[]).map((p:any)=>[p.id,p]));
-    const allBundles=bundles.data||[];
-    const published=allBundles.filter((r:any)=>r.status==="published");
-    const latest=(channel:string)=>published.find((r:any)=>r.channel===channel)||null;
+    const releases=(bundles.data||[]).map(normalizeRelease);
+    const published=releases.filter((r:any)=>r?.status==="published");
+    const latest=(channel:string)=>normalizeRelease(published.find((r:any)=>r.channel===channel)||null);
     const s=settingsRow.data||{};
     return Response.json({
       installations:installations.map((i:any)=>({...i,customer:profileMap.get(i.auth_user_id)||null})),
-      releases:allBundles,
+      releases,
       latestBase:latest("base"),
       latestUpdate:latest("update"),
       settings:{
