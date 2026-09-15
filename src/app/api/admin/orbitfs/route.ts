@@ -1,23 +1,13 @@
 import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
-async function bounded<T>(promise:Promise<T>,fallback:T,ms=6000):Promise<T>{
+async function bounded<T>(promise:PromiseLike<T>,fallback:T,ms=6000):Promise<T>{
   let timer:ReturnType<typeof setTimeout>|undefined;
-  try{return await Promise.race([promise,new Promise<T>(resolve=>{timer=setTimeout(()=>resolve(fallback),ms)})])}
+  try{return await Promise.race([Promise.resolve(promise),new Promise<T>(resolve=>{timer=setTimeout(()=>resolve(fallback),ms)})])}
   finally{if(timer)clearTimeout(timer)}
 }
 
-function normalizeRelease(r:any){return r?{
-  ...r,
-  releaseId:r.releaseId||r.release_id||r.id,
-  sourceCommit:r.sourceCommit||r.base_source_commit||r.engine_source_commit||null,
-  schemaVersion:r.schemaVersion||r.schema_version||null,
-  minimumVersion:r.minimumVersion||r.minimum_version||null,
-  publishedAt:r.publishedAt||r.published_at||null,
-  updatedAt:r.updatedAt||r.updated_at||null,
-  required:r.required===true,
-  components:Array.isArray(r.components)?r.components:[]
-}:null}
+function normalizeRelease(r:any){return r?{...r,releaseId:r.releaseId||r.release_id||r.id,sourceCommit:r.sourceCommit||r.base_source_commit||r.engine_source_commit||null,schemaVersion:r.schemaVersion||r.schema_version||null,minimumVersion:r.minimumVersion||r.minimum_version||null,publishedAt:r.publishedAt||r.published_at||null,updatedAt:r.updatedAt||r.updated_at||null,required:r.required===true,components:Array.isArray(r.components)?r.components:[]}:null}
 
 export async function GET(req:Request){
   try{
@@ -32,19 +22,8 @@ export async function GET(req:Request){
     const installations=inst.data||[],profileMap=new Map((profiles.data||[]).map((p:any)=>[p.id,p]));
     const releases=(bundles.data||[]).map(normalizeRelease);
     const published=releases.filter((r:any)=>r?.status==="published");
-    const latest=(channel:string)=>normalizeRelease(published.find((r:any)=>r.channel===channel)||null);
+    const latest=(channel:string)=>published.find((r:any)=>r.channel===channel)||null;
     const s=settingsRow.data||{};
-    return Response.json({
-      installations:installations.map((i:any)=>({...i,customer:profileMap.get(i.auth_user_id)||null})),
-      releases,
-      latestBase:latest("base"),
-      latestUpdate:latest("update"),
-      settings:{
-        enabled:s.enabled!==false,
-        customer_deploy_enabled:s.customer_deploy_enabled!==false,
-        customer_updates_enabled:s.customer_updates_enabled!==false,
-        customer_rollbacks_enabled:s.customer_rollbacks_enabled!==false
-      }
-    },{headers:{"cache-control":"no-store"}});
+    return Response.json({installations:installations.map((i:any)=>({...i,customer:profileMap.get(i.auth_user_id)||null})),releases,latestBase:latest("base"),latestUpdate:latest("update"),settings:{enabled:s.enabled!==false,customer_deploy_enabled:s.customer_deploy_enabled!==false,customer_updates_enabled:s.customer_updates_enabled!==false,customer_rollbacks_enabled:s.customer_rollbacks_enabled!==false}},{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
