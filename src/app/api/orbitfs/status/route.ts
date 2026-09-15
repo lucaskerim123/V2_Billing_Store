@@ -1,9 +1,38 @@
 import {createClient} from "@supabase/supabase-js";
-import {masterDeployments,masterInstallations,masterLicenses,masterProducts,masterReleases,masterRevision,masterSettings} from "@/lib/master-api";
+
 export const dynamic="force-dynamic";
+
 const supabaseUrl=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
 const supabaseKey=()=>String(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"");
-async function currentUser(req:Request){const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!token||!supabaseUrl()||!supabaseKey())throw Object.assign(new Error("Authentication is unavailable"),{status:401});const sb=createClient(supabaseUrl(),supabaseKey(),{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}});const {data,error}=await sb.auth.getUser(token);if(error||!data.user)throw Object.assign(new Error("Unauthorized"),{status:401});return data.user;}
-const rows=(value:any,key:string)=>Array.isArray(value?.[key])?value[key]:[];
-const ownsLicense=(l:any,userId:string)=>String(l?.customer_ref||l?.auth_user_id||"")===userId;
-export async function GET(req:Request){try{const user=await currentUser(req);const [settings,products,revision,licensesResult,releasesResult,installationsResult,deploymentsResult]=await Promise.all([masterSettings(),masterProducts(),masterRevision(),masterLicenses(),masterReleases(),masterInstallations(),masterDeployments()]);const licenses=rows(licensesResult,"licenses").filter((l:any)=>ownsLicense(l,user.id));const licenseIds=new Set(licenses.map((l:any)=>String(l.id)));const orderRefs=new Set(licenses.map((l:any)=>String(l.order_ref||"")).filter(Boolean));const installations=rows(installationsResult,"installations").filter((i:any)=>licenseIds.has(String(i.license_id||i.licenseId||i.license_binding_id||""))||orderRefs.has(String(i.order_ref||"")));const installationIds=new Set(installations.map((i:any)=>String(i.id)));const deployments=rows(deploymentsResult,"deployments").filter((d:any)=>installationIds.has(String(d.installation_id||d.installationId||"")));const releases=rows(releasesResult,"releases");const published=releases.filter((r:any)=>String(r.status||"")==="published").sort((a:any,b:any)=>String(b.updatedAt||b.updated_at||b.publishedAt||"").localeCompare(String(a.updatedAt||a.updated_at||a.publishedAt||"")));return Response.json({authority:"orbitfs-license-master-v2",sections:{licensing:{licenses,products:rows(products,"products"),revision},releases:{releases,latest:published[0]||null},baseDeployment:{installations,deployments}},settings},{headers:{"cache-control":"no-store"}})}catch(e:any){return Response.json({error:e?.message||"License Master unavailable"},{status:Number(e?.status)||503,headers:{"cache-control":"no-store"}})}}
+const masterBase=()=>String(process.env.MASTER_API_URL||"").replace(/\/+$/,"" ).replace(/\/api$/i,"");
+const timeoutMs=()=>Math.max(1000,Number(process.env.MASTER_API_TIMEOUT_MS||10000));
+
+async function currentToken(req:Request){
+  const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
+  if(!token||!supabaseUrl()||!supabaseKey())throw Object.assign(new Error("Authentication is unavailable"),{status:401});
+  const sb=createClient(supabaseUrl(),supabaseKey(),{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}});
+  const {data,error}=await sb.auth.getUser(token);
+  if(error||!data.user)throw Object.assign(new Error("Unauthorized"),{status:401});
+  return token;
+}
+
+export async function GET(req:Request){
+  try{
+    const token=await currentToken(req),base=masterBase();
+    if(!base)throw Object.assign(new Error("MASTER_API_URL is not configured"),{status:503});
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs());
+    try{
+      const response=await fetch(`${base}/api/orbitfs/status`,{method:"GET",headers:{authorization:`Bearer ${token}`},cache:"no-store",signal:controller.signal});
+      const text=await response.text();
+      let data:any={};
+      try{data=text?JSON.parse(text):{}}catch{data={error:text||"License Master returned an invalid response"};}
+      if(!response.ok)throw Object.assign(new Error(data?.error||`License Master request failed (${response.status})`),{status:response.status});
+      return Response.json(data,{headers:{"cache-control":"no-store"}});
+    }catch(error:any){
+      if(error?.name==="AbortError")throw Object.assign(new Error(`License Master status request timed out after ${timeoutMs()}ms`),{status:504});
+      throw error;
+    }finally{clearTimeout(timer)}
+  }catch(e:any){
+    return Response.json({error:e?.message||"License Master unavailable"},{status:Number(e?.status)||503,headers:{"cache-control":"no-store"}});
+  }
+}
