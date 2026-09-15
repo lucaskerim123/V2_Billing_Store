@@ -1,4 +1,4 @@
-const base=()=>String(process.env.MASTER_API_URL||"").replace(/\/$/,"");
+const base=()=>String(process.env.MASTER_API_URL||"").replace(/\/+$/,"" ).replace(/\/api$/i,"");
 const timeoutMs=()=>Math.max(1000,Number(process.env.MASTER_API_TIMEOUT_MS||10000));
 type MasterRole="billing"|"deployer";
 const token=(role:MasterRole="billing")=>String(role==="deployer"?process.env.DEPLOYER_API_TOKEN:process.env.BILLING_API_TOKEN||"");
@@ -21,7 +21,7 @@ export async function masterControl(id:string,input:any){return masterRequest(`/
 export async function masterCreateRelease(input:any){return masterRequest("/api/releases",{method:"POST",body:JSON.stringify(input)},"billing");}
 export async function masterPublishRelease(id:string){return masterRequest(`/api/releases/${encodeURIComponent(id)}/publish`,{method:"POST"},"billing");}
 export async function masterValidateRelease(id:string){return masterRequest(`/api/releases/${encodeURIComponent(id)}/validate`,{method:"POST"},"billing");}
-export async function masterControlRelease(id:string,status:string){return masterRequest(`/api/releases/${encodeURIComponent(id)}/control`,{method:"POST",body:JSON.stringify({action:status})},"billing");}
+export async function masterControlRelease(id:string,status:string){return masterRequest(`/api/releases/${encodeURIComponent(id)}/control`,{method:"POST",body:JSON.stringify({action:status)},"billing");}
 export async function masterUploadReleaseArtifact(id:string,bytes:Buffer,contentType="application/octet-stream"){return masterRequest(`/api/releases/${encodeURIComponent(id)}/artifact`,{method:"POST",headers:{"content-type":contentType,"x-artifact-sha256":(await import("node:crypto")).createHash("sha256").update(bytes).digest("hex")},body:new Uint8Array(bytes)},"billing");}
 export async function masterDownloadReleaseArtifact(id:string){return masterBinaryRequest(`/api/releases/${encodeURIComponent(id)}/artifact`,{method:"GET"},"billing");}
 export async function masterExecuteDeployment(input:any){return masterRequest("/api/deployments/execute",{method:"POST",body:JSON.stringify(input)},"deployer");}
