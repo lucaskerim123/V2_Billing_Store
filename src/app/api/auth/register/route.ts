@@ -17,12 +17,10 @@ export async function POST(req:Request){
  if(existing){
   const {data:customer}=await client.from("customers").select("id").eq("user_id",existing.id).maybeSingle();
   if(customer)return Response.json({error:"An OrbitFS account already exists for that email address."},{status:409});
-  // A staff account is still the same person. Registration never creates a second identity.
-  // It may attach the missing customer profile, but it must not replace an existing staff password.
   const {data:credential}=await client.from("customer_credentials").select("user_id").eq("user_id",existing.id).maybeSingle();
   if(!credential)return Response.json({error:"This email already belongs to an OrbitFS staff account. Sign in with the existing account or have a staff administrator enable its customer profile."},{status:409});
   const {data:createdCustomer,error}=await client.from("customers").insert({
-   user_id:existing.id,auth_user_id:existing.id,email,name:existing.display_name||existing.first_name||username,
+   user_id:existing.id,email,name:existing.display_name||existing.first_name||username,
    username:existing.username||username,display_name:existing.display_name||existing.first_name||username,status:"active",
    email_verified_at:existing.email_verified_at,metadata:{registration_source:"public_existing_user"},updated_at:now
   }).select("id").single();
@@ -35,7 +33,7 @@ export async function POST(req:Request){
  try{
   await setOrbitPassword(user.id,password);
   const {error:customerError}=await client.from("customers").insert({
-   user_id:user.id,auth_user_id:user.id,email,name:username,username,display_name:username,status:"active",
+   user_id:user.id,email,name:username,username,display_name:username,status:"active",
    email_verified_at:null,metadata:{registration_source:"public"},updated_at:now
   });
   if(customerError)throw customerError;
