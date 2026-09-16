@@ -3,7 +3,7 @@ import {masterHealth,masterProducts} from "@/lib/master-api";
 import {requireOrbitDeploymentAdmin} from "@/lib/orbitfs-deployment-auth";
 
 const cleanError=(e:any)=>String(e?.message||"License Master connection test failed").slice(0,1000);
-const MASTER_URL="https://customlicensev1.vercel.app";
+const MASTER_URL="https://incendiarynetworks.cc/api";
 
 export async function GET(req:Request){
   try{
