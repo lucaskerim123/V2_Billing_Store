@@ -1,7 +1,6 @@
 -- OrbitFS unified identity architecture.
 -- One users row represents one person/account. Customer and staff capabilities are additive.
--- Supabase Auth is not the application identity store; existing auth_user_id columns remain as
--- compatibility references during the application migration and are not used by new auth flows.
+-- Supabase Auth is not the application identity store; auth_user_id is legacy compatibility only.
 
 create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
@@ -35,8 +34,7 @@ alter table public.user_profiles add column if not exists user_id uuid;
 alter table public.customer_credentials add column if not exists canonical_user_id uuid;
 alter table public.customer_sessions add column if not exists canonical_user_id uuid;
 
--- Backfill one canonical user for every existing customer/profile identity. Existing UUIDs are
--- intentionally preserved where possible so existing ownership relationships remain stable.
+-- Backfill one canonical user for every existing customer/profile identity.
 insert into public.users(id,email,username,display_name,first_name,status,email_verified_at,created_at,updated_at)
 select coalesce(c.auth_user_id,p.id,gen_random_uuid()),
        lower(coalesce(c.email,p.email,'unknown+'||coalesce(c.auth_user_id::text,p.id::text,gen_random_uuid()::text)||'@invalid.local')),
@@ -49,9 +47,7 @@ select coalesce(c.auth_user_id,p.id,gen_random_uuid()),
        now()
 from public.customers c
 full join public.user_profiles p on p.id=c.auth_user_id
-where not exists (
-  select 1 from public.users u where u.id=coalesce(c.auth_user_id,p.id)
-)
+where not exists (select 1 from public.users u where u.id=coalesce(c.auth_user_id,p.id))
   and coalesce(c.email,p.email) is not null;
 
 update public.users u
@@ -67,27 +63,24 @@ where u.id=c.auth_user_id;
 
 update public.customers c set user_id=c.auth_user_id where c.user_id is null and c.auth_user_id is not null;
 update public.user_profiles p set user_id=p.id where p.user_id is null;
-update public.customer_credentials cc
-set canonical_user_id=cc.user_id
-where cc.canonical_user_id is null
-  and exists(select 1 from public.users u where u.id=cc.user_id);
-update public.customer_sessions cs
-set canonical_user_id=cs.user_id
-where cs.canonical_user_id is null
-  and exists(select 1 from public.users u where u.id=cs.user_id);
+update public.customer_credentials cc set canonical_user_id=cc.user_id where cc.canonical_user_id is null and exists(select 1 from public.users u where u.id=cc.user_id);
+update public.customer_sessions cs set canonical_user_id=cs.user_id where cs.canonical_user_id is null and exists(select 1 from public.users u where u.id=cs.user_id);
 
-alter table public.customers
-  add constraint customers_user_id_fkey foreign key (user_id) references public.users(id) on delete cascade;
-alter table public.user_profiles
-  add constraint user_profiles_user_id_fkey foreign key (user_id) references public.users(id) on delete cascade;
-alter table public.customer_credentials
-  add constraint customer_credentials_canonical_user_id_fkey foreign key (canonical_user_id) references public.users(id) on delete cascade;
-alter table public.customer_sessions
-  add constraint customer_sessions_canonical_user_id_fkey foreign key (canonical_user_id) references public.users(id) on delete cascade;
+-- The credential/session tables become owned by the canonical users table. This removes their
+-- dependency on auth.users while preserving existing UUIDs and credentials.
+alter table public.customer_credentials drop constraint if exists customer_credentials_customer_identity_fkey;
+alter table public.customer_sessions drop constraint if exists customer_sessions_user_id_fkey;
+update public.customer_credentials set user_id=canonical_user_id where canonical_user_id is not null;
+update public.customer_sessions set user_id=canonical_user_id where canonical_user_id is not null;
+alter table public.customer_credentials add constraint customer_credentials_user_fkey foreign key (user_id) references public.users(id) on delete cascade;
+alter table public.customer_sessions add constraint customer_sessions_user_fkey foreign key (user_id) references public.users(id) on delete cascade;
+
+alter table public.customers add constraint customers_user_id_fkey foreign key (user_id) references public.users(id) on delete cascade;
+alter table public.user_profiles add constraint user_profiles_user_id_fkey foreign key (user_id) references public.users(id) on delete cascade;
 
 create unique index if not exists customers_user_id_uidx on public.customers(user_id);
 create unique index if not exists user_profiles_user_id_uidx on public.user_profiles(user_id);
-create unique index if not exists customer_credentials_canonical_user_id_uidx on public.customer_credentials(canonical_user_id);
+create unique index if not exists customer_credentials_user_id_uidx on public.customer_credentials(user_id);
 
 -- Existing staff roles become an additive capability rather than an account type.
 insert into public.staff_access(user_id,enabled,role,permissions)
