@@ -14,7 +14,7 @@ npm ci
 npm run dev
 ```
 
-The browser can use the publishable Supabase key. `SUPABASE_SERVICE_ROLE_KEY`, `MASTER_API_TOKEN`, and `CRON_SECRET` are server-only secrets and must not be prefixed with `NEXT_PUBLIC_`.
+The browser can use the publishable Supabase key. `SUPABASE_SERVICE_ROLE_KEY`, `BILLING_API_TOKEN`, `DEPLOYER_API_TOKEN`, and `CRON_SECRET` are server-only secrets and must not be prefixed with `NEXT_PUBLIC_`. The same License Master managed API key may be placed in both `BILLING_API_TOKEN` and `DEPLOYER_API_TOKEN` when that key was created with the required licensing/release and deployment scopes.
 
 ## Checks
 
