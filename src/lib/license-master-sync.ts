@@ -32,13 +32,14 @@ export async function syncPaidOrderToLicenseMaster(orderId:string){
       results.push({product,orderItemId:item.id,licenseId:existing.license_id,reused:true,state:"fulfilled"});fulfilled++;continue;
     }
     try{
-      const result=await masterIssue({product_code:product,customer_external_id:String(order.auth_user_id),external_reference:ref,metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
+      const components=product==="orbitfs_base"?{orbitfs_base:true}:{[product]:true};
+      const result=await masterIssue({product_code:product,customer_external_id:String(order.auth_user_id),external_reference:ref,components,metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
       const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
-      const licenseKey=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||"");
+      const licenseKey=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||result?.licence?.licenseKey||"");
       if(!licenseId)throw new Error("License Master did not return a licence/binding id");
       const now=new Date().toISOString();
       const remoteState=String(result?.status||result?.licence?.status||result?.license?.status||result?.binding?.status||"active");
-      const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:licenseId,state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,master_response:{id:licenseId,status:remoteState,license_key_last4:licenseKey?licenseKey.slice(-4):null,idempotent:Boolean(result?.idempotent)}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
+      const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,master_response:{id:licenseId,status:remoteState,license_key_last4:licenseKey?licenseKey.slice(-4):null,idempotent:Boolean(result?.idempotent)}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
       if(upsertError)throw upsertError;
 
       const bindingPayload={order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,fulfillment_id:upserted.id,license_id:licenseId,license_product_key:product,desired_state:"active",remote_state:remoteState,license_key_last4:licenseKey?licenseKey.slice(-4):null,label:String(item.product_name||product),api_source:"license_master",updated_at:now};
