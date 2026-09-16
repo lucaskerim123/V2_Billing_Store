@@ -7,6 +7,7 @@ async function payload(r:Response){const text=await r.text();if(!text)return {};
 function addressFrom(input:string,domain:string){const value=String(input||"").trim().toLowerCase();return value.includes("@")?value:`${value}@${domain}`}
 function senderEmail(v:any){const s=Array.isArray(v)?String(v[0]||""):String(v||"");const m=s.match(/<([^>]+)>/);return (m?m[1]:s).trim().toLowerCase()}
 function senderIp(m:any){return String(m?.sender_ip||m?.client_ip||m?.ip||"").trim()}
+function resendMailKey(){return String(process.env.RESEND_MAIL_API_KEY||process.env.RESEND_API_KEY||"").trim()}
 async function listRemote(key:string,endpoint:string){const r=await fetch(endpoint,{headers:{Authorization:`Bearer ${key}`},cache:"no-store"});const j:any=await payload(r);if(!r.ok)throw new Error(j?.message||`Mail provider returned ${r.status}.`);return j.data||[]}
 
 export async function GET(req:Request){
@@ -14,7 +15,7 @@ export async function GET(req:Request){
  const u=new URL(req.url),folder=String(u.searchParams.get("folder")||"inbox").toLowerCase(),address=addressFrom(u.searchParams.get("account")||u.searchParams.get("mailbox")||"admin",config.inbound.domain);
  if(!validFolders.has(folder))return Response.json({error:"Invalid folder."},{status:400});if(!await canUseMailbox(ctx,address,false))return Response.json({error:"You do not have access to this mailbox."},{status:403});
  await ctx.db.rpc("mail_purge_expired_trash",{p_address:address});if(folder==="outbox"){const {data,error}=await ctx.db.rpc("mail_get_outbox",{p_address:address});if(error)return Response.json({error:error.message},{status:500});return Response.json({address,folder,data:(data||[]).map((x:any)=>({...x,id:x.provider_id||x.id,direction:"outbound",folder:"outbox",from:x.sender,to:[x.recipient]}))});}
- const key=process.env.RESEND_MAIL_API_KEY;if(!key)return Response.json({error:"Inbound/mailbox transport is not configured."},{status:503});
+ const key=resendMailKey();if(!key)return Response.json({error:"Inbound/mailbox transport is not configured. Set RESEND_API_KEY (or RESEND_MAIL_API_KEY for a separate inbound key)."},{status:503});
  try{
   const [incoming,outgoing,stateResult]=await Promise.all([listRemote(key,`${resendBase}/emails/receiving?limit=100`),listRemote(key,`${resendBase}/emails?limit=100`),ctx.db.rpc("mail_get_message_states",{p_address:address})]);if(stateResult.error)return Response.json({error:stateResult.error.message},{status:500});
   const states=new Map((stateResult.data||[]).map((s:any)=>[String(s.provider_id),s]));
@@ -31,7 +32,7 @@ export async function PATCH(req:Request){
 }
 
 export async function POST(req:Request){
- const ctx:any=await requireMailUser(req);if(ctx.error)return ctx.error;const key=process.env.RESEND_API_KEY;if(!key)return Response.json({error:"Outbound transport is not configured."},{status:503});
+ const ctx:any=await requireMailUser(req);if(ctx.error)return ctx.error;const key=String(process.env.RESEND_API_KEY||"").trim();if(!key)return Response.json({error:"Outbound transport is not configured. Set RESEND_API_KEY."},{status:503});
  const config=await loadMailRuntimeConfig(ctx.db),body=await req.json().catch(()=>({})),address=addressFrom(String(body.account||body.mailbox||"admin"),config.inbound.domain);if(!await canUseMailbox(ctx,address,true))return Response.json({error:"You do not have send access to this mailbox."},{status:403});if(!body.to||!body.subject||(!body.text&&!body.html))return Response.json({error:"To, subject and message are required."},{status:400});
  const recipient=Array.isArray(body.to)?body.to.join(", "):String(body.to);const {data:identity}=await ctx.db.rpc("mail_sender_identity",{p_address:address});const senderName=String(identity?.display_name||config.outbound.sender_name);
  const {data:prep,error:pe}=await ctx.db.rpc("mail_prepare_delivery",{p_template_key:null,p_event_type:"manual",p_related_type:null,p_related_id:null,p_recipient:recipient,p_sender:address,p_subject:String(body.subject)});if(pe||!prep?.reference_id)return Response.json({error:pe?.message||"Could not prepare email record."},{status:500});
