@@ -14,13 +14,10 @@ create index if not exists staff_access_enabled_idx on public.staff_access(enabl
 alter table public.customers add column if not exists user_id uuid;
 alter table public.user_profiles add column if not exists user_id uuid;
 insert into public.users(id,email,username,display_name,first_name,last_name,status,email_verified_at,created_at,updated_at)
-select coalesce(c.auth_user_id,p.id,gen_random_uuid()),lower(coalesce(c.email,'unknown+'||coalesce(c.auth_user_id::text,p.id::text,gen_random_uuid()::text)||'@invalid.local')),c.username,coalesce(c.display_name,c.name,p.display_name),coalesce(c.first_name,p.first_name),coalesce(c.last_name,p.last_name),
-case when coalesce(c.status,p.status,'active') in ('active','suspended','disabled','pending') then coalesce(c.status,p.status,'active') else 'active' end,coalesce(c.email_verified_at,p.email_verified_at),coalesce(c.created_at,p.created_at,now()),now()
-from public.customers c full join public.user_profiles p on p.id=c.auth_user_id
-where not exists(select 1 from public.users u where u.id=coalesce(c.auth_user_id,p.id)) and c.email is not null;
+select coalesce(c.auth_user_id,p.id,gen_random_uuid()),lower(coalesce(c.email,'unknown+'||coalesce(c.auth_user_id::text,p.id::text,gen_random_uuid()::text)||'@invalid.local')),c.username,coalesce(c.display_name,c.name,p.display_name),coalesce(c.first_name,p.first_name),coalesce(c.last_name,p.last_name),case when coalesce(c.status,p.status,'active') in ('active','suspended','disabled','pending') then coalesce(c.status,p.status,'active') else 'active' end,coalesce(c.email_verified_at,p.email_verified_at),coalesce(c.created_at,p.created_at,now()),now()
+from public.customers c full join public.user_profiles p on p.id=c.auth_user_id where not exists(select 1 from public.users u where u.id=coalesce(c.auth_user_id,p.id)) and c.email is not null;
 insert into public.users(id,email,display_name,first_name,last_name,status,email_verified_at,created_at,updated_at)
-select p.id,lower(coalesce(a.email,'staff+'||p.id::text||'@invalid.local')),p.display_name,p.first_name,p.last_name,case when p.status in ('active','suspended','disabled','pending') then p.status else 'active' end,p.email_verified_at,coalesce(p.created_at,now()),now()
-from public.user_profiles p left join auth.users a on a.id=p.id where not exists(select 1 from public.users u where u.id=p.id);
+select p.id,lower(coalesce(a.email,'staff+'||p.id::text||'@invalid.local')),p.display_name,p.first_name,p.last_name,case when p.status in ('active','suspended','disabled','pending') then p.status else 'active' end,p.email_verified_at,coalesce(p.created_at,now()),now() from public.user_profiles p left join auth.users a on a.id=p.id where not exists(select 1 from public.users u where u.id=p.id);
 update public.customers set user_id=auth_user_id where user_id is null and auth_user_id is not null;
 update public.user_profiles set user_id=id where user_id is null;
 alter table public.customers drop constraint if exists customers_user_id_fkey;
@@ -31,6 +28,10 @@ create unique index if not exists customers_user_id_uidx on public.customers(use
 create unique index if not exists user_profiles_user_id_uidx on public.user_profiles(user_id);
 insert into public.staff_access(user_id,enabled,role,permissions)
 select p.id,true,case when lower(coalesce(p.role,'')) in ('owner','system_admin','admin','superadmin','senior_support','staff') then lower(p.role) else 'staff' end,'{}'::jsonb from public.user_profiles p where lower(coalesce(p.role,'')) in ('owner','system_admin','admin','superadmin','senior_support','staff') on conflict(user_id) do update set enabled=true,role=excluded.role,updated_at=now();
+alter table public.users enable row level security;
+alter table public.staff_access enable row level security;
+revoke all on public.users from anon,authenticated;
+revoke all on public.staff_access from anon,authenticated;
 comment on table public.users is 'Canonical OrbitFS account identity. Customer and staff access attach to this identity.';
 comment on table public.staff_access is 'Optional staff capability attached to a normal user account.';
 comment on column public.customers.user_id is 'Canonical OrbitFS user identity. auth_user_id is legacy compatibility only.';
