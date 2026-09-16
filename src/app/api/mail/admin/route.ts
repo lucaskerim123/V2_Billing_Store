@@ -9,7 +9,9 @@ export async function GET(req:Request){
   if(error)return Response.json({error:error.message},{status:500});
   if(queueError)return Response.json({error:queueError.message},{status:500});
   if(!data)return Response.json({error:'Mail administration denied.'},{status:403});
-  return Response.json({...data,queue:queue||{summary:{},queue:[],stuck_logs:[]},runtimeConfig:config,provider:{name:'Resend transport',apiKeyConfigured:!!process.env.RESEND_API_KEY,mailApiKeyConfigured:!!process.env.RESEND_MAIL_API_KEY,secretsLocation:'Vercel environment'}})
+  const outboundConfigured=!!String(process.env.RESEND_API_KEY||'').trim();
+  const inboundConfigured=!!String(process.env.RESEND_MAIL_API_KEY||process.env.RESEND_API_KEY||'').trim();
+  return Response.json({...data,queue:queue||{summary:{},queue:[],stuck_logs:[]},runtimeConfig:config,provider:{name:'Resend transport',apiKeyConfigured:outboundConfigured,mailApiKeyConfigured:inboundConfigured,separateMailApiKeyConfigured:!!String(process.env.RESEND_MAIL_API_KEY||'').trim(),secretsLocation:'Vercel environment'}})
 }
 
 export async function PUT(req:Request){
