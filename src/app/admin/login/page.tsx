@@ -4,70 +4,15 @@ import Link from "next/link";
 import {useRouter} from "next/navigation";
 import {createClient} from "@/lib/supabase";
 
-function hasAdminAccess(raw:any){
- const row=Array.isArray(raw)?raw[0]:raw;
- const permissions=row?.permissions;
- if(permissions?.all||permissions?.["admin.access"])return true;
- if(Array.isArray(permissions))return permissions.includes("*")||permissions.includes("admin.access");
- return false;
-}
+function hasAdminAccess(raw:any){const row=Array.isArray(raw)?raw[0]:raw;const permissions=row?.permissions;if(permissions?.all||permissions?.["admin.access"])return true;if(Array.isArray(permissions))return permissions.includes("*")||permissions.includes("admin.access");return false;}
 
 export default function AdminLoginPage(){
- const [message,setMessage]=useState("");
- const [busy,setBusy]=useState(false);
- const [id,setId]=useState<any>({site_name:"OrbitFS",admin_name:"OrbitFS Master"});
- const router=useRouter();
- const sb=useMemo(()=>createClient(),[]);
- useEffect(()=>{
-  let live=true;
-  sb.from("app_settings").select("key,value").eq("category","identity").then(({data})=>{
-   if(!live)return;
-   const m=Object.fromEntries((data||[]).map((x:any)=>[x.key.split(".").pop(),x.value]));
-   setId((v:any)=>({...v,...m}));
-   document.title=`Admin sign in · ${m.admin_name||m.site_name||"OrbitFS"}`;
-  });
-  (async()=>{const {data:{user}}=await sb.auth.getUser();if(!live||!user)return;const {data}=await sb.rpc("get_my_staff_access");if(live&&hasAdminAccess(data))router.replace("/admin")})();
+ const [message,setMessage]=useState("");const [busy,setBusy]=useState(false);const [setupAvailable,setSetupAvailable]=useState(false);const [id,setId]=useState<any>({site_name:"OrbitFS",admin_name:"OrbitFS Master"});const router=useRouter();const sb=useMemo(()=>createClient(),[]);
+ useEffect(()=>{let live=true;
+  sb.from("app_settings").select("key,value").eq("category","identity").then(({data})=>{if(!live)return;const m=Object.fromEntries((data||[]).map((x:any)=>[x.key.split(".").pop(),x.value]));setId((v:any)=>({...v,...m}));document.title=`Admin sign in · ${m.admin_name||m.site_name||"OrbitFS"}`});
+  (async()=>{const status=await fetch("/api/admin/bootstrap",{cache:"no-store").catch(()=>null);if(status?.ok){const j=await status.json().catch(()=>({}));if(live)setSetupAvailable(!!j.available)}const {data:{user}}=await sb.auth.getUser();if(!live||!user)return;const {data}=await sb.rpc("get_my_staff_access");if(live&&hasAdminAccess(data))router.replace("/admin")})();
   return()=>{live=false};
  },[router,sb]);
- async function submit(e:FormEvent<HTMLFormElement>){
-  e.preventDefault();if(busy)return;setBusy(true);setMessage("");
-  const f=new FormData(e.currentTarget);
-  const {error}=await sb.auth.signInWithPassword({email:String(f.get("email")||""),password:String(f.get("password")||"")});
-  if(error){setMessage(error.message);setBusy(false);return;}
-  const {data,error:accessError}=await sb.rpc("get_my_staff_access");
-  if(accessError||!hasAdminAccess(data)){await sb.auth.signOut();setMessage("This account does not have admin access.");setBusy(false);return;}
-  router.replace("/admin");router.refresh();
- }
- return <main className="orbitAuthPage orbitAuthAdmin">
-  <header className="orbitAuthTop">
-   <Link className="orbitAuthBrand" href="/"><span className="orbitAuthMark" aria-hidden="true"/><span>{id.admin_name||id.site_name||"OrbitFS Master"}</span></Link>
-   <nav className="orbitAuthNav"><Link href="/">Public site</Link><Link href="/support">Support</Link><Link className="orbitAuthNavCta" href="/login">Customer sign in</Link></nav>
-  </header>
-  <div className="orbitAuthStage">
-   <section className="orbitAuthStory">
-    <p className="orbitAuthEyebrow">V3A administration</p>
-    <h2>Control the platform.<br/><span>Keep access separate.</span></h2>
-    <p>The admin entry point is isolated from the customer portal and checks staff permissions before opening the OrbitFS administration system.</p>
-    <div className="orbitAuthOrbitVisual" aria-hidden="true"><span className="orbitAuthRing"/><span className="orbitAuthRing orbitAuthRingTwo"/><span className="orbitAuthPlanet"/><span className="orbitAuthTile orbitAuthTileOne">BILLING</span><span className="orbitAuthTile orbitAuthTileTwo">SYSTEM</span><span className="orbitAuthTile orbitAuthTileThree">ACCESS</span></div>
-    <p className="orbitAuthStoryFoot">Admin access · Staff permissions · System control</p>
-   </section>
-   <section className="orbitAuthCard">
-    <div className="orbitAuthAdminBadge">Admin access</div>
-    <p className="orbitAuthEyebrow" style={{marginTop:18}}>Secure administration</p>
-    <h1>Sign in to V3A</h1>
-    <p className="orbitAuthDescription">Use an OrbitFS account with admin access. Customer-only accounts are rejected here.</p>
-    <form onSubmit={submit} className="orbitAuthForm">
-     <label className="orbitAuthFieldLabel">Admin email<span className="orbitAuthField"><span className="orbitAuthFieldIcon">@</span><input name="email" type="email" autoComplete="email" placeholder="admin@example.com" required/></span></label>
-     <label className="orbitAuthFieldLabel">Password<span className="orbitAuthField"><span className="orbitAuthFieldIcon">●</span><input name="password" type="password" autoComplete="current-password" placeholder="Enter your password" required/></span></label>
-     <div className="orbitAuthFormMeta"><span/><Link href="/reset-password">Forgot your password?</Link></div>
-     <button className="orbitAuthSubmit" type="submit" disabled={busy}>{busy?"Checking access…":"Enter admin"}<span aria-hidden="true">→</span></button>
-    </form>
-    {message&&<p className="orbitAuthMessage" role="alert">{message}</p>}
-    <p className="orbitAuthAdminNotice">Authentication uses the normal OrbitFS account system, then verifies admin permissions before allowing access to `/admin`.</p>
-    <div className="orbitAuthDivider">Not an administrator?</div>
-    <p className="orbitAuthSwitch"><Link href="/login">Return to customer sign in</Link></p>
-    <div className="orbitAuthTrust" aria-label="Admin security"><span>◎<small>AUTHENTICATED</small></span><span>◇<small>PERMISSION CHECK</small></span><span>⌁<small>V3A ADMIN</small></span></div>
-   </section>
-  </div>
- </main>
+ async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();if(busy)return;setBusy(true);setMessage("");const f=new FormData(e.currentTarget);const {error}=await sb.auth.signInWithPassword({email:String(f.get("email")||""),password:String(f.get("password")||"")});if(error){setMessage(error.message);setBusy(false);return}const {data,error:accessError}=await sb.rpc("get_my_staff_access");if(accessError||!hasAdminAccess(data)){await sb.auth.signOut();setMessage("This account does not have admin access. If this is a new Billing Store, use Initial setup below.");setBusy(false);return}router.replace("/admin");router.refresh()}
+ return <main className="orbitAuthPage orbitAuthAdmin"><header className="orbitAuthTop"><Link className="orbitAuthBrand" href="/"><span className="orbitAuthMark" aria-hidden="true"/><span>{id.admin_name||id.site_name||"OrbitFS Master"}</span></Link><nav className="orbitAuthNav"><Link href="/">Public site</Link><Link href="/support">Support</Link><Link className="orbitAuthNavCta" href="/login">Customer sign in</Link></nav></header><div className="orbitAuthStage"><section className="orbitAuthStory"><p className="orbitAuthEyebrow">V3A administration</p><h2>Control the platform.<br/><span>Keep access separate.</span></h2><p>The admin entry point is isolated from the customer portal and checks staff permissions before opening the OrbitFS administration system.</p><div className="orbitAuthOrbitVisual" aria-hidden="true"><span className="orbitAuthRing"/><span className="orbitAuthRing orbitAuthRingTwo"/><span className="orbitAuthPlanet"/><span className="orbitAuthTile orbitAuthTileOne">BILLING</span><span className="orbitAuthTile orbitAuthTileTwo">SYSTEM</span><span className="orbitAuthTile orbitAuthTileThree">ACCESS</span></div><p className="orbitAuthStoryFoot">Admin access · Staff permissions · System control</p></section><section className="orbitAuthCard"><div className="orbitAuthAdminBadge">Admin access</div><p className="orbitAuthEyebrow" style={{marginTop:18}}>Secure administration</p><h1>Sign in to V3A</h1><p className="orbitAuthDescription">Use an OrbitFS account with admin access. Customer-only accounts are rejected here.</p><form onSubmit={submit} className="orbitAuthForm"><label className="orbitAuthFieldLabel">Admin email<span className="orbitAuthField"><span className="orbitAuthFieldIcon">@</span><input name="email" type="email" autoComplete="email" placeholder="admin@example.com" required/></span></label><label className="orbitAuthFieldLabel">Password<span className="orbitAuthField"><span className="orbitAuthFieldIcon">●</span><input name="password" type="password" autoComplete="current-password" placeholder="Enter your password" required/></span></label><div className="orbitAuthFormMeta"><span/><Link href="/reset-password">Forgot your password?</Link></div><button className="orbitAuthSubmit" type="submit" disabled={busy}>{busy?"Checking access…":"Enter admin"}<span aria-hidden="true">→</span></button></form>{message&&<p className="orbitAuthMessage" role="alert">{message}</p>}<p className="orbitAuthAdminNotice">Authentication uses the normal OrbitFS account system, then verifies admin permissions before allowing access to `/admin`.</p>{setupAvailable&&<><div className="orbitAuthDivider">First deployment?</div><p className="orbitAuthSwitch"><Link href="/admin/setup">Create the first Billing Store administrator</Link></p></>}<div className="orbitAuthTrust" aria-label="Admin security"><span>◎<small>AUTHENTICATED</small></span><span>◇<small>PERMISSION CHECK</small></span><span>⌁<small>V3A ADMIN</small></span></div></section></div></main>
 }
