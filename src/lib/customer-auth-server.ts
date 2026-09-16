@@ -19,7 +19,7 @@ export function verifyCustomerPassword(password:string,encoded:string){
   if(scheme!=="scrypt"||!salt||!expectedHex)return false;
   const actual=scryptSync(password,salt,64),expected=Buffer.from(expectedHex,"hex");
   return actual.length===expected.length&&timingSafeEqual(actual,expected);
- }catch{return false}
+ }catch{return false;}
 }
 
 export async function resolveCustomerIdentity(userOrCustomerId:string):Promise<OrbitCustomerIdentity|null>{
@@ -39,7 +39,7 @@ export async function setCustomerCredentialPassword(userOrCustomerId:string,pass
  const db=service(),identity=await resolveCustomerIdentity(userOrCustomerId);
  if(!identity)return {ok:false as const,error:"Customer account not found."};
  const now=new Date().toISOString(),passwordHash=hashCustomerPassword(password);
- const {error}=await db.from("customer_credentials").upsert({user_id:identity.userId,canonical_user_id:identity.userId,password_hash:passwordHash,password_changed_at:now,updated_at:now},{onConflict:"user_id"});
+ const {error}=await db.from("customer_credentials").upsert({user_id:identity.userId,password_hash:passwordHash,password_changed_at:now,updated_at:now},{onConflict:"user_id"});
  if(error)return {ok:false as const,error:error.message};
  await db.from("customer_sessions").update({revoked_at:now}).eq("user_id",identity.userId).is("revoked_at",null);
  return {ok:true as const,...identity};
