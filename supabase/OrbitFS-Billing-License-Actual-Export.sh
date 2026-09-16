@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_REF="${PROJECT_REF:-zekejuprrsurjmwgzexw}"
+PROJECT_REF="${PROJECT_REF:-xwbjfhpgsvsjaykelufa}"
 DB_URL="${DB_URL:-}"
 
 if [[ -z "$DB_URL" ]]; then
