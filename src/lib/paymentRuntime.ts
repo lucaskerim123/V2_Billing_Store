@@ -1,4 +1,4 @@
-const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||'https://xwbjfhpgsvsjaykelufa.supabase.co';
+const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||'';
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||'';
 
 type RuntimeOptions={
@@ -11,6 +11,7 @@ type RuntimeOptions={
 };
 
 export async function paymentRuntime(action:string,options:RuntimeOptions){
+  if(!SUPABASE_URL||!SUPABASE_KEY)throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are required');
   const url=new URL(`${SUPABASE_URL}/functions/v1/payment-runtime`);
   url.searchParams.set('action',action);
   for(const [key,value] of Object.entries(options.query||{}))if(value!=null&&value!=='')url.searchParams.set(key,String(value));
