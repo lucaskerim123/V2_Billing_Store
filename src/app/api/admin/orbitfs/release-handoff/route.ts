@@ -6,17 +6,19 @@ export async function GET(req:Request){
     await requireOrbitAdmin(req);
     const u=new URL(req.url),action=u.searchParams.get("action")||"published";
     if(action!=="published"&&action!=="all")return Response.json({error:"Release publication is controlled by License Master"},{status:409});
-    const rows=await masterRequest("/api/releases",{method:"GET"},"billing");
-    const releases=(Array.isArray(rows)?rows:[]).filter((r:any)=>action==="all"||r.status==="published").map((r:any)=>({
+    const result=await masterRequest("/api/releases",{method:"GET"},"billing");
+    // License Master returns { releases: [...] }; accept the legacy array shape too.
+    const rows=Array.isArray(result)?result:(Array.isArray(result?.releases)?result.releases:[]);
+    const releases=rows.filter((r:any)=>action==="all"||r.status==="published").map((r:any)=>({
       id:r.id,
       version:r.version,
       channel:r.channel,
       status:r.status,
-      releaseType:r.release_type,
-      title:`OrbitFS ${r.release_type==='base'?'Base':'Update'} ${r.version}`,
-      description:r.notes||null,
-      changelog:r.notes||null,
-      sourceCommit:r.source_sha||null,
+      releaseType:r.release_type||r.releaseType,
+      title:`OrbitFS ${(r.release_type||r.releaseType)==='base'?'Base':'Update'} ${r.version}`,
+      description:r.notes||r.description||null,
+      changelog:r.changelog||r.notes||null,
+      sourceCommit:r.source_sha||r.source_commit||null,
       sourceRepo:r.source_repo||null,
       sourceRef:r.source_ref||null,
       artifactUrl:r.artifact_url||null,
