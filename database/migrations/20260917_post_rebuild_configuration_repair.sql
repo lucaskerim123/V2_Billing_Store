@@ -1,11 +1,23 @@
 -- OrbitFS Billing Store post-rebuild configuration repair.
 -- Recreates missing reusable configuration without touching customer/runtime data.
--- Existing values are preserved; only missing keys/gateway definitions are created.
+-- Existing values are deliberately preserved; only missing keys/gateway definitions are created.
 
 -- Canonical public Store origin.
 insert into public.app_settings(key,value,category,public_read,updated_at)
 values
-('site.public_url','"https://orbitfsstore.vercel.app"'::jsonb,'site',true,now())
+('site.public_url','"https://orbitfsstore.vercel.app"'::jsonb,'site',true,now()),
+('site.website_url','"https://orbitfsstore.vercel.app"'::jsonb,'site',true,now())
+on conflict(key) do nothing;
+
+-- Store-facing copy used by the customer catalogue surface.
+insert into public.app_settings(key,value,category,public_read,updated_at) values
+('store.hero_eyebrow','"ORBITFS STORE"'::jsonb,'store',true,now()),
+('store.hero_title','"Build your OrbitFS setup"'::jsonb,'store',true,now()),
+('store.hero_lead','"Start with OrbitFS Base System, then add the components you need."'::jsonb,'store',true,now()),
+('store.base_action_label','"Base system"'::jsonb,'store',true,now()),
+('store.addons_eyebrow','"EXPAND ORBITFS"'::jsonb,'store',true,now()),
+('store.addons_title','"Add-ons"'::jsonb,'store',true,now()),
+('store.addons_lead','"Add only the capabilities you want."'::jsonb,'store',true,now())
 on conflict(key) do nothing;
 
 -- Internal gateway canonical-sync authentication.
@@ -28,7 +40,6 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('identity.browser_store_name','"OrbitFS Store"'::jsonb,'identity',true,now()),
 ('identity.browser_admin_name','"OrbitFS Master"'::jsonb,'identity',false,now()),
 ('identity.browser_title_separator','" - "'::jsonb,'identity',true,now()),
-
 ('general.registration_enabled','true'::jsonb,'general',true,now()),
 ('general.require_email_verification','true'::jsonb,'general',true,now()),
 ('general.account_deletion_enabled','true'::jsonb,'general',true,now()),
@@ -36,7 +47,6 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('general.default_locale','"en-AU"'::jsonb,'general',true,now()),
 ('general.default_timezone','"Australia/Sydney"'::jsonb,'general',true,now()),
 ('general.support_email','"support@orbitfs.cc"'::jsonb,'general',true,now()),
-
 ('billing.currency','"AUD"'::jsonb,'billing',true,now()),
 ('billing.order_prefix','"ORB-"'::jsonb,'billing',true,now()),
 ('billing.allow_account_credit','true'::jsonb,'billing',true,now()),
@@ -49,7 +59,6 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('billing.tax_enabled','true'::jsonb,'billing',true,now()),
 ('billing.tax_name','"GST"'::jsonb,'billing',true,now()),
 ('billing.tax_rate','10'::jsonb,'billing',true,now()),
-
 ('invoice.auto_generate','true'::jsonb,'invoice',false,now()),
 ('invoice.prefix','"INV-"'::jsonb,'invoice',true,now()),
 ('invoice.due_days','7'::jsonb,'invoice',true,now()),
@@ -68,7 +77,6 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('invoice.presentation_show_logo','true'::jsonb,'invoice',true,now()),
 ('invoice.presentation_show_tax','true'::jsonb,'invoice',true,now()),
 ('invoice.presentation_show_payment_instructions','true'::jsonb,'invoice',true,now()),
-
 ('products.default_currency','"AUD"'::jsonb,'products',true,now()),
 ('products.default_setup_mode','"after_payment"'::jsonb,'products',false,now()),
 ('products.require_payment_before_fulfillment','true'::jsonb,'products',false,now()),
@@ -79,7 +87,6 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('products.hide_out_of_stock','false'::jsonb,'products',true,now()),
 ('products.show_disabled_to_admin','true'::jsonb,'products',false,now()),
 ('products.sort_mode','"sort_order"'::jsonb,'products',true,now()),
-
 ('license.integration_mode','"active"'::jsonb,'license',false,now()),
 ('license.auto_suspend_on_account_suspend','true'::jsonb,'license',false,now()),
 ('license.auto_suspend_on_overdue_invoice','true'::jsonb,'license',false,now()),
@@ -89,13 +96,11 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('license.customer_key_rotation','true'::jsonb,'license',true,now()),
 ('license.customer_unlock_all','true'::jsonb,'license',true,now()),
 ('license.customer_unlock_component','true'::jsonb,'license',true,now()),
-
 ('support.default_priority','"normal"'::jsonb,'support',true,now()),
 ('support.allow_reopen','true'::jsonb,'support',true,now()),
 ('support.customer_can_close','true'::jsonb,'support',true,now()),
 ('support.auto_close_days','14'::jsonb,'support',false,now()),
 ('support.intro','"Need help with your OrbitFS account, billing, licensing or deployment? Open a support ticket and our team will help."'::jsonb,'support',true,now()),
-
 ('site.logo_text','"OrbitFS"'::jsonb,'site',true,now()),
 ('site.logo_url','""'::jsonb,'site',true,now()),
 ('site.favicon_url','""'::jsonb,'site',true,now()),
@@ -126,7 +131,7 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('site.portal_welcome','"Welcome back to My OrbitFS."'::jsonb,'site',true,now())
 on conflict(key) do nothing;
 
--- Restore the four expected payment methods if the configuration data was not carried over.
+-- Restore the expected payment methods if configuration data was not carried over.
 insert into public.payment_gateways
 (code,provider,display_name,description,enabled,sort_order,fee_fixed_cents,fee_percent,supports_recurring,supports_refunds,supports_partial,instructions,currencies,public_config,created_at,updated_at)
 values
