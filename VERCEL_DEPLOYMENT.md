@@ -28,7 +28,7 @@ Set these in Vercel for Production, Preview, and Development as appropriate:
 
 Payment/provider secrets used by the Store must also be configured from the names referenced by the application; none should be committed to GitHub. Never expose server-only credentials as `NEXT_PUBLIC_*` variables.
 
-`MASTER_API_TOKEN` is a License Master-side privileged secret. Do not put it in the Billing Store environment.
+The same License Master managed API key may be used for both `BILLING_API_TOKEN` and `DEPLOYER_API_TOKEN` when it was created with the required scopes. `MASTER_API_TOKEN` is a License Master-side machine-key fallback and is not required in Billing Store.
 
 ## Architecture
 The Store owns customers, orders, billing, payments, support, customer provider connections, customer deployment state and customer/admin control surfaces.
