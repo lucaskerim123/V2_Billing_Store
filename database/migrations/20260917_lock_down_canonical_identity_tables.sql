@@ -1,1 +1,0 @@
--- Retired migration marker. Lockdown is now part of 20260917_unified_users_staff_customer_architecture.sql.
