@@ -1,6 +1,6 @@
 -- OrbitFS License Master authority wiring.
 -- Safe to re-run: all changes are idempotent/upserts.
--- Runtime contract: https://customlicensev1.vercel.app
+-- Runtime contract: https://incendiarynetworks.cc/api
 -- Licensed products: orbitfs_base, orbitfs_apex, orbitfs_mcp, orbitfs_studio.
 -- This migration never creates or stores plaintext License Master keys.
 
@@ -11,10 +11,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS license_fulfillments_order_item_uidx
 
 INSERT INTO public.products (id,name,slug,license_product_key,active,currency,license_api_url,license_api_mode,license_api_enabled,approval_mode,metadata)
 VALUES
-  (gen_random_uuid(),'OrbitFS Base','orbitfs-base','orbitfs_base',true,'AUD','https://customlicensev1.vercel.app','master',true,'automatic','{"license_authority":"orbitfs-license-master-v2"}'::jsonb),
-  (gen_random_uuid(),'OrbitFS APEX','orbitfs-apex','orbitfs_apex',true,'AUD','https://customlicensev1.vercel.app','master',true,'automatic','{"license_authority":"orbitfs-license-master-v2"}'::jsonb),
-  (gen_random_uuid(),'OrbitFS MCP','orbitfs-mcp','orbitfs_mcp',true,'AUD','https://customlicensev1.vercel.app','master',true,'automatic','{"license_authority":"orbitfs-license-master-v2"}'::jsonb),
-  (gen_random_uuid(),'OrbitFS Studio','orbitfs-studio','orbitfs_studio',true,'AUD','https://customlicensev1.vercel.app','master',true,'automatic','{"license_authority":"orbitfs-license-master-v2"}'::jsonb)
+  (gen_random_uuid(),'OrbitFS Base','orbitfs-base','orbitfs_base',true,'AUD','https://incendiarynetworks.cc/api','master',true,'automatic','{"license_authority":"orbitfs-license-master-v2"}'::jsonb),
+  (gen_random_uuid(),'OrbitFS APEX','orbitfs-apex','orbitfs_apex',true,'AUD','https://incendiarynetworks.cc/api','master',true,'automatic','{"license_authority":"orbitfs-license-master-v2"}'::jsonb),
+  (gen_random_uuid(),'OrbitFS MCP','orbitfs-mcp','orbitfs_mcp',true,'AUD','https://incendiarynetworks.cc/api','master',true,'automatic','{"license_authority":"orbitfs-license-master-v2"}'::jsonb),
+  (gen_random_uuid(),'OrbitFS Studio','orbitfs-studio','orbitfs_studio',true,'AUD','https://incendiarynetworks.cc/api','master',true,'automatic','{"license_authority":"orbitfs-license-master-v2"}'::jsonb)
 ON CONFLICT (license_product_key) DO UPDATE SET
   name=excluded.name,
   active=true,
@@ -25,14 +25,14 @@ ON CONFLICT (license_product_key) DO UPDATE SET
 
 UPDATE public.license_api_settings
 SET api_name='OrbitFS Licence API',
-    base_url='https://customlicensev1.vercel.app',
+    base_url='https://incendiarynetworks.cc/api',
     mode='master',
     enabled=true,
-    validation_path='/api/license/validate',
-    registration_path='/api/license/issue',
-    activation_path='/api/license/{id}/control',
-    revision_path='/api/health',
-    health_path='/api/health',
+    validation_path='/license/validate',
+    registration_path='/license/issue',
+    activation_path='/license/{id}/control',
+    revision_path='/health',
+    health_path='/health',
     issuer='orbitfs-license-master',
     audience='orbitfs-runtime',
     entitlement_ttl_seconds=3600,
@@ -43,11 +43,11 @@ SET api_name='OrbitFS Licence API',
 WHERE true;
 
 INSERT INTO public.license_api_settings (api_name,base_url,mode,enabled,validation_path,registration_path,activation_path,revision_path,health_path,issuer,audience,entitlement_ttl_seconds,grace_seconds,max_failed_validations,allow_offline_grace)
-SELECT 'OrbitFS Licence API','https://customlicensev1.vercel.app','master',true,'/api/license/validate','/api/license/issue','/api/license/{id}/control','/api/health','/api/health','orbitfs-license-master','orbitfs-runtime',3600,0,5,false
+SELECT 'OrbitFS Licence API','https://incendiarynetworks.cc/api','master',true,'/license/validate','/license/issue','/license/{id}/control','/health','/health','orbitfs-license-master','orbitfs-runtime',3600,0,5,false
 WHERE NOT EXISTS (SELECT 1 FROM public.license_api_settings);
 
 UPDATE public.license_master_connection
-SET master_url='https://customlicensev1.vercel.app',
+SET master_url='https://incendiarynetworks.cc/api',
     enabled=true,
     last_error=NULL,
     updated_at=now()
