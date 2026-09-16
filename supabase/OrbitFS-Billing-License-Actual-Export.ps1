@@ -1,12 +1,12 @@
 param(
-  [string]$ProjectRef = "zekejuprrsurjmwgzexw",
+  [string]$ProjectRef = "xwbjfhpgsvsjaykelufa",
   [string]$DbUrl = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 if (-not $DbUrl) {
-  Write-Host "Enter the Supabase Postgres connection string for the OrbitFS Website project."
+  Write-Host "Enter the Supabase Postgres connection string for the rebuilt OrbitFS Store project."
   Write-Host "Use the Session Pooler connection string from Supabase -> Connect."
   $DbUrl = Read-Host "DB URL"
 }
@@ -86,7 +86,7 @@ Source project: $ProjectRef
 IMPORTANT
 ---------
 This is a real database export process, not a seed/deployment wrapper.
-The resulting SQL files are generated directly from the live OrbitFS Website
+The resulting SQL files are generated directly from the rebuilt OrbitFS Store
 billing database at the time this script is run.
 
 Restore order:
