@@ -33,18 +33,20 @@ export async function syncPaidOrderToLicenseMaster(orderId:string){
     }
     try{
       const result=await masterIssue({product_code:product,customer_external_id:String(order.auth_user_id),external_reference:ref,metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
-      const licenseId=String(result?.id||result?.license_id||"");
-      if(!licenseId)throw new Error("License Master did not return a license id");
+      const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
+      const licenseKey=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||"");
+      if(!licenseId)throw new Error("License Master did not return a licence/binding id");
       const now=new Date().toISOString();
-      const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:licenseId,state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,master_response:{id:licenseId,status:result?.status||null,alreadyIssued:Boolean(result?.already_issued)}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
+      const remoteState=String(result?.status||result?.licence?.status||result?.license?.status||result?.binding?.status||"active");
+      const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:licenseId,state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,master_response:{id:licenseId,status:remoteState,license_key_last4:licenseKey?licenseKey.slice(-4):null,idempotent:Boolean(result?.idempotent)}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
       if(upsertError)throw upsertError;
 
-      const bindingPayload={order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,fulfillment_id:upserted.id,license_id:licenseId,license_product_key:product,desired_state:"active",remote_state:String(result?.status||"active"),license_key_last4:result?.license_key?String(result.license_key).slice(-4):null,label:String(item.product_name||product),api_source:"license_master",updated_at:now};
+      const bindingPayload={order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,fulfillment_id:upserted.id,license_id:licenseId,license_product_key:product,desired_state:"active",remote_state:remoteState,license_key_last4:licenseKey?licenseKey.slice(-4):null,label:String(item.product_name||product),api_source:"license_master",updated_at:now};
       const {data:binding}=await db.from("license_bindings").select("id").eq("order_item_id",item.id).maybeSingle();
       const bindingWrite=binding?.id?await db.from("license_bindings").update(bindingPayload).eq("id",binding.id):await db.from("license_bindings").insert(bindingPayload);
       if(bindingWrite.error)throw bindingWrite.error;
 
-      results.push({product,orderItemId:item.id,licenseId,licenseKey:result?.license_key||null,state:upserted.state,reused:Boolean(result?.already_issued)});fulfilled++;
+      results.push({product,orderItemId:item.id,licenseId,licenseKey:licenseKey||null,state:upserted.state,reused:Boolean(result?.idempotent)});fulfilled++;
     }catch(error:any){
       failed++;await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,state:"failed",attempt_count:Number(existing?.attempt_count||0)+1,last_error:String(error?.message||"License fulfilment failed").slice(0,1000),metadata:{...(existing?.metadata||{}),license_product_key:product}},{onConflict:"order_item_id"});
       results.push({product,orderItemId:item.id,state:"failed",error:String(error?.message||"License fulfilment failed")});
