@@ -16,11 +16,11 @@ const sections:Section[]=[
   {title:"Payment gateways",description:"Stripe, PayPal and other providers, webhooks, supported currencies and availability.",href:"/admin/payments/setup",badge:"Gateways",tags:["Stripe","PayPal","Webhooks"]},
   {title:"Products & catalogue",description:"Fulfilment, addons, upgrades, coupons, quantities, stock and checkout defaults.",href:"/admin/settings/products",badge:"Catalogue",tags:["Fulfilment","Add-ons","Stock"]}
  ]},
- {title:"Operations, access & automation",description:"Staff access, messaging, alerts, support and licence enforcement.",cards:[
+ {title:"Licensing, operations & access",description:"License Master connectivity, staff access, messaging, alerts and account enforcement.",cards:[
+  {title:"License Master connection",description:"Authority URL, connection status, API contract and bounded health test for the licensing authority.",href:"/admin/settings/license-master",badge:"Licensing",tags:["Authority","Health","API"]},
   {title:"Staff System",description:"Staff identities, groups, primary roles and exact inherited permission maps.",href:"/admin/settings/staff",badge:"Access",tags:["Staff","Groups","Permissions"]},
   {title:"OrbitFS Alert System",description:"Configure alert delivery, composer defaults, safety limits and available alert types.",href:"/admin/settings/alerts",badge:"Alerts",tags:["Types","Delivery","Targeting"]},
   {title:"Outbound Mail",description:"System email behaviour, sender identities, automation and reusable templates.",href:"/admin/settings/outbound-mail",badge:"Messaging",tags:["Senders","Automation","Templates"]},
-  {title:"Support settings",description:"Ticket defaults, close/reopen rules, auto-close and customer-facing support content.",href:"/admin/support/settings",badge:"Support",tags:["Tickets","Auto-close","Controls"]},
   {title:"Account enforcement",description:"View and manage currently suspended or banned customer accounts, reasons and expiry times.",href:"/admin/settings/enforcement/accounts",badge:"Enforcement",tags:["Suspensions","Bans","Expiry"]}
  ]}
 ];
