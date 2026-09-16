@@ -14,16 +14,29 @@ OrbitFS stores the canonical address in Supabase as `site.public_url`. Customer-
 
 ## Vercel environment variables
 
-Keep only private infrastructure credentials in Vercel:
+Set these on the V2_Billing_Store Vercel project for **Production, Preview and Development** as appropriate:
 
-- `RESEND_API_KEY` — private outbound transport credential.
-- `RESEND_MAIL_API_KEY` — private mailbox/inbound transport credential when inbound Mail is enabled.
-- Supabase infrastructure variables used by the application. The publishable browser key is not a secret; any service-role credential must remain server-side and should only be present where genuinely required.
-- Optional deployment override `NEXT_PUBLIC_ORBITFS_STORE_URL` when a deployment intentionally needs a different canonical Store origin.
+### Required for outbound mail
+
+- `RESEND_API_KEY` — your private Resend API key. This is the primary OrbitFS Mail outbound transport key and is required for registration confirmation, password-reset mail, transactional mail, manual mail and the Mail test endpoint.
+
+### Optional separate inbound/mailbox key
+
+- `RESEND_MAIL_API_KEY` — optional private Resend API key used for mailbox/receiving operations. If this is not set, OrbitFS Mail now falls back to `RESEND_API_KEY`, so a second key is not required for the normal setup.
+
+### Supabase infrastructure
+
+- `NEXT_PUBLIC_SUPABASE_URL` — the Store Supabase project URL.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — the Store Supabase publishable/anon key.
+- `SUPABASE_SERVICE_ROLE_KEY` — server-only Supabase service-role key where Store server workflows require it. Never expose this to browser code.
+
+### Optional Store origin override
+
+- `NEXT_PUBLIC_ORBITFS_STORE_URL` — normally `https://orbitfsstore.vercel.app` only when an explicit deployment override is required.
 
 Do **not** put normal OrbitFS Mail configuration in environment variables.
 
-The following legacy Mail variables are retired and can be removed from Vercel **only after** the application version containing the OrbitFS Mail runtime-config change is live in that environment:
+The following legacy Mail variables are retired and can be removed from Vercel after the runtime-config version is live:
 
 - `EMAIL_FROM`
 - `EMAIL_REPLY_TO`
@@ -59,6 +72,8 @@ The live runtime configuration is stored in `mail_settings`. Mailbox-specific di
 4. Customer-facing links resolve against the canonical OrbitFS Store address.
 5. Resend receives the finished message only as the delivery transport.
 6. OrbitFS records success/failure and provider message IDs back into its own Mail history.
+
+The mailbox reader uses `RESEND_MAIL_API_KEY` when present and otherwise uses `RESEND_API_KEY`. This prevents the Mail system from failing simply because a second Resend key was not configured.
 
 ## Security
 
