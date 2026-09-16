@@ -10,7 +10,7 @@ const pretty=(v:any)=>String(v||"waiting").replaceAll("_"," ");
 export default function OrbitFSDeploymentCenter(){
   const sb=useMemo(()=>createClient(),[]);
   const [data,setData]=useState<any>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(""),[msg,setMsg]=useState("");
-  async function auth(){const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{}}
+  async function auth():Promise<HeadersInit>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token`}}:{}};
   async function load(){setLoading(true);setMsg("");try{const r=await fetch("/api/orbitfs/status",{headers:await auth(),cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||`Could not load deployment status (${r.status})`);setData(j)}catch(e:any){setMsg(e?.message||"Could not load deployment status.")}finally{setLoading(false)}}
   useEffect(()=>{void load()},[]);
   const binding=(data?.bindings||[]).find(hasBase)||data?.bindings?.[0],install=(data?.installations||[]).find((x:any)=>x.license_binding_id===binding?.id),latestBase=data?.latestBase?.version,latestUpdate=data?.latestUpdate?.version,releases=(data?.releases||[]).filter((x:any)=>!install?.id||!x.installation_id||x.installation_id===install.id),updateAvailable=!!install?.release_version&&!!latestUpdate&&install.release_version!==latestUpdate;
