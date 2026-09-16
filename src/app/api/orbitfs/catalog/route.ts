@@ -8,10 +8,14 @@ async function masterCatalog(){
   const master=await masterRequest("/api/v1/products",{method:"GET"});
   return Array.isArray(master?.products)?master.products:[];
 }
-function merge(master:any,local:any){return {...local,id:local?.id||null,master_id:master.id,master_code:master.code,name:master.name,slug:master.slug,description:master.description,short_description:master.shortDescription,price_cents:Math.round(Number(master.priceAmount||0)*100),currency:master.priceCurrency||"AUD",active:!!master.active,purchasable:!!master.purchasable,public:!!master.public,license_product_key:master.code,metadata:{...(local?.metadata||{}),...(master.metadata||{}),component:master.componentKey||local?.metadata?.component||null},master};}
+function masterActive(p:any){return typeof p.active==="boolean"?p.active:String(p.status||"").toLowerCase()==="active";}
+function masterPurchasable(p:any){return typeof p.purchasable==="boolean"?p.purchasable:masterActive(p);}
+function masterPublic(p:any){return typeof p.public==="boolean"?p.public:masterActive(p);}
+function masterPriceCents(master:any,local:any){return master.priceAmount!=null?Math.round(Number(master.priceAmount)*100):local?.price_cents??null;}
+function merge(master:any,local:any){return {...local,id:local?.id||null,master_id:master.id,master_code:master.code,name:master.name,slug:master.slug,description:master.description,short_description:master.shortDescription,price_cents:masterPriceCents(master,local),currency:master.priceCurrency||local?.currency||"AUD",active:masterActive(master),purchasable:masterPurchasable(master),public:masterPublic(master),license_product_key:master.code,metadata:{...(local?.metadata||{}),...(master.metadata||{}),component:master.componentKey||local?.metadata?.component||null},master};}
 
 async function syncOne(db:any,master:any,local:any){
-  const patch={name:master.name,slug:master.slug,description:master.description,price_cents:Math.round(Number(master.priceAmount||0)*100),currency:master.priceCurrency||"AUD",active:!!master.active,license_product_key:master.code,metadata:{...(local?.metadata||{}),...(master.metadata||{}),component:master.componentKey||null}};
+  const patch={name:master.name,slug:master.slug,description:master.description,price_cents:masterPriceCents(master,local),currency:master.priceCurrency||local?.currency||"AUD",active:masterActive(master),license_product_key:master.code,metadata:{...(local?.metadata||{}),...(master.metadata||{}),component:master.componentKey||local?.metadata?.component||null}};
   if(local){const {data,error}=await db.from("products").update(patch).eq("id",local.id).select("*").single();if(error)throw error;return data;}
   const {data,error}=await db.from("products").insert({id:randomUUID(),...patch}).select("*").single();
   if(error)throw error;
