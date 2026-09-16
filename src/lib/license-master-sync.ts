@@ -4,11 +4,8 @@ import {masterIssue} from "@/lib/master-api";
 const CANONICAL=new Set(["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio"]);
 const ALIASES:Record<string,string>={orbitfs_panel:"orbitfs_base",orbitfs_sorter:"orbitfs_apex"};
 const MAX_ITEMS=20;
-const REQUEST_TIMEOUT_MS=10000;
 
 function canonicalComponent(value:any){const key=String(value||"").trim().toLowerCase();return ALIASES[key]||key}
-
-function timeout(ms=REQUEST_TIMEOUT_MS){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return {signal:c.signal,clear:()=>clearTimeout(t)}}
 
 export async function syncPaidOrderToLicenseMaster(orderId:string){
   const id=String(orderId||"").trim();if(!id)throw new Error("Order ID is required");
@@ -20,9 +17,9 @@ export async function syncPaidOrderToLicenseMaster(orderId:string){
   if(!paid)return {ok:false,skipped:true,reason:"order_not_paid"};
   if(!order.auth_user_id)throw new Error("Paid order has no customer user id");
 
-  const {data:items,error:itemError}=await db.from("order_items").select("id,product_id,product_name,license_product_key,quantity,configuration").eq("order_id",id).order("id").limit(MAX_ITEMS);
+  const {data:items,error:itemError}=await db.from("order_items").select("id,product_id,product_name,license_product_key,quantity,configuration").eq("order_id",id).order("id").limit(MAX_ITEMS+1);
   if(itemError)throw itemError;
-  if((items||[]).length>=MAX_ITEMS)throw new Error(`Order exceeds fulfilment safety limit of ${MAX_ITEMS} line items`);
+  if((items||[]).length>MAX_ITEMS)throw new Error(`Order exceeds fulfilment safety limit of ${MAX_ITEMS} line items`);
 
   const results=[];let fulfilled=0;let failed=0;
   for(const item of items||[]){
@@ -41,6 +38,12 @@ export async function syncPaidOrderToLicenseMaster(orderId:string){
       const now=new Date().toISOString();
       const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:licenseId,state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,master_response:{id:licenseId,status:result?.status||null,alreadyIssued:Boolean(result?.already_issued)}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
       if(upsertError)throw upsertError;
+
+      const bindingPayload={order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,fulfillment_id:upserted.id,license_id:licenseId,license_product_key:product,desired_state:"active",remote_state:String(result?.status||"active"),license_key_last4:result?.license_key?String(result.license_key).slice(-4):null,label:String(item.product_name||product),api_source:"license_master",updated_at:now};
+      const {data:binding}=await db.from("license_bindings").select("id").eq("order_item_id",item.id).maybeSingle();
+      const bindingWrite=binding?.id?await db.from("license_bindings").update(bindingPayload).eq("id",binding.id):await db.from("license_bindings").insert(bindingPayload);
+      if(bindingWrite.error)throw bindingWrite.error;
+
       results.push({product,orderItemId:item.id,licenseId,licenseKey:result?.license_key||null,state:upserted.state,reused:Boolean(result?.already_issued)});fulfilled++;
     }catch(error:any){
       failed++;await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,state:"failed",attempt_count:Number(existing?.attempt_count||0)+1,last_error:String(error?.message||"License fulfilment failed").slice(0,1000),metadata:{...(existing?.metadata||{}),license_product_key:product}},{onConflict:"order_item_id"});
