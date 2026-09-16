@@ -11,7 +11,15 @@ export default function LoginPage(){
  const router=useRouter();
  const sb=useMemo(()=>createClient(),[]);
  useEffect(()=>{sb.from('app_settings').select('key,value').eq('category','identity').then(({data})=>{const m=Object.fromEntries((data||[]).map((x:any)=>[x.key.split('.').pop(),x.value]));setId((v:any)=>({...v,...m}));document.title=m.login_title||`Sign in · ${m.site_name||'OrbitFS'}`})},[sb]);
- async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();setMessage("");setUnverifiedEmail("");const f=new FormData(e.currentTarget);const email=String(f.get("email")||"").trim().toLowerCase();const {data,error}=await sb.auth.signInWithPassword({email,password:String(f.get("password")||"")});if(error){setMessage(error.message);return;}const {data:customer}=await sb.from("customers").select("email_verified_at").eq("auth_user_id",data.user.id).maybeSingle();if(!customer?.email_verified_at){await sb.auth.signOut();setUnverifiedEmail(email);setMessage("Your email has not been verified yet. Check your inbox for the OrbitFS verification email.");return;}const {data:enforcement}=await sb.rpc("account_enforcement_status");if(enforcement?.state==="banned"){try{const payload=JSON.stringify({...enforcement,stored_at:new Date().toISOString()});localStorage.setItem("orbitfs_account_blocked",payload);sessionStorage.setItem("orbitfs_account_blocked",payload)}catch{}await sb.auth.signOut();router.replace("/account-blocked");return;}try{localStorage.removeItem("orbitfs_account_blocked");sessionStorage.removeItem("orbitfs_account_blocked")}catch{}if(data.session?.access_token)fetch('/api/account/activity',{method:'POST',headers:{authorization:`Bearer ${data.session.access_token}`,'content-type':'application/json'},body:JSON.stringify({eventType:'login',source:'auth',route:'/login'})}).catch(()=>{});router.push("/portal")}
+ async function submit(e:FormEvent<HTMLFormElement>){
+  e.preventDefault();setMessage("");setUnverifiedEmail("");
+  const f=new FormData(e.currentTarget),email=String(f.get("email")||"").trim().toLowerCase(),password=String(f.get("password")||"");
+  const r=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){setMessage(d.error||"Could not sign in.");if(r.status===403)setUnverifiedEmail(email);return;}
+  try{localStorage.removeItem("orbitfs_account_blocked");sessionStorage.removeItem("orbitfs_account_blocked")}catch{}
+  router.push("/portal");
+ }
  async function resendVerification(){if(!unverifiedEmail)return;setMessage("Sending a new verification email…");const r=await fetch("/api/auth/email-verification/resend",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:unverifiedEmail})});const d=await r.json().catch(()=>({}));setMessage(d.message||"If the account still needs verification, a new email has been sent.")}
  return <main className="orbitAuthPage orbitAuthCustomer">
   <header className="orbitAuthTop">
