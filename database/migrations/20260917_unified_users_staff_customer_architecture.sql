@@ -18,10 +18,7 @@ create unique index if not exists customers_user_id_uidx on public.customers(use
 create unique index if not exists user_profiles_user_id_uidx on public.user_profiles(user_id);
 insert into public.staff_access(user_id,enabled,role,permissions) select p.id,true,case when lower(coalesce(p.role,'')) in ('owner','system_admin','admin','superadmin','senior_support','staff') then lower(p.role) else 'staff' end,'{}'::jsonb from public.user_profiles p where lower(coalesce(p.role,'')) in ('owner','system_admin','admin','superadmin','senior_support','staff') on conflict(user_id) do update set enabled=true,role=excluded.role,updated_at=now();
 insert into public.customers (user_id,auth_user_id,email,name,display_name,first_name,last_name,status,email_verified_at,metadata,updated_at) select u.id,null,u.email,u.display_name,u.display_name,u.first_name,u.last_name,'active',u.email_verified_at,jsonb_build_object('account_capabilities',jsonb_build_array('customer','staff'),'created_by_architecture_migration',true),now() from public.users u join public.staff_access s on s.user_id=u.id and s.enabled=true left join public.customers c on c.user_id=u.id where c.id is null on conflict do nothing;
-alter table public.users enable row level security;
-alter table public.staff_access enable row level security;
-revoke all on public.users from anon,authenticated;
-revoke all on public.staff_access from anon,authenticated;
+alter table public.users enable row level security; alter table public.staff_access enable row level security; revoke all on public.users from anon,authenticated; revoke all on public.staff_access from anon,authenticated;
 comment on table public.users is 'Canonical OrbitFS account identity. Customer and staff access attach to this identity.';
 comment on table public.staff_access is 'Optional staff capability attached to a normal user account.';
 comment on column public.customers.user_id is 'Canonical OrbitFS user identity. auth_user_id is legacy compatibility only.';
