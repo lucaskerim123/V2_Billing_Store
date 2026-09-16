@@ -3,63 +3,63 @@
 ## Project
 Deploy this repository as a Next.js application on any Vercel account/team that you control.
 
-The Store itself is not tied to a particular Vercel account. Customer Vercel deployments are separate: the customer connects their own Vercel account/team and the Store uses that connection when deploying OrbitFS.
+The Store is portable between Vercel accounts. It does not depend on the old License API or the old Supabase project. The Store's database is whatever Supabase project you configure with the environment variables below.
 
 ## Required environment variables
 Set these in Vercel for Production, Preview, and Development as appropriate:
 
-`NEXT_PUBLIC_SUPABASE_URL`
+`NEXT_PUBLIC_SUPABASE_URL` — the new Supabase project used by this Store
 
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — publishable/anon key for that project
 
-`SUPABASE_SERVICE_ROLE_KEY`
+`SUPABASE_SERVICE_ROLE_KEY` — server-only service role key for Store database workflows
 
-`MASTER_API_URL` — URL of the independent License Master authority
+`MASTER_API_URL` — URL of the independent License Master V2 authority
 
 `MASTER_API_TIMEOUT_MS` — optional request timeout, default 10000
 
 `BILLING_API_TOKEN` — server-only Store credential for License Master licensing, entitlements, releases and licence control
 
-`DEPLOYER_API_TOKEN` — server-only deployment/update credential for License Master deployment operations when that external deployment authority is enabled
+`DEPLOYER_API_TOKEN` — server-only deployment/update credential for License Master deployment operations
 
-`CRON_SECRET`
+`CRON_SECRET` — random secret used by the scheduled mail reconciliation endpoint
 
-`SITE_URL` or `NEXT_PUBLIC_ORBITFS_STORE_URL` — canonical public Store origin for generated links
+`SITE_URL` or `NEXT_PUBLIC_ORBITFS_STORE_URL` — canonical public Store origin
 
-Never expose any of the server-only credentials as `NEXT_PUBLIC_*` variables.
+Payment/provider secrets used by the Store must also be configured from the names referenced by the application; none should be committed to GitHub. Never expose server-only credentials as `NEXT_PUBLIC_*` variables.
 
 `MASTER_API_TOKEN` is a License Master-side privileged secret. Do not put it in the Billing Store environment.
 
 ## Architecture
-The Store owns customers, orders, billing, payments, support, customer provider connections, customer deployment state and the customer/admin control surfaces.
+The Store owns customers, orders, billing, payments, support, customer provider connections, customer deployment state and customer/admin control surfaces.
 
-The independent OrbitFS License Master owns licence issuance, validation, licence authority, products/entitlements and the authoritative release/deployment control plane.
+The independent OrbitFS License Master owns licence issuance, validation, licence authority, products/entitlements and authoritative release/deployment control.
 
-The Store is a commercial/control plane and License Master is the authoritative licensing plane. The Store must never contain a licence signing private key or become the licence authority.
+All Store-to-Master authority operations go through the License Master V2 API. The Store never contains a licence signing private key and never becomes the licensing authority.
+
+## License flow
+Paid Store orders call License Master V2 through `BILLING_API_TOKEN` for licence issuance. The returned Master licence key/id are recorded against the Store-side order workflow. Validation and licence control are also delegated to Master through its API.
+
+If License Master is unavailable, paid orders can remain pending licence issuance rather than silently becoming locally-authorized licences.
+
+## Release flow
+License Master is the authoritative release source. Billing Store reads published Master releases through the API and exposes only the releases allowed by its Store-side publication/handoff workflow. Customers then deploy through their connected provider credentials.
 
 ## Customer Vercel/Supabase boundary
-Customer provider credentials are stored server-side and are selected per authenticated customer. Deployment requests use the customer's connected Vercel token/team and customer's selected Supabase project. The Store's own Vercel account is never used as the customer's deployment target.
-
-A customer can therefore connect a different Vercel account/team from every other customer without changing the Store deployment.
-
-## Token boundary
-Normal Store licensing calls use `BILLING_API_TOKEN`. Deployment/update calls use `DEPLOYER_API_TOKEN` when routed through License Master. Provider deployment credentials for customer Vercel/Supabase are separate customer connections and must never be sent to the browser.
+Customer provider credentials are stored server-side and selected per authenticated customer. Deployment requests use the customer's connected Vercel token/team and customer's selected Supabase project. The Store's own Vercel account is never used as the customer's deployment target.
 
 ## Vercel
 Use the repository root as the project root and the Next.js framework preset.
 
-Build command: `npm run build`
-
 Install command: `npm ci`
 
-Do not commit `.env.local` or any service token.
+Build command: `npm run build`
 
-Keep the Vercel production branch set to `main`. The repository can be imported into a different Vercel account/team without changing application code; configure the environment variables for that deployment.
+Keep the Vercel production branch set to `main`.
+
+Do not commit `.env.local`, Supabase service-role keys, License Master API tokens, payment secrets or customer provider credentials.
+
+The repository can be imported into a different Vercel account/team without changing application code. After import, add the values from `.env.example` and this document. No old License API URL, old Supabase URL, or old database credentials are required.
 
 ## Free-tier cron
-`vercel.json` schedules `/api/cron/mail-automations` once daily at 03:00 UTC. Vercel sends the configured cron secret as a bearer token; the route also requires `SUPABASE_SERVICE_ROLE_KEY` and returns an explicit configuration error when either secret is missing.
-
-## External integrations
-The Store is designed to continue operating as its own application when License Master is unavailable. Paid orders can remain pending licence issuance until the authority is reachable. Customer deployment state is owned by the Store, while authoritative licence decisions remain external.
-
-Release publication follows the License Master → Billing Store → customer flow: License Master prepares authoritative release data, Billing Store controls customer visibility/publication, and the customer portal exposes the published release for deployment to the customer's connected Vercel/Supabase environment.
+`vercel.json` schedules `/api/cron/mail-automations` once daily at 03:00 UTC. The route requires `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY`.
