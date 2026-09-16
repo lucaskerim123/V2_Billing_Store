@@ -24,14 +24,16 @@ async function configuredStoreOrigin(){
   return normalizeOrigin(DEFAULT_STORE_ORIGIN);
 }
 
-export async function orbitfsStoreOrigin(){
+// requestUrl is retained for compatibility with existing callers but is never
+// used as an origin. Production URLs come only from configured Store settings.
+export async function orbitfsStoreOrigin(_requestUrl?:string){
   const origin=await configuredStoreOrigin();
   if(!origin)throw new Error("SITE_URL or NEXT_PUBLIC_ORBITFS_STORE_URL is required");
   return origin;
 }
 
-export async function orbitfsStoreUrl(path=""){
-  const origin=await orbitfsStoreOrigin();
+export async function orbitfsStoreUrl(path="",requestUrl?:string){
+  const origin=await orbitfsStoreOrigin(requestUrl);
   if(!path)return origin;
   return `${origin}${path.startsWith("/")?path:`/${path}`}`;
 }
