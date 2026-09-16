@@ -8,7 +8,8 @@ const sections:Section[]=[
  {title:"Platform & customer experience",description:"Core identity, account behaviour and the customer-facing presentation layer.",cards:[
   {title:"Site identity & naming",description:"Names used across Store, Portal, Admin, support, authentication and browser titles.",href:"/admin/settings/identity",badge:"Identity",tags:["Names","Titles","Company"]},
   {title:"General system",description:"Registrations, verification, maintenance, account lifecycle and regional defaults.",href:"/admin/settings/general",badge:"Core",tags:["Accounts","Availability","Region"]},
-  {title:"Site customisation",description:"Branding, colours, layout density, homepage content, links and portal presentation.",href:"/admin/settings/customization",badge:"Appearance",tags:["Branding","Colours","Layout"]}
+  {title:"Site customisation",description:"Branding, colours, layout density, homepage content, links and portal presentation.",href:"/admin/settings/customization",badge:"Appearance",tags:["Branding","Colours","Layout"]},
+  {title:"Storefront presentation",description:"Customer Store copy used by the catalogue and checkout surface, including hero and add-on sections.",href:"/admin/settings/store",badge:"Store",tags:["Storefront","Copy","Checkout"]}
  ]},
  {title:"Commerce & billing",description:"Money movement, invoice behaviour, gateways and catalogue defaults.",cards:[
   {title:"Billing & Wallet",description:"Currency, Wallet behaviour, recharge limits, tax and payment rules.",href:"/admin/settings/billing",badge:"Billing",tags:["Currency","Wallet","Tax"]},
