@@ -1,5 +1,6 @@
 -- Keep provider-side payment webhooks aligned with the canonical OrbitFS Store URL.
 -- The Edge Function authenticates cron requests with this private database-held token.
+-- The Store database was rebuilt; this migration must target the rebuilt Supabase project.
 
 insert into public.app_settings(key,value,category,public_read,updated_at)
 select
@@ -21,7 +22,7 @@ begin
     '17 */6 * * *',
     $job$
       select net.http_post(
-        url := 'https://zekejuprrsurjmwgzexw.supabase.co/functions/v1/payment-gateway-canonical-sync',
+        url := 'https://xwbjfhpgsvsjaykelufa.supabase.co/functions/v1/payment-gateway-canonical-sync',
         body := '{}'::jsonb,
         headers := jsonb_build_object(
           'Content-Type','application/json',
