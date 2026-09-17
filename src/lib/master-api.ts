@@ -1,4 +1,4 @@
-const MASTER_ORIGIN="https://incendiarynetworks.cc";
+const MASTER_ORIGIN="https://panel.incendiarynetworks.cc";
 const base=()=>String(process.env.MASTER_API_URL||MASTER_ORIGIN).replace(/\/+$/,"" ).replace(/\/api$/i,"");
 const timeoutMs=()=>Math.max(1000,Number(process.env.MASTER_API_TIMEOUT_MS||10000));
 const getCacheSeconds=()=>Math.min(300,Math.max(0,Number(process.env.MASTER_API_CACHE_SECONDS||30)));
