@@ -3,7 +3,7 @@ import {masterRequest} from "@/lib/master-api";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const SUPABASE_PUBLISHABLE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
-const ALLOWED_PREFIXES=["/api/licenses","/api/license","/api/products","/api/installations","/api/releases","/api/deployments","/api/settings","/api/release-capture","/api/release-control","/api/release-handoff","/api/release-automation-settings"];
+const ALLOWED_PREFIXES=["/api/health","/api/licenses","/api/license","/api/products","/api/installations","/api/releases","/api/deployments","/api/settings","/api/release-capture","/api/release-control","/api/release-handoff","/api/release-automation-settings"];
 
 async function authorize(req:Request){
   const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
