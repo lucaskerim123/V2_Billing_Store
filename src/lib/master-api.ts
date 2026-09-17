@@ -1,9 +1,10 @@
-const base=()=>String(process.env.MASTER_API_URL||"").replace(/\/+$/,"" ).replace(/\/api$/i,"");
+const MASTER_ORIGIN="https://incendiarynetworks.cc";
+const base=()=>String(process.env.MASTER_API_URL||MASTER_ORIGIN).replace(/\/+$/,"" ).replace(/\/api$/i,"");
 const timeoutMs=()=>Math.max(1000,Number(process.env.MASTER_API_TIMEOUT_MS||10000));
 const getCacheSeconds=()=>Math.min(300,Math.max(0,Number(process.env.MASTER_API_CACHE_SECONDS||30)));
 type MasterRole="billing"|"deployer";
-const token=(role:MasterRole="billing")=>String(role==="deployer"?(process.env.DEPLOYER_API_TOKEN||process.env.BILLING_API_TOKEN):(process.env.BILLING_API_TOKEN||process.env.DEPLOYER_API_TOKEN||"")).trim();
-function requireConfig(role:MasterRole="billing"){const url=base(),value=token(role);if(!url)throw new Error("MASTER_API_URL is not configured");if(!value)throw new Error("License Master API token is not configured");return {url,token:value};}
+const token=(role:MasterRole="billing")=>String(role==="deployer"?(process.env.DEPLOYER_API_TOKEN||process.env.BILLING_API_TOKEN||process.env.INTEGRATION_API_TOKEN):(process.env.BILLING_API_TOKEN||process.env.DEPLOYER_API_TOKEN||process.env.INTEGRATION_API_TOKEN||"")).trim();
+function requireConfig(role:MasterRole="billing"){const url=base(),value=token(role);if(!url)throw new Error("MASTER_API_URL is not configured");if(!value)throw new Error("License Master API token is not configured (set BILLING_API_TOKEN or INTEGRATION_API_TOKEN)");return {url,token:value};}
 function masterPath(path:string){
   if(path==="/api/health")return "/api/v1/health";
   if(path==="/api/products"||path.startsWith("/api/products?"))return path.replace(/^\/api\/products/,"/api/v1/products");
