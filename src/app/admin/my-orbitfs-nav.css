@@ -1,0 +1,13 @@
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary{position:relative;display:block;height:100%;margin:0}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary{height:100%;display:flex;align-items:center;gap:7px;padding:0 12px;color:#aab5c1;cursor:pointer;list-style:none;white-space:nowrap}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary::-webkit-details-marker{display:none}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary:hover{color:#fff;background:#131923}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary.active>summary{color:#fff;border-bottom:2px solid var(--page-accent);background:color-mix(in srgb,var(--page-accent) 8%,#090d12)}
+html[data-admin-theme="v3"] .myOrbitFSItems{position:absolute;z-index:1000;top:calc(100% + 1px);left:0;min-width:280px;padding:10px;background:#10151c;border:1px solid #283241;border-radius:0 0 10px 10px;box-shadow:0 14px 35px #0008}
+html[data-admin-theme="v3"] .myOrbitFSGroup{padding:4px 0 8px}
+html[data-admin-theme="v3"] .myOrbitFSGroup+.myOrbitFSGroup{border-top:1px solid #283241;padding-top:9px}
+html[data-admin-theme="v3"] .myOrbitFSGroupTitle{padding:5px 10px 4px;color:#8794a3;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+html[data-admin-theme="v3"] .myOrbitFSGroup a{display:block;padding:8px 10px;color:#c8d0da;text-decoration:none;border-radius:6px;white-space:nowrap}
+html[data-admin-theme="v3"] .myOrbitFSGroup a:hover,html[data-admin-theme="v3"] .myOrbitFSGroup a.active{color:#fff;background:#17211d}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary:not([open]) .myOrbitFSItems{display:none}
+@media(max-width:900px){html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary{display:none}}
