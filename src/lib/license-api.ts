@@ -1,5 +1,6 @@
 import {createClient as createSupabaseClient} from "@supabase/supabase-js";
 import {masterValidate,masterIssue,masterControl} from "@/lib/master-api";
+import {createClient as createBrowserSupabaseClient} from "@/lib/supabase";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const key=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -24,6 +25,14 @@ export const bodyOf=async(req:Request)=>{
   return req.json().catch(()=>({}));
 };
 export {masterValidate,masterIssue,masterControl};
+
+/** Returns the currently signed-in user's Supabase access token for browser-side authenticated admin calls. */
+export const getClientAccessToken=async()=>{
+  const supabase=createBrowserSupabaseClient();
+  const {data,error}=await supabase.auth.getSession();
+  if(error)throw error;
+  return data.session?.access_token||null;
+};
 
 /** The Website is a client of the Master. It never signs, stores, or authorizes licences. */
 export const licensingAuthority="orbitfs-license-master-v2";
