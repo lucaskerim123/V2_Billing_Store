@@ -1,15 +1,15 @@
-import {createClient} from "@/lib/supabase";
+import {createClient as createSupabaseClient} from "@supabase/supabase-js";
 import {masterIssue} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
-const SUPABASE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
+const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 
 async function staff(req:Request){
   const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
   if(!token||!SUPABASE_URL||!SUPABASE_KEY)return null;
-  const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}});
-  const {data:{user},error}=await sb.auth.getUser();if(error||!user)return null;
+  const sb=createSupabaseClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;
   const {data}=await sb.rpc("get_my_staff_access");
   const row=Array.isArray(data)?data[0]:data,p=row?.permissions;
   const ok=p?.all===true||(Array.isArray(p)?p.includes("licenses.manage")||p.includes("license_api.manage"):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]));
@@ -32,7 +32,7 @@ export async function POST(req:Request){
     const customerNumber=String(customer.customer_number||"").trim();
     if(!customerNumber)return Response.json({error:"Customer has no Billing Store customer number"},{status:400});
     const orderRef=String(body.orderRef||`admin:${customerNumber}:${Date.now()}`);
-    const result=await masterIssue({product_code:product,customer_external_id:customerNumber,external_reference:orderRef,expires_at:body.expiresAt||null,components:body.components||{orbitfs_base:product==="orbitfs_base"},max_installations:Number(body.maxInstallations||1),metadata:{source:"billing_store_admin",customerId:String(customer.id),customerNumber,customerEmail:customer.email||null,label}});
+    const result=await masterIssue({product_code:product,customer_external_id:customerNumber,external_reference:orderRef,expires_at:body.expiresAt||null,components:body.components||{[product]:true},max_installations:Number(body.maxInstallations||1),metadata:{source:"billing_store_admin",customerId:String(customer.id),customerNumber,customerEmail:customer.email||null,label}});
     const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
     if(!licenseId)throw new Error("License Master did not return a license ID");
     const key=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||result?.licence?.licenseKey||"");
