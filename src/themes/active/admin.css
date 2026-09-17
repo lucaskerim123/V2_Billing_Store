@@ -1,19 +1,20 @@
 /* Active OrbitFS admin theme. Theme installer rewrites this single import. */
 @import "../V3A/theme.css";
 
-/* Compact collapsible control-plane navigation. */
-html[data-admin-theme="v3"] .adminCollapsibleNav{display:flex;align-items:center;gap:4px;min-width:0}
+/* OrbitFS control-plane navigation: three primary systems plus the normal store/admin areas. */
+html[data-admin-theme="v3"] .adminCollapsibleNav{display:flex;align-items:center;gap:5px;min-width:0;flex:1}
 html[data-admin-theme="v3"] .adminCollapsibleNav>a,
 html[data-admin-theme="v3"] .adminCollapsibleNav>details{flex:0 0 auto}
 html[data-admin-theme="v3"] .adminCollapsibleNav>details{position:relative}
-html[data-admin-theme="v3"] .adminCollapsibleNav>details>summary{list-style:none;display:flex;align-items:center;gap:7px;cursor:pointer;color:#aab5c1!important;border:1px solid transparent;border-radius:7px;padding:8px 9px;font-size:11px;white-space:nowrap}
+html[data-admin-theme="v3"] .adminCollapsibleNav>details>summary{list-style:none;display:flex;align-items:center;gap:7px;cursor:pointer;color:#aab5c1!important;border:1px solid transparent;border-radius:7px;padding:8px 10px;font-size:11px;white-space:nowrap;user-select:none}
 html[data-admin-theme="v3"] .adminCollapsibleNav>details>summary::-webkit-details-marker{display:none}
 html[data-admin-theme="v3"] .adminCollapsibleNav>details>summary:hover{color:#fff!important;background:#131923!important}
 html[data-admin-theme="v3"] .adminCollapsibleNav>details.active>summary{color:#fff!important;background:color-mix(in srgb,var(--page-accent) 8%,#090d12)!important;border-color:color-mix(in srgb,var(--page-accent) 24%,#202936)!important}
 html[data-admin-theme="v3"] .adminNavChevron{font-size:12px;line-height:1;opacity:.7;transition:transform .15s ease}
 html[data-admin-theme="v3"] .adminCollapsibleNav>details[open] .adminNavChevron{transform:rotate(180deg)}
-html[data-admin-theme="v3"] .adminCollapsibleItems{position:absolute;z-index:80;top:calc(100% + 5px);left:0;min-width:205px;padding:5px;background:#0b1017;border:1px solid #283241;border-radius:9px;box-shadow:0 14px 30px rgba(0,0,0,.32)}
-html[data-admin-theme="v3"] .adminCollapsibleItems a{display:block;padding:8px 10px;color:#aab5c1!important;border-radius:6px;font-size:10px;text-decoration:none;white-space:nowrap}
+html[data-admin-theme="v3"] .adminCollapsibleItems{position:absolute;z-index:1000;top:calc(100% + 5px);left:0;min-width:225px;max-width:300px;padding:5px;background:#0b1017;border:1px solid #283241;border-radius:9px;box-shadow:0 14px 30px rgba(0,0,0,.45)}
+html[data-admin-theme="v3"] .adminCollapsibleItems a{display:block;padding:9px 10px;color:#aab5c1!important;border-radius:6px;font-size:10.5px;text-decoration:none;white-space:nowrap}
 html[data-admin-theme="v3"] .adminCollapsibleItems a:hover{color:#fff!important;background:#151c27!important}
 html[data-admin-theme="v3"] .adminCollapsibleItems a.active{color:#fff!important;background:color-mix(in srgb,var(--page-accent) 13%,#101720)!important}
+@media(max-width:1250px){html[data-admin-theme="v3"] .adminCollapsibleNav{gap:2px}html[data-admin-theme="v3"] .adminCollapsibleNav>details>summary{padding-left:7px;padding-right:7px;font-size:10px}}
 @media(max-width:1100px){html[data-admin-theme="v3"] .adminCollapsibleNav{display:none}}
