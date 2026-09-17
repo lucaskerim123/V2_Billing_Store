@@ -1,4 +1,4 @@
-const MASTER_ORIGIN=()=>String(process.env.MASTER_API_URL||"https://incendiarynetworks.cc").trim().replace(/\/+$/,'').replace(/\/api\/v1$/i,'').replace(/\/api$/i,'');
+const MASTER_ORIGIN=()=>String(process.env.MASTER_API_URL||"https://incendiarynetworks.cc/api").trim().replace(/\/+$/,'').replace(/\/api\/v1$/i,'').replace(/\/api$/i,'');
 const timeoutMs=()=>Math.max(1000,Number(process.env.MASTER_API_TIMEOUT_MS||10000));
 const getCacheSeconds=()=>Math.min(300,Math.max(0,Number(process.env.MASTER_API_CACHE_SECONDS||30)));
 type MasterRole="billing"|"deployer";
