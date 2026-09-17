@@ -1,17 +1,18 @@
-const MASTER_ORIGIN="https://panel.incendiarynetworks.cc";
-const base=()=>MASTER_ORIGIN;
+const MASTER_ORIGIN=()=>String(process.env.MASTER_API_URL||"https://incendiarynetworks.cc").trim().replace(/\/+$/," ").replace(/\s+$/," ").replace(/\/api$/i,"").replace(/\s+$/," ").trim();
+const base=()=>MASTER_ORIGIN();
 const timeoutMs=()=>Math.max(1000,Number(process.env.MASTER_API_TIMEOUT_MS||10000));
 const getCacheSeconds=()=>Math.min(300,Math.max(0,Number(process.env.MASTER_API_CACHE_SECONDS||30)));
 type MasterRole="billing"|"deployer";
 const token=(role:MasterRole="billing")=>String(role==="deployer"?(process.env.DEPLOYER_API_TOKEN||process.env.BILLING_API_TOKEN||process.env.INTEGRATION_API_TOKEN):(process.env.BILLING_API_TOKEN||process.env.DEPLOYER_API_TOKEN||process.env.INTEGRATION_API_TOKEN||"")).trim();
 function requireConfig(role:MasterRole="billing"){const url=base(),value=token(role);if(!value)throw new Error("License Master API token is not configured (set BILLING_API_TOKEN or INTEGRATION_API_TOKEN)");return {url,token:value};}
 function masterPath(path:string){
-  if(path==="/api/health")return "/api/v1/health";
-  if(path==="/api/products"||path.startsWith("/api/products?"))return path.replace(/^\/api\/products/,"/api/v1/products");
-  if(path==="/api/licenses"||path.startsWith("/api/licenses?"))return path.replace(/^\/api\/licenses/,"/api/v1/licenses");
-  if(path==="/api/installations"||path.startsWith("/api/installations?"))return path.replace(/^\/api\/installations/,"/api/v1/installations");
-  if(path==="/api/releases"||path.startsWith("/api/releases?")||path.startsWith("/api/releases/"))return path.replace(/^\/api\/releases/,"/api/v1/releases");
-  if(path==="/api/deployments"||path.startsWith("/api/deployments?")||path.startsWith("/api/deployments/"))return path.replace(/^\/api\/deployments/,"/api/v1/deployments");
+  if(path.startsWith("/api/v1/"))return path.replace(/^\/api\/v1\//,"/api/");
+  if(path==="/api/health")return "/api/health";
+  if(path==="/api/products"||path.startsWith("/api/products?"))return path;
+  if(path==="/api/licenses"||path.startsWith("/api/licenses?")||path.startsWith("/api/licenses/"))return path;
+  if(path==="/api/installations"||path.startsWith("/api/installations?"))return path;
+  if(path==="/api/releases"||path.startsWith("/api/releases?")||path.startsWith("/api/releases/"))return path;
+  if(path==="/api/deployments"||path.startsWith("/api/deployments?")||path.startsWith("/api/deployments/"))return path;
   return path;
 }
 export async function masterRequest(path:string,init:RequestInit={},role:MasterRole="billing"){const cfg=requireConfig(role);const headers=new Headers(init.headers);headers.set("authorization",`Bearer ${cfg.token}`);if(!headers.has("content-type")&&init.body)headers.set("content-type","application/json");const controller=init.signal?null:new AbortController();const timer=controller?setTimeout(()=>controller.abort(),timeoutMs()):null;const method=String(init.method||"GET").toUpperCase();const cacheSeconds=getCacheSeconds();const target=masterPath(path);const fetchInit:any={...init,headers,signal:init.signal||controller?.signal};if(method==="GET"&&cacheSeconds>0)fetchInit.next={revalidate:cacheSeconds};else fetchInit.cache="no-store";try{const response=await fetch(`${cfg.url}${target}`,fetchInit);const text=await response.text();let data:any={};try{data=text?JSON.parse(text):{}}catch{data={error:text||"License Master returned an invalid response"}}if(!response.ok)throw Object.assign(new Error(data?.error||`License Master request failed (${response.status})`),{status:response.status,code:data?.code});return data;}catch(error){if(error instanceof Error&&error.name==="AbortError")throw new Error(`License Master request timed out after ${timeoutMs()}ms`);throw error;}finally{if(timer)clearTimeout(timer);}}
@@ -22,7 +23,7 @@ export const masterProducts=()=>masterRequest("/api/products",{method:"GET"});
 export const masterLicenses=()=>masterRequest("/api/licenses",{method:"GET"});
 export const masterDeployments=()=>masterRequest("/api/deployments",{method:"GET"},"deployer");
 export const masterReleases=(product="orbitfs_base",channel="stable",type="base")=>masterRequest(`/api/releases?product=${encodeURIComponent(product)}&channel=${encodeURIComponent(channel)}&type=${encodeURIComponent(type)}`,{method:"GET"});
-export async function masterLicenseValidate(input:any){return masterRequest("/api/v1/licenses/validate",{method:"POST",body:JSON.stringify({license_key:input.licenseKey||input.license_key,installation_id:input.installationId||input.installation_id,product:input.product||input.product_code||"orbitfs_base",product_version:input.appVersion||input.product_version,metadata:input.metadata||{}})});}
+export async function masterLicenseValidate(input:any){return masterRequest("/api/licenses/validate",{method:"POST",body:JSON.stringify({license_key:input.licenseKey||input.license_key,installation_id:input.installationId||input.installation_id,product:input.product||input.product_code||"orbitfs_base",product_version:input.appVersion||input.product_version,metadata:input.metadata||{}})});}
 export const masterValidate=masterLicenseValidate;
 export async function masterIssue(input:any){return masterRequest("/api/licenses",{method:"POST",headers:{"x-orbitfs-order-ref":String(input.external_reference||input.orderRef||"")},body:JSON.stringify({external_reference:input.external_reference||input.orderRef,customer_external_id:input.customer_external_id||input.customerRef,product:input.product||input.product_code||input.productCode||"orbitfs_base",expires_at:input.expires_at||input.expiresAt||null,metadata:input.metadata||{}})},"billing");}
 export async function masterControl(id:string,input:any){const action=String(input?.action||"").toLowerCase();return masterRequest(`/api/license/${encodeURIComponent(id)}/control`,{method:"POST",body:JSON.stringify({...input,action})},"billing");}
@@ -34,5 +35,5 @@ export async function masterControlRelease(id:string,status:string){const action
 export async function masterDownloadReleaseArtifact(id:string){return masterBinaryRequest(`/api/releases/${encodeURIComponent(id)}/artifact`,{method:"GET"},"billing");}
 export async function masterUploadReleaseArtifact(id:string,bytes:Buffer,contentType="application/octet-stream"){return masterRequest(`/api/releases/${encodeURIComponent(id)}/artifact`,{method:"POST",headers:{"content-type":contentType,"x-artifact-name":`orbitfs-release-${id}.bin`},body:bytes as any},"billing");}
 export async function masterExecuteDeployment(input:any){return masterRequest("/api/deployments",{method:"POST",body:JSON.stringify({action:input.action||"deploy",releaseId:input.releaseId||input.release_id,vercelAccessToken:input.vercelAccessToken||input.vercel_access_token,vercelProjectId:input.vercelProjectId||input.vercel_project_id||input.vercelProjectName||input.vercel_project_name,vercelTeamId:input.vercelTeamId||input.vercel_team_id,env:input.env||{}})},"deployer");}
-export async function masterSyncDeployment(input:any){const deploymentId=String(input.vercelDeploymentId||input.vercel_deployment_id||input.deploymentId||input.deployment_id||"").trim();if(!deploymentId)throw new Error("vercelDeploymentId is required");return masterRequest("/api/v1/deployments/sync",{method:"POST",body:JSON.stringify(input)},"deployer");}
+export async function masterSyncDeployment(input:any){const deploymentId=String(input.vercelDeploymentId||input.vercel_deployment_id||input.deploymentId||input.deployment_id||"").trim();if(!deploymentId)throw new Error("vercelDeploymentId is required");return masterRequest("/api/deployments/sync",{method:"POST",body:JSON.stringify(input)},"deployer");}
 export const licensingAuthority="orbitfs-license-master-v2";
