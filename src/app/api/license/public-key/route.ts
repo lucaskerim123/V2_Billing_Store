@@ -1,6 +1,6 @@
 import {cors,reply} from "@/lib/license-api";
 
-const MASTER_ORIGIN="https://panel.incendiarynetworks.cc";
+const MASTER_ORIGIN="https://incendiarynetworks.cc/api";
 
 export async function GET(){
   try{
