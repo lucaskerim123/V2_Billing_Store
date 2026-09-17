@@ -21,4 +21,8 @@ export async function masterUpdateRelease(id:string,input:any){return masterRequ
 export async function masterPublishRelease(id:string){return masterRequest(`/api/releases/${encodeURIComponent(id)}/publish`,{method:"POST"},"billing");}
 export async function masterValidateRelease(id:string){return masterRequest(`/api/releases/${encodeURIComponent(id)}/validate`,{method:"POST"},"billing");}
 export async function masterControlRelease(id:string,status:string){const action=status==="paused"?"pause":status==="withdrawn"?"withdraw":status;return masterRequest(`/api/releases/${encodeURIComponent(id)}/control`,{method:"POST",body:JSON.stringify({action})},"billing");}
+export async function masterDownloadReleaseArtifact(id:string){return masterRequest(`/api/releases/${encodeURIComponent(id)}/artifact`,{method:"GET"},"deployer");}
+export async function masterUploadReleaseArtifact(id:string,input:any){return masterRequest(`/api/releases/${encodeURIComponent(id)}/artifact`,{method:"POST",body:JSON.stringify(input)},"deployer");}
+export async function masterExecuteDeployment(input:any){return masterRequest("/api/deployments/execute",{method:"POST",body:JSON.stringify(input)},"deployer");}
+export async function masterSyncDeployment(input:any){return masterRequest("/api/deployments/sync",{method:"POST",body:JSON.stringify(input)},"deployer");}
 export const licensingAuthority="orbitfs-license-master-v2";
