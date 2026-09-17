@@ -20,6 +20,7 @@
 @import "../../app/admin/admin-v3-premium-palette.css";
 @import "../../app/admin/admin-v3-alert-isolation.css";
 @import "../../app/admin/admin-v3-navigation.css";
+@import "../../app/admin/orbitfs-control.css";
 @import "./mobile.css";
 @import "../auth.css";
 @import "../auth-fixes.css";
