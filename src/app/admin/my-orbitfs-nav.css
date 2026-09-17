@@ -1,13 +1,80 @@
-html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary{position:relative;display:block;height:100%;margin:0}
-html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary{height:100%;display:flex;align-items:center;gap:7px;padding:0 12px;color:#aab5c1;cursor:pointer;list-style:none;white-space:nowrap}
-html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary::-webkit-details-marker{display:none}
-html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary:hover{color:#fff;background:#131923}
-html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary.active>summary{color:#fff;border-bottom:2px solid var(--page-accent);background:color-mix(in srgb,var(--page-accent) 8%,#090d12)}
-html[data-admin-theme="v3"] .myOrbitFSItems{position:absolute;z-index:1000;top:calc(100% + 1px);left:0;min-width:280px;padding:10px;background:#10151c;border:1px solid #283241;border-radius:0 0 10px 10px;box-shadow:0 14px 35px #0008}
-html[data-admin-theme="v3"] .myOrbitFSGroup{padding:4px 0 8px}
-html[data-admin-theme="v3"] .myOrbitFSGroup+.myOrbitFSGroup{border-top:1px solid #283241;padding-top:9px}
-html[data-admin-theme="v3"] .myOrbitFSGroupTitle{padding:5px 10px 4px;color:#8794a3;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
-html[data-admin-theme="v3"] .myOrbitFSGroup a{display:block;padding:8px 10px;color:#c8d0da;text-decoration:none;border-radius:6px;white-space:nowrap}
-html[data-admin-theme="v3"] .myOrbitFSGroup a:hover,html[data-admin-theme="v3"] .myOrbitFSGroup a.active{color:#fff;background:#17211d}
-html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary:not([open]) .myOrbitFSItems{display:none}
-@media(max-width:900px){html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary{display:none}}
+/* My OrbitFS uses the exact same collapsible-nav geometry and interaction model as the other admin navigation groups. */
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary{
+  position:relative!important;
+  display:block!important;
+  flex:0 0 auto!important;
+  height:100%!important;
+  margin:0!important;
+  padding:0!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary{
+  height:100%!important;
+  min-height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  padding:0 9px!important;
+  border:0!important;
+  border-bottom:2px solid transparent!important;
+  list-style:none!important;
+  cursor:pointer!important;
+  color:#aab5c1!important;
+  background:transparent!important;
+  font:inherit!important;
+  white-space:nowrap!important;
+  user-select:none!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary::-webkit-details-marker{display:none!important}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary>summary:hover,
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary.active>summary{
+  color:#fff!important;
+  background:#131923!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary.active>summary{
+  border-bottom-color:var(--page-accent)!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary .adminNavChevron{
+  opacity:.75!important;
+  font-size:11px!important;
+  transition:transform .15s ease!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary[open] .adminNavChevron{transform:rotate(180deg)!important}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary .myOrbitFSItems{
+  position:absolute!important;
+  top:calc(100% + 3px)!important;
+  left:0!important;
+  z-index:300!important;
+  display:grid!important;
+  min-width:280px!important;
+  padding:6px!important;
+  gap:2px!important;
+  border:1px solid #303c4b!important;
+  border-radius:8px!important;
+  background:#111821!important;
+  box-shadow:0 18px 42px #000b!important;
+  pointer-events:auto!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary .myOrbitFSItems a{
+  display:flex!important;
+  align-items:center!important;
+  min-height:36px!important;
+  padding:7px 10px!important;
+  border:0!important;
+  border-radius:6px!important;
+  color:#c7d0da!important;
+  background:transparent!important;
+  text-decoration:none!important;
+  white-space:nowrap!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary .myOrbitFSItems a:hover,
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary .myOrbitFSItems a.active{
+  color:#fff!important;
+  background:#202936!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary .myOrbitFSItems a.active{
+  box-shadow:inset 2px 0 var(--page-accent)!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary:not([open]) .myOrbitFSItems{display:none!important}
+@media(max-width:760px){
+  html[data-admin-theme="v3"] .adminV3Primary details.myOrbitFSPrimary{display:none!important}
+}
