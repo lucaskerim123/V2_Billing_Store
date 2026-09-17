@@ -7,8 +7,9 @@ The Billing Store is the commercial and customer control plane. It owns products
 Server-only:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `MASTER_API_URL`
-- `MASTER_API_TOKEN`
+- `MASTER_API_URL` — use `https://incendiarynetworks.cc/api`
+- `BILLING_API_TOKEN` — License Master credential for licence/release operations
+- `DEPLOYER_API_TOKEN` — License Master credential for deployment/update operations
 - `MASTER_API_TIMEOUT_MS` (optional; defaults to 10000 ms)
 - `PANEL_RELEASE_PUBLISHER_TOKEN` if an internal publisher endpoint is enabled
 - `CRON_SECRET`
@@ -18,7 +19,7 @@ Browser-safe:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-Never put the Master token, publisher token, Supabase service-role key, provider access/refresh tokens, installation secrets or database passwords in `NEXT_PUBLIC_*` variables.
+Never put the Master tokens, publisher token, Supabase service-role key, provider access/refresh tokens, installation secrets or database passwords in `NEXT_PUBLIC_*` variables.
 
 ## 2. Master API connection gate
 
@@ -66,7 +67,7 @@ If an existing customer Supabase project is selected, validate that the project 
 
 The customer connects the Vercel account/team used for their OrbitFS installation. The Store uses the customer's provider connection to create/update the customer's Vercel project. Store credentials and provider tokens remain server-side.
 
-The deployed Panel must receive only the environment/configuration it needs. Never inject Store service-role credentials or the Store Master API token into the customer deployment.
+The deployed Panel must receive only the environment/configuration it needs. Never inject Store service-role credentials or the Store Master API tokens into the customer deployment.
 
 ## 7. Initial Base deployment sequence
 
@@ -89,7 +90,7 @@ Do not silently bypass a disabled capability in a route or background worker.
 ## 10. Final Base release checklist
 
 - Production Master API reachable.
-- Master token configured server-side.
+- Master tokens configured server-side.
 - Published `orbitfs_base` release exists.
 - Artifact download uses authenticated Master API access.
 - Customer entitlement is checked before deployment.
