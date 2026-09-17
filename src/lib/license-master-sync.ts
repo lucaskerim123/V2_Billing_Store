@@ -13,8 +13,9 @@ export async function syncPaidOrderToLicenseMaster(orderId:string){
   const {data:order,error:orderError}=await db.from("orders").select("id,order_number,auth_user_id,status,payment_status,fulfillment_status").eq("id",id).maybeSingle();
   if(orderError)throw orderError;
   if(!order)return {ok:false,skipped:true,reason:"order_not_found"};
-  const paid=String(order.payment_status||"").toLowerCase().startsWith("paid")||String(order.status||"").toLowerCase()==="active";
-  if(!paid)return {ok:false,skipped:true,reason:"order_not_paid"};
+  const status=String(order.status||"").toLowerCase();
+  const paid=String(order.payment_status||"").toLowerCase().startsWith("paid");
+  if(!paid||status!=="active")return {ok:false,skipped:true,reason:status==="pending_approval"?"order_pending_approval":"order_not_accepted"};
   if(!order.auth_user_id)throw new Error("Paid order has no customer user id");
 
   // License Master must receive the Billing Store customer number, never the Supabase/Auth UUID.
