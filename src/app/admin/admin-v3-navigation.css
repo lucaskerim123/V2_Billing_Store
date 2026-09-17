@@ -1,0 +1,89 @@
+/* OrbitFS Admin V3 navigation authority layer. Keep system groups visible and usable on desktop/tablet. */
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav{
+  display:flex!important;
+  align-items:stretch!important;
+  gap:4px!important;
+  min-width:0!important;
+  overflow:visible!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > a,
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > details{
+  flex:0 0 auto!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > details{
+  position:relative!important;
+  height:100%!important;
+  margin:0!important;
+  padding:0!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > details > summary{
+  height:100%!important;
+  min-height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  padding:0 9px!important;
+  border:0!important;
+  border-bottom:2px solid transparent!important;
+  list-style:none!important;
+  cursor:pointer!important;
+  color:#aab5c1!important;
+  background:transparent!important;
+  font:inherit!important;
+  white-space:nowrap!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > details > summary::-webkit-details-marker{display:none!important}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > details > summary:hover,
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > details.active > summary{
+  color:#fff!important;
+  background:#131923!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > details.active > summary{
+  border-bottom-color:var(--page-accent)!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav .adminNavChevron{
+  opacity:.75!important;
+  font-size:11px!important;
+  transition:transform .15s ease!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav > details[open] .adminNavChevron{transform:rotate(180deg)!important}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav .adminCollapsibleItems{
+  position:absolute!important;
+  top:calc(100% + 3px)!important;
+  left:0!important;
+  z-index:300!important;
+  display:grid!important;
+  min-width:210px!important;
+  padding:6px!important;
+  gap:2px!important;
+  border:1px solid #303c4b!important;
+  border-radius:8px!important;
+  background:#111821!important;
+  box-shadow:0 18px 42px #000b!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav .adminCollapsibleItems a{
+  display:flex!important;
+  align-items:center!important;
+  min-height:36px!important;
+  padding:7px 10px!important;
+  border:0!important;
+  border-radius:6px!important;
+  color:#c7d0da!important;
+  background:transparent!important;
+  text-decoration:none!important;
+  white-space:nowrap!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav .adminCollapsibleItems a:hover,
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav .adminCollapsibleItems a.active{
+  color:#fff!important;
+  background:#202936!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav .adminCollapsibleItems a.active{
+  box-shadow:inset 2px 0 var(--page-accent)!important;
+}
+html[data-admin-theme="v3"] .adminV3MobileMenuButton,
+html[data-admin-theme="v3"] .adminV3MobileMenu{display:none!important}
+@media(max-width:760px){
+  html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav{display:none!important}
+  html[data-admin-theme="v3"] .adminV3MobileMenuButton{display:inline-flex!important}
+}
