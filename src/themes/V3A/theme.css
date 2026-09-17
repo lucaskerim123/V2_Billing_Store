@@ -12,12 +12,10 @@
 @import "../../app/admin/settings-accessibility-v3.css";
 @import "../../app/admin/admin-v3-accent.css";
 @import "../../app/admin/admin-v3-color-zones.css";
-@import "../../app/admin/admin-v3-dark.css";
 @import "../../app/admin/admin-v3-pages.css";
 @import "../../app/admin/admin-v3-area-polish.css";
 @import "../../app/admin/admin-v3-global.css";
 @import "../../app/admin/admin-v3-compact-density.css";
-@import "../../app/admin/admin-v3-premium-palette.css";
 @import "../../app/admin/admin-v3-alert-isolation.css";
 @import "../../app/admin/admin-v3-navigation.css";
 @import "../../app/admin/orbitfs-control.css";
