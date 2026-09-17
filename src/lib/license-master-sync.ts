@@ -53,6 +53,9 @@ export async function syncPaidOrderToLicenseMaster(orderId:string){
       const bindingWrite=binding?.id?await db.from("license_bindings").update(bindingPayload).eq("id",binding.id):await db.from("license_bindings").insert(bindingPayload);
       if(bindingWrite.error)throw bindingWrite.error;
 
+      const {error:entitlementError}=await db.from("download_entitlements").upsert({auth_user_id:order.auth_user_id,order_id:id,order_item_id:item.id,product_id:item.product_id,status:"active",granted_at:now,revoked_at:null,reason:"License Master provisioning",metadata:{license_id:licenseId,license_product_key:product,source:"license_master"},source_order_status:String(order.status||order.payment_status||"")},{onConflict:"auth_user_id,order_item_id"});
+      if(entitlementError)throw entitlementError;
+
       results.push({product,orderItemId:item.id,licenseId,licenseKey:licenseKey||null,state:upserted.state,reused:Boolean(result?.idempotent)});fulfilled++;
     }catch(error:any){
       failed++;await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,state:"failed",attempt_count:Number(existing?.attempt_count||0)+1,last_error:String(error?.message||"License fulfilment failed").slice(0,1000),metadata:{...(existing?.metadata||{}),license_product_key:product,customer_number:customerNumber}},{onConflict:"order_item_id"});
