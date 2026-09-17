@@ -9,7 +9,7 @@ async function staff(req:Request){
   const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
   if(!token||!SUPABASE_URL||!SUPABASE_KEY)return null;
   const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}});
-  const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;
+  const {data:{user},error}=await sb.auth.getUser();if(error||!user)return null;
   const {data}=await sb.rpc("get_my_staff_access");
   const row=Array.isArray(data)?data[0]:data,p=row?.permissions;
   const ok=p?.all===true||(Array.isArray(p)?p.includes("licenses.manage")||p.includes("license_api.manage"):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]));
@@ -26,9 +26,10 @@ export async function POST(req:Request){
     if(!customerId)return Response.json({error:"Customer is required"},{status:400});
     const {data:customer,error:customerError}=await actor.sb.from("customers").select("id,auth_user_id,user_id,customer_number,name,email").eq("id",customerId).maybeSingle();
     if(customerError)throw customerError;
-    const userId=String(customer?.user_id||customer?.auth_user_id||"").trim();
+    if(!customer)return Response.json({error:"Customer not found"},{status:404});
+    const userId=String(customer.user_id||customer.auth_user_id||"").trim();
     if(!userId)return Response.json({error:"Customer has no linked account"},{status:400});
-    const customerNumber=String(customer?.customer_number||"").trim();
+    const customerNumber=String(customer.customer_number||"").trim();
     if(!customerNumber)return Response.json({error:"Customer has no Billing Store customer number"},{status:400});
     const orderRef=String(body.orderRef||`admin:${customerNumber}:${Date.now()}`);
     const result=await masterIssue({product_code:product,customer_external_id:customerNumber,external_reference:orderRef,expires_at:body.expiresAt||null,components:body.components||{orbitfs_base:product==="orbitfs_base"},max_installations:Number(body.maxInstallations||1),metadata:{source:"billing_store_admin",customerId:String(customer.id),customerNumber,customerEmail:customer.email||null,label}});
