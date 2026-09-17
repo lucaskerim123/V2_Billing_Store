@@ -5,7 +5,10 @@ import Link from "next/link";
 
 export default function LicenseMasterSettings(){
   const [data,setData]=useState<any>(null),[busy,setBusy]=useState(false),[msg,setMsg]=useState("");
-  async function headers(){const {data:{session}}=await createClient().auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{} }
+  async function headers(): Promise<Record<string,string>> {
+    const {data:{session}}=await createClient().auth.getSession();
+    return session?.access_token ? {Authorization:`Bearer ${session.access_token}`} : {};
+  }
   async function load(test=false){
     setBusy(true);setMsg("");
     try{
