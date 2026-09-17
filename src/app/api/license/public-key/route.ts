@@ -1,9 +1,10 @@
 import {cors,reply} from "@/lib/license-api";
 
+const MASTER_ORIGIN="https://incendiarynetworks.cc";
+
 export async function GET(){
   try{
-    const base=String(process.env.MASTER_API_URL||"").replace(/\/$/,"");
-    if(!base)throw Object.assign(new Error("MASTER_API_URL is not configured"),{status:503});
+    const base=String(process.env.MASTER_API_URL||MASTER_ORIGIN).replace(/\/+$/i,"").replace(/\/api$/i,"");
     const response=await fetch(`${base}/api/license/public-key`,{cache:"no-store"});
     const key=await response.text();
     if(!response.ok)throw Object.assign(new Error(key||"Master public key unavailable"),{status:response.status});
