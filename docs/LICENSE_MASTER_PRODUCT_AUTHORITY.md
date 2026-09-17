@@ -15,9 +15,10 @@ The Master catalogue controls product name, slug, description, active/public/pur
 
 Billing requires these server-only environment variables:
 
-- `MASTER_API_URL` — production License Master URL
-- `MASTER_API_TOKEN` — server-only Master integration token
-- `MASTER_API_TIMEOUT_MS` — optional request timeout
+- `MASTER_API_URL` — production License Master URL. Use `https://incendiarynetworks.cc/api` (the client normalizes an optional trailing `/api`).
+- `BILLING_API_TOKEN` — server-only License Master managed API credential with the `license.issue` scope (or `license.manage`).
+- `DEPLOYER_API_TOKEN` — server-only License Master managed API credential for deployment operations when those operations are used.
+- `MASTER_API_TIMEOUT_MS` — optional request timeout.
 
 The Store calls the Master product endpoint at `/api/v1/products`. The Master catch-all routes this path to the database-backed product catalogue (`license_products`). `/api/products` remains available as the legacy equivalent.
 
@@ -33,4 +34,4 @@ Before an order/invoice is created, the selected product is synchronised from th
 4. The local row is a mirror/cache and is synchronised from Master before checkout.
 5. Licence issuance, validation, activation, component entitlement and installation authority remain with License Master.
 6. Billing owns customers, orders, invoices, payment state and commercial fulfilment.
-7. Never expose `MASTER_API_TOKEN` to browser code.
+7. Never expose `BILLING_API_TOKEN` or `DEPLOYER_API_TOKEN` to browser code.
