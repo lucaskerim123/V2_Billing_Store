@@ -54,10 +54,10 @@ export async function masterRequest(path: string, init: RequestInit = {}, role: 
   if (!headers.has("content-type") && init.body) headers.set("content-type", "application/json");
 
   const method = String(init.method || "GET").toUpperCase();
-  const fetchInit: RequestInit & { next?: { revalidate: number } } = { ...init, headers };
+  const fetchInit: RequestInit = { ...init, headers };
 
   if (method === "GET" && getCacheSeconds() > 0) {
-    fetchInit.next = { revalidate: getCacheSeconds() };
+    (fetchInit as any).next = { revalidate: getCacheSeconds() };
   } else {
     fetchInit.cache = "no-store";
   }
