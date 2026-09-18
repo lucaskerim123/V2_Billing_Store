@@ -1,10 +1,4 @@
-const MASTER_ORIGIN = () =>
-  String(process.env.MASTER_API_URL || "https://incendiarynetworks.cc")
-    .trim()
-    .replace(/\/+$/, "")
-    .replace(/\/api\/v1$/i, "")
-    .replace(/\/api$/i, "");
-
+const MASTER_API_BASE = "https://incendiarynetworks.cc/api";
 const timeoutMs = () => Math.max(1000, Number(process.env.MASTER_API_TIMEOUT_MS || 10000));
 const getCacheSeconds = () => Math.min(300, Math.max(0, Number(process.env.MASTER_API_CACHE_SECONDS || 30)));
 
@@ -18,11 +12,10 @@ const token = (role: MasterRole = "billing") =>
   ).trim();
 
 function requireConfig(role: MasterRole = "billing") {
-  const url = MASTER_ORIGIN();
   const value = token(role);
   const variable = role === "deployer" ? "DEPLOYER_API_TOKEN" : "BILLING_API_TOKEN";
   if (!value) throw new Error(`License Master API token is not configured (set ${variable})`);
-  return { url, value };
+  return { url: MASTER_API_BASE, value };
 }
 
 function masterPath(path: string) {
