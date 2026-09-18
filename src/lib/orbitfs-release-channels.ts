@@ -7,6 +7,7 @@ export async function customerReleaseChannels(userId:string){
     .eq("user_id",userId);
   if(error)throw error;
   const rows=(data||[]).map((x:any)=>x.orbitfs_release_channels).filter((x:any)=>x?.enabled&&x?.customer_visible);
+  if(!rows.length)return ["stable"];
   return rows.map((x:any)=>String(x.channel)).filter(Boolean);
 }
 
