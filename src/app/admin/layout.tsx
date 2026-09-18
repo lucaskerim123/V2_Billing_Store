@@ -19,6 +19,7 @@ const permissionAliases:Record<string,string[]>={
 const orbitfsGroup:NavGroup={label:"OrbitFS Control",shortLabel:"OrbitFS Control",match:path=>path.startsWith("/admin/orbitfs")||path.startsWith("/admin/license-controller")||path.startsWith("/admin/licensing")||path.startsWith("/admin/settings/license-master")||path.startsWith("/admin/releases"),items:[
   {label:"Base Release",href:"/admin/orbitfs/base-deployment",permission:"licenses.manage"},
   {label:"Update Release System",href:"/admin/orbitfs/update-release-deployer",permission:"licenses.manage"},
+  {label:"Release Channels",href:"/admin/orbitfs/release-channels",permission:"licenses.manage"},
   {label:"License System",href:"/admin/licensing",permission:"licenses.view"},
   {label:"Product Connections",href:"/admin/settings/license-master",permission:"licenses.manage"}
 ]};
