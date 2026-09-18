@@ -11,7 +11,7 @@ export async function PATCH(req:Request){
     if(!id)throw Object.assign(new Error("Release ID is required"),{status:400});
     const patch:any={};
     for(const key of Object.keys(body)){if(allowed.has(key))patch[key]=body[key];}
-    const result=await masterRequest(`/api/releases/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(patch)},"billing");
+    const result=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(patch)},"billing");
     return Response.json(result,{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
