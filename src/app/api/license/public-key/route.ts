@@ -4,7 +4,7 @@ const MASTER_ORIGIN="https://api.incendiarynetworks.cc";
 
 export async function GET(){
   try{
-    const base=String(process.env.MASTER_API_URL||MASTER_ORIGIN).replace(/\/+$/i,"").replace(/\/api$/i,"");
+    const base=MASTER_ORIGIN;
     const response=await fetch(`${base}/api/license/public-key`,{cache:"no-store"});
     const key=await response.text();
     if(!response.ok)throw Object.assign(new Error(key||"Master public key unavailable"),{status:response.status});
