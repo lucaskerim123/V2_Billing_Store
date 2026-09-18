@@ -15,7 +15,7 @@ The Master catalogue controls product name, slug, description, active/public/pur
 
 Billing requires these server-only environment variables:
 
-- `MASTER_API_URL` — production License Master URL. Use `https://incendiarynetworks.cc/api` (the client normalizes an optional trailing `/api`).
+The production License Master API authority is fixed in code at `https://api.incendiarynetworks.cc`. `MASTER_API_URL` is not used by the Billing Store.
 - `BILLING_API_TOKEN` — server-only License Master managed API credential with the `license.issue` scope (or `license.manage`).
 - `DEPLOYER_API_TOKEN` — server-only License Master managed API credential for deployment operations when those operations are used.
 - `MASTER_API_TIMEOUT_MS` — optional request timeout.
