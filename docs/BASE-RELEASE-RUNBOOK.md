@@ -7,7 +7,7 @@ The Billing Store is the commercial and customer control plane. It owns products
 Server-only:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `MASTER_API_URL` — use `https://incendiarynetworks.cc/api`
+- License Master API authority is fixed at `https://api.incendiarynetworks.cc` in `src/lib/master-api.ts`.
 - `BILLING_API_TOKEN` — License Master credential for licence/release operations
 - `DEPLOYER_API_TOKEN` — License Master credential for deployment/update operations
 - `MASTER_API_TIMEOUT_MS` (optional; defaults to 10000 ms)
