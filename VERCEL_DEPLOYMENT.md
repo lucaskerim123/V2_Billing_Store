@@ -14,7 +14,7 @@ Set these in Vercel for Production, Preview, and Development as appropriate:
 
 `SUPABASE_SERVICE_ROLE_KEY` — server-only service role key for Store database workflows
 
-`MASTER_API_URL` — URL of the independent License Master V2 authority
+License Master API authority is fixed at `https://api.incendiarynetworks.cc`; `MASTER_API_URL` is not required.
 
 `MASTER_API_TIMEOUT_MS` — optional request timeout, default 10000
 
