@@ -8,7 +8,7 @@ async function currentUser(req:Request){const token=(req.headers.get("authorizat
 export async function GET(req:Request){
  try{
   const user=await currentUser(req),db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}}),q=(p:any)=>Promise.resolve(p).catch(()=>({data:[],error:null}));
-  const [bindings,connections,installations,settings,bundles,masterLicenseResult,masterBaseResult,masterUpdateResult,customerChannelsResult]=await Promise.all([
+  const [bindings,connections,installations,settings,bundles,masterLicenseResult,masterBaseResult,masterUpdateResult]=await Promise.all([
    q(db.from("license_bindings").select("*").eq("auth_user_id",user.id).is("archived_at",null).order("created_at",{ascending:false})),
    q(db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_installations").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
