@@ -6,9 +6,10 @@ export async function customerReleaseChannels(userId:string){
     .select("channel_id,orbitfs_release_channels!inner(channel,enabled,customer_visible)")
     .eq("user_id",userId);
   if(error)throw error;
-  const rows=(data||[]).map((x:any)=>x.orbitfs_release_channels).filter((x:any)=>x?.enabled&&x?.customer_visible);
-  if(!rows.length)return ["stable"];
-  return rows.map((x:any)=>String(x.channel)).filter(Boolean);
+  const explicit=(data||[]).map((x:any)=>x.orbitfs_release_channels)
+    .filter((x:any)=>x?.enabled&&x?.customer_visible)
+    .map((x:any)=>String(x.channel)).filter(Boolean);
+  return [...new Set(["stable",...explicit])];
 }
 
 export async function customerCanUseReleaseChannel(userId:string,channel:string){
