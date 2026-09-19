@@ -29,7 +29,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string){
     if(existing?.license_id&&existing.state==="fulfilled"){results.push({product,orderItemId:item.id,licenseId:existing.license_id,reused:true,state:"fulfilled"});fulfilled++;continue}
     try{
       const components=product==="orbitfs_base"?{orbitfs_base:true}:{[product]:true};
-      const result=await masterIssue({product_code:product,customer_external_id:customerNumber,external_reference:ref,components,metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),customerId,customerNumber,licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
+      const result=await masterIssue({product_code:product,customer_external_id:customerId,external_reference:ref,components,metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),customerId,customerNumber,licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
       const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
       const licenseKey=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||result?.licence?.licenseKey||"");
       if(!licenseId)throw new Error("License Master did not return a licence/binding id");
