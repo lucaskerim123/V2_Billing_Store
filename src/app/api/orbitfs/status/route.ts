@@ -1,5 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
 import {masterLicenses,masterReleases} from "@/lib/master-api";
+import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 
 export const dynamic="force-dynamic";
 const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
@@ -15,10 +16,9 @@ export async function GET(req:Request){
    q(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle()),
    q(db.from("orbitfs_release_bundles").select("id,version,channel,release_channel,status,title,description,changelog,customer_notes,severity,required,rollout,minimum_version,rollback_version,schema_version,checkpoint_required,components,published_at,updated_at").eq("status","published").order("published_at",{ascending:false}).limit(50)),
    masterLicenses().catch(()=>({licenses:[]})),
-   q(db.from("orbitfs_release_channel_access").select("channel_id,orbitfs_release_channels!inner(channel,enabled,customer_visible)").eq("user_id",user.id))
+   customerReleaseChannels(user.id).catch(()=>["stable"])
   ]);
-  const accessRows=channelAccess.data||[];
-  const allowedChannels=[...new Set(accessRows.map((x:any)=>x?.orbitfs_release_channels?.channel).filter((x:any)=>x))].map(String);
+  const allowedChannels=[...new Set((channelAccess||[]).map((x:any)=>String(x)))];
   if(!allowedChannels.length)allowedChannels.push("stable");
   const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>[masterReleases("orbitfs_base",channel,"base").catch(()=>({releases:[]})),masterReleases("orbitfs_base",channel,"update").catch(()=>({releases:[]}))]));
   const installationRows=installations.data||[],bindingRows=bindings.data||[],masterLicensesRows=masterLicenseResult?.licenses||[],masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.releases||[]);
