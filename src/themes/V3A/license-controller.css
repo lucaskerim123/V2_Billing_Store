@@ -1,0 +1,14 @@
+/* OrbitFS admin licence controller layout. */
+html[data-admin-theme="v3"] .licenseControllerPage{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:28px 0 48px;min-width:0}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHero{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+html[data-admin-theme="v3"] .licenseControllerPage .lmCard{box-sizing:border-box;min-width:0;overflow:hidden}
+html[data-admin-theme="v3"] .licenseControllerPage .lmRelease{min-width:0;overflow:hidden}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV>div{min-width:0}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV b{display:block;overflow-wrap:anywhere;word-break:break-word}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHeroActions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:760px){
+html[data-admin-theme="v3"] .licenseControllerPage{width:100%;padding:16px 12px 32px}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHero{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV{grid-template-columns:minmax(0,1fr)}
+}
