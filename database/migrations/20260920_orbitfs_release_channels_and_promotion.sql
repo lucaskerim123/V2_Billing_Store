@@ -38,5 +38,14 @@ create index if not exists orbitfs_release_channel_access_audit_channel_idx
 alter table public.orbitfs_release_channel_access_audit enable row level security;
 revoke all on public.orbitfs_release_channel_access_audit from public,authenticated;
 
+alter table public.orbitfs_release_bundles
+  add column if not exists release_channel text not null default 'stable'
+    check (release_channel ~ '^[a-z0-9][a-z0-9_-]{0,31} Explicit beta/dev/custom grants are
+-- additive; the application always includes Stable for active customers.
+);
+
+create index if not exists orbitfs_release_bundles_release_channel_idx
+  on public.orbitfs_release_bundles(release_channel,status,updated_at desc);
+
 -- Stable is the baseline customer channel. Explicit beta/dev/custom grants are
 -- additive; the application always includes Stable for active customers.
