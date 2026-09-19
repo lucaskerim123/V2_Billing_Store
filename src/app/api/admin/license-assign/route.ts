@@ -32,7 +32,7 @@ export async function POST(req:Request){
     const customerNumber=String(customer.customer_number||"").trim();
     if(!customerNumber)return Response.json({error:"Customer has no Billing Store customer number"},{status:400});
     const orderRef=String(body.orderRef||`admin:${customerNumber}:${Date.now()}`);
-    const result=await masterIssue({product_code:product,customer_external_id:customerNumber,external_reference:orderRef,expires_at:body.expiresAt||null,components:body.components||{[product]:true},max_installations:Number(body.maxInstallations||1),metadata:{source:"billing_store_admin",customerId:String(customer.id),customerNumber,customerEmail:customer.email||null,label}});
+    const result=await masterIssue({product_code:product,customer_external_id:customerId,external_reference:orderRef,expires_at:body.expiresAt||null,components:body.components||{[product]:true},max_installations:Number(body.maxInstallations||1),metadata:{source:"billing_store_admin",customerId:String(customer.id),customerNumber,customerEmail:customer.email||null,label}});
     const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
     if(!licenseId)throw new Error("License Master did not return a license ID");
     const key=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||result?.licence?.licenseKey||"");
