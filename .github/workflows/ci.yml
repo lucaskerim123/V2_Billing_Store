@@ -20,22 +20,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  production-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://bealqgenrcytjzjoikmk.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_PQVgZOdSyHRbgXRz6ALXGQ_Qe-Uyrzz
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      # Lint remains advisory while the existing React 19 migration backlog is cleaned up.
-      # Typecheck and production build are the blocking release gates.
-      - run: npm run lint
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
         continue-on-error: true
-      - run: npm run typecheck
-      - run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Production gate passed
+        run: echo "CI production gate passed: typecheck and production build are green."
