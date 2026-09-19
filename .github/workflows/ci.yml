@@ -41,7 +41,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       - name: Typecheck
         run: npm run typecheck
@@ -50,4 +49,4 @@ jobs:
         run: npm run build
 
       - name: Production gate passed
-        run: echo "CI production gate passed: typecheck and production build are green."
+        run: echo "CI production gate passed: lint, typecheck, and production build are green."
