@@ -13,6 +13,19 @@ jobs:
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_PQVgZOdSyHRbgXRz6ALXGQ_Qe-Uyrzz
     steps:
       - uses: actions/checkout@v4
+      - name: Check Vercel deployment credentials
+        id: vercel-preflight
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::VERCEL_TOKEN is not configured; Vercel deployment will be skipped after build validation."
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -20,7 +33,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
-      - run: npx vercel deploy --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --name="v2-billing-store"
+      - name: Deploy to Vercel Production
+        if: steps.vercel-preflight.outputs.ready == 'true'
+        run: npx vercel deploy --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --name="v2-billing-store"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: team_W3fS0X03YCjNkD2BoqRj6Uld
