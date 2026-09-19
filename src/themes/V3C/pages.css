@@ -62,3 +62,23 @@ html[data-customer-theme="V3C"] .portalLayout .invoiceDocument .invoiceDocMeta s
 html[data-customer-theme="V3C"] .portalLayout .invoiceDocument .invoiceDocLabel{color:var(--invoice-accent)!important}
 html[data-customer-theme="V3C"] .portalLayout .invoiceDocument .invoiceDocTotalMain span,html[data-customer-theme="V3C"] .portalLayout .invoiceDocument .invoiceDocTotalMain strong{color:#111827!important}
 html[data-customer-theme="V3C"] .portalLayout .invoiceDocument .invoiceDocFooter{background:#f8fafc!important}
+
+
+/* OrbitFS License Controller — explicit V3C surface, no dependency on generic legacy .panel sizing. */
+html[data-customer-theme="V3C"] .orbitfsLicenseController{max-width:980px!important;margin:0 auto!important;padding-bottom:32px!important;min-width:0!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController>.portalOverviewHero{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:14px!important;align-items:center!important;padding:18px 20px!important;margin-bottom:10px!important;border:1px solid #2c3746!important;border-radius:12px!important;background:#131a23!important;box-shadow:0 8px 24px rgba(0,0,0,.18)!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController>.portalOverviewHero h1{font-size:24px!important;margin:3px 0 5px!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController>.portalOverviewHero p{font-size:10px!important;line-height:1.45!important;color:#8f9cac!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .portalOverviewGrid{display:grid!important;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr)!important;gap:10px!important;align-items:start!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .panel{min-width:0!important;padding:14px!important;border:1px solid #2c3746!important;border-radius:11px!important;background:#131a23!important;box-shadow:0 7px 22px rgba(0,0,0,.14)!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .panel h2{font-size:15px!important;margin:3px 0 9px!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow{display:grid!important;grid-template-columns:minmax(92px,.35fr) minmax(0,1fr)!important;gap:10px!important;align-items:start!important;padding:9px 0!important;border-bottom:1px solid #293340!important;background:transparent!important;border-radius:0!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow b{font-size:9px!important;color:#7f8d9d!important;text-transform:uppercase!important;letter-spacing:.06em!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow span{font-size:10px!important;color:#e4e9ee!important;overflow-wrap:anywhere!important;text-align:right!important}
+html[data-customer-theme="V3C"] .orbitfsLicenseController button{min-height:36px!important;border-radius:7px!important}
+@media(max-width:760px){
+ html[data-customer-theme="V3C"] .orbitfsLicenseController>.portalOverviewHero{grid-template-columns:1fr!important;padding:14px!important}
+ html[data-customer-theme="V3C"] .orbitfsLicenseController .portalOverviewGrid{grid-template-columns:1fr!important}
+ html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow{grid-template-columns:1fr!important;gap:3px!important}
+ html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow span{text-align:left!important}
+}
