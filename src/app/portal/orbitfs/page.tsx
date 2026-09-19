@@ -22,6 +22,7 @@ export default function MyOrbitFS(){
   const [newProject,setNewProject]=useState({organizationSlug:"",name:"",region:"ap-southeast-2"});
   const [vercelToken,setVercelToken]=useState("");
   const [vercelTeamId,setVercelTeamId]=useState("");
+  const [currentStep,setCurrentStep]=useState<number>(1);
 
   async function authHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{} }
   async function load(){
