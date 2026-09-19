@@ -1,0 +1,35 @@
+/* OrbitFS licence controller: self-contained layout so it does not depend on legacy portal rows/panels. */
+html[data-customer-theme="V3C"] .orbitfsLicenseController{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:28px 0 48px;min-width:0}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .portalOverviewHero{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:20px}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .portalOverviewHero>div:first-child{min-width:0}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .portalOverviewHero h1{margin:4px 0 8px;overflow-wrap:anywhere}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .portalOverviewGrid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,.8fr);gap:16px;align-items:start}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .panel{min-width:0;box-sizing:border-box}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:13px 0;border-bottom:1px solid var(--line,#e5e7eb);min-width:0}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow:last-child{border-bottom:0}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow b{flex:0 0 auto}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow span{min-width:0;text-align:right;overflow-wrap:anywhere}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .licenseActions{display:flex;gap:10px;flex-wrap:wrap}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .licenseKeyReveal{margin-top:16px;padding:14px;border:1px solid var(--line,#dfe4ea);border-radius:12px;overflow:hidden}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .licenseKeyReveal code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .inlineStatus{margin:14px 0 0;overflow-wrap:anywhere}
+@media(max-width:760px){
+html[data-customer-theme="V3C"] .orbitfsLicenseController{width:100%;padding:16px 12px 32px}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .portalOverviewHero{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .portalOverviewGrid{grid-template-columns:minmax(0,1fr);gap:12px}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+html[data-customer-theme="V3C"] .orbitfsLicenseController .listrow span{text-align:left}
+}
+html[data-admin-theme="v3"] .licenseControllerPage{width:min(1180px,calc(100% - 40px));margin:0 auto;padding:28px 0 48px;min-width:0}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHero{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+html[data-admin-theme="v3"] .licenseControllerPage .lmCard{box-sizing:border-box;min-width:0;overflow:hidden}
+html[data-admin-theme="v3"] .licenseControllerPage .lmRelease{min-width:0;overflow:hidden}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV>div{min-width:0}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV b{display:block;overflow-wrap:anywhere;word-break:break-word}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHeroActions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:760px){
+html[data-admin-theme="v3"] .licenseControllerPage{width:100%;padding:16px 12px 32px}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHero{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV{grid-template-columns:minmax(0,1fr)}
+}
