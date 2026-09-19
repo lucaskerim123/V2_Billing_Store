@@ -191,11 +191,11 @@ export async function masterUploadReleaseArtifact(id: string, bytes: Buffer | st
 }
 
 export async function masterExecuteDeployment(input: any) {
-  return masterRequest("/api/deployments/execute", { method: "POST", body: JSON.stringify(input) }, "deployer");
+  return masterRequest("/api/v1/deployments", { method: "POST", body: JSON.stringify(input) }, "deployer");
 }
 
 export async function masterSyncDeployment(input: any) {
-  return masterRequest("/api/deployments/sync", { method: "POST", body: JSON.stringify(input) }, "deployer");
+  return masterRequest("/api/v1/deployments/sync", { method: "POST", body: JSON.stringify(input) }, "deployer");
 }
 
 export const licensingAuthority = "orbitfs-license-master-v2";
