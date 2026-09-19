@@ -2,7 +2,7 @@
 import {useEffect,useState} from "react";
 import Link from "next/link";
 
-const initial=(r:any)=>({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||"",internal_notes:r.internalNotes||"",severity:r.severity||"normal",rollout:r.rollout||"public",required:r.required===true,minimum_version:r.minimumVersion||"",rollback_version:r.rollbackVersion||""});
+const initial=(r:any)=>({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||"",internal_notes:r.internalNotes||"",severity:r.severity||"normal",required:r.required===true,minimum_version:r.minimumVersion||"",rollback_version:r.rollbackVersion||""});
 
 export default function AdminBaseDeployment(){
  const [data,setData]=useState<any>({releases:[]}),[channels,setChannels]=useState<any[]>([]),[targets,setTargets]=useState<Record<string,string>>({}),[busy,setBusy]=useState(""),[msg,setMsg]=useState(""),[editing,setEditing]=useState<string|null>(null),[draft,setDraft]=useState<any>({});
