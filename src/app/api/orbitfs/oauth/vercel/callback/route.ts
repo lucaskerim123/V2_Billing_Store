@@ -1,3 +1,4 @@
+import {licenseDb} from "@/lib/license-api";
 import {createHmac} from "node:crypto";
 import {consumeOAuthState,releaseSettings,saveProviderConnection} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
@@ -26,6 +27,7 @@ export async function GET(req:Request){
     const scopes=String(tokens.scope||"").split(/[ ,]+/).filter(Boolean);
     const accountName=String(profile.name||profile.preferred_username||profile.email||"").trim()||(teamId?"Customer Vercel team":"Customer Vercel account");
     await saveProviderConnection(state.auth_user_id,"vercel",tokens,{provider_account_id:teamId||profile.sub||tokens.user_id||null,provider_account_name:accountName,team_id:teamId,scopes,teams:teams.map((x:any)=>({id:x.id,name:x.name,slug:x.slug}))});
+    if(state.installation_id)await licenseDb().from("orbitfs_installations").update({updated_at:new Date().toISOString()}).eq("id",state.installation_id).eq("auth_user_id",state.auth_user_id);
     return Response.redirect(new URL(`${returnPath}?connected=vercel`,STORE_ORIGIN));
   }catch(e:any){const target=new URL(returnPath,STORE_ORIGIN);target.searchParams.set("error",e?.message||"Vercel connection failed");return Response.redirect(target)}
 }

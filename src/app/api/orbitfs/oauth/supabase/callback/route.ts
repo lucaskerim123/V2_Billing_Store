@@ -1,3 +1,4 @@
+import {licenseDb} from "@/lib/license-api";
 import {consumeOAuthState,releaseSettings,saveProviderConnection} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
 
@@ -22,6 +23,7 @@ export async function GET(req:Request){
     try{const o=await fetch("https://api.supabase.com/v1/organizations",{headers:{authorization:`Bearer ${tokens.access_token}`}});if(o.ok)orgs=await o.json()}catch{}
     const scopes=String(tokens.scope||"").split(/[ ,]+/).filter(Boolean);
     await saveProviderConnection(state.auth_user_id,"supabase",tokens,{provider_account_name:"Customer Supabase account",provider_account_id:null,scopes,organizations:orgs.map((x:any)=>({id:x.id||x.slug,name:x.name,slug:x.slug||x.id}))});
+    if(state.installation_id)await licenseDb().from("orbitfs_installations").update({updated_at:new Date().toISOString()}).eq("id",state.installation_id).eq("auth_user_id",state.auth_user_id);
     return Response.redirect(new URL(`${returnPath}?connected=supabase`,STORE_ORIGIN));
   }catch(e:any){const target=new URL(returnPath,STORE_ORIGIN);target.searchParams.set("error",e?.message||"Supabase connection failed");return Response.redirect(target)}
 }
