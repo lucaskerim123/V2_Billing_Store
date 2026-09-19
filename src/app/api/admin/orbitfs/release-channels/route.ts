@@ -43,11 +43,15 @@ export async function POST(req:Request){
       if(c.error)throw c.error;if(!c.data)throw Object.assign(new Error("Release channel was not found"),{status:404});
       if(!c.data.enabled||!c.data.customer_visible)throw Object.assign(new Error("Release channel is not available to customers"),{status:400});
       const x=await db.from("orbitfs_release_channel_access").upsert({channel_id:c.data.id,user_id:userId},{onConflict:"channel_id,user_id"}).select().single();
-      if(x.error)throw x.error;\n      await db.from("orbitfs_release_channel_access_audit").insert({channel_id:c.data.id,user_id:userId,action:"grant",actor_user_id:auth.user.id,metadata:{source:"admin"}});\n      return Response.json({access:x.data},{status:201});
+      if(x.error)throw x.error;
+      await db.from("orbitfs_release_channel_access_audit").insert({channel_id:c.data.id,user_id:userId,action:"grant",actor_user_id:auth.user.id,metadata:{source:"admin"}});
+      return Response.json({access:x.data},{status:201});
     }
     if(action==="revoke"){
       const id=String(body.id||"").trim();if(!id)throw Object.assign(new Error("Access ID is required"),{status:400});
-      const existing=await db.from("orbitfs_release_channel_access").select("channel_id,user_id").eq("id",id).maybeSingle();if(existing.error)throw existing.error;if(!existing.data)throw Object.assign(new Error("Channel access was not found"),{status:404});\n      const x=await db.from("orbitfs_release_channel_access").delete().eq("id",id);if(x.error)throw x.error;\n      await db.from("orbitfs_release_channel_access_audit").insert({channel_id:existing.data.channel_id,user_id:existing.data.user_id,action:"revoke",actor_user_id:auth.user.id,metadata:{source:"admin"}});return Response.json({ok:true});
+      const existing=await db.from("orbitfs_release_channel_access").select("channel_id,user_id").eq("id",id).maybeSingle();if(existing.error)throw existing.error;if(!existing.data)throw Object.assign(new Error("Channel access was not found"),{status:404});
+      const x=await db.from("orbitfs_release_channel_access").delete().eq("id",id);if(x.error)throw x.error;
+      await db.from("orbitfs_release_channel_access_audit").insert({channel_id:existing.data.channel_id,user_id:existing.data.user_id,action:"revoke",actor_user_id:auth.user.id,metadata:{source:"admin"}});return Response.json({ok:true});
     }
     if(action==="channel")throw Object.assign(new Error("Release channels are managed by License Master. Use Sync from License Master."),{status:409});
     throw Object.assign(new Error("Unsupported release-channel action"),{status:400});
