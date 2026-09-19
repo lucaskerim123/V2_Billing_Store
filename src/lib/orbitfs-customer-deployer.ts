@@ -36,8 +36,12 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(error)throw error;await event(data,"deployment.rollback.completed","ok",`Rolled back to ${previous.release_version}`,{deploymentId:previousDeploymentId,result});return data;
   }
 
-  const release=await publishedRelease(version,action,channel),parsed=await readPackage(release);
-  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.id,userRef:install.auth_user_id});
+  const release=await publishedRelease(version,action,channel);
+  const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
+  if((binding as any)?.error)throw (binding as any).error;
+  const licenseId=(binding as any)?.data?.license_id?String((binding as any).data.license_id):null;
+  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.id,userRef:install.auth_user_id,licenseId,channel});
+  const parsed=await readPackage(release);
   const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:parsed.files.map(f=>({file:f.file,data:f.data})),projectSettings:parsed.pkg.projectSettings||{},meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:channel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||"")}};
   await event(install,"deployment.started","info",`Deploying ${release.version}`,{action,releaseId:release.id,fileCount:parsed.files.length,checksum:parsed.artifactSha256});
   const created=await vercelApi(install.auth_user_id,"/v13/deployments",{method:"POST",body:JSON.stringify(body)});if(!created?.id&&!created?.uid)fail("Vercel did not return a deployment id",502);
