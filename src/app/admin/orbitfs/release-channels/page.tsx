@@ -1,13 +1,16 @@
 "use client";
 
 import {useEffect,useMemo,useState} from "react";
+import {createClient} from "@/lib/supabase";
 
 export default function ReleaseChannelsAdmin(){
+ const sb=useMemo(()=>createClient(),[]);
  const [data,setData]=useState<any>({channels:[],access:[],customers:[]}),[busy,setBusy]=useState(""),[msg,setMsg]=useState("");
- const load=async()=>{setBusy("load");setMsg("");try{const r=await fetch("/api/admin/orbitfs/release-channels",{cache:"no-store"}),j=await r.json();if(!r.ok)throw new Error(j.error||"Could not load release channels");setData(j)}catch(e:any){setMsg(e.message||"Could not load release channels")}finally{setBusy("")}};
+ const authHeaders=async()=>{const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:`Bearer ${session.access_token}`};};
+ const load=async()=>{setBusy("load");setMsg("");try{const r=await fetch("/api/admin/orbitfs/release-channels",{headers:await authHeaders(),cache:"no-store"}),j=await r.json();if(!r.ok)throw new Error(j.error||"Could not load release channels");setData(j)}catch(e:any){setMsg(e.message||"Could not load release channels")}finally{setBusy("")}};
  useEffect(()=>{void load()},[]);
  const customers=useMemo(()=>new Map<string,any>((data.customers||[]).map((x:any)=>[String(x.id),x])),[data.customers]);
- async function mutate(body:any){setBusy(body.action||"save");setMsg("");try{const r=await fetch("/api/admin/orbitfs/release-channels",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw new Error(j.error||"Operation failed");setMsg("Saved.");await load()}catch(e:any){setMsg(e.message||"Operation failed")}finally{setBusy("")}}
+ async function mutate(body:any){setBusy(body.action||"save");setMsg("");try{const r=await fetch("/api/admin/orbitfs/release-channels",{method:"POST",headers:{"content-type":"application/json",...(await authHeaders())},body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw new Error(j.error||"Operation failed");setMsg("Saved.");await load()}catch(e:any){setMsg(e.message||"Operation failed")}finally{setBusy("")}}
  return <main className="lmPage">
   <div className="lmHero"><div><div className="lmEyebrow">ORBITFS · CUSTOMER DELIVERY</div><h1>Release Channels</h1><p>License Master defines the available channels. Billing Store controls customer access. Stable is the baseline channel for every active customer; Beta, Development and custom channels are additive assignments.</p></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><a className="buttonlink" href="/admin/orbitfs">← My OrbitFS</a><button onClick={()=>void load()} disabled={!!busy}>{busy==="load"?"Refreshing…":"Refresh"}</button></div></div>
   <section className="lmGrid2">

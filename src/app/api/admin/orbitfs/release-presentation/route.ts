@@ -1,7 +1,7 @@
 import {masterRequest} from "@/lib/master-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
-const allowed=new Set(["title","description","changelog","customer_notes","internal_notes","severity","required","minimum_version","rollback_version"]);
+const allowed=new Set(["title","description","changelog","customer_notes","internal_notes","severity","required","rollout","minimum_version","rollback_version"]);
 
 export async function PATCH(req:Request){
   try{
