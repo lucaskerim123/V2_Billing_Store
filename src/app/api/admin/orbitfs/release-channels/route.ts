@@ -33,7 +33,7 @@ export async function GET(req:Request){
 
 export async function POST(req:Request){
   try{
-    await requireOrbitAdmin(req);
+    const auth=await requireOrbitAdmin(req);
     const body=await req.json().catch(()=>({})),action=String(body.action||"").toLowerCase(),db=licenseDb();
     if(action==="sync"){const channels=await syncFromMaster();return Response.json({ok:true,channels});}
     if(action==="grant"){
@@ -43,7 +43,7 @@ export async function POST(req:Request){
       if(c.error)throw c.error;if(!c.data)throw Object.assign(new Error("Release channel was not found"),{status:404});
       if(!c.data.enabled||!c.data.customer_visible)throw Object.assign(new Error("Release channel is not available to customers"),{status:400});
       const x=await db.from("orbitfs_release_channel_access").upsert({channel_id:c.data.id,user_id:userId},{onConflict:"channel_id,user_id"}).select().single();
-      if(x.error)throw x.error;await db.from("orbitfs_release_channel_access_audit").insert({channel_id:c.data.id,user_id:userId,action:"grant",actor_user_id:auth.user.id,metadata:{source:"admin"}});\n      return Response.json({access:x.data},{status:201});
+      if(x.error)throw x.error;\n      await db.from("orbitfs_release_channel_access_audit").insert({channel_id:c.data.id,user_id:userId,action:"grant",actor_user_id:auth.user.id,metadata:{source:"admin"}});\n      return Response.json({access:x.data},{status:201});
     }
     if(action==="revoke"){
       const id=String(body.id||"").trim();if(!id)throw Object.assign(new Error("Access ID is required"),{status:400});
