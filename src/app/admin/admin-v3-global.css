@@ -169,3 +169,35 @@ html[data-admin-theme="v3"] .adminV3Layout button[class*="sendButton"]{backgroun
   html[data-admin-theme="v3"] .adminV3Layout button,html[data-admin-theme="v3"] .adminV3Layout input,html[data-admin-theme="v3"] .adminV3Layout select{min-height:42px}
   html[data-admin-theme="v3"] .adminV3Layout textarea{min-height:100px}
 }
+
+
+/* License Controller — dedicated layout. Keeps this surface independent of legacy page styles. */
+html[data-admin-theme="v3"] .licenseControllerPage{max-width:1180px!important;margin:0 auto!important;padding:18px 20px 40px!important;min-width:0!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHero{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:18px!important;align-items:end!important;margin-bottom:14px!important;padding:18px!important;border:1px solid #303946!important;border-radius:12px!important;background:#151b23!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHero h1{margin:3px 0 5px!important;font-size:24px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHero p{max-width:760px!important;color:#9eabb9!important;font-size:11px!important;line-height:1.5!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmEyebrow,.licenseControllerPage .lmKicker{font-size:9px!important;letter-spacing:.12em!important;font-weight:850!important;color:#7f90ff!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmCard{display:block!important;margin:0 0 14px!important;padding:16px!important;background:#151b23!important;border:1px solid #303946!important;border-radius:12px!important;box-shadow:0 8px 24px #0003!important;overflow:hidden!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmCard h2{margin:4px 0 10px!important;font-size:16px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHint{margin:0 0 12px!important;color:#8e9baa!important;font-size:10px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmReleaseList{display:grid!important;gap:10px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmRelease{padding:13px!important;background:#10161e!important;border:1px solid #2c3745!important;border-radius:10px!important;min-width:0!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmRelease>header{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;gap:10px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmRelease>header b{font-size:12px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmRelease>header small{display:block!important;margin-top:3px!important;overflow-wrap:anywhere!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:7px!important;margin-top:12px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV>div{min-width:0!important;padding:9px!important;border:1px solid #2a3441!important;border-radius:8px!important;background:#151c25!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV span{display:block!important;color:#7f8c9b!important;font-size:8px!important;text-transform:uppercase!important;letter-spacing:.07em!important;margin-bottom:4px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmKV b{display:block!important;color:#edf2f7!important;font-size:10px!important;overflow-wrap:anywhere!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHeroActions{display:flex!important;gap:6px!important;flex-wrap:wrap!important}
+html[data-admin-theme="v3"] .licenseControllerPage .lmHeroActions button{min-height:36px!important;padding:7px 10px!important;border-radius:7px!important}
+html[data-admin-theme="v3"] .licenseControllerPage .state{display:inline-flex!important;align-items:center!important;min-height:26px!important;padding:4px 8px!important;border-radius:999px!important;font-size:8px!important;text-transform:uppercase!important;font-weight:850!important;background:#18342b!important;border:1px solid #2d6752!important;color:#7be0bc!important}
+@media(max-width:760px){
+ html[data-admin-theme="v3"] .licenseControllerPage{padding:10px!important}
+ html[data-admin-theme="v3"] .licenseControllerPage .lmHero{grid-template-columns:1fr!important;padding:13px!important}
+ html[data-admin-theme="v3"] .licenseControllerPage .lmKV{grid-template-columns:1fr 1fr!important}
+}
+@media(max-width:480px){
+ html[data-admin-theme="v3"] .licenseControllerPage .lmKV{grid-template-columns:1fr!important}
+ html[data-admin-theme="v3"] .licenseControllerPage .lmRelease>header{flex-direction:column!important}
+}
