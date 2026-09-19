@@ -24,6 +24,8 @@ export default function ThemeRuntime({surface,fallback}:{surface:Surface;fallbac
     return()=>{live=false};
   },[surface,fallback]);
 
-  if(!theme?.css_text)return null;
+  // Built-in V3A/V3C styles are already bundled statically. Re-injecting the full
+  // stylesheet after an async Supabase RPC causes a late layout/style shift.
+  if(!theme?.css_text||theme.is_builtin)return null;
   return <style data-orbitfs-runtime-theme={theme.id} dangerouslySetInnerHTML={{__html:theme.css_text}}/>;
 }
