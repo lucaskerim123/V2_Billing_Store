@@ -13,6 +13,8 @@ export async function GET(req:Request){
   if(!serviceKey)return Response.json({error:"SUPABASE_SERVICE_ROLE_KEY is not configured"},{status:503});
   const db=createClient(url,serviceKey,{auth:{persistSession:false}});
   let queue={processed:0,sent:0,failed:0};try{queue=await drainMailOutbox()}catch(e:any){console.error("mail outbox drain failed",e)}
+  try{await db.rpc("process_support_auto_close")}catch(e:any){console.error("support auto-close failed",e)}
+  try{await db.rpc("process_expired_guest_support_tickets")}catch(e:any){console.error("guest support cleanup failed",e)}
   const {data:settings}=await db.from("app_settings").select("key,value").in("key",["invoice.reminder_before_days","invoice.reminder_after_days","invoice.auto_cancel_unpaid_days","mail.automation_reconcile_started_at"]);
   const sm=Object.fromEntries((settings||[]).map((x:any)=>[x.key,x.value])),beforeDays=Number(sm["invoice.reminder_before_days"]??1),afterDays=Number(sm["invoice.reminder_after_days"]??1),cancelDays=Number(sm["invoice.auto_cancel_unpaid_days"]??3),reconcileStart=new Date(String(sm["mail.automation_reconcile_started_at"]||new Date().toISOString())),now=new Date();
   const [{data:invoices},{data:orders}]=await Promise.all([db.from("invoices").select("id,invoice_number,order_id,auth_user_id,status,total_cents,paid_cents,currency,due_at,created_at,updated_at").limit(500),db.from("orders").select("id,order_number,auth_user_id,status,payment_status,service_status,total_cents,currency,created_at,updated_at,termination_reason").limit(500)]);
