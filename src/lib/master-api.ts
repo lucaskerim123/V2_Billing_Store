@@ -1,4 +1,6 @@
-const MASTER_API_BASE = "https://api.incendiarynetworks.cc";
+const MASTER_API_BASE = String(process.env.LICENSE_MASTER_URL || "https://api.incendiarynetworks.cc").trim().replace(/\/+$/, "");
+
+function assertMasterApiUrl(value: string) { const u = new URL(value); if (u.protocol !== "https:" || u.hostname !== "api.incendiarynetworks.cc" || u.pathname !== "/" || u.search || u.hash) throw new Error("LICENSE_MASTER_URL must be exactly https://api.incendiarynetworks.cc"); }
 const timeoutMs = () => Math.max(1000, Number(process.env.MASTER_API_TIMEOUT_MS || 10000));
 const getCacheSeconds = () => Math.min(300, Math.max(0, Number(process.env.MASTER_API_CACHE_SECONDS || 30)));
 
@@ -56,6 +58,7 @@ export async function masterRequest(path: string, init: RequestInit = {}, role: 
   }
 
   const cfg = requireConfig(role);
+  assertMasterApiUrl(cfg.url);
   const response = await fetchWithTimeout(`${cfg.url}${masterPath(path)}`, fetchInit, role);
   const text = await response.text();
 
