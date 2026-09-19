@@ -11,5 +11,6 @@
 @import "./responsive.css";
 @import "./admin-system-match.css";
 @import "./mobile.css";
+@import "./license-controller.css";
 @import "../auth.css";
 @import "../auth-fixes.css";
