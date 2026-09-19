@@ -13,7 +13,7 @@ export async function GET(req:Request){
    q(db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_installations").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle()),
-   q(db.from("orbitfs_release_bundles").select("id,version,channel,status,title,description,changelog,customer_notes,severity,required,rollout,minimum_version,rollback_version,schema_version,checkpoint_required,components,published_at,updated_at").eq("status","published").order("published_at",{ascending:false}).limit(50)),
+   q(db.from("orbitfs_release_bundles").select("id,version,channel,release_channel,status,title,description,changelog,customer_notes,severity,required,rollout,minimum_version,rollback_version,schema_version,checkpoint_required,components,published_at,updated_at").eq("status","published").order("published_at",{ascending:false}).limit(50)),
    masterLicenses().catch(()=>({licenses:[]})),
    q(db.from("orbitfs_release_channel_access").select("channel_id,orbitfs_release_channels!inner(channel,enabled,customer_visible)").eq("user_id",user.id))
   ]);
@@ -27,7 +27,7 @@ export async function GET(req:Request){
   const base=enrichedBindings.find((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel)||enrichedBindings[0]||null,install=base?installationRows.find((x:any)=>x.license_binding_id===base.id):null;
   if(install?.vercel_project_id)connectionRows=connectionRows.map((x:any)=>x.provider==="vercel"?{...x,team_id:install.vercel_team_id||x.team_id,metadata:{...(x.metadata||{}),team_id:install.vercel_team_id||x.metadata?.team_id||null,team_locked:true}}:x);
   const [eventRows,installReleaseRows]=install?await Promise.all([q(db.from("orbitfs_deployment_events").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)),q(db.from("orbitfs_installation_releases").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40))]):[{data:[],error:null},{data:[],error:null}];
-  const localBundles=bundles.data||[];
+  const localBundles=(bundles.data||[]).map((r:any)=>({...r,releaseChannel:r.release_channel||"stable"}));
   const publishedMaster=[...masterReleaseRows].filter((r:any)=>String(r.status||"")==="published").map((r:any)=>{const m=r.manifest&&typeof r.manifest==="object"?r.manifest:{};return {...r,title:m.title||`OrbitFS ${r.release_type==="base"?"Base":"Update"} ${r.version}`,description:m.description||null,changelog:r.notes||null,customer_notes:m.customer_notes||m.customerNotes||"",severity:m.severity||"normal",required:m.required===true,rollout:m.rollout||"public",minimum_version:m.minimum_version||m.minimumVersion||null,rollback_version:m.rollback_version||m.rollbackVersion||null,components:Array.isArray(m.components)?m.components:[]}});
   const latestMaster=(type:string)=>publishedMaster.find((r:any)=>String(r.release_type||"")===type)||null;
   const latestBase=latestMaster("base")||localBundles.find((r:any)=>r.channel==="base")||null,latestUpdate=latestMaster("update")||localBundles.find((r:any)=>r.channel==="update")||null;

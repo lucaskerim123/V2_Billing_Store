@@ -138,6 +138,13 @@ export async function masterPublishRelease(id: string) {
   return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}/publish`, { method: "POST" }, "billing");
 }
 
+export async function masterPromoteRelease(id: string, targetChannel: string) {
+  return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}/promote`, {
+    method: "POST",
+    body: JSON.stringify({ target_channel: String(targetChannel).trim().toLowerCase() })
+  }, "billing");
+}
+
 export async function masterValidateRelease(id: string) {
   return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}/validate`, { method: "POST" }, "billing");
 }
