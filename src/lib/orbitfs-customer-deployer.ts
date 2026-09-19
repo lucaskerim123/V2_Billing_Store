@@ -2,7 +2,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
-import {event,requireSystem,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {configureVercel,event,requireSystem,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 
 const MAX_FILES=5000,MAX_FILE_BYTES=25*1024*1024,MAX_TOTAL_BYTES=70*1024*1024;
 const SAFE_PATH=/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)(?:\.git|\.vercel|node_modules)(?:\/|$))[A-Za-z0-9._@+\-\/]+$/;
@@ -40,7 +40,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
   if((binding as any)?.error)throw (binding as any).error;
   const licenseId=(binding as any)?.data?.license_id?String((binding as any).data.license_id):null;
-  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.id,userRef:install.auth_user_id,licenseId,channel});
+  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.id,userRef:install.auth_user_id,licenseId,channel,productVersion:String(release.version)});
+  await configureVercel(install);
   const parsed=await readPackage(release);
   const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:parsed.files.map(f=>({file:f.file,data:f.data})),projectSettings:parsed.pkg.projectSettings||{},meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:channel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||"")}};
   await event(install,"deployment.started","info",`Deploying ${release.version}`,{action,releaseId:release.id,fileCount:parsed.files.length,checksum:parsed.artifactSha256});
@@ -49,5 +50,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const previousVersion=install.release_version||null,deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url,patch={vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,release_source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,previous_release_version:previousVersion,last_deployment_at:new Date().toISOString(),last_error:null,state:"deployed"};
   const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();if(error)throw error;
   await licenseDb().from("orbitfs_installation_releases").insert({installation_id:install.id,auth_user_id:install.auth_user_id,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,action,status:"ready",ready_at:new Date().toISOString()});
+  const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
+  const customer=customerResult.data||null;
+  await masterExecuteDeployment({action,phase:"completed",releaseId:release.id,installationId:install.id,userRef:install.auth_user_id,licenseId,channel,productVersion:String(release.version),deploymentId,deploymentUrl,projectId:install.vercel_project_id,projectName:install.vercel_project_name,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
   await event(data,"deployment.completed","ok",`Vercel deployment ${deploymentId} is ready`,{action,releaseId:release.id,version:release.version,deploymentId});return data;
 }
