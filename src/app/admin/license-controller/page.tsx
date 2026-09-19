@@ -10,7 +10,7 @@ export default function LicenseControllerPage(){
   const [licenses,setLicenses]=useState<LicenseRow[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(true),[busy,setBusy]=useState("");
   async function request(path:string,method:"GET"|"POST"="GET",body?:any){
     const token=await getClientAccessToken();
-    const response=await fetch(`/api/admin/license-master?path=${encodeURIComponent(path)}`,{method,headers:{...(token?{authorization:`Bearer ${token}`:{}),...(body?{"content-type":"application/json"}:{})},body:body?JSON.stringify(body):undefined,cache:"no-store"});
+    const response=await fetch(`/api/admin/license-master?path=${encodeURIComponent(path)}`,{method,headers:{...(token?{authorization:`Bearer ${token}`}:{ } ),...(body?{"content-type":"application/json"}:{})},body:body?JSON.stringify(body):undefined,cache:"no-store"});
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data?.error||`License Master request failed (${response.status})`);return data;
   }
   async function load(){setLoading(true);setError("");try{const data=await request("/api/licenses");setLicenses(Array.isArray(data?.licenses)?data.licenses:[])}catch(e){setError(e instanceof Error?e.message:"Failed to load licences")}finally{setLoading(false)}}
