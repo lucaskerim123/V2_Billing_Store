@@ -199,3 +199,6 @@ export async function masterSyncDeployment(input: any) {
 }
 
 export const licensingAuthority = "orbitfs-license-master-v2";
+
+export async function masterArchiveRelease(id:string){return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"archive"})},"billing");}
+export async function masterDeleteRelease(id:string){return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"delete"})},"billing");}
