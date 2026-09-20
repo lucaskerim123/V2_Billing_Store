@@ -21,14 +21,14 @@ async function localMappings(){const {data,error}=await licenseDb().from("produc
 export async function GET(req:Request){
  try{
   await requireOrbitDeploymentAdmin(req);
-  const {data,error}=await licenseDb().from("license_master_connection").select("id,master_url,admin_url,enabled,last_tested_at,last_success_at,last_error,updated_at").order("updated_at",{ascending:false}).limit(1).maybeSingle();
+  const {data,error}=await licenseDb().from("license_master_connection").select("id,master_url,enabled,last_tested_at,last_success_at,last_error,updated_at").order("updated_at",{ascending:false}).limit(1).maybeSingle();
   if(error)throw error;
   const products=await masterProducts();
   const local=await localMappings();
   const masterRows=Array.isArray(products?.products)?products.products:[];
   const masterBySlug=new Map(masterRows.map((p:any)=>[String(p.code||p.slug||"").toLowerCase(),p]));
   const connections=canonicalProducts.map(code=>({code,master:masterBySlug.get(code)||null,local:local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code)||null,connected:Boolean(masterBySlug.get(code)&&local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code&&p.license_api_mode==="master"&&p.license_api_enabled!==false))}));
-  return Response.json({connection:data||null,configuredUrl:data?.master_url||DEFAULT_MASTER_URL,masterPanelUrl:data?.admin_url||DEFAULT_PANEL_URL,connections,masterProducts:masterRows},{headers:{"cache-control":"no-store"}});
+  return Response.json({connection:data||null,configuredUrl:data?.master_url||DEFAULT_MASTER_URL,masterPanelUrl:DEFAULT_PANEL_URL,connections,masterProducts:masterRows},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:cleanError(e)},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}})}
 }
 
@@ -40,17 +40,17 @@ export async function POST(req:Request){
   const {data:row}=await db.from("license_master_connection").select("id").order("updated_at",{ascending:false}).limit(1).maybeSingle();
   if(body.action==="save"){
     const masterUrl=cleanUrl(body.masterUrl||DEFAULT_MASTER_URL,"Master API");
-    const adminUrl=cleanUrl(body.adminUrl||DEFAULT_PANEL_URL,"Master Admin");
+    const adminUrl=DEFAULT_PANEL_URL;
     const now=new Date().toISOString();
-    if(row) await db.from("license_master_connection").update({master_url:masterUrl,admin_url:adminUrl,enabled:body.enabled!==false,updated_at:now}).eq("id",row.id);
-    else await db.from("license_master_connection").insert({master_url:masterUrl,admin_url:adminUrl,enabled:body.enabled!==false,updated_at:now});
+    if(row) await db.from("license_master_connection").update({master_url:masterUrl:adminUrl,enabled:body.enabled!==false,updated_at:now}).eq("id",row.id);
+    else await db.from("license_master_connection").insert({master_url:masterUrl,enabled:body.enabled!==false,updated_at:now});
     return Response.json({ok:true,masterUrl,adminUrl});
   }
   const started=Date.now();
   const [health,products]=await Promise.all([masterHealth(),masterProducts()]);
   const masterRows=Array.isArray(products?.products)?products.products:[];
   const now=new Date().toISOString();
-  if(row)await db.from("license_master_connection").update({master_url:DEFAULT_MASTER_URL,admin_url:DEFAULT_PANEL_URL,enabled:true,last_tested_at:now,last_success_at:now,last_error:null,updated_at:now}).eq("id",row.id);
+  if(row)await db.from("license_master_connection").update({master_url:DEFAULT_MASTER_URL,enabled:true,last_tested_at:now,last_success_at:now,last_error:null,updated_at:now}).eq("id",row.id);
   else await db.from("license_master_connection").insert({master_url:DEFAULT_MASTER_URL,admin_url:DEFAULT_PANEL_URL,enabled:true,last_tested_at:now,last_success_at:now,last_error:null});
   return Response.json({ok:true,latencyMs:Date.now()-started,health,productCount:masterRows.length,products:masterRows},{headers:{"cache-control":"no-store"}});
  }catch(e:any){
