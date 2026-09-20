@@ -1,6 +1,24 @@
-const MASTER_API_BASE = "https://incendiarynetworks.cc/api";
+import {licenseDb} from "@/lib/license-api";
 
-function assertMasterApiUrl(value: string) { const u = new URL(value); if (u.protocol !== "https:" || u.hostname !== "incendiarynetworks.cc" || u.pathname !== "/api" || u.search || u.hash) throw new Error("LICENSE_MASTER_URL must be exactly https://incendiarynetworks.cc/api"); }
+const DEFAULT_MASTER_API_BASE = "https://incendiarynetworks.cc/api";
+
+function assertMasterApiUrl(value: string) {
+  const u = new URL(value);
+  if (u.protocol !== "https:" || u.pathname !== "/api" || u.search || u.hash || ["localhost","127.0.0.1","::1","api.incendiarynetworks.cc"].includes(u.hostname)) {
+    throw new Error("License Master URL must be an HTTPS /api endpoint. api.incendiarynetworks.cc is retired.");
+  }
+  return u.toString().replace(/\/$/, "");
+}
+
+async function configuredMasterApiBase() {
+  const env = String(process.env.LICENSE_MASTER_URL || "").trim();
+  if (env) return assertMasterApiUrl(env);
+  try {
+    const {data,error}=await licenseDb().from("license_master_connection").select("master_url,enabled").order("updated_at",{ascending:false}).limit(1).maybeSingle();
+    if (!error && data?.enabled !== false && data?.master_url) return assertMasterApiUrl(String(data.master_url));
+  } catch {}
+  return DEFAULT_MASTER_API_BASE;
+}
 const timeoutMs = () => Math.max(1000, Number(process.env.MASTER_API_TIMEOUT_MS || 10000));
 const getCacheSeconds = () => Math.min(300, Math.max(0, Number(process.env.MASTER_API_CACHE_SECONDS || 30)));
 
@@ -17,7 +35,7 @@ function requireConfig(role: MasterRole = "billing") {
   const value = token(role);
   const variable = role === "deployer" ? "DEPLOYER_API_TOKEN" : "BILLING_API_TOKEN";
   if (!value) throw new Error(`License Master API token is not configured (set ${variable})`);
-  return { url: MASTER_API_BASE, value };
+  return { value };
 }
 
 function masterPath(path: string) {
@@ -58,8 +76,8 @@ export async function masterRequest(path: string, init: RequestInit = {}, role: 
   }
 
   const cfg = requireConfig(role);
-  assertMasterApiUrl(cfg.url);
-  const response = await fetchWithTimeout(`${cfg.url}${masterPath(path)}`, fetchInit, role);
+  const base = await configuredMasterApiBase();
+  const response = await fetchWithTimeout(`${base}${masterPath(path)}`, fetchInit, role);
   const text = await response.text();
 
   let data: any = {};
@@ -88,7 +106,25 @@ export const masterReleases = (product = "orbitfs_base", channel = "stable", typ
   masterRequest(`/api/v1/releases?product=${encodeURIComponent(product)}&channel=${encodeURIComponent(channel)}&type=${encodeURIComponent(type)}`, { method: "GET" });
 
 export async function masterLicenseValidate(input: any) {
-  return masterRequest("/api/v1/licenses/validate", {
+  const product=String(input?.product||input?.product_code||"orbitfs_base").trim().toLowerCase();
+  const key=String(input?.licenseKey||input?.license_key||"").trim();
+  if(!key) throw Object.assign(new Error("License key is required"),{status:400,code:"LICENSE_KEY_REQUIRED"});
+  if(!/^[a-z0-9_]+$/.test(product)) throw Object.assign(new Error("Invalid license product"),{status:400,code:"INVALID_LICENSE_PRODUCT"});
+  const base=await configuredMasterApiBase();
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs());
+  try{
+    const response=await fetch(`${base}/license/v1/validate`,{
+      method:"POST",headers:{"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify({license_key:key,installation_id:String(input.installationId||input.installation_id||"").trim()||undefined,product,product_version:input.productVersion||input.product_version||input.appVersion||undefined,metadata:input.metadata&&typeof input.metadata==="object"?input.metadata:{}}),
+      cache:"no-store",signal:controller.signal
+    });
+    const text=await response.text();let data:any={};try{data=text?JSON.parse(text):{}}catch{data={error:text||"License Master returned an invalid response"}}
+    if(!response.ok)throw Object.assign(new Error(data?.error||`License validation failed (${response.status})`),{status:response.status,code:data?.code});
+    return data;
+  }finally{clearTimeout(timer)}
+}
+
     method: "POST",
     body: JSON.stringify({
       license_key: input.licenseKey || input.license_key,
@@ -158,9 +194,10 @@ export async function masterControlRelease(id: string, status: string) {
 }
 
 export async function masterDownloadReleaseArtifact(id: string) {
-  const cfg = requireConfig("deployer");
+  requireConfig("deployer");
+  const base = await configuredMasterApiBase();
   const response = await fetchWithTimeout(
-    `${cfg.url}${masterPath(`/api/v1/releases/${encodeURIComponent(id)}/artifact`)}`,
+    `${base}${masterPath(`/api/v1/releases/${encodeURIComponent(id)}/artifact`)}`,
     { method: "GET", cache: "no-store" },
     "deployer"
   );
