@@ -1,7 +1,7 @@
 import {createClient as createSupabaseClient} from "@supabase/supabase-js";
 import {masterLicenses} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
-const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
+const ALLOWED_PRODUCTS=new Set(["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);\nconst SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 const ALLOWED_PRODUCTS=new Set(["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
 async function staff(req:Request){const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!token||!SUPABASE_URL||!SUPABASE_KEY)return null;const sb=createSupabaseClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;const {data}=await sb.rpc("get_my_staff_access");const row=Array.isArray(data)?data[0]:data,p=row?.permissions;const ok=p?.all===true||(Array.isArray(p)?p.includes("licenses.manage")||p.includes("license_api.manage"):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]));return ok?{user,sb}:null;}
