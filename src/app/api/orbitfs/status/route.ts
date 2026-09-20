@@ -24,8 +24,16 @@ export async function GET(req:Request){
   const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>[masterReleases("orbitfs_base",channel,"base").catch(()=>({releases:[]})),masterReleases("orbitfs_base",channel,"update").catch(()=>({releases:[]}))]));
   const customer=customerResult.data||null;
   const installationRows=installations.data||[],bindingRows=bindings.data||[],masterLicensesRows=masterLicenseResult?.licenses||[],masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.releases||[]);
+  const customerNumber=String(customer?.customer_number||"").trim();
+  const customerMasterLicenses=customerNumber?masterLicensesRows.filter((x:any)=>String(x.customer_external_id||"").trim()===customerNumber):[];
   let connectionRows=(connections.data||[]).map((x:any)=>({...x,metadata:{...(x.metadata||{})}}));
-  const enrichedBindings=bindingRows.map((b:any)=>{const remote=masterLicensesRows.find((x:any)=>String(x.id)===String(b.license_id));return remote?{...b,remote_state:remote.status||b.remote_state,remote_expires_at:remote.expires_at||b.remote_expires_at,master_license_id:remote.id}:{...b}});
+  const enrichedBindings=bindingRows.map((b:any)=>{const remote=masterLicensesRows.find((x:any)=>String(x.id)===String(b.license_id));return remote?{...b,remote_state:remote.status||b.remote_state,expires_at:remote.expires_at||b.expires_at,master_license_id:remote.id,license_product_key:b.license_product_key||remote.product||remote.product_code}:{...b}});
+  for(const remote of customerMasterLicenses){
+    if(!enrichedBindings.some((b:any)=>String(b.license_id)===String(remote.id))){
+      const product=String(remote.product||remote.product_code||"").toLowerCase();
+      enrichedBindings.push({id:`master-${remote.id}`,license_id:remote.id,license_product_key:product,desired_state:remote.status,remote_state:remote.status,license_key_last4:remote.license_key_last4||null,expires_at:remote.expires_at||null,label:product,api_source:"license_master"});
+    }
+  }
   const base=enrichedBindings.find((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel)||enrichedBindings[0]||null,install=base?installationRows.find((x:any)=>x.license_binding_id===base.id):null;
   if(install?.vercel_project_id)connectionRows=connectionRows.map((x:any)=>x.provider==="vercel"?{...x,team_id:install.vercel_team_id||x.team_id,metadata:{...(x.metadata||{}),team_id:install.vercel_team_id||x.metadata?.team_id||null,team_locked:true}}:x);
   const [eventRows,installReleaseRows]=install?await Promise.all([q(db.from("orbitfs_deployment_events").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)),q(db.from("orbitfs_installation_releases").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40))]):[{data:[],error:null},{data:[],error:null}];

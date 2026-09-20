@@ -20,10 +20,15 @@ export async function syncPaidOrderToLicenseMaster(orderId:string){
   if(!customerNumber)throw new Error("Billing Store customer number is missing for this paid order");
   const {data:items,error:itemError}=await db.from("order_items").select("id,product_id,product_name,license_product_key,quantity,configuration").eq("order_id",id).order("id").limit(MAX_ITEMS+1);
   if(itemError)throw itemError;if((items||[]).length>MAX_ITEMS)throw new Error(`Order exceeds fulfilment safety limit of ${MAX_ITEMS} line items`);
+  const normalizedItems=(items||[]).map((item:any)=>({...item,license_product_key:canonicalComponent(item.license_product_key)}));
+  const hasBase=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&item.license_product_key==="orbitfs_base");
+  const hasAddon=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&["orbitfs_apex","orbitfs_mcp","orbitfs_studio"].includes(item.license_product_key));
+  if(hasAddon&&!hasBase)throw new Error("OrbitFS Base is required before any OrbitFS add-on can be fulfilled");
   const results=[];let fulfilled=0,failed=0;
-  for(const item of items||[]){
+  const orderedItems=[...normalizedItems].sort((a:any,b:any)=>Number(b.license_product_key==="orbitfs_base")-Number(a.license_product_key==="orbitfs_base"));
+  for(const item of orderedItems){
     if(item.configuration?.gift===true)continue;
-    const product=canonicalComponent(item.license_product_key);if(!CANONICAL.has(product))continue;
+    const product=String(item.license_product_key||"");if(!CANONICAL.has(product))continue;
     const ref=`${id}:${String(item.id)}`;
     const {data:existing}=await db.from("license_fulfillments").select("id,license_id,state,attempt_count,last_error,fulfilled_at,metadata").eq("order_item_id",item.id).maybeSingle();
     if(existing?.license_id&&existing.state==="fulfilled"){results.push({product,orderItemId:item.id,licenseId:existing.license_id,reused:true,state:"fulfilled"});fulfilled++;continue}
