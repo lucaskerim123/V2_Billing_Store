@@ -2,11 +2,6 @@ name: Production Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      confirm_deploy:
-        description: 'Type DEPLOY to explicitly authorize a production deployment'
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -17,7 +12,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.ref == 'refs/heads/main' && github.event.inputs.confirm_deploy == 'DEPLOY' }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
