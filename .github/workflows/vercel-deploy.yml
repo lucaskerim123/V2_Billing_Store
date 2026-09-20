@@ -1,42 +1,73 @@
 name: Deploy Vercel Production
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: "Type DEPLOY to explicitly authorize a production deployment"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-billing-production
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    if: ${{ github.ref == 'refs/heads/main' && github.event.inputs.confirm_deploy == 'DEPLOY' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://bealqgenrcytjzjoikmk.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_PQVgZOdSyHRbgXRz6ALXGQ_Qe-Uyrzz
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_W3fS0X03YCjNkD2BoqRj6Uld
+      VERCEL_PROJECT_ID: prj_3ARdg4cRikU2OiMeZjZDvQ3JuEZd
     steps:
-      - uses: actions/checkout@v4
-      - name: Check Vercel deployment credentials
-        id: vercel-preflight
-        shell: bash
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Checkout exact main snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify deployment credentials
         run: |
           set -euo pipefail
-          if [ -n "$VERCEL_TOKEN" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::VERCEL_TOKEN is not configured; Vercel deployment will be skipped after build validation."
-          fi
-      - uses: actions/setup-node@v4
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run build
-      - name: Deploy to Vercel Production
-        if: steps.vercel-preflight.outputs.ready == 'true'
-        run: npx vercel deploy --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --name="v2-billing-store"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: team_W3fS0X03YCjNkD2BoqRj6Uld
-          VERCEL_PROJECT_ID: prj_7ZS0ZcGZ09LE8i8UXTN8mwQkJFWD
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel production configuration
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+
+      - name: Build exact production artifact without deploying
+        run: vercel build --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+
+      - name: Deploy only the validated prebuilt artifact
+        run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
