@@ -36,7 +36,7 @@ export async function GET(req:Request){
   const {data:customer,error}=await actor.sb.from("customers").select("id,auth_user_id,user_id,customer_number,name,email").eq("id",customerId).maybeSingle();
   if(error)throw error;if(!customer)return Response.json({error:"Customer not found"},{status:404});
   const userId=String(customer.auth_user_id||customer.user_id||"").trim();
-  const [b,o,m]=await Promise.all([licenseDb().from("license_bindings").select("*").eq("auth_user_id",userId).is("archived_at",null).order("created_at",{ascending:false}),actor.sb.from("orders").select("id,order_number").eq("auth_user_id",userId),masterLicenses().catch(()=>({licenses:[]}))]);
+  const [b,o,m]=await Promise.all([licenseDb().from("license_bindings").select("*").eq("auth_user_id",userId).is("archived_at",null).order("created_at",{ascending:false}),actor.sb.from("orders").select("id,order_number").eq("auth_user_id",userId),masterLicenses()]);
   if(b.error)throw b.error;
   const bindings=b.data||[],master=Array.isArray(m?.licenses)?m.licenses:[],linked=new Set(bindings.map((x:any)=>String(x.license_id||"")));
   const all=master.map((x:any)=>({...x,_match:matchReason(x,customer,o.data||[]),_linked:linked.has(licenseId(x))}));
@@ -62,7 +62,8 @@ export async function POST(req:Request){
   const selectedId=licenseId(selected);if(!selectedId)return Response.json({error:"License Master returned a licence without an ID"},{status:502});
   const product=String(selected.product_code||selected.product||selected.license_product_key||"orbitfs_base").toLowerCase(),remote=String(selected.status||"active"),key=String(selected.license_key||selected.licenseKey||selected.key||"");
   const db=licenseDb();const existing=await db.from("license_bindings").select("id").eq("auth_user_id",userId).eq("license_id",selectedId).maybeSingle();if(existing.error)throw existing.error;
-  const payload={auth_user_id:userId,license_id:selectedId,license_product_key:product,desired_state:remote==="active"?"active":remote,remote_state:remote,license_key_last4:key?key.slice(-4):selected.license_key_last4||null,expires_at:selected.expires_at||null,label:selected.product_name||selected.product_code||selected.product||"OrbitFS licence",api_source:"license_master",admin_override:true,updated_at:new Date().toISOString()};
+  const matchedOrder=(orders.data||[]).find((o:any)=>[o.id,o.order_number].map(normalize).includes(normalize(selected.external_reference||selected.order_ref||"")));
+  const payload={auth_user_id:userId,license_id:selectedId,license_product_key:product,desired_state:remote==="active"?"active":remote,remote_state:remote,license_key_last4:key?key.slice(-4):selected.license_key_last4||null,expires_at:selected.expires_at||null,label:selected.product_name||selected.product_code||selected.product||"OrbitFS licence",api_source:"license_master",admin_override:true,updated_at:new Date().toISOString(),...(matchedOrder?.id?{order_id:matchedOrder.id}:{}),...(selected.order_item_id?{order_item_id:selected.order_item_id}:{}),...(selected.fulfillment_id?{fulfillment_id:selected.fulfillment_id}: {})};
   const write=existing.data?.id?await db.from("license_bindings").update(payload).eq("id",existing.data.id):await db.from("license_bindings").insert(payload).select("id").single();if(write.error)throw write.error;
   return Response.json({ok:true,linked:true,licenseId:selectedId,customerId,product,matchReason:reason||"manual",bindingId:existing.data?.id||write.data?.id||null});
  }catch(e:any){return Response.json({error:e?.message||"License linking failed"},{status:e?.status||500});}
