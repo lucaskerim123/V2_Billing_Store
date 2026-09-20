@@ -1,4 +1,4 @@
-const MASTER_API_BASE = String(process.env.LICENSE_MASTER_URL || "https://incendiarynetworks.cc/api").trim().replace(/\/+$/, "");
+const MASTER_API_BASE = "https://incendiarynetworks.cc/api";
 
 function assertMasterApiUrl(value: string) { const u = new URL(value); if (u.protocol !== "https:" || u.hostname !== "incendiarynetworks.cc" || u.pathname !== "/api" || u.search || u.hash) throw new Error("LICENSE_MASTER_URL must be exactly https://incendiarynetworks.cc/api"); }
 const timeoutMs = () => Math.max(1000, Number(process.env.MASTER_API_TIMEOUT_MS || 10000));
