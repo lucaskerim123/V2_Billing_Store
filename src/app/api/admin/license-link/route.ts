@@ -16,6 +16,7 @@ async function staff(req:Request){
   return ok?{user,sb}:null;
 }
 const normalize=(v:any)=>String(v??"").trim().toLowerCase();
+const CANONICAL_PRODUCTS=new Set(["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
 const licenseId=(x:any)=>String(x?.id||x?.license_id||x?.licenseId||"").trim();
 function matchReason(x:any,c:any,orders:any[]){
   const number=normalize(c.customer_number),id=normalize(c.id),auth=normalize(c.auth_user_id||c.user_id),email=normalize(c.email);
@@ -60,7 +61,12 @@ export async function POST(req:Request){
    if(!selected)return Response.json({error:"No single unambiguous License Master match was found. Use manual linking.",matches:matches.map((x:any)=>({id:licenseId(x),product:x.product_code||x.product||null,reason:x._match}))},{status:409});
   }else{selected=master.find((x:any)=>licenseId(x)===wanted);if(!selected)return Response.json({error:"License Master licence not found"},{status:404});}
   const selectedId=licenseId(selected);if(!selectedId)return Response.json({error:"License Master returned a licence without an ID"},{status:502});
-  const product=String(selected.product_code||selected.product||selected.license_product_key||"orbitfs_base").toLowerCase(),remote=String(selected.status||"active"),key=String(selected.license_key||selected.licenseKey||selected.key||"");
+  const product=String(selected.product_code||selected.product||selected.license_product_key||"").toLowerCase();
+  if(!CANONICAL_PRODUCTS.has(product))return Response.json({error:"This License Master licence is not an OrbitFS product supported by Billing Store."},{status:409});
+  const remote=String(selected.status||"active"),key=String(selected.license_key||selected.licenseKey||selected.key||"");
+  const {data:otherBindings,error:otherBindingError}=await db.from("license_bindings").select("id,auth_user_id").eq("license_id",selectedId).is("archived_at",null);
+  if(otherBindingError)throw otherBindingError;
+  if((otherBindings||[]).some((x:any)=>String(x.auth_user_id)!==userId))return Response.json({error:"This licence is already linked to another customer."},{status:409});
   const db=licenseDb();const existing=await db.from("license_bindings").select("id").eq("auth_user_id",userId).eq("license_id",selectedId).maybeSingle();if(existing.error)throw existing.error;
   const matchedOrder=(orders.data||[]).find((o:any)=>[o.id,o.order_number].map(normalize).includes(normalize(selected.external_reference||selected.order_ref||"")));
   const payload={auth_user_id:userId,license_id:selectedId,license_product_key:product,desired_state:remote==="active"?"active":remote,remote_state:remote,license_key_last4:key?key.slice(-4):selected.license_key_last4||null,expires_at:selected.expires_at||null,label:selected.product_name||selected.product_code||selected.product||"OrbitFS licence",api_source:"license_master",admin_override:true,updated_at:new Date().toISOString(),...(matchedOrder?.id?{order_id:matchedOrder.id}:{}),...(selected.order_item_id?{order_item_id:selected.order_item_id}:{}),...(selected.fulfillment_id?{fulfillment_id:selected.fulfillment_id}: {})};
