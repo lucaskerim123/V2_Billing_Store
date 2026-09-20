@@ -11,7 +11,8 @@
     "theme:pack": "node tools/theme-manager.mjs pack",
     "theme:install": "node tools/theme-manager.mjs install",
     "theme:install-apply": "node tools/theme-manager.mjs install-apply",
-    "theme:apply": "node tools/theme-manager.mjs apply"
+    "theme:apply": "node tools/theme-manager.mjs apply",
+    "preflight": "node scripts/preflight.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

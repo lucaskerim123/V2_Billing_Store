@@ -1,0 +1,90 @@
+name: Production Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: 'Type DEPLOY to explicitly authorize a production deployment'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-billing-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ github.ref == 'refs/heads/main' && github.event.inputs.confirm_deploy == 'DEPLOY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://bealqgenrcytjzjoikmk.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_PQVgZOdSyHRbgXRz6ALXGQ_Qe-Uyrzz
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_W3fS0X03YCjNkD2BoqRj6Uld
+      VERCEL_PROJECT_ID: prj_3ARdg4cRikU2OiMeZjZDvQ3JuEZd
+    steps:
+      - name: Checkout complete repository history at selected commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify selected commit is the complete main snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "$(git rev-parse --is-shallow-repository)" = "false"
+          git fetch origin main --prune
+          test "$(git rev-parse origin/main)" = "${GITHUB_SHA}"
+          test -f package-lock.json
+          test -f vercel.json
+
+      - name: Use Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Run complete production preflight
+        run: npm run preflight
+
+      - name: Generate immutable release/change-set manifest
+        run: node scripts/release-manifest.mjs
+
+      - name: Upload release/change-set manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-release-${{ github.sha }}
+          path: release-manifest.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Verify deployment credentials
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN"
+          test -n "$VERCEL_ORG_ID"
+          test -n "$VERCEL_PROJECT_ID"
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel production configuration
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+
+      - name: Build exact production artifact without deploying
+        run: vercel build --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+
+      - name: Deploy only the validated prebuilt artifact
+        run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+
+      - name: Report deployed commit
+        run: echo "Production deployment completed for immutable commit $GITHUB_SHA."

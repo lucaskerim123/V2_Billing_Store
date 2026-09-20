@@ -11,6 +11,7 @@ on:
     paths-ignore:
       - "**.md"
       - "docs/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,31 +23,33 @@ concurrency:
 jobs:
   production-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://bealqgenrcytjzjoikmk.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_PQVgZOdSyHRbgXRz6ALXGQ_Qe-Uyrzz
     steps:
-      - name: Checkout exact commit
-        uses: actions/checkout@v4
+      - name: Checkout complete repository history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify complete repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse --is-shallow-repository)" = "false"
+          test -f package-lock.json
+          test -f vercel.json
 
       - name: Use Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Install locked dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Production build
-        run: npm run build
+      - name: Run complete production preflight
+        run: npm run preflight
 
       - name: Production gate passed
-        run: 'echo "CI production gate passed: lint, typecheck, and production build are green."'
+        run: 'echo "CI production gate passed: install, integrity, lint, typecheck, audit, and production build are green."'
