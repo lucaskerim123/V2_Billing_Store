@@ -9,7 +9,7 @@ const FORBIDDEN_HOSTS=new Set(["api.incendiarynetworks.cc"]);
 function cleanUrl(value:string,label:string){
   const u=new URL(String(value||"").trim());
   if(u.protocol!=="https:"||u.search||u.hash||u.pathname.replace(/\\/+$/,"")!=="/api"&&label==="Master API") throw new Error(`${label} must be an HTTPS URL`);
-  if(label==="Master API"&&(u.pathname.replace(/\\/+$/,"")!=="/api"||FORBIDDEN_HOSTS.has(u.hostname.toLowerCase()))) throw new Error("Master API must be the current /api endpoint; api.incendiarynetworks.cc is no longer supported");
+  if(label==="Master API"&&(u.pathname.replace(/\\/+$/,"")!=="/api"||FORBIDDEN_HOSTS.has(u.hostname.toLowerCase()))) throw new Error("Master API must be the current /api endpoint; the legacy API host is no longer supported");
   if(label==="Master Admin"&&(u.pathname.replace(/\\/+$/,"")!=="")) throw new Error("Master Admin must be the HTTPS site origin");
   return u.origin+(label==="Master API"?"/api":"");
 }
