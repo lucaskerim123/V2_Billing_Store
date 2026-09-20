@@ -10,5 +10,8 @@
       "path": "/api/cron/mail-automations",
       "schedule": "0 3 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": false
+  }
 }
