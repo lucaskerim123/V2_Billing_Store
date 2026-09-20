@@ -51,7 +51,7 @@ if(row)await db.from("license_master_connection").update({master_url:configuredU
     return Response.json({ok:true,configuredUrl,latencyMs:Date.now()-started,health,productCount:masterRows.length,products:masterRows},{headers:{"cache-control":"no-store"}});
   }catch(e:any){
     const message=cleanError(e);
-    try{const db=licenseDb();const now=new Date().toISOString();const {data:row}=await db.from("license_master_connection").select("id").order("updated_at",{ascending:false}).limit(1).maybeSingle();if(row)await db.from("license_master_connection").update({master_url:MASTER_URL,last_tested_at:now,last_error:message,updated_at:now}).eq("id",row.id);}catch{}
+    try{const db=licenseDb();const now=new Date().toISOString();const {data:row}=await db.from("license_master_connection").select("id").order("updated_at",{ascending:false}).limit(1).maybeSingle();if(row)await db.from("license_master_connection").update({last_tested_at:now,last_error:message,updated_at:now}).eq("id",row.id);}catch{}
     return Response.json({ok:false,error:message},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}});
   }
 }
