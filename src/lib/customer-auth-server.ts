@@ -24,8 +24,9 @@ export function verifyCustomerPassword(password:string,encoded:string){
 
 export async function resolveCustomerIdentity(userOrCustomerId:string):Promise<OrbitCustomerIdentity|null>{
  const db=service();
- let {data:customer,error}=await db.from("customers").select("id,user_id,email,name,display_name,first_name").eq("user_id",userOrCustomerId).maybeSingle();
- if(error)return null;
+ const first=await db.from("customers").select("id,user_id,email,name,display_name,first_name").eq("user_id",userOrCustomerId).maybeSingle();
+ if(first.error)return null;
+ let customer=first.data;
  if(!customer){
   const byId=await db.from("customers").select("id,user_id,email,name,display_name,first_name").eq("id",userOrCustomerId).maybeSingle();
   if(byId.error)return null;

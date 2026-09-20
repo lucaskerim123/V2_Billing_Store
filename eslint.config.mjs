@@ -12,7 +12,8 @@ const eslintConfig = defineConfig([
       "react-hooks/immutability": "off",
       "react-hooks/purity": "off",
       "react-hooks/preserve-manual-memoization": "off",
-      "react/no-unescaped-entities": "off"
+      "react/no-unescaped-entities": "off",
+      "react-hooks/static-components": "off"
     }
   },
   globalIgnores([

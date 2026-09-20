@@ -7,7 +7,7 @@ export default function StaffGroups(){
  async function load(prefer?:string){setLoading(true);const h=await headers();const r=await fetch("/api/admin/staff",{headers:h,cache:"no-store"});const j=await r.json().catch(()=>({}));setLoading(false);if(!r.ok){setMsg(j.error||"Unable to load staff groups.");return}setData(j);const id=prefer||selected||j.groups?.[0]?.id||"";setSelected(id);setDraft(j.groups?.find((x:any)=>x.id===id)||null)}
  useEffect(()=>{load()},[]);
  const groups=data.groups||[],members=data.members||[],can=data.can||{},keys=Object.keys(CAP);
- const sections=useMemo(()=>[...new Set(keys.map(k=>CAP[k][2]))],[keys.join("|")]);
+ const sections=[...new Set(keys.map(k=>CAP[k][2]))];
  function choose(g:any){setSelected(g.id);setDraft({...g,permissions:{...(g.permissions||{})}});setMsg("")}
  function toggle(k:string,v:boolean){if(!draft||draft.slug==="superadmin"||!can.groupsManage)return;setDraft({...draft,permissions:{...(draft.permissions||{}),[k]:v}})}
  function setSection(section:string,v:boolean){if(!draft||draft.slug==="superadmin"||!can.groupsManage)return;const p={...(draft.permissions||{})};keys.filter(k=>CAP[k][2]===section&&k!=="all").forEach(k=>p[k]=v);setDraft({...draft,permissions:p})}
