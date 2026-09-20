@@ -25,9 +25,9 @@ export async function GET(req:Request){
   const customer=customerResult.data||null;
   const installationRows=installations.data||[],bindingRows=bindings.data||[],masterLicensesRows=masterLicenseResult?.licenses||[],masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.releases||[]);
   const customerNumber=String(customer?.customer_number||"").trim();
-  const customerMasterLicenses=customerNumber?masterLicensesRows.filter((x:any)=>String(x.customer_external_id||"").trim()===customerNumber):[];
+  const customerMasterLicenses=customerNumber?masterLicensesRows.filter((x:any)=>String(x.customer_external_id||"").trim()===customerNumber).filter((x:any)=>!["revoked","expired"].includes(String(x.status||"").toLowerCase())):[];
   let connectionRows=(connections.data||[]).map((x:any)=>({...x,metadata:{...(x.metadata||{})}}));
-  const enrichedBindings=bindingRows.map((b:any)=>{const remote=masterLicensesRows.find((x:any)=>String(x.id)===String(b.license_id));return remote?{...b,remote_state:remote.status||b.remote_state,expires_at:remote.expires_at||b.expires_at,master_license_id:remote.id,license_product_key:b.license_product_key||remote.product||remote.product_code}:{...b}});
+  const enrichedBindings=bindingRows.flatMap((b:any)=>{const remote=customerMasterLicenses.find((x:any)=>String(x.id)===String(b.license_id));return remote?[{...b,remote_state:remote.status||b.remote_state,expires_at:remote.expires_at||b.expires_at,master_license_id:remote.id,license_product_key:b.license_product_key||remote.product||remote.product_code}]:[]});
   for(const remote of customerMasterLicenses){
     if(!enrichedBindings.some((b:any)=>String(b.license_id)===String(remote.id))){
       const product=String(remote.product||remote.product_code||"").toLowerCase();
