@@ -2,7 +2,7 @@ import {masterHealth,masterProducts} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 import {requireOrbitDeploymentAdmin} from "@/lib/orbitfs-deployment-auth";
 
-const MASTER_URL="https://api.incendiarynetworks.cc";
+const MASTER_URL="https://incendiarynetworks.cc/api";
 const canonicalProducts=["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
 const cleanError=(e:any)=>String(e?.message||"License Master connection test failed").slice(0,1000);
 
