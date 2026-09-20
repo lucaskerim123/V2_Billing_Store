@@ -51,5 +51,14 @@ jobs:
       - name: Run complete production preflight
         run: npm run preflight
 
+      - name: Upload temporary validation failure report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-failure-${{ github.sha }}
+          path: .orbitfs-validation/validation-error.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Production gate passed
         run: 'echo "CI production gate passed: install, integrity, lint, typecheck, audit, and production build are green."'

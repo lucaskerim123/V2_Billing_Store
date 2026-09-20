@@ -33,6 +33,10 @@ export default function OrbitFSUpdateReleaseDeployer(){
   </section>
 
   {msg&&<div className="orbitfsNotice">{msg}</div>}
+  {chosen?.manifest?.validation?.status === "failed" && <section className="orbitfsCard" style={{marginTop:12,border:"1px solid currentColor"}}>
+   <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">VALIDATION FAILED</div><h2>Release is blocked</h2><p className="orbitfsMuted">Fix the failed checks below, then re-run validation in License Master. Nothing should be published while validation is failed.</p></div></div>
+   <div>{(Array.isArray(chosen.manifest.validation.checks)?chosen.manifest.validation.checks:[]).filter((c:any)=>!c.ok).map((c:any,i:number)=><div key={c.key||i} style={{padding:"10px 0",borderTop:"1px solid rgba(127,127,127,.2)"}}><b>✕ {c.key||"check"}</b><div className="orbitfsMuted">{c.message||"Validation check failed."}</div>{c.fix&&<div className="orbitfsMuted" style={{marginTop:4}}><b>Fix:</b> {c.fix}</div>}<pre style={{whiteSpace:"pre-wrap",marginTop:6}}>{c.prompt||("Fix the "+(c.key||"failed")+" validation check. Inspect the related release data/code, make the smallest production-safe fix, then run validation again.")}</pre></div>)}</div>
+  </section>}
 
   <div className="orbitfsGrid" style={{marginTop:msg?10:0}}>
    <section className="orbitfsCard">
