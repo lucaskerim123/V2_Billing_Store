@@ -78,8 +78,11 @@ jobs:
       - name: Build exact production artifact without deploying
         run: vercel build --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
 
+      - name: Inspect validated prebuilt deployment manifest
+        run: vercel deploy --prebuilt --dry --format=json --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+
       - name: Deploy only the validated prebuilt artifact
-        run: vercel deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+        run: vercel deploy --prebuilt --archive=split-tgz --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
 
       - name: Report deployed commit
         run: echo "Production deployment completed for immutable commit $GITHUB_SHA."
