@@ -1,6 +1,6 @@
-const MASTER_API_BASE = String(process.env.LICENSE_MASTER_URL || "https://api.incendiarynetworks.cc").trim().replace(/\/+$/, "");
+const MASTER_API_BASE = String(process.env.LICENSE_MASTER_URL || "https://incendiarynetworks.cc/api").trim().replace(/\/+$/, "");
 
-function assertMasterApiUrl(value: string) { const u = new URL(value); if (u.protocol !== "https:" || u.hostname !== "api.incendiarynetworks.cc" || u.pathname !== "/" || u.search || u.hash) throw new Error("LICENSE_MASTER_URL must be exactly https://api.incendiarynetworks.cc"); }
+function assertMasterApiUrl(value: string) { const u = new URL(value); if (u.protocol !== "https:" || u.hostname !== "incendiarynetworks.cc" || u.pathname !== "/api" || u.search || u.hash) throw new Error("LICENSE_MASTER_URL must be exactly https://incendiarynetworks.cc/api"); }
 const timeoutMs = () => Math.max(1000, Number(process.env.MASTER_API_TIMEOUT_MS || 10000));
 const getCacheSeconds = () => Math.min(300, Math.max(0, Number(process.env.MASTER_API_CACHE_SECONDS || 30)));
 
@@ -22,7 +22,7 @@ function requireConfig(role: MasterRole = "billing") {
 
 function masterPath(path: string) {
   const clean = path.startsWith("/") ? path : `/${path}`;
-  return clean.startsWith("/api/") ? clean : `/api/v1${clean}`;
+  return clean.startsWith("/api/") ? clean.slice(4) : `/v1${clean}`;
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit, role: MasterRole = "billing") {
@@ -51,7 +51,7 @@ export async function masterRequest(path: string, init: RequestInit = {}, role: 
   const method = String(init.method || "GET").toUpperCase();
   const fetchInit: RequestInit = { ...init, headers };
 
-  if (method === "GET" && getCacheSeconds() > 0) {
+  if (method === "GET" && getCacheSeconds() > 0 && fetchInit.cache !== "no-store") {
     (fetchInit as any).next = { revalidate: getCacheSeconds() };
   } else {
     fetchInit.cache = "no-store";
@@ -82,7 +82,7 @@ export async function masterRequest(path: string, init: RequestInit = {}, role: 
 export const masterHealth = () => masterRequest("/api/v1/health", { method: "GET" });
 export const masterRevision = () => masterRequest("/api/v1/health", { method: "GET" });
 export const masterProducts = () => masterRequest("/api/products", { method: "GET" });
-export const masterLicenses = () => masterRequest("/api/v1/licenses", { method: "GET" });
+export const masterLicenses = () => masterRequest("/api/v1/licenses", { method: "GET", cache: "no-store" });
 export const masterDeployments = () => masterRequest("/api/v1/deployments", { method: "GET" }, "deployer");
 export const masterReleases = (product = "orbitfs_base", channel = "stable", type = "base") =>
   masterRequest(`/api/v1/releases?product=${encodeURIComponent(product)}&channel=${encodeURIComponent(channel)}&type=${encodeURIComponent(type)}`, { method: "GET" });
