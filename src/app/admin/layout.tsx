@@ -6,7 +6,6 @@ import {createClient} from "@/lib/supabase";
 import SuperadminDeleteBar from "@/components/SuperadminDeleteBar";
 import AdminRecordQuickSend from "@/components/AdminRecordQuickSend";
 import AdminGuestSupportContext from "@/components/AdminGuestSupportContext";
-import AdminCustomerLicenseActions from "@/components/AdminCustomerLicenseActions";
 import NotificationCenter from "@/components/NotificationCenter";
 import ThemeRuntime from "@/components/ThemeRuntime";
 import "@/themes/active/admin.css";
