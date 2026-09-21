@@ -1,6 +1,6 @@
 import {createOAuthState,httpError,requireOrbitUser,requireSystem} from "@/lib/orbitfs-deployment";
 
-const STORE_ORIGIN="https://orbitfsstore.vercel.app";
+const STORE_ORIGIN=(process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.SITE_URL||"https://orbitfsstore.vercel.app").replace(/\/+$/,"");
 
 export async function POST(req:Request){
   try{
