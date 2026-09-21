@@ -13,7 +13,7 @@ const fail=(message:string,status=400):never=>{throw Object.assign(new Error(mes
 const checksum=(buf:Buffer)=>createHash("sha256").update(buf).digest("hex");
 const releaseType=(action:DeployAction)=>action==="update"?"update":"base";
 
-async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable"):Promise<any>{const rows=await masterReleases("orbitfs_base",channel,releaseType(action));const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved");const wanted=version?releases.find((r:any)=>String(r.version)===version):releases[0];if(!wanted?.id)fail(version?`Published ${releaseType(action)} release ${version} was not found in License Master`:`No approved published ${releaseType(action)} release is available`,404);return wanted}
+async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable",releaseId?:string):Promise<any>{const rows=await masterReleases("orbitfs_base",channel,releaseType(action));const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved");const wanted=releaseId?releases.find((r:any)=>String(r.id)===String(releaseId)):version?releases.find((r:any)=>String(r.version)===version):releases[0];if(!wanted?.id)fail(releaseId?`Selected published ${releaseType(action)} release is no longer available in License Master`:version?`Published ${releaseType(action)} release ${version} was not found in License Master`:`No approved published ${releaseType(action)} release is available`,404);if(String(wanted.channel||channel)!==channel)fail("Selected release channel does not match the installation channel",409);return wanted}
 
 function gunzipArtifact(bytes:Buffer){try{return gunzipSync(bytes)}catch{throw Object.assign(new Error("Release artifact is not a valid OrbitFS gzip package"),{status:422})}}
 function parsePackage(raw:Buffer){try{const value=JSON.parse(raw.toString("utf8")) as Package;if(!value||!Array.isArray(value.files)||!value.version)fail("Release package manifest is incomplete",422);return value}catch(error){if(error instanceof Error&&"status" in error)throw error;throw Object.assign(new Error("Release package contains invalid JSON"),{status:422})}}
@@ -22,7 +22,7 @@ async function readPackage(release:any):Promise<{pkg:Package;files:Array<{file:s
 async function waitForReady(userId:string,id:string):Promise<any>{const deadline=Date.now()+120000;let last:any=null;while(Date.now()<deadline){last=await vercelApi(userId,`/v13/deployments/${encodeURIComponent(id)}`,{method:"GET"});const state=String(last?.readyState||last?.state||"");if(state==="READY")return last;if(["ERROR","CANCELED"].includes(state))fail(`Vercel deployment failed (${state})`,502);await new Promise(r=>setTimeout(r,3000))}return last}
 async function previousDeployment(install:any):Promise<{vercel_deployment_id:string;release_version:string;release_id:string;created_at:string}>{const {data,error}=await licenseDb().from("orbitfs_installation_releases").select("vercel_deployment_id,release_version,release_id,created_at").eq("installation_id",install.id).eq("status","ready").order("created_at",{ascending:false}).limit(2);if(error)throw error;const previous=(data||[]).find((r:any)=>r.vercel_deployment_id!==install.vercel_deployment_id);if(!previous)throw Object.assign(new Error("No previous successful deployment is available for rollback"),{status:409});if(!previous.vercel_deployment_id||!previous.release_id||!previous.release_version)throw Object.assign(new Error("Previous deployment record is incomplete and cannot be rolled back"),{status:409});return {vercel_deployment_id:String(previous.vercel_deployment_id),release_version:String(previous.release_version),release_id:String(previous.release_id),created_at:String(previous.created_at||"")}}
 
-export async function runCustomerDeployer(install:any,action:DeployAction,version?:string,channel?:string){
+export async function runCustomerDeployer(install:any,action:DeployAction,version?:string,channel?:string,releaseId?:string){
   const requestedChannel=String(channel||install.release_channel||"stable").trim().toLowerCase();
   if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(requestedChannel))fail("Invalid release channel",400);
   const allowedChannels=await customerReleaseChannels(String(install.auth_user_id));
@@ -42,7 +42,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(error)throw error;await event(data,"deployment.rollback.completed","ok",`Rolled back to ${previous.release_version}`,{deploymentId:previousDeploymentId,result});return data;
   }
 
-  const release=await publishedRelease(version,action,requestedChannel);
+  const release=await publishedRelease(version,action,requestedChannel,releaseId);
   const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
   if((binding as any)?.error)throw (binding as any).error;
   const licenseId=(binding as any)?.data?.license_id?String((binding as any).data.license_id):null;
