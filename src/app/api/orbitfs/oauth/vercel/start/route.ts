@@ -2,7 +2,7 @@ import {createHash,createHmac} from "node:crypto";
 import {createOAuthState,httpError,requireOrbitUser,requireSystem} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
 
-const STORE_ORIGIN="https://orbitfsstore.vercel.app";
+const STORE_ORIGIN=(process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.SITE_URL||"https://orbitfsstore.vercel.app").replace(/\/+$/,"");
 function pkceVerifier(state:string,secret:string){return createHmac("sha256",secret).update(`orbitfs-vercel:${state}`).digest("base64url")}
 
 export async function POST(req:Request){
