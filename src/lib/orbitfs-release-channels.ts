@@ -15,7 +15,9 @@ export async function customerReleaseChannels(userId:string){
     .filter((x:any)=>x?.enabled&&x?.customer_visible)
     .map((x:any)=>String(x.channel)).filter(Boolean);
   const open=(openChannels||[]).map((x:any)=>String(x.channel)).filter(Boolean);
-  const configuredStable=(await db.from("orbitfs_release_channels").select("channel,enabled,customer_visible").eq("channel","stable").maybeSingle()).data;\n  const stable=configuredStable?.enabled&&configuredStable?.customer_visible?["stable"]:[];\n  return [...new Set([...stable,...open,...explicit])];
+  const configuredStable=(await db.from("orbitfs_release_channels").select("channel,enabled,customer_visible").eq("channel","stable").maybeSingle()).data;
+  const stable=configuredStable?.enabled&&configuredStable?.customer_visible?["stable"]:[];
+  return [...new Set([...stable,...open,...explicit])];
 }
 
 export async function customerCanUseReleaseChannel(userId:string,channel:string){
