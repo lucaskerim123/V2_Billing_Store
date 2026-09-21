@@ -3,7 +3,7 @@ import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
 import {configureVercel,event,requireSystem,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
-import {customerCanUseReleaseChannel,customerReleaseChannels} from "@/lib/orbitfs-release-channels";
+import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 
 const MAX_FILES=5000,MAX_FILE_BYTES=25*1024*1024,MAX_TOTAL_BYTES=70*1024*1024;
 const SAFE_PATH=/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)(?:\.git|\.vercel|node_modules)(?:\/|$))[A-Za-z0-9._@+\-\/]+$/;
@@ -35,7 +35,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     const previousDeploymentId=previous.vercel_deployment_id;
     const previousReleaseId=previous.release_id;
     if(install.release_channel&&String(install.release_channel)!==requestedChannel)fail("Installation release channel does not match the requested rollback channel",409);
-    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.id,userRef:install.auth_user_id});
+    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.id,userRef:install.auth_user_id,channel:requestedChannel});
     await event(install,"deployment.rollback.started","info",`Rolling back to ${previous.release_version}`,{deploymentId:previousDeploymentId});
     const result=await vercelApi(install.auth_user_id,`/v9/projects/${encodeURIComponent(install.vercel_project_id)}/rollback/${encodeURIComponent(previousDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
     const {data,error}=await licenseDb().from("orbitfs_installations").update({previous_release_version:install.release_version||null,release_version:previous.release_version,release_id:previousReleaseId,vercel_deployment_id:previousDeploymentId,last_deployment_at:new Date().toISOString(),last_error:null,state:"deployed"}).eq("id",install.id).select().single();
