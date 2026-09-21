@@ -2,7 +2,7 @@ import {licenseDb} from "@/lib/license-api";
 import {consumeOAuthState,releaseSettings,saveProviderConnection} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
 
-const STORE_ORIGIN="https://orbitfsstore.vercel.app";
+const STORE_ORIGIN=(process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.SITE_URL||"https://orbitfsstore.vercel.app").replace(/\/+$/,"");
 
 export async function GET(req:Request){
   const u=new URL(req.url);let returnPath="/portal/orbitfs";
