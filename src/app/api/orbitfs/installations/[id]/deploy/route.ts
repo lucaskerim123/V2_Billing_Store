@@ -12,7 +12,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     if(!allowed.has(action))throw Object.assign(new Error("Unsupported deployment action"),{status:400});
     const install=await loadInstallation(id,user.id);
     const version=body.version?String(body.version).trim():undefined;
-    const channel=String(body.channel||"stable").trim().toLowerCase();
+    const channel=String(body.channel||install.release_channel||"stable").trim().toLowerCase();
     if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw Object.assign(new Error("Invalid release channel"),{status:400});
     const installation=await runCustomerDeployer(install,action,version,channel);
     return Response.json({ok:true,installation},{headers:{"cache-control":"no-store"}});
