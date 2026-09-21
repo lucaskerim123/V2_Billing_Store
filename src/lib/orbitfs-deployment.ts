@@ -54,9 +54,14 @@ export async function event(install:any,type:string,status="info",message="",det
 
 const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
 export async function createOAuthState(userId:string,provider:"supabase"|"vercel",installationId:string|null,returnPath="/portal/orbitfs"){
+  // A new connection attempt invalidates unfinished attempts for the same customer/provider.
+  await licenseDb().from("orbitfs_oauth_states").delete().eq("auth_user_id",userId).eq("provider",provider).is("consumed_at",null);
   const state=randomBytes(32).toString("hex");
   const {error}=await licenseDb().from("orbitfs_oauth_states").insert({state_hash:hash(state),auth_user_id:userId,installation_id:installationId,provider,return_path:returnPath,expires_at:new Date(Date.now()+10*60*1000).toISOString()});
   if(error)throw error;return state;
+}
+export async function disconnectProviderConnection(userId:string,provider:"supabase"|"vercel"){
+  return serviceRpc("service_disconnect_orbitfs_provider_connection",{p_user_id:userId,p_provider:provider});
 }
 export async function consumeOAuthState(state:string,provider:"supabase"|"vercel"){
   if(!state)throw Object.assign(new Error("Missing OAuth state"),{status:400});const db=licenseDb();
