@@ -26,7 +26,7 @@ export async function POST(req:Request){
 
     const {data:order,error:oe}=await actor.sb.from("orders").select("id,auth_user_id,order_number").eq("id",orderId).maybeSingle();
     if(oe)throw oe;if(!order)return Response.json({error:"Order not found"},{status:404});
-    const {data:customer,error:ce}=await actor.sb.from("customers").select("id,customer_number").eq("auth_user_id",order.auth_user_id).maybeSingle();
+    const {data:customer,error:ce}=await actor.sb.from("customers").select("id,customer_number").or("auth_user_id.eq."+order.auth_user_id+",user_id.eq."+order.auth_user_id).maybeSingle();
     if(ce)throw ce;
     const customerNumber=String(customer?.customer_number||"").trim();
     if(!customerNumber)return Response.json({error:"Customer number is missing for this order"},{status:409});
