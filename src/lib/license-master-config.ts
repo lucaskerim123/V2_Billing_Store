@@ -1,7 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
 export const DEFAULT_MASTER_API_URL = "https://incendiarynetworks.cc/api";
-const OLD_MASTER_HOST = "api.incendiarynetworks.cc";
 
 function validMasterUrl(value: string) {
   try {
@@ -11,7 +10,6 @@ function validMasterUrl(value: string) {
     if (
       u.protocol !== "https:" ||
       !approvedHost ||
-      host === OLD_MASTER_HOST ||
       u.pathname.replace(/\/$/, "") !== "/api" ||
       u.username ||
       u.password ||
