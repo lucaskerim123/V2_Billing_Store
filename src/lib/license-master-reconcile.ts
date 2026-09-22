@@ -32,6 +32,10 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
    const desired=String(binding.desired_state||"").toLowerCase(),remote=String(binding.remote_state||"").toLowerCase(),product=productOf(binding);
    if(!CANONICAL.has(product)){await db.from("license_bindings").update({last_synced_at:new Date().toISOString(),last_sync_error:null}).eq("id",bindingId);continue}
    if(remote===desired&&!binding.last_sync_error)continue;
+   if(remote===desired&&binding.last_sync_error&&binding.license_id){
+    const confirmationAction=desired==="active"?"activate":desired==="suspended"?"suspend":desired==="revoked"?"revoke":"";
+    if(confirmationAction){const confirmation=await masterControl(String(binding.license_id),{action:confirmationAction,actorRef:"billing_store_reconciliation_retry"});const confirmedState=masterState(confirmation,desired);if(confirmedState!==desired)throw new Error("License Master returned state "+confirmedState+" while Billing Store expected "+desired);const now=new Date().toISOString();const {error:confirmWrite}=await db.from("license_bindings").update({remote_state:desired,last_synced_at:now,last_sync_error:null,updated_at:now}).eq("id",bindingId);if(confirmWrite)throw confirmWrite;results.push({kind:"binding",bindingId,licenseId:String(binding.license_id),desired,remoteState:desired,status:"reconfirmed"});continue}
+   }
    const orderResult=binding.order_id?await db.from("orders").select("id,order_number,auth_user_id,status,payment_status").eq("id",binding.order_id).maybeSingle():{data:null,error:null};
    if(orderResult.error)throw orderResult.error;
    const order=orderResult.data,userId=String(binding.auth_user_id||order?.auth_user_id||"").trim();
