@@ -1,7 +1,7 @@
 import {masterRequest} from "@/lib/master-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
-const PATH_RE=/^\/api\/v1\/(license(?:\/[^/]+\/control)?|products|releases(?:\/[^/]+(?:\/(?:validate|artifact))?)?|release-channels(?:\/access)?)$/;
+const PATH_RE=/^\/api\/v1\/(license(?:\/health|\/[^/]+\/control)?|products|releases(?:\/[^/]+(?:\/(?:validate|artifact))?)?|release-channels(?:\/access)?)$/;
 
 function allowed(path:string){return PATH_RE.test(path);}
 async function forward(req:Request,method:string){
