@@ -7,7 +7,7 @@ function validMasterUrl(value: string) {
   try {
     const u = new URL(value.trim());
     const host = u.hostname.toLowerCase();
-    const approvedHost = host === "incendiarynetworks.cc" || host.endsWith(".incendiarynetworks.cc");
+    const approvedHost = host === "incendiarynetworks.cc";
     if (
       u.protocol !== "https:" ||
       !approvedHost ||
