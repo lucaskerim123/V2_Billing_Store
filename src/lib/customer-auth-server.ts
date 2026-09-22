@@ -1,6 +1,4 @@
 import {randomUUID,scrypt,timingSafeEqual} from "node:crypto";
-import {promisify} from "node:util";
-const scryptAsync=promisify(scrypt);
 import {createClient} from "@supabase/supabase-js";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
@@ -9,9 +7,16 @@ const service=()=>createClient(url,serviceKey,{auth:{persistSession:false,autoRe
 
 export type OrbitCustomerIdentity={customerId:string;userId:string;email:string;name:string};
 
+function scryptAsync(password:string,salt:string,keylen:number):Promise<Buffer>{
+ return new Promise((resolve,reject)=>scrypt(password,salt,keylen,{maxmem:64*1024*1024},(error,result)=>{
+  if(error)return reject(error);
+  resolve(Buffer.from(result));
+ }));
+}
+
 export async function hashCustomerPassword(password:string){
  const salt=randomUUID().replaceAll("-","");
- const digest=(await scryptAsync(password,salt,64,{maxmem:64*1024*1024})).toString("hex");
+ const digest=(await scryptAsync(password,salt,64)).toString("hex");
  return `scrypt${salt}${digest}`;
 }
 
@@ -19,7 +24,7 @@ export async function verifyCustomerPassword(password:string,encoded:string){
  try{
   const [scheme,salt,expectedHex]=String(encoded||"").split("$");
   if(scheme!=="scrypt"||!salt||!expectedHex)return false;
-  const actual=(await scryptAsync(password,salt,64,{maxmem:64*1024*1024})),expected=Buffer.from(expectedHex,"hex");
+  const actual=await scryptAsync(password,salt,64),expected=Buffer.from(expectedHex,"hex");
   return actual.length===expected.length&&timingSafeEqual(actual,expected);
  }catch{return false;}
 }
