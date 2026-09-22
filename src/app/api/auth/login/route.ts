@@ -50,11 +50,10 @@ export async function POST(req:Request){
    if(customerForLink?.id&&customerForLink.user_id!==user.id){
     await legacy.from("customers").update({user_id:user.id,updated_at:new Date().toISOString()}).eq("id",customerForLink.id);
    }
-   try{
-    await setOrbitPassword(user.id,password);
-   }catch(error){
-    console.error("[auth/login] legacy account migration failed",error);
-    return Response.json({error:"Could not migrate the existing account into the OrbitFS user system."},{status:500});
+   const migrated=await setCustomerCredentialPassword(user.id,password);
+   if(!migrated.ok){
+    console.error("[auth/login] legacy account migration failed",migrated.error);
+    return Response.json({error:"Could not migrate the existing account into the OrbitFS user system.",detail:migrated.error},{status:500});
    }
    await legacy.auth.signOut();
   }
