@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: store-ci-${{{ github.workflow }}-${{{ github.ref }}
+  group: store-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   production-gate:
@@ -36,10 +36,10 @@ jobs:
       - name: Run complete production preflight
         run: npm run preflight
       - name: Upload temporary validation failure report
-        if: ${{{ always() }}
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: validation-failure-${{{ github.sha }}
+          name: validation-failure-${{ github.sha }}
           path: .orbitfs-validation/validation-error.txt
           if-no-files-found: ignore
           retention-days: 7
