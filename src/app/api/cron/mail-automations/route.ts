@@ -1,15 +1,17 @@
 import {createClient} from "@supabase/supabase-js";
 import {sendAutomation} from "@/lib/transactional-server";
 import {drainMailOutbox} from "@/lib/mail-queue-worker";
+import {reconcileLicenseMaster} from "@/lib/license-master-reconcile";
 export const dynamic="force-dynamic";
 export const runtime="nodejs";
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const money=(c:any,currency="AUD")=>new Intl.NumberFormat("en-AU",{style:"currency",currency}).format(Number(c||0)/100);
 export async function GET(req:Request){
   const auth=req.headers.get("authorization")||"",cronSecret=process.env.CRON_SECRET;
   if(!cronSecret)return Response.json({error:"CRON_SECRET is not configured"},{status:503});
   if(auth!==`Bearer ${cronSecret}`)return Response.json({error:"Unauthorized"},{status:401});
+  if(!url)return Response.json({error:"NEXT_PUBLIC_SUPABASE_URL is not configured"},{status:503});
   if(!serviceKey)return Response.json({error:"SUPABASE_SERVICE_ROLE_KEY is not configured"},{status:503});
   const db=createClient(url,serviceKey,{auth:{persistSession:false}});
   let queue={processed:0,sent:0,failed:0};try{queue=await drainMailOutbox()}catch(e:any){console.error("mail outbox drain failed",e)}
@@ -27,5 +29,6 @@ export async function GET(req:Request){
   const run=async(eventKey:string,to:string,vars:any,type:string,id:string)=>{const k=`${eventKey}|${type}|${id}`;if(!to||sent.has(k))return;try{const r=await sendAutomation(eventKey,to,vars,type,id);if(!r?.skipped){sent.add(k);done.push({eventKey,type,id})}}catch(e:any){failed.push({eventKey,type,id,error:e?.message||String(e)})}};
   for(const i of invoices||[]){const c=who(i.auth_user_id),due=Math.max(0,Number(i.total_cents||0)-Number(i.paid_cents||0)),vars={customer_name:c.name,invoice_number:i.invoice_number||"",invoice_total:money(i.total_cents,i.currency||"AUD"),invoice_due:money(due,i.currency||"AUD"),due_date:i.due_at?new Date(i.due_at).toLocaleDateString("en-AU"):"No due date"};if(new Date(i.created_at)>=reconcileStart)await run("invoice.created",c.email,vars,"invoice",String(i.id));if(i.status==="paid"&&new Date(i.updated_at)>=reconcileStart)await run("invoice.paid",c.email,vars,"invoice",String(i.id));if(i.due_at&&!["paid","cancelled","void"].includes(String(i.status))){const dueAt=new Date(i.due_at),days=(dueAt.getTime()-now.getTime())/86400000;if(days>=0&&days<=beforeDays)await run("invoice.due",c.email,vars,"invoice",String(i.id));if(dueAt>=reconcileStart&&days<=-afterDays)await run("invoice.overdue",c.email,vars,"invoice",String(i.id));}}
   for(const o of orders||[]){const c=who(o.auth_user_id),vars={customer_name:c.name,order_number:o.order_number||"",order_total:money(o.total_cents,o.currency||"AUD"),reason:o.termination_reason||""};if(new Date(o.created_at)>=reconcileStart)await run("order.created",c.email,vars,"order",String(o.id));const ageDays=(now.getTime()-new Date(o.created_at).getTime())/86400000,unpaid=o.status==="pending_payment"&&!String(o.payment_status||"").startsWith("paid");if(unpaid&&ageDays>=cancelDays){await db.from("invoices").update({status:"cancelled",updated_at:now.toISOString()}).eq("order_id",o.id).in("status",["unpaid","partial","overdue"]);await db.from("orders").update({status:"terminated",payment_status:"cancelled",fulfillment_status:"terminated",termination_reason:"Payment not completed within grace period",terminated_at:now.toISOString(),updated_at:now.toISOString()}).eq("id",o.id);await db.from("payment_attempts").update({status:"expired",updated_at:now.toISOString()}).eq("invoice_id",(invoices||[]).find((x:any)=>x.order_id===o.id)?.id).in("status",["created","pending","action_required","processing"]);await run("order.cancelled_unpaid",c.email,{...vars,reason:"Payment not completed within 3 days"},"order",String(o.id));continue;}if(new Date(o.updated_at)<reconcileStart)continue;if(String(o.payment_status||"").startsWith("paid"))await run("order.paid",c.email,vars,"order",String(o.id));const suspended=o.service_status==="suspended"||o.status==="suspended",terminated=o.service_status==="terminated"||o.status==="terminated",active=o.service_status==="active"||o.status==="active";if(terminated)await run("service.terminated",c.email,vars,"order",String(o.id));else if(suspended)await run("service.suspended",c.email,{...vars,reason:"Service or billing suspension"},"order",String(o.id));else if(active){const hadSuspended=sent.has(`service.suspended|order|${o.id}`);if(hadSuspended)await run("service.restored",c.email,vars,"order",String(o.id));else await run("service.activated",c.email,vars,"order",String(o.id));}}
-  return Response.json({ok:true,sent:done.length+queue.sent,failed:failed.length+queue.failed,queue,events:done,errors:failed});
+  let licenseMasterReconciliation:any={ok:true,processed:0,failed:0};try{licenseMasterReconciliation=await reconcileLicenseMaster(50)}catch(e:any){licenseMasterReconciliation={ok:false,processed:0,failed:1,error:String(e?.message||e)}}
+  return Response.json({ok:true,sent:done.length+queue.sent,failed:failed.length+queue.failed,queue,events:done,errors:failed,licenseMasterReconciliation});
 }
