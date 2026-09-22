@@ -1,4 +1,0 @@
-import {masterLicenseValidate} from "@/lib/master-api";
-const PRODUCTS=new Set(["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
-export async function POST(req:Request){try{const body=await req.json();const product=String(body?.product||body?.product_code||"").trim().toLowerCase();const key=String(body?.license_key||body?.licenseKey||"").trim();if(!key||!PRODUCTS.has(product))return Response.json({valid:false,code:"INVALID_LICENSE_REQUEST"},{status:400});return Response.json(await masterLicenseValidate({...body,product}));}catch(e:any){return Response.json({valid:false,error:e.message||"License validation failed",code:e.code||"LICENSE_VALIDATION_ERROR"},{status:e.status||500});}}
-export async function OPTIONS(){return new Response(null,{status:204,headers:{"access-control-allow-origin":"*","access-control-allow-methods":"POST,OPTIONS","access-control-allow-headers":"content-type"}})}
