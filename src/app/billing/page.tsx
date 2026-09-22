@@ -12,7 +12,7 @@ const componentOrder:Record<string,number>={base:0,mcp:1,apex:2,studio:3};
 export default async function BillingPage(){
  const sb=createClient(url,publicKey,{auth:{persistSession:false}});
  const [catalog,s]=await Promise.all([
-  masterRequest("/api/products",{method:"GET"}).catch(()=>({products:[]})),
+  masterRequest("/api/v1/products",{method:"GET"}).catch(()=>({products:[]})),
   sb.from("app_settings").select("key,value").eq("public_read",true)
  ]);
  const products=(Array.isArray(catalog?.products)?catalog.products:[]).filter((p:any)=>p.active&&p.public&&p.purchasable).sort((a:any,b:any)=>(componentOrder[String(a.metadata?.component||a.componentKey||a.slug||"").toLowerCase()]??99)-(componentOrder[String(b.metadata?.component||b.componentKey||b.slug||"").toLowerCase()]??99));
