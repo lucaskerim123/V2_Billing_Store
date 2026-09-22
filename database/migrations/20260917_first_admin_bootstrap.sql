@@ -50,7 +50,31 @@ begin
   values(p_user_id,superadmin_id,true)
   on conflict (user_id,group_id) do update set is_primary=true;
 
-  return jsonb_build_object('ok',true,'user_id',p_user_id,'role','superadmin');
+  -- The first Billing Store administrator is also a normal customer account.
+  -- This keeps the admin identity linked to the customer portal from day one.
+  insert into public.customers(
+    auth_user_id,user_id,email,name,display_name,first_name,status,
+    email_verified_at,country_code,timezone,currency,language
+  )
+  select
+    p_user_id,p_user_id,au.email,
+    coalesce(nullif(up.display_name,''),nullif(up.first_name,''),au.email),
+    up.display_name,up.first_name,'active',
+    up.email_verified_at,'AU','Australia/Sydney','AUD','en'
+  from auth.users au
+  left join public.user_profiles up on up.id=au.id
+  where au.id=p_user_id
+  on conflict (auth_user_id) do update set
+    user_id=excluded.user_id,
+    email=excluded.email,
+    name=excluded.name,
+    display_name=excluded.display_name,
+    first_name=excluded.first_name,
+    status='active',
+    email_verified_at=coalesce(excluded.email_verified_at,public.customers.email_verified_at),
+    updated_at=now();
+
+  return jsonb_build_object('ok',true,'user_id',p_user_id,'role','superadmin','customer_created',true);
 end;
 $$;
 
