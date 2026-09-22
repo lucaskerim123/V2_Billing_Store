@@ -20,7 +20,7 @@ The production License Master API authority is fixed in code at `https://incendi
 - `DEPLOYER_API_TOKEN` — server-only License Master managed API credential for deployment operations when those operations are used.
 - `MASTER_API_TIMEOUT_MS` — optional request timeout.
 
-The Store calls the Master product endpoint at `/api/v1/products`. The Master catch-all routes this path to the database-backed product catalogue (`license_products`). `/api/products` remains available as the legacy equivalent.
+The Store calls the License Master product endpoint at `/api/v1/products`. All License Master integration paths use the `/api/v1` namespace; the Billing Store does not depend on legacy unversioned License Master API paths.
 
 The public Billing landing page reads its product catalogue from the Master. Product detail pages use `/api/orbitfs/catalog`, which joins authoritative Master data with the local Billing product record only to obtain the Billing database product ID and local checkout configuration/options. Master name, slug, description, price, currency, availability and component metadata override the local mirror.
 
