@@ -16,9 +16,16 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
  if(pendingResult.error)throw pendingResult.error;
  const orderIds=[...new Set((pendingResult.data||[]).map((x:any)=>String(x.order_id)).filter(Boolean))];
  for(const orderId of orderIds){try{const r=await syncPaidOrderToLicenseMaster(orderId);results.push({kind:"fulfillment",orderId,result:r})}catch(error:any){failures.push({kind:"fulfillment",orderId,error:String(error?.message||error)})}}
- const bindingResult=await db.from("license_bindings").select("*").or("last_sync_error.not.is.null,desired_state.neq.remote_state").order("updated_at",{ascending:true}).limit(cap);
- if(bindingResult.error)throw bindingResult.error;
- for(const binding of bindingResult.data||[]){
+ const [errorResult,mismatchResult]=await Promise.all([
+  db.from("license_bindings").select("*").not("last_sync_error","is",null).order("updated_at",{ascending:true}).limit(cap),
+  db.from("license_bindings").select("*").not("desired_state","is",null).order("updated_at",{ascending:true}).limit(cap*2)
+ ]);
+ if(errorResult.error)throw errorResult.error;if(mismatchResult.error)throw mismatchResult.error;
+ const seenBindings=new Set<string>(),bindings:any[]=[];
+ for(const row of [...(errorResult.data||[]),...(mismatchResult.data||[]).filter((x:any)=>String(x.desired_state||"").toLowerCase()!==String(x.remote_state||"").toLowerCase())]){
+  const id=String(row.id||"");if(id&&!seenBindings.has(id)){seenBindings.add(id);bindings.push(row)}if(bindings.length>=cap)break;
+ }
+ for(const binding of bindings){
   const bindingId=String(binding.id||"");
   try{
    if(!bindingId)continue;
