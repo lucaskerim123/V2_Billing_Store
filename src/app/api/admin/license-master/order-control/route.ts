@@ -54,6 +54,9 @@ export async function POST(req:Request){
           const patch={license_id:newId,remote_state:String(remote?.status||remote?.license?.status||"active"),desired_state:"active",archived_at:null,archive_reason:null,license_key_last4:key?key.slice(-4):binding.license_key_last4||null,last_synced_at:now,last_sync_error:null,updated_at:now};
           const {error}=await licenseDb().from("license_bindings").update(patch).eq("id",binding.id);if(error)throw error;
           if(binding.fulfillment_id){const {error:fe}=await licenseDb().from("license_fulfillments").update({license_id:newId,state:"fulfilled",last_error:null,fulfilled_at:now,updated_at:now,metadata:{...(binding.metadata||{}),master_license_id:newId,reprovisioned:true}}).eq("id",binding.fulfillment_id);if(fe)throw fe}
+          const entitlementResult=await licenseDb().from("download_entitlements").select("id,metadata").eq("auth_user_id",order.auth_user_id).eq("order_item_id",binding.order_item_id||"").maybeSingle();
+          if(entitlementResult.error)throw entitlementResult.error;
+          if(entitlementResult.data){const metadata={...(entitlementResult.data.metadata||{}),license_id:newId,master_license_id:newId,reprovisioned:true,previous_license_id:licenseId||null};const {error:ee}=await licenseDb().from("download_entitlements").update({metadata,status:"active",revoked_at:null,reason:"License Master reprovisioning"}).eq("id",entitlementResult.data.id);if(ee)throw ee}
           results.push({bindingId:binding.id,previousLicenseId:licenseId||null,licenseId:newId,action,status:"ok",reprovisioned:true});
         }else{
           if(!licenseId)throw new Error("Binding has no License Master license id");
