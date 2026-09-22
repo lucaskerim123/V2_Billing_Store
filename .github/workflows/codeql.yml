@@ -2,9 +2,6 @@ name: CodeQL Manual Scan
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - ".codeql-manual-trigger"
 
 permissions:
   contents: read
