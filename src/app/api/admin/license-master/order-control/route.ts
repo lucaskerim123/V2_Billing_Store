@@ -39,35 +39,34 @@ export async function POST(req:Request){
     const results:any[]=[];const failures:any[]=[];
     for(const binding of bindings||[]){
       const licenseId=String(binding.license_id||"").trim();
-      if(!licenseId){failures.push({bindingId:binding.id,error:"Binding has no License Master license id"});continue;}
       try{
         let remote:any;
-        if(action==="reprovision" || (action==="activate" && String(binding.remote_state||"").toLowerCase()==="revoked")){
+        const shouldIssue=action==="reprovision" || (action==="activate" && (!licenseId || String(binding.remote_state||"").toLowerCase()==="revoked"));
+        if(shouldIssue){
           const product=String(binding.license_product_key||"").trim().toLowerCase();
           if(!product)throw new Error("License binding has no product key");
-          const item=(items||[]).find((x:any)=>String(x.license_product_key||"").toLowerCase()===product);
-          remote=await masterIssue({
-            product,
-            customer_external_id:customerNumber,
-            external_reference:`${orderId}:${item?.id||binding.order_item_id||binding.id}`,
-            metadata:{billingOrderId:orderId,orderNumber:order.order_number||"",orderItemId:item?.id||binding.order_item_id||null,customerId:customer?.id||null,customerNumber,source:"v2_billing_store_order_control"}
-          });
+          const item=(items||[]).find((x:any)=>String(x.id)===String(binding.order_item_id))||(items||[]).find((x:any)=>String(x.license_product_key||"").toLowerCase()===product);
+          remote=await masterIssue({product,customer_external_id:customerNumber,external_reference:String(orderId)+":"+String(item?.id||binding.order_item_id||binding.id),metadata:{billingOrderId:orderId,orderNumber:order.order_number||"",orderItemId:item?.id||binding.order_item_id||null,customerId:customer?.id||null,customerNumber,source:"v2_billing_store_order_control"}});
           const newId=String(remote?.id||remote?.license_id||remote?.license?.id||remote?.licence?.id||"").trim();
           if(!newId)throw new Error("License Master did not return a license id");
           const key=String(remote?.license_key||remote?.licenseKey||remote?.key||remote?.license?.license_key||remote?.licence?.license_key||"");
-          const patch={license_id:newId,remote_state:String(remote?.status||remote?.license?.status||"active"),desired_state:"active",archived_at:null,license_key_last4:key?key.slice(-4):binding.license_key_last4||null,updated_at:new Date().toISOString()};
+          const now=new Date().toISOString();
+          const patch={license_id:newId,remote_state:String(remote?.status||remote?.license?.status||"active"),desired_state:"active",archived_at:null,archive_reason:null,license_key_last4:key?key.slice(-4):binding.license_key_last4||null,last_synced_at:now,last_sync_error:null,updated_at:now};
           const {error}=await licenseDb().from("license_bindings").update(patch).eq("id",binding.id);if(error)throw error;
-          results.push({bindingId:binding.id,previousLicenseId:licenseId,licenseId:newId,action,status:"ok",rotated:false,reprovisioned:true});
+          if(binding.fulfillment_id){const {error:fe}=await licenseDb().from("license_fulfillments").update({license_id:newId,state:"fulfilled",last_error:null,fulfilled_at:now,updated_at:now,metadata:{...(binding.metadata||{}),master_license_id:newId,reprovisioned:true}}).eq("id",binding.fulfillment_id);if(fe)throw fe}
+          results.push({bindingId:binding.id,previousLicenseId:licenseId||null,licenseId:newId,action,status:"ok",reprovisioned:true});
         }else{
+          if(!licenseId)throw new Error("Binding has no License Master license id");
           const masterAction=action==="terminate"?"revoke":action==="unsuspend"?"activate":action;
           remote=await masterControl(licenseId,{action:masterAction,actorRef:"billing_store_order_control"});
           const remoteState=masterAction==="revoke"?"revoked":masterAction==="suspend"?"suspended":"active";
-          const patch:any={remote_state:remoteState,desired_state:remoteState,updated_at:new Date().toISOString()};
-          if(masterAction==="revoke")patch.archived_at=new Date().toISOString();
+          const now=new Date().toISOString();
+          const patch:any={remote_state:remoteState,desired_state:remoteState,last_synced_at:now,last_sync_error:null,updated_at:now};
+          if(masterAction==="revoke"){patch.archived_at=now;patch.archive_reason=String(body.reason||"Order service termination")}
           const {error}=await licenseDb().from("license_bindings").update(patch).eq("id",binding.id);if(error)throw error;
           results.push({bindingId:binding.id,licenseId,action,status:"ok"});
         }
-      }catch(e:any){failures.push({bindingId:binding.id,licenseId,error:String(e?.message||"License Master action failed")});}
+      }catch(e:any){failures.push({bindingId:binding.id,licenseId:licenseId||null,error:String(e?.message||"License Master action failed")})}
     }
     return Response.json({ok:failures.length===0,orderId,action,results,failures},{headers:{"cache-control":"no-store"}});
   }catch(e:any){return Response.json({error:e?.message||"Order license control failed",code:e?.code||"ORDER_LICENSE_CONTROL_FAILED"},{status:e?.status||500});}
