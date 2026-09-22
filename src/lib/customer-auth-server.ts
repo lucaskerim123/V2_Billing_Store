@@ -17,7 +17,7 @@ function scryptAsync(password:string,salt:string,keylen:number):Promise<Buffer>{
 export async function hashCustomerPassword(password:string){
  const salt=randomUUID().replaceAll("-","");
  const digest=(await scryptAsync(password,salt,64)).toString("hex");
- return `scrypt${salt}${digest}`;
+ return `scrypt$${salt}$${digest}`;
 }
 
 export async function verifyCustomerPassword(password:string,encoded:string){
