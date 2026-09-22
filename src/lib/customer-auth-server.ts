@@ -1,4 +1,6 @@
-import {randomUUID,scryptSync,timingSafeEqual} from "node:crypto";
+import {randomUUID,scrypt,timingSafeEqual} from "node:crypto";
+import {promisify} from "node:util";
+const scryptAsync=promisify(scrypt);
 import {createClient} from "@supabase/supabase-js";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
@@ -7,17 +9,17 @@ const service=()=>createClient(url,serviceKey,{auth:{persistSession:false,autoRe
 
 export type OrbitCustomerIdentity={customerId:string;userId:string;email:string;name:string};
 
-export function hashCustomerPassword(password:string){
+export async function hashCustomerPassword(password:string){
  const salt=randomUUID().replaceAll("-","");
- const digest=scryptSync(password,salt,64).toString("hex");
- return `scrypt$${salt}$${digest}`;
+ const digest=(await scryptAsync(password,salt,64,{maxmem:64*1024*1024})).toString("hex");
+ return `scrypt${salt}${digest}`;
 }
 
-export function verifyCustomerPassword(password:string,encoded:string){
+export async function verifyCustomerPassword(password:string,encoded:string){
  try{
   const [scheme,salt,expectedHex]=String(encoded||"").split("$");
   if(scheme!=="scrypt"||!salt||!expectedHex)return false;
-  const actual=scryptSync(password,salt,64),expected=Buffer.from(expectedHex,"hex");
+  const actual=(await scryptAsync(password,salt,64,{maxmem:64*1024*1024})),expected=Buffer.from(expectedHex,"hex");
   return actual.length===expected.length&&timingSafeEqual(actual,expected);
  }catch{return false;}
 }
@@ -39,7 +41,7 @@ export async function resolveCustomerIdentity(userOrCustomerId:string):Promise<O
 export async function setCustomerCredentialPassword(userOrCustomerId:string,password:string){
  const db=service(),identity=await resolveCustomerIdentity(userOrCustomerId);
  if(!identity)return {ok:false as const,error:"Customer account not found."};
- const now=new Date().toISOString(),passwordHash=hashCustomerPassword(password);
+ const now=new Date().toISOString(),passwordHash=await hashCustomerPassword(password);
  const {error}=await db.from("customer_credentials").upsert({user_id:identity.userId,password_hash:passwordHash,password_changed_at:now,updated_at:now},{onConflict:"user_id"});
  if(error)return {ok:false as const,error:error.message};
  await db.from("customer_sessions").update({revoked_at:now}).eq("user_id",identity.userId).is("revoked_at",null);
@@ -53,6 +55,6 @@ export async function verifyCustomerCredential(email:string,password:string){
  const {data:customer}=await db.from("customers").select("id,status,email_verified_at,name,display_name,first_name").eq("user_id",user.id).maybeSingle();
  if(!customer)return null;
  const {data:credential}=await db.from("customer_credentials").select("password_hash").eq("user_id",user.id).maybeSingle();
- if(!credential?.password_hash||!verifyCustomerPassword(password,String(credential.password_hash)))return null;
+ if(!credential?.password_hash||!(await verifyCustomerPassword(password,String(credential.password_hash))))return null;
  return {customerId:String(customer.id),userId:String(user.id),email:String(user.email),name:String(customer.name||customer.display_name||user.display_name||user.first_name||"Customer"),status:String(user.status||customer.status||"active"),emailVerifiedAt:user.email_verified_at||customer.email_verified_at||null};
 }
