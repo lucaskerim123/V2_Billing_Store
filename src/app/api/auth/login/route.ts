@@ -21,7 +21,7 @@ export async function POST(req:Request){
    const legacyUser=legacyLogin.user;
    const {data:existingById}=await legacy.from("users").select("id,email,username,display_name,first_name,status,email_verified_at").eq("id",legacyUser.id).maybeSingle();
    const {data:existingByEmail}=existingById?{data:null}:{data:await legacy.from("users").select("id,email,username,display_name,first_name,status,email_verified_at").ilike("email",email).maybeSingle()};
-   let existing=existingById||existingByEmail?.data||null;
+   const existing=existingById||existingByEmail?.data||null;
    if(existing){
     user=existing;
    }else{
