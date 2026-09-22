@@ -5,6 +5,8 @@ const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const service=()=>createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
 
+export const runtime="nodejs";
+
 export async function POST(req:Request){
  const body=await req.json().catch(()=>({}));
  const email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
@@ -49,7 +51,8 @@ export async function POST(req:Request){
    }
    try{
     await setOrbitPassword(user.id,password);
-   }catch{
+   }catch(error){
+    console.error("[auth/login] legacy account migration failed",error);
     return Response.json({error:"Could not migrate the existing account into the OrbitFS user system."},{status:500});
    }
    await legacy.auth.signOut();
