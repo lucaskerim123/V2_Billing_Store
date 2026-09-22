@@ -1,6 +1,5 @@
 import {createClient} from "@supabase/supabase-js";
-import {authenticateOrbitUser,createOrbitSession} from "@/lib/orbitfs-auth-server";
-import {setCustomerCredentialPassword} from "@/lib/customer-auth-server";
+import {authenticateOrbitUser,createOrbitSession,setOrbitPassword} from "@/lib/orbitfs-auth-server";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -50,10 +49,14 @@ export async function POST(req:Request){
    if(customerForLink?.id&&customerForLink.user_id!==user.id){
     await legacy.from("customers").update({user_id:user.id,updated_at:new Date().toISOString()}).eq("id",customerForLink.id);
    }
-   const migrated=await setCustomerCredentialPassword(user.id,password);
-   if(!migrated.ok){
-    console.error("[auth/login] legacy account migration failed",migrated.error);
-    return Response.json({error:"Could not migrate the existing account into the OrbitFS user system.",detail:migrated.error},{status:500});
+   try{
+    // The canonical user and customer link are already established above. Write the
+    // credential directly against the canonical OrbitFS user so legacy migration cannot
+    // fail because the legacy customer identity resolver is stale.
+    await setOrbitPassword(user.id,password);
+   }catch(error:any){
+    console.error("[auth/login] legacy credential migration failed",error);
+    return Response.json({error:"Could not migrate the existing account into the OrbitFS user system.",detail:error?.message||"Credential migration failed."},{status:500});
    }
    await legacy.auth.signOut();
   }
