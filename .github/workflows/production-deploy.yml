@@ -48,18 +48,21 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Run complete production preflight
-        run: npm run preflight
-
-      - name: Upload concise validation failure report
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: production-validation-failure-${{ github.sha }}
-          path: .orbitfs-validation/validation-error.txt
-          if-no-files-found: ignore
-          retention-days: 30
-
+      - name: Verify latest main commit has passed the production gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          repo=os.environ['GITHUB_REPOSITORY']
+          sha=os.environ['GITHUB_SHA']
+          req=urllib.request.Request(f'https://api.github.com/repos/{repo}/actions/workflows/ci.yml/runs?branch=main&per_page=10', headers={'Authorization':'Bearer '+os.environ['GITHUB_TOKEN'],'Accept':'application/vnd.github+json'})
+          with urllib.request.urlopen(req) as response: data=json.load(response)
+          match=next((x for x in data.get('workflow_runs',[]) if x.get('head_sha')==sha and x.get('status')=='completed' and x.get('conclusion')=='success'),None)
+          if not match: raise SystemExit('No successful production gate exists for this exact main commit. Run Scan & Prepare first.')
+          print('Validated by CI run', match['id'], 'for', sha)
+          PY
       - name: Generate immutable release/change-set manifest
         run: node scripts/release-manifest.mjs
 
@@ -91,7 +94,7 @@ jobs:
         run: vercel deploy --prebuilt --dry --format=json --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
 
       - name: Deploy only the validated prebuilt artifact
-        run: vercel deploy --prebuilt --archive=split-tgz --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+        run: vercel deploy --prebuilt --archive=tgz --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
 
       - name: Report deployed commit
         run: echo "Production deployment completed for immutable commit $GITHUB_SHA."
