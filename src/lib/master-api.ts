@@ -35,6 +35,24 @@ function masterPath(path:string){const clean=path.startsWith("/")?path:`/${path}
 async function fetchWithTimeout(url:string,init:RequestInit,role:MasterRole="billing"){const cfg=requireConfig(role);const headers=new Headers(init.headers);headers.set("authorization",`Bearer ${cfg.value}`);const controller=init.signal?null:new AbortController();const timer=controller?setTimeout(()=>controller.abort(),timeoutMs()):null;try{return await fetch(url,{...init,headers,signal:init.signal||controller?.signal});}catch(error){if(error instanceof Error&&error.name==="AbortError")throw new Error(`License Master request timed out after ${timeoutMs()}ms`);throw new Error(`License Master connection failed: ${error instanceof Error?error.message:String(error)}`);}finally{if(timer)clearTimeout(timer);}}
 export async function masterRequest(path:string,init:RequestInit={},role:MasterRole="billing"){const headers=new Headers(init.headers);if(!headers.has("content-type")&&init.body)headers.set("content-type","application/json");const method=String(init.method||"GET").toUpperCase();const fetchInit:RequestInit={...init,headers};if(method==="GET"&&getCacheSeconds()>0&&fetchInit.cache!=="no-store")(fetchInit as any).next={revalidate:getCacheSeconds()};else fetchInit.cache="no-store";const base=await configuredMasterApiBase();const response=await fetchWithTimeout(`${base}${masterPath(path)}`,fetchInit,role);const text=await response.text();let data:any={};try{data=text?JSON.parse(text):{};}catch{data={error:text||"License Master returned an invalid response"};}if(!response.ok)throw Object.assign(new Error(data?.error||`License Master request failed (${response.status})`),{status:response.status,code:data?.code});return data;}
 
+export async function masterProducts(role:MasterRole="billing"){
+  return masterRequest("/api/v1/products",{method:"GET"},role);
+}
+export async function masterLicenses(role:MasterRole="billing"){
+  return masterRequest("/api/v1/license",{method:"GET"},role);
+}
+export async function masterReleases(product="orbitfs_base",channel="all",releaseType="all",role:MasterRole="billing"){
+  const qs=new URLSearchParams();
+  const p=String(product||"").trim().toLowerCase();
+  const c=String(channel||"").trim().toLowerCase();
+  const t=String(releaseType||"").trim().toLowerCase();
+  if(p&&p!=="all")qs.set("product",p);
+  if(c&&c!=="all")qs.set("channel",c);
+  if(t&&t!=="all")qs.set("type",t);
+  const query=qs.toString();
+  return masterRequest("/api/v1/releases"+(query?"?"+query:""),{method:"GET"},role);
+}
+
 const ALLOWED_PRODUCTS=new Set(["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
 export async function masterLicenseValidate(input:any){const product=String(input.product||input.product_code||"orbitfs_base").trim().toLowerCase();const licenseKey=String(input.licenseKey||input.license_key||"").trim();if(!ALLOWED_PRODUCTS.has(product))throw Object.assign(new Error("Unsupported OrbitFS license product"),{status:400,code:"UNSUPPORTED_PRODUCT"});if(!licenseKey)throw Object.assign(new Error("License key is required"),{status:400,code:"LICENSE_KEY_REQUIRED"});const base="https://incendiarynetworks.cc/api/v1/license";const response=await fetch(base+"/validate",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},cache:"no-store",body:JSON.stringify({license_key:licenseKey,installation_id:input.installationId||input.installation_id,product,component:product,product_version:input.productVersion||input.product_version||input.appVersion||undefined,metadata:input.metadata&&typeof input.metadata==="object"?input.metadata:{}})});const data=await response.json().catch(()=>({}));if(!response.ok)throw Object.assign(new Error(data?.error||data?.code||"License validation failed"),{status:response.status,code:data?.code});return data;}
 export const masterValidate=masterLicenseValidate;
