@@ -100,7 +100,13 @@ export async function POST(req:NextRequest){
   const decision=String(body.decision||'').toLowerCase();
   if(!['approve','deny'].includes(decision))return NextResponse.json({error:'Invalid cancellation decision.'},{status:400});
   const review:any=await userRpc(token,'admin_review_order_cancellation',{p_request_id:requestId,p_decision:decision,p_staff_note:body.staff_note?String(body.staff_note):null});
-  if(decision==='deny'||review?.status!=='completed'||!review?.refund_required)return NextResponse.json({ok:true,review,refund:null});
+  if(decision==='deny')return NextResponse.json({ok:true,review,refund:null});
+  if(review?.status==='completed'&&review?.termination?.order_id){
+   const syncResponse=await fetch(new URL('/api/admin/license-master/order-control',req.url),{method:'POST',headers:{authorization:auth,'content-type':'application/json'},body:JSON.stringify({orderId:String(review.termination.order_id),action:'terminate',reason:String(body.staff_note||'Customer cancellation request approved')})});
+   const syncData=await syncResponse.json().catch(()=>({}));
+   if(!syncResponse.ok||syncData?.ok!==true)return NextResponse.json({ok:false,review,refund:null,error:'Cancellation was applied locally but License Master termination synchronization failed.',licenseMaster:syncData},{status:502});
+  }
+  if(review?.status!=='completed'||!review?.refund_required)return NextResponse.json({ok:true,review,refund:null});
 
   try{
    const refund=await processRefund(token,requestId);
