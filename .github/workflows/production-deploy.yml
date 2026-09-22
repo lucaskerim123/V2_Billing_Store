@@ -51,6 +51,15 @@ jobs:
       - name: Run complete production preflight
         run: npm run preflight
 
+      - name: Upload concise validation failure report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-validation-failure-${{ github.sha }}
+          path: .orbitfs-validation/validation-error.txt
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Generate immutable release/change-set manifest
         run: node scripts/release-manifest.mjs
 
