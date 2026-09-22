@@ -1,6 +1,7 @@
 import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitUser,requireSystem,saveProviderConnection} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
+import {disconnectProviderConnection} from "@/lib/orbitfs-deployment";
 
 const VERCEL_API="https://api.vercel.com";
 
@@ -31,6 +32,7 @@ export async function POST(req:Request){
     if(!s.vercel_oauth_enabled)throw Object.assign(new Error("Customer Vercel connection is disabled"),{status:503});
     const body=await req.json().catch(()=>({})),action=String(body.action||"connect");
     const {data:deployed}=await licenseDb().from("orbitfs_installations").select("id,vercel_team_id,vercel_project_id").eq("auth_user_id",user.id).not("vercel_project_id","is",null).limit(1).maybeSingle();
+    if(action==="disconnect"){if(deployed?.vercel_project_id)throw Object.assign(new Error("Undeploy the OrbitFS Panel before resetting the Vercel connector."),{status:409});return Response.json({ok:Boolean(await disconnectProviderConnection(user.id,"vercel"))})}
     if(action==="select_team"){
       if(deployed?.vercel_project_id)throw Object.assign(new Error("Undeploy your OrbitFS Panel before changing the Vercel deployment account/team."),{status:409});
       const existing=String(await serviceRpc("service_orbitfs_provider_secret",{p_user_id:user.id,p_provider:"vercel",p_key:"access_token"})||"").trim();
