@@ -12,7 +12,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
   try{
    const {data:{session}}=await sb.auth.getSession();
    if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");
-   const target="/api/releases?type=update";
+   const target="/api/v1/releases?type=update";
    const r=await fetch(`/api/admin/license-master?path=${encodeURIComponent(target)}`,{headers:{Authorization:`Bearer ${session.access_token}`,Accept:"application/json"},cache:"no-store"});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||`License Master returned HTTP ${r.status}`);
