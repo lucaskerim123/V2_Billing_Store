@@ -1,7 +1,7 @@
 import {mkdirSync,rmSync,writeFileSync,existsSync,readFileSync} from "node:fs";
 import {spawnSync} from "node:child_process";
 const dir=".orbitfs-validation";rmSync(dir,{recursive:true,force:true});mkdirSync(dir,{recursive:true});
-const npm=process.platform==="win32"?"npm.cmd":"npm";const failures=[];
+const npm=process.platform==="win32"?"npm.cmd":"npm";const failures=[];const compact=(output)=>{const lines=String(output||"").split(/\\r?\\n/).map(x=>x.trimEnd()).filter(Boolean);let i=-1;for(let n=lines.length-1;n>=0;n--){if(/##\\[error\\]/i.test(lines[n])){i=n;break;}}if(i<0)for(let n=lines.length-1;n>=0;n--){if(/(?:npm ERR!|Error:|error TS\\d+|Type error|Build failed|failed with|Expected .+ got)/i.test(lines[n])){i=n;break;}}if(i<0)return lines.slice(-6);return lines.slice(Math.max(0,i-5),i+1).map(x=>x.replace(/^.*?##\\[error\\]\\s*/,"").trim()).filter(Boolean);};
 function run(label,command,args,fix,prompt){console.log("\n=== "+label+" ===");const r=spawnSync(command,args,{encoding:"utf8",shell:false});const output=[r.stdout||"",r.stderr||""].join("\n").trim();if(r.status!==0){failures.push({label,exitCode:r.status??1,output:output.slice(-12000),fix,prompt});console.error(output);}}
 if(!existsSync("package-lock.json"))failures.push({label:"Repository / lockfile",exitCode:1,output:"package-lock.json is missing.",fix:"Restore and commit package-lock.json.",prompt:"Fix the missing package-lock.json, then run npm ci, lint, typecheck and build."});
 if(!existsSync("vercel.json"))failures.push({label:"Vercel configuration",exitCode:1,output:"vercel.json is missing.",fix:"Restore the required production vercel.json.",prompt:"Fix the missing vercel.json using the existing production configuration. Do not change unrelated settings."});
