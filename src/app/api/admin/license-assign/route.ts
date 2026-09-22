@@ -3,12 +3,12 @@ import {masterIssue} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
-const SUPABASE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
+const SUPABASE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 
 async function staff(req:Request){
   const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
   if(!token||!SUPABASE_URL||!SUPABASE_KEY)return null;
-  const sb=createSupabaseClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+  const sb=createSupabaseClient(SUPABASE_URL,SUPABASE_KEY,{global:{headers:{Authorization:"Bearer "+token}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;
   const {data}=await sb.rpc("get_my_staff_access");
   const row=Array.isArray(data)?data[0]:data,p=row?.permissions;
