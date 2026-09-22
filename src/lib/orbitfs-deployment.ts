@@ -2,7 +2,7 @@ import {createHash,randomBytes} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
 import {getPanelRelease} from "@/lib/panel-release";
-import {masterExecuteDeployment,masterSyncDeployment} from "@/lib/master-api";
+import {masterExecuteDeployment,masterSyncDeployment,masterReleases} from "@/lib/master-api";
 
 const SUPABASE_API="https://api.supabase.com/v1";
 const VERCEL_API="https://api.vercel.com";
@@ -554,8 +554,11 @@ async function assertSupabaseProjectReady(install:any){
   const db=rows.find((x:any)=>String(x?.name||x?.service||"").toLowerCase()==="db")||rows[0];
   if(String(db?.status||"").toUpperCase()!=="ACTIVE_HEALTHY")throw Object.assign(new Error(`Supabase database is still starting (${db?.status||"not ready"}). Try again shortly.`),{status:409});
 }
-export async function initializeSupabaseDatabase(install:any){
+export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   await requireSystem("deploy");if(!install.supabase_project_ref)throw Object.assign(new Error("Choose a customer Supabase project first"),{status:409});
+  const channel=String(install.release_channel||"stable"),releaseRows=await masterReleases("orbitfs_base",channel,"base"),published=(releaseRows?.releases||[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved"),release=releaseId?published.find((r:any)=>String(r.id)===releaseId):published[0];
+  if(!release?.id)throw Object.assign(new Error(releaseId?"Selected Base release is no longer published in License Master":"No published Base release is available for this channel"),{status:409});
+  if(String(release.channel||channel)!==channel)throw Object.assign(new Error("Selected Base release does not match the installation release channel"),{status:409});
   await assertSupabaseProjectReady(install);
   const sql=await schemaText();
   await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:null}).eq("id",install.id);
@@ -572,7 +575,7 @@ export async function initializeSupabaseDatabase(install:any){
     await event(install,"database.failed","error",message);
     throw e;
   }
-  const s=await releaseSettings(),{data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:s.schema_version,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS schema ${s.schema_version}`);return data;
+  const s=await releaseSettings(),releaseSchema=String(release.manifest?.schemaVersion||release.manifest?.schema_version||s.schema_version||"1"),{data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:releaseSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS schema ${s.schema_version}`);return data;
 }
 
 async function publishableKey(install:any){
