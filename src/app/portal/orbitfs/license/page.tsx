@@ -70,7 +70,7 @@ export default function OrbitFSLicenseController() {
       },
       body: JSON.stringify({
         licenseId: binding.license_id,
-        installationId: install?.id || null,
+        installationId: install?.installation_id || null,
         action,
       }),
     });
