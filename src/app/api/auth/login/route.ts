@@ -1,5 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
-import {authenticateOrbitUser,createOrbitSession,setOrbitPassword} from "@/lib/orbitfs-auth-server";
+import {authenticateOrbitUser,createOrbitSession} from "@/lib/orbitfs-auth-server";
+import {setCustomerCredentialPassword} from "@/lib/customer-auth-server";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
