@@ -1,4 +1,4 @@
-import Link from "next/link";
+"use client";\n\nimport Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import {usePathname} from "next/navigation";
 import {createClient} from "@/lib/supabase";
