@@ -36,12 +36,33 @@ export async function GET(req:Request){
   const base=enrichedBindings.find((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel)||enrichedBindings[0]||null,install=base?installationRows.find((x:any)=>x.license_binding_id===base.id):null;
   if(install?.vercel_project_id)connectionRows=connectionRows.map((x:any)=>x.provider==="vercel"?{...x,team_id:install.vercel_team_id||x.team_id,metadata:{...(x.metadata||{}),team_id:install.vercel_team_id||x.metadata?.team_id||null,team_locked:true}}:x);
   const [eventRows,installReleaseRows]=install?await Promise.all([q(db.from("orbitfs_deployment_events").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)),q(db.from("orbitfs_installation_releases").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40))]):[{data:[],error:null},{data:[],error:null}];
+  const installHistory=installReleaseRows.data||[];
+  if(install){
+    const metadata=install.metadata&&typeof install.metadata==="object"?{...install.metadata}:{};
+    if(!metadata.appliedUpdate){
+      const applied=installHistory.find((row:any)=>String(row.action||"").toLowerCase()==="update"&&String(row.status||"").toLowerCase()==="ready");
+      if(applied){
+        metadata.appliedUpdate={
+          version:String(applied.release_version||""),
+          releaseId:String(applied.release_id||""),
+          sha256:String(applied.release_sha256||""),
+          sourceCommit:String(applied.source_commit||""),
+          channel:String(install.release_channel||"stable"),
+          components:Array.isArray(applied.components)?applied.components:[],
+          appliedAt:String(applied.ready_at||applied.created_at||""),
+          panelDeploymentId:String(applied.panel_deployment_id||applied.vercel_deployment_id||""),
+          engineDeploymentId:String(applied.engine_deployment_id||"")
+        };
+      }
+    }
+    install.metadata=metadata;
+  }
   const publishedMaster=[...masterReleaseRows].filter((r:any)=>String(r.status||"")==="published").map((r:any)=>{const m=r.manifest&&typeof r.manifest==="object"?r.manifest:{};return {...r,title:m.title||`OrbitFS ${r.release_type==="base"?"Base":"Update"} ${r.version}`,description:m.description||null,changelog:r.notes||null,customer_notes:m.customer_notes||m.customerNotes||"",severity:m.severity||"normal",required:m.required===true,rollout:m.rollout||"public",minimum_version:m.minimum_version||m.minimumVersion||null,rollback_version:m.rollback_version||m.rollbackVersion||null,components:Array.isArray(m.components)?m.components:[]}});
   const selectedChannel=String(install?.release_channel||allowedChannels[0]||"stable");
   const latestMaster=(type:string)=>publishedMaster.filter((r:any)=>String(r.release_type||"")===type&&String(r.channel||"stable")===selectedChannel).sort((a:any,b:any)=>String(b.published_at||b.publishedAt||"").localeCompare(String(a.published_at||a.publishedAt||""))||String(b.version).localeCompare(String(a.version),undefined,{numeric:true}))[0]||null;
   const latestBase=latestMaster("base"),latestUpdate=latestMaster("update");
   const settingsChannels=allowedChannels;
   const s=settings.data||{};
-  return Response.json({customer:{id:customer?.id||null,customer_id:customer?.customer_number||null,customer_number:customer?.customer_number||null,name:customer?.name||null,email:customer?.email||null},settings:{enabled:s.enabled!==false,customer_deploy_enabled:s.customer_deploy_enabled!==false,customer_updates_enabled:s.customer_updates_enabled!==false,customer_rollbacks_enabled:s.customer_rollbacks_enabled!==false,supabase_oauth_enabled:s.supabase_oauth_enabled!==false,vercel_oauth_enabled:s.vercel_oauth_enabled!==false,allow_existing_supabase_project:s.allow_existing_supabase_project!==false,allow_create_supabase_project:s.allow_create_supabase_project!==false,schema_version:s.schema_version||"1",release_channel:settingsChannels[0]||"stable",release_channels:settingsChannels},bindings:enrichedBindings,connections:connectionRows,installations:installationRows,events:eventRows.data||[],releases:installReleaseRows.data||[],publishedReleases:publishedMaster,latestRelease:latestUpdate||latestBase,latestBase,latestUpdate,master:{licenses:masterLicensesRows,releases:masterReleaseRows}},{headers:{"cache-control":"no-store"}});
+  return Response.json({customer:{id:customer?.id||null,customer_id:customer?.customer_number||null,customer_number:customer?.customer_number||null,name:customer?.name||null,email:customer?.email||null},settings:{enabled:s.enabled!==false,customer_deploy_enabled:s.customer_deploy_enabled!==false,customer_updates_enabled:s.customer_updates_enabled!==false,customer_rollbacks_enabled:s.customer_rollbacks_enabled!==false,supabase_oauth_enabled:s.supabase_oauth_enabled!==false,vercel_oauth_enabled:s.vercel_oauth_enabled!==false,allow_existing_supabase_project:s.allow_existing_supabase_project!==false,allow_create_supabase_project:s.allow_create_supabase_project!==false,schema_version:s.schema_version||"1",release_channel:settingsChannels[0]||"stable",release_channels:settingsChannels},bindings:enrichedBindings,connections:connectionRows,installations:installationRows.map((row:any)=>install&&row.id===install.id?install:row),events:eventRows.data||[],releases:installHistory,publishedReleases:publishedMaster,latestRelease:latestUpdate||latestBase,latestBase,latestUpdate,master:{licenses:masterLicensesRows,releases:masterReleaseRows}},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:e?.message||"Could not load OrbitFS status"},{status:Number(e?.status)||500,headers:{"cache-control":"no-store"}})}
 }
