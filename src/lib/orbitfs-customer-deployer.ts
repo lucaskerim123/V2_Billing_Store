@@ -2,13 +2,15 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
-import {configureVercel,event,requireSystem,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,event,requireSystem,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 
 const MAX_FILES=5000,MAX_FILE_BYTES=25*1024*1024,MAX_TOTAL_BYTES=70*1024*1024;
 const SAFE_PATH=/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)(?:\.git|\.vercel|node_modules)(?:\/|$))[A-Za-z0-9._@+\-\/]+$/;
-type ReleaseFile={file:string;data:string;encoding?:string;sha256?:string};
-type Package={version:string;releaseId?:string;sourceCommit?:string;components?:string[];projectSettings?:Record<string,unknown>;files:ReleaseFile[]};
+type ReleaseFile={file:string;data:string;encoding?:string;sha256?:string;size?:number;component?:string};
+type Package={format?:string;schemaVersion?:number;version:string;releaseId?:string;sourceCommit?:string;components?:string[];projectSettings?:Record<string,unknown>;files:ReleaseFile[];[key:string]:any};
+type UpdateBundle={format:"orbitfs-update-bundle-v3";schemaVersion:number;version:string;sourceCommit?:string;components:string[];minimumBaseVersion?:string;minimumEngineDeployerProtocol?:number;checkpointRequired?:boolean;payloads:{panel:Package|null;engine:Package|null};[key:string]:any};
+type ParsedArtifact={root:Package|UpdateBundle;artifactSha256:string};
 const fail=(message:string,status=400):never=>{throw Object.assign(new Error(message),{status})};
 const checksum=(buf:Buffer)=>createHash("sha256").update(buf).digest("hex");
 const releaseType=(action:DeployAction)=>action==="update"?"update":"base";
@@ -16,9 +18,67 @@ const releaseType=(action:DeployAction)=>action==="update"?"update":"base";
 async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable",releaseId?:string):Promise<any>{const rows=await masterReleases("orbitfs_base",channel,releaseType(action),"deployer");const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved");const wanted=releaseId?releases.find((r:any)=>String(r.id)===String(releaseId)):version?releases.find((r:any)=>String(r.version)===version):releases[0];if(!wanted?.id)fail(releaseId?`Selected published ${releaseType(action)} release is no longer available in License Master`:version?`Published ${releaseType(action)} release ${version} was not found in License Master`:`No approved published ${releaseType(action)} release is available`,404);if(String(wanted.channel||channel)!==channel)fail("Selected release channel does not match the installation channel",409);return wanted}
 
 function gunzipArtifact(bytes:Buffer){try{return gunzipSync(bytes)}catch{throw Object.assign(new Error("Release artifact is not a valid OrbitFS gzip package"),{status:422})}}
-function parsePackage(raw:Buffer,release:any){try{const value=JSON.parse(raw.toString("utf8")) as Package;if(!value||!Array.isArray(value.files)||!value.version)fail("Release package manifest is incomplete",422);if((value as any).format&&String((value as any).format)!=="orbitfs-base-deployment-v2")fail("Release package format is not a supported OrbitFS Base manifest",422);const manifest=release?.manifest||{};const expectedCommit=String(release?.source_sha||manifest?.sourceCommit||"").trim();const packageCommit=String((value as any).sourceCommit||"").trim();if(expectedCommit&&packageCommit&&expectedCommit!==packageCommit)fail("Release package source commit does not match License Master",422);const releaseComponents=[...(Array.isArray(manifest?.components)?manifest.components:[])].map((x:any)=>String(x||"").trim().toLowerCase()).filter(Boolean).sort();const packageComponents=[...((Array.isArray((value as any).components)?(value as any).components:[]))].map((x:any)=>String(x||"").trim().toLowerCase()).filter(Boolean).sort();if(releaseComponents.length&&packageComponents.length&&releaseComponents.join(",")!==packageComponents.join(","))fail("Release package components do not match License Master",422);return value}catch(error){if(error instanceof Error&&"status" in error)throw error;throw Object.assign(new Error("Release package contains invalid JSON"),{status:422})}}
-
-async function readPackage(release:any):Promise<{pkg:Package;files:Array<{file:string;data:string;sha256:string;size:number}>;artifactSha256:string}>{const artifact=await masterDownloadReleaseArtifact(String(release.id));if(artifact.bytes.byteLength>75*1024*1024)fail("Release artifact exceeds the customer deployer size limit",413);const raw=gunzipArtifact(artifact.bytes);if(raw.byteLength>MAX_TOTAL_BYTES)fail("Release package exceeds the customer deployer size limit",413);const pkg=parsePackage(raw,release);if(pkg.files.length<1||pkg.files.length>MAX_FILES)fail("Release package file count is invalid",422);let total=0;const files=pkg.files.map((entry:any)=>{const file=String(entry?.file||"").replaceAll("\\","/");if(!SAFE_PATH.test(file))fail(`Unsafe release path: ${file}`,422);if(entry.encoding!=="base64"||typeof entry.data!=="string")fail(`Release file ${file} is not base64 encoded`,422);const data=Buffer.from(entry.data,"base64");if(data.byteLength>MAX_FILE_BYTES)fail(`Release file ${file} exceeds the file size limit`,413);total+=data.byteLength;const actual=checksum(data);if(entry.sha256&&String(entry.sha256)!==actual)fail(`Release checksum mismatch for ${file}`,422);return {file,data:data.toString("base64"),sha256:actual,size:data.byteLength}});if(total>MAX_TOTAL_BYTES)fail("Release package exceeds the total file size limit",413);const expected=String(release.sha256||release.checksum||release.artifactSha256||"").trim();if(expected&&expected!==checksum(artifact.bytes))fail("Release artifact checksum does not match License Master metadata",422);if(String(pkg.version)!==String(release.version))fail("Release package version does not match License Master",422);return {pkg,files,artifactSha256:checksum(artifact.bytes)}}
+function expectedSource(release:any){return String(release?.source_sha||release?.source_commit||release?.manifest?.sourceCommit||"").trim()}
+function parseArtifact(raw:Buffer,release:any):Package|UpdateBundle{
+  try{
+    const value:any=JSON.parse(raw.toString("utf8"));
+    if(!value||typeof value!=="object"||!value.version)fail("Release package manifest is incomplete",422);
+    if(String(value.version)!==String(release.version))fail("Release package version does not match License Master",422);
+    const expected=expectedSource(release),actual=String(value.sourceCommit||"").trim();
+    if(expected&&actual&&expected!==actual)fail("Release package source commit does not match License Master",422);
+    if(value.format==="orbitfs-update-bundle-v3"){
+      if(Number(value.schemaVersion)!==3||!Array.isArray(value.components)||!value.components.length||!value.payloads||typeof value.payloads!=="object")fail("Update bundle manifest is incomplete",422);
+      return value as UpdateBundle;
+    }
+    if(value.format&&String(value.format)!=="orbitfs-base-deployment-v2")fail("Release package format is not supported by the customer deployer",422);
+    if(!Array.isArray(value.files)||!value.files.length)fail("Release package file list is incomplete",422);
+    return value as Package;
+  }catch(error){
+    if(error instanceof Error&&"status" in error)throw error;
+    throw Object.assign(new Error("Release package contains invalid JSON"),{status:422});
+  }
+}
+function validateFiles(files:ReleaseFile[],label:string){
+  if(!Array.isArray(files)||files.length<1||files.length>MAX_FILES)fail(`${label} file count is invalid`,422);
+  let total=0;
+  const seen=new Set<string>();
+  const normalized=files.map((entry:any)=>{
+    const file=String(entry?.file||"").replaceAll("\\","/");
+    if(!SAFE_PATH.test(file)||seen.has(file))fail(`Unsafe or duplicate ${label} path: ${file}`,422);
+    seen.add(file);
+    if(entry.encoding!=="base64"||typeof entry.data!=="string")fail(`${label} file ${file} is not base64 encoded`,422);
+    const data=Buffer.from(entry.data,"base64");
+    if(data.byteLength>MAX_FILE_BYTES)fail(`${label} file ${file} exceeds the file size limit`,413);
+    total+=data.byteLength;
+    const actual=checksum(data);
+    if(entry.sha256&&String(entry.sha256).toLowerCase()!==actual)fail(`${label} checksum mismatch for ${file}`,422);
+    if(entry.size!==undefined&&Number(entry.size)!==data.byteLength)fail(`${label} size mismatch for ${file}`,422);
+    return {file,data:data.toString("base64"),sha256:actual,size:data.byteLength,component:entry.component?String(entry.component):undefined};
+  });
+  if(total>MAX_TOTAL_BYTES)fail(`${label} exceeds the total file size limit`,413);
+  return normalized;
+}
+async function readArtifact(release:any):Promise<ParsedArtifact>{
+  const artifact=await masterDownloadReleaseArtifact(String(release.id));
+  if(artifact.bytes.byteLength>75*1024*1024)fail("Release artifact exceeds the customer deployer size limit",413);
+  const digest=checksum(artifact.bytes);
+  const expected=String(release.sha256||release.checksum||release.artifactSha256||"").trim().toLowerCase();
+  if(expected&&expected!==digest)fail("Release artifact checksum does not match License Master metadata",422);
+  const raw=gunzipArtifact(artifact.bytes);
+  if(raw.byteLength>MAX_TOTAL_BYTES*3)fail("Release package exceeds the customer deployer unpacked size limit",413);
+  return {root:parseArtifact(raw,release),artifactSha256:digest};
+}
+async function readBasePackage(release:any):Promise<{pkg:Package;files:Array<{file:string;data:string;sha256:string;size:number}>;artifactSha256:string}>{
+  const parsed=await readArtifact(release);
+  if((parsed.root as any).format==="orbitfs-update-bundle-v3")fail("Base deployment cannot use an Update Bundle artifact",422);
+  const pkg=parsed.root as Package;
+  const releaseComponents=[...(Array.isArray(release?.manifest?.components)?release.manifest.components:[])].map((x:any)=>String(x||"").trim().toLowerCase()).filter(Boolean).sort();
+  const packageComponents=[...(Array.isArray(pkg.components)?pkg.components:[])].map(x=>String(x||"").trim().toLowerCase()).filter(Boolean).sort();
+  if(releaseComponents.length&&packageComponents.length&&releaseComponents.join(",")!==packageComponents.join(","))fail("Release package components do not match License Master",422);
+  return {pkg,files:validateFiles(pkg.files,"Base package"),artifactSha256:parsed.artifactSha256};
+}
+function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
+function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
 async function registerBaseInstallation(install:any,deploymentUrl:string,deploymentId:string){
   const baseUrl=String(deploymentUrl||'').replace(/\/$/,'');
   if(!baseUrl)fail("Base deployment did not return a public URL",502);
