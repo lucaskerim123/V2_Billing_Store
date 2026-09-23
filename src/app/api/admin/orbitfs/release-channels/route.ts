@@ -9,7 +9,7 @@ async function syncFromMaster(){
   for(const c of rows){
     const result=await db.from("orbitfs_release_channels").upsert({
       channel:String(c.channel),label:String(c.label||c.channel),description:String(c.description||""),
-      enabled:c.enabled!==false,customer_visible:c.customer_visible!==false,access_mode:String(c.access_mode||"closed")==="open"?"open":"closed",updated_at:new Date().toISOString()
+      enabled:c.enabled!==false,customer_visible:c.customer_visible!==false,access_mode:String(c.access_mode||"closed")==="open"?"open":"closed",access_request_enabled:c.access_request_enabled===true,self_join_enabled:c.self_join_enabled===true,updated_at:new Date().toISOString()
     },{onConflict:"channel"});
     if(result.error)throw result.error;
   }
