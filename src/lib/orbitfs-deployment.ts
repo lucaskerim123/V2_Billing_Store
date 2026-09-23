@@ -601,7 +601,7 @@ const ORBITFS_VERCEL_TIMEOUT_MS="120000";
 const ORBITFS_LICENSE_REFRESH_MINUTES="30";
 const ORBITFS_LICENSE_TIMEOUT_MS="8000";
 
-export async function configureVercel(install:any,releaseVersion?:string,panelUrl?:string,_releaseChannel?:string,releaseId?:string,releaseSha256?:string,releaseSourceCommit?:string){
+export async function configureVercel(install:any,releaseVersion?:string,panelUrl?:string,releaseChannel?:string,releaseId?:string,releaseSha256?:string,releaseSourceCommit?:string){
   if(!install?.supabase_project_ref)throw new Error("Customer Supabase project is not configured");
   if(!install?.vercel_project_id)throw new Error("Customer Vercel project is not configured");
   const key=await publishableKey(install),secret=await installationSecret(install.id,"db_secret");
@@ -612,6 +612,8 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
   const checksumValue=String(releaseSha256||install.release_sha256||"").trim();
   const sourceCommit=String(releaseSourceCommit||install.release_source_commit||"").trim();
   const schemaVersion=String(install.schema_version||"1").trim();
+  const channel=String(releaseChannel||install.release_channel||"stable").trim().toLowerCase();
+  if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw new Error("Invalid OrbitFS release channel");
   const vars:Record<string,string>={
     SUPABASE_URL:`https://${install.supabase_project_ref}.supabase.co`,
     SUPABASE_PUBLISHABLE_KEY:key,
@@ -626,6 +628,7 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     ORBITFS_LICENSE_TIMEOUT_MS:ORBITFS_LICENSE_TIMEOUT_MS,
     ORBITFS_SCHEMA_VERSION:schemaVersion,
     ORBITFS_PANEL_RELEASE_VERSION:version,
+    ORBITFS_RELEASE_CHANNEL:channel,
     ORBITFS_RELEASE_ID:release,
     ORBITFS_RELEASE_SHA256:checksumValue,
     ORBITFS_RELEASE_SOURCE_COMMIT:sourceCommit
