@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-export const DEFAULT_MASTER_API_URL = "https://incendiarynetworks.cc/api";
+export const DEFAULT_MASTER_API_URL = "https://incendiarynetworks.cc/api/v1";
 
 function validMasterUrl(value: string) {
   try {
@@ -10,13 +10,13 @@ function validMasterUrl(value: string) {
     if (
       u.protocol !== "https:" ||
       !approvedHost ||
-      u.pathname.replace(/\/$/, "") !== "/api" ||
+      u.pathname.replace(/\/+$/, "") !== "/api/v1" ||
       u.username ||
       u.password ||
       u.search ||
       u.hash
     ) return null;
-    return `${u.origin}/api`;
+    return `${u.origin}/api/v1`;
   } catch {
     return null;
   }
