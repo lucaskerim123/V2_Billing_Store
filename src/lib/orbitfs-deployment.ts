@@ -101,6 +101,8 @@ export async function supabaseApi(userId:string,path:string,init:RequestInit={})
 }
 
 async function vercelAccessToken(userId:string){const conn=await connection(userId,"vercel");if(!conn||conn.status!=="connected")throw Object.assign(new Error("Customer Vercel account is not connected"),{status:409});const token=await providerSecret(userId,"vercel","access_token");if(!token)throw Object.assign(new Error("Vercel connection token is missing"),{status:409});return {token,teamId:conn.team_id||conn.metadata?.team_id||null}}
+export async function customerVercelCredentials(userId:string){return vercelAccessToken(userId)}
+export async function customerInstallationDbSecret(installationRecordId:string){const secret=String(await installationSecret(installationRecordId,"db_secret")||"").trim();if(!secret)throw Object.assign(new Error("OrbitFS database secret is missing"),{status:409});return secret}
 function withTeam(path:string,teamId?:string|null){if(!teamId)return path;const u=new URL(path,VERCEL_API);u.searchParams.set("teamId",teamId);return u.pathname+u.search}
 export async function vercelApi(userId:string,path:string,init:RequestInit={}){const {token,teamId}=await vercelAccessToken(userId);const r=await fetch(`${VERCEL_API}${withTeam(path,teamId)}`,{...init,headers:{authorization:`Bearer ${token}`,"content-type":"application/json",...(init.headers||{})}});if(!r.ok)throw Object.assign(new Error(`Vercel API ${r.status}: ${await r.text()}`),{status:r.status>=500?502:r.status});return r.status===204?null:r.json()}
 
@@ -635,6 +637,22 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
   };
   for(const [name,value] of Object.entries(vars)){if(value)await upsertVercelEnv(install,name,value)}
 }
+export async function configureVercelUpdateIdentity(install:any,input:{version:string;releaseId:string;sha256:string;sourceCommit?:string|null;channel:string;components?:string[]}){
+  if(!install?.vercel_project_id)throw new Error("Customer Vercel project is not configured");
+  const channel=String(input.channel||install.release_channel||"stable").trim().toLowerCase();
+  if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw new Error("Invalid OrbitFS release channel");
+  const vars:Record<string,string>={
+    ORBITFS_APP_VERSION:String(input.version||"").trim(),
+    ORBITFS_RELEASE_CHANNEL:channel,
+    ORBITFS_UPDATE_RELEASE_VERSION:String(input.version||"").trim(),
+    ORBITFS_UPDATE_RELEASE_ID:String(input.releaseId||"").trim(),
+    ORBITFS_UPDATE_RELEASE_SHA256:String(input.sha256||"").trim(),
+    ORBITFS_UPDATE_RELEASE_SOURCE_COMMIT:String(input.sourceCommit||"").trim(),
+    ORBITFS_UPDATE_COMPONENTS:JSON.stringify(Array.isArray(input.components)?input.components:[])
+  };
+  for(const [name,value] of Object.entries(vars)){if(value)await upsertVercelEnv(install,name,value)}
+}
+
 async function uploadVercelFiles(install:any,files:any[]){const {token,teamId}=await vercelAccessToken(install.auth_user_id),out=[];for(const file of files){const bytes=file.encoding==="base64"?Buffer.from(file.data,"base64"):Buffer.from(file.data,"utf8"),sha=createHash("sha1").update(bytes).digest("hex");let r=await fetch(`${VERCEL_API}${withTeam("/v2/files",teamId)}`,{method:"POST",headers:{authorization:`Bearer ${token}`,"content-type":"application/octet-stream","content-length":String(bytes.length),"x-vercel-digest":sha},body:new Uint8Array(bytes)});if(!r.ok&&r.status===404)r=await fetch(`${VERCEL_API}${withTeam("/v2/now/files",teamId)}`,{method:"POST",headers:{authorization:`Bearer ${token}`,"content-type":"application/octet-stream","content-length":String(bytes.length),"x-now-digest":sha},body:new Uint8Array(bytes)});if(!r.ok&&r.status!==409)throw new Error(`Vercel file upload failed for ${file.file}: ${await r.text()}`);out.push({file:file.file,sha,size:bytes.length})}return out}
 
 function assertReleaseSchemaCompatible(install:any,release:any){
