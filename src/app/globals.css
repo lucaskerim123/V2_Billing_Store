@@ -64,3 +64,31 @@ button,.buttonlink{transition:transform .14s,filter .14s,background .14s,border-
 /* Payment gateway setup */
 .gatewaySetupWorkspace{display:grid;grid-template-columns:330px minmax(0,1fr);border:1px solid #29415d;border-radius:16px;overflow:hidden;background:#0b1725;min-height:720px}.setupProviderRail{background:#091522;border-right:1px solid #243a52}.setupProviderRail .gatewayRailHead{padding:20px;border-bottom:1px solid #243a52}.setupProviderRow{width:100%;display:flex;justify-content:space-between;gap:14px;align-items:center;background:transparent;border-radius:0;border-bottom:1px solid #1f344b;padding:15px 16px;text-align:left}.setupProviderRow>div{display:grid;gap:4px}.setupProviderRow span{font-size:10px;color:var(--muted)}.setupProviderRow.active{background:#122a47;box-shadow:inset 3px 0 #4b8bd8}.setupProviderBody{padding:22px;min-width:0}.setupHero{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;padding-bottom:20px;border-bottom:1px solid #243a52}.setupHero h2{margin:3px 0 7px}.setupStateLarge{padding:8px 11px;border:1px solid #564c37;border-radius:99px;color:#d8c589;background:#241f13;font-size:11px;white-space:nowrap}.setupStateLarge.ready{border-color:#356a4b;color:#9ee0b4;background:#10271b}
 .setupSection{padding:22px 0;border-bottom:1px solid #243a52}.setupSection:last-child{border-bottom:0}.setupSectionHead{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:15px}.setupSectionHead h3{margin:0 0 5px;font-size:16px}.secretGrid{display:grid;gap:10px}.secretField{padding:14px;border:1px solid #263e59;border-radius:11px;background:#091625}.secretFieldHead{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:10px}.secretFieldHead>div{display:grid;gap:3px}.secretFieldHead span{font-size:10px;color:var(--muted)}.secretInputRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px}.secretInputRow input{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:8px;background:#071321;color:var(--text)}.setupChoiceRow,.currencyPicker{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}.setupChoiceRow .active,.currencyPicker .active{outline:1px solid #5d8dcc;background:#17345a}.webhookCard{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:15px;border:1px solid #29425f;border-radius:11px;background:#091625;margin-bottom:12px}.webhookCard>div{display:grid;gap:6px;min-width:0}.webhookCard code{overflow-wrap:anywhere;color:#9ec3ef}.setupChecklist.compact{grid-template-columns:repeat(3,minmax(0,1fr))}.setupRequiredBanner{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:14px 18px;border-bottom:1px solid #493f2b;background:#201b10}.setupRequiredBanner>div{display:grid;gap:4px}.setupRequiredBanner span{font-size:11px;color:#cabb94}@media(max-width:900px){.gatewaySetupWorkspace{grid-template-columns:1fr}.setupProviderRail{border-right:0;border-bottom:1px solid #243a52}.setupProviderRail{display:flex;overflow-x:auto}.setupProviderRail .gatewayRailHead{min-width:220px}.setupProviderRow{min-width:235px;border-bottom:0;border-right:1px solid #1f344b}.setupProviderRow.active{box-shadow:inset 0 -3px #4b8bd8}.setupChecklist.compact{grid-template-columns:1fr}.setupHero,.setupSectionHead,.webhookCard,.setupRequiredBanner{align-items:stretch;flex-direction:column}.secretInputRow{grid-template-columns:1fr}.setupProviderBody{padding:16px}}
+
+
+/* OrbitFS customer deployment */
+.portalOverviewV2{max-width:1220px;margin:0 auto;padding:4px 0 56px}
+.portalOverviewHero{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding:8px 0 22px;border-bottom:1px solid var(--line)}
+.portalOverviewHero h1{font-size:32px;line-height:1.1;letter-spacing:-.025em;margin:5px 0 8px}
+.portalOverviewHero .muted{max-width:760px;margin:0}
+.portalOverviewV2>.panel{margin:14px 0;padding:18px 20px}
+.portalOverviewV2>.panel:first-of-type{margin-top:14px}
+.portalOverviewV2 .panelTitle{align-items:flex-start;gap:18px}
+.portalOverviewV2 .panelTitle h2{margin:3px 0 6px;font-size:19px}
+.portalOverviewV2 .listrow{align-items:center;padding:13px 0}
+.portalOverviewV2 .listrow>div{display:grid;gap:4px;min-width:0}
+.portalOverviewV2 .listrow b{font-size:13px}
+.portalOverviewV2 .listrow span{font-size:12px;line-height:1.45}
+.portalOverviewV2 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;overflow-wrap:anywhere;text-align:right;max-width:48%}
+.portalOverviewV2 .buttonlink{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.portalOverviewV2 .state{flex:0 0 auto}
+@media(max-width:800px){
+ .portalOverviewV2{padding:0 0 36px}
+ .portalOverviewHero{align-items:flex-start;flex-direction:column;padding:4px 0 16px}
+ .portalOverviewHero h1{font-size:27px}
+ .portalOverviewV2>.panel{padding:15px 16px}
+ .portalOverviewV2 .panelTitle{align-items:flex-start;flex-direction:column}
+ .portalOverviewV2 .listrow{align-items:flex-start;flex-direction:column}
+ .portalOverviewV2 .listrow button,.portalOverviewV2 .listrow .buttonlink{width:100%}
+ .portalOverviewV2 .mono{max-width:100%;text-align:left}
+}
