@@ -1,4 +1,4 @@
-import {masterPromoteRelease} from "@/lib/master-api";
+import {masterPromoteRelease,masterRequest} from "@/lib/master-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
 export async function POST(req:Request){
@@ -10,6 +10,8 @@ export async function POST(req:Request){
     if(!id)throw Object.assign(new Error("Release ID is required"),{status:400});
     if(!target)throw Object.assign(new Error("Target release channel is required"),{status:400});
     if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(target))throw Object.assign(new Error("Invalid release channel"),{status:400});
+    const current=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"GET"},"billing");
+    if(String(current?.release?.release_type||"")!=="update")throw Object.assign(new Error("Billing Store can promote Update releases only"),{status:403});
     return Response.json(await masterPromoteRelease(id,target),{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
