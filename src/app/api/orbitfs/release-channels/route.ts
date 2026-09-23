@@ -6,18 +6,19 @@ export async function GET(req:Request){
   try{
     const {user}=await requireOrbitUser(req);
     const db=licenseDb();
-    const [channels,bindings,requests]=await Promise.all([
-      db.from("orbitfs_release_channels").select("channel,label,description,enabled,customer_visible,access_mode,access_request_enabled,self_join_enabled").eq("enabled",true).eq("customer_visible",true).order("channel"),
+    const [channelResult,bindings,requests]=await Promise.all([
+      masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET"},"billing"),
       db.from("license_bindings").select("license_id,license_product_key").eq("auth_user_id",user.id).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle(),
       Promise.resolve(null),
     ]);
-    if(channels.error)throw channels.error;if(bindings.error)throw bindings.error;
+    if(bindings.error)throw bindings.error;
     const licenseId=String(bindings.data?.license_id||"");
     let remote:any={requests:[]};
     if(licenseId){
       try{remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"list_requests",license_id:licenseId})},"billing")}catch{}
     }
-    return Response.json({channels:channels.data||[],requests:Array.isArray(remote?.requests)?remote.requests:[]},{headers:{"cache-control":"no-store"}});
+    const channels=Array.isArray(channelResult?.channels)?channelResult.channels.filter((x:any)=>x.enabled!==false&&x.customer_visible!==false):[];
+    return Response.json({channels,requests:Array.isArray(remote?.requests)?remote.requests:[]},{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
 
