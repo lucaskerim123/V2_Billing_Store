@@ -169,29 +169,30 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if((binding as any)?.error)throw (binding as any).error;
   const licenseId=(binding as any)?.data?.license_id?String((binding as any).data.license_id):null;
   if(!licenseId)fail("Installation is not linked to an active License Manager licence",409);
+  const authorityLicenseId:string=licenseId;
 
   if(action==="rollback"){
     const previous=await previousDeployment(install);
     const previousDeploymentId=previous.vercel_deployment_id;
     const previousReleaseId=previous.release_id;
     if(install.release_channel&&String(install.release_channel)!==requestedChannel)fail("Installation release channel does not match the requested rollback channel",409);
-    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId,channel:requestedChannel,productVersion:previous.release_version});
+    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version});
     try{
       await event(install,"deployment.rollback.started","info",`Rolling back to ${previous.release_version}`,{deploymentId:previousDeploymentId});
       const result=await vercelApi(install.auth_user_id,`/v9/projects/${encodeURIComponent(install.vercel_project_id)}/rollback/${encodeURIComponent(previousDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
       const completedAt=new Date().toISOString();
       const {data,error}=await licenseDb().from("orbitfs_installations").update({previous_release_version:install.release_version||null,release_version:previous.release_version,release_id:previousReleaseId,vercel_deployment_id:previousDeploymentId,last_deployment_at:completedAt,last_error:null,state:"ready"}).eq("id",install.id).select().single();
       if(error)throw error;
-      await masterExecuteDeployment({action:"rollback",phase:"completed",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId,channel:requestedChannel,productVersion:previous.release_version,deploymentId:previousDeploymentId,projectId:install.vercel_project_id,projectName:install.vercel_project_name});
+      await masterExecuteDeployment({action:"rollback",phase:"completed",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version,deploymentId:previousDeploymentId,projectId:install.vercel_project_id,projectName:install.vercel_project_name});
       await event(data,"deployment.rollback.completed","ok",`Rolled back to ${previous.release_version}`,{deploymentId:previousDeploymentId,result});return data;
     }catch(error){
-      await reportDeploymentFailure(install,{action:"rollback",releaseId:previousReleaseId,licenseId,channel:requestedChannel,productVersion:previous.release_version},error);
+      await reportDeploymentFailure(install,{action:"rollback",releaseId:previousReleaseId,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version},error);
       throw error;
     }
   }
 
   const release=await publishedRelease(version,action,requestedChannel,releaseId);
-  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId,channel:requestedChannel,productVersion:String(release.version)});
+  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version)});
   try{
   if(action==="update"){
     const parsed=await readArtifact(release);
@@ -235,7 +236,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(history.error)throw history.error;
     const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
     const customer=customerResult.data||null;
-    await masterExecuteDeployment({action:"update",phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId,channel:requestedChannel,productVersion:String(release.version),deploymentId:panelResult?.deploymentId||engineResult?.deploymentId||null,deploymentUrl:panelResult?.deploymentUrl||engineResult?.hostUrl||null,projectId:install.vercel_project_id,projectName:install.vercel_project_name,components,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
+    await masterExecuteDeployment({action:"update",phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),deploymentId:panelResult?.deploymentId||engineResult?.deploymentId||null,deploymentUrl:panelResult?.deploymentUrl||engineResult?.hostUrl||null,projectId:install.vercel_project_id,projectName:install.vercel_project_name,components,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
     await event(data,"update.completed","ok",`OrbitFS Update ${release.version} applied`,updateState);
     return data;
   }
@@ -255,10 +256,10 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(history.error)throw history.error;
   const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
   const customer=customerResult.data||null;
-  await masterExecuteDeployment({action,phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId,channel:requestedChannel,productVersion:String(release.version),deploymentId,deploymentUrl,projectId:install.vercel_project_id,projectName:install.vercel_project_name,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
+  await masterExecuteDeployment({action,phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),deploymentId,deploymentUrl,projectId:install.vercel_project_id,projectName:install.vercel_project_name,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
   await event(data,"deployment.completed","ok",`Vercel deployment ${deploymentId} is ready`,{action,releaseId:release.id,version:release.version,deploymentId});return data;
   }catch(error){
-    await reportDeploymentFailure(install,{action,releaseId:String(release.id),licenseId,channel:requestedChannel,productVersion:String(release.version)},error);
+    await reportDeploymentFailure(install,{action,releaseId:String(release.id),licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version)},error);
     throw error;
   }
 }
