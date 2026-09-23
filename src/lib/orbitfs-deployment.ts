@@ -595,7 +595,7 @@ async function upsertVercelEnv(install:any,key:string,value:string){
   await vercelApi(install.auth_user_id,`/v10/projects/${encodeURIComponent(install.vercel_project_id)}/env?upsert=true`,{method:"POST",body:JSON.stringify({key,value,type:"encrypted",target:["production","preview","development"]})});
 }
 const ORBITFS_LICENSE_API_URL="https://incendiarynetworks.cc/api/v1/license";
-const ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER=String(process.env.ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER||"https://incendiarynetworks.cc/api/v1/updater").trim().replace(/\\/+$/,"");
+const ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER=String(process.env.ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER||"https://incendiarynetworks.cc/api/v1/updater").trim().replace(/\/+$/,"");
 const ORBITFS_ENGINE_RELEASE_TIMEOUT_MS="30000";
 const ORBITFS_VERCEL_TIMEOUT_MS="120000";
 const ORBITFS_LICENSE_REFRESH_MINUTES="30";
