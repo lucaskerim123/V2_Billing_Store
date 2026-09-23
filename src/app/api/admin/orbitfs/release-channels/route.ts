@@ -21,17 +21,19 @@ export async function GET(req:Request){
     await requireOrbitAdmin(req);
     try{await syncFromMaster()}catch(e){console.warn("Release-channel master sync failed; serving local mirror:",e)}
     const db=licenseDb();
-    const [channels,access,profiles,customerRows,requests]=await Promise.all([
+    const [channels,localAccess,profiles,customerRows,requests,remoteAccess]=await Promise.all([
       db.from("orbitfs_release_channels").select("*").order("channel"),
       db.from("orbitfs_release_channel_access").select("id,channel_id,user_id,created_at").order("created_at",{ascending:false}),
       db.from("user_profiles").select("id,display_name,company_name,status,role").eq("role","user").order("display_name"),
       db.from("customers").select("id,auth_user_id,user_id,customer_number,name,email"),
-      masterRequest("/api/v1/release-channels/access?status=pending",{method:"GET"},"billing").catch(()=>({requests:[]}))
+      masterRequest("/api/v1/release-channels/access?status=pending",{method:"GET"},"billing").catch(()=>({requests:[]})),
+      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET"},"billing").catch(()=>({access:[]}))
     ]);
     if(channels.error)throw channels.error;if(access.error)throw access.error;if(profiles.error)throw profiles.error;if(customerRows.error)throw customerRows.error;
     const customerMap=new Map((customerRows.data||[]).map((c:any)=>[String(c.auth_user_id||c.user_id||c.id),c]));
     const customers=(profiles.data||[]).map((p:any)=>{const c=customerMap.get(String(p.id));return {...p,email:c?.email||null,customer_id:c?.id||null,customer_number:c?.customer_number||null,customer_name:c?.name||null}}).filter((p:any)=>p.status!=="deleted");
-    return Response.json({channels:channels.data||[],access:access.data||[],customers,requests:Array.isArray(requests?.requests)?requests.requests:[]},{headers:{"cache-control":"no-store"}});
+    const authoritativeAccess=Array.isArray(remoteAccess?.access)?remoteAccess.access:[];
+    return Response.json({channels:channels.data||[],access:authoritativeAccess,customers,requests:Array.isArray(requests?.requests)?requests.requests:[]},{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
 
