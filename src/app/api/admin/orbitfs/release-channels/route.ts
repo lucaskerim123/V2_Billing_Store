@@ -63,7 +63,26 @@ export async function POST(req:Request){
       await db.from("orbitfs_release_channel_access_audit").insert({channel_id:existing.data.channel_id,user_id:existing.data.user_id,action:"revoke",actor_user_id:auth.user.id,metadata:{source:"admin",licenseMasterSynced:Boolean(binding.data?.license_id)}});
       return Response.json({ok:true,licenseMasterSynced:Boolean(binding.data?.license_id)});
     }
-    if(action==="channel")throw Object.assign(new Error("Release channels are managed by License Master. Use Sync from License Master."),{status:409});
+    if(action==="channel"){
+      const channel=String(body.channel||"").trim().toLowerCase();
+      if(!channel)throw Object.assign(new Error("Channel is required"),{status:400});
+      const remote=await masterRequest("/api/v1/release-channels",{
+        method:"POST",
+        body:JSON.stringify({
+          channel,
+          label:body.label,
+          description:body.description,
+          enabled:body.enabled,
+          customer_visible:body.customer_visible,
+          access_mode:body.access_mode,
+          access_request_enabled:body.access_request_enabled,
+          self_join_enabled:body.self_join_enabled,
+          sort_order:body.sort_order
+        })
+      },"billing");
+      await syncFromMaster();
+      return Response.json({ok:true,channel:remote?.channel||remote});
+    }
     throw Object.assign(new Error("Unsupported release-channel action"),{status:400});
   }catch(e){return httpError(e)}
 }
