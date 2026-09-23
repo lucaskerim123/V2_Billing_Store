@@ -1,23 +1,22 @@
 import {licenseDb} from "@/lib/license-api";
+import {masterRequest} from "@/lib/master-api";
 
 export async function customerReleaseChannels(userId:string){
   const db=licenseDb();
-  const [{data:access,error:accessError},{data:openChannels,error:openError}]=await Promise.all([
-    db.from("orbitfs_release_channel_access")
-      .select("channel_id,orbitfs_release_channels!inner(channel,enabled,customer_visible,access_mode)")
-      .eq("user_id",userId),
-    db.from("orbitfs_release_channels")
-      .select("channel,enabled,customer_visible,access_mode")
-      .eq("enabled",true).eq("customer_visible",true).eq("access_mode","open")
+  const binding=await db.from("license_bindings").select("license_id").eq("auth_user_id",userId).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(binding.error)throw binding.error;
+  const licenseId=String(binding.data?.license_id||"");
+  if(!licenseId)return ["stable"];
+  const [channelResult,accessResult]=await Promise.all([
+    masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET"},"billing"),
+    masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"list_access",license_id:licenseId})},"billing")
   ]);
-  if(accessError)throw accessError;if(openError)throw openError;
-  const explicit=(access||[]).map((x:any)=>x.orbitfs_release_channels)
-    .filter((x:any)=>x?.enabled&&x?.customer_visible)
-    .map((x:any)=>String(x.channel)).filter(Boolean);
-  const open=(openChannels||[]).map((x:any)=>String(x.channel)).filter(Boolean);
-  const configuredStable=(await db.from("orbitfs_release_channels").select("channel,enabled,customer_visible").eq("channel","stable").maybeSingle()).data;
-  const stable=configuredStable?.enabled&&configuredStable?.customer_visible?["stable"]:[];
-  return [...new Set([...stable,...open,...explicit])];
+  const channels=Array.isArray(channelResult?.channels)?channelResult.channels:[];
+  const access=Array.isArray(accessResult?.access)?accessResult.access:[];
+  const explicit=new Set(access.map((x:any)=>String(x.channel||"").trim().toLowerCase()).filter(Boolean));
+  const allowed=channels.filter((c:any)=>c.enabled!==false&&c.customer_visible!==false).filter((c:any)=>c.channel==="stable"||c.access_mode==="open"||c.self_join_enabled===true||explicit.has(String(c.channel).toLowerCase())).map((c:any)=>String(c.channel).toLowerCase());
+  if(!allowed.includes("stable")&&channels.some((c:any)=>c.channel==="stable"&&c.enabled!==false&&c.customer_visible!==false))allowed.unshift("stable");
+  return [...new Set(allowed)];
 }
 
 export async function customerCanUseReleaseChannel(userId:string,channel:string){
