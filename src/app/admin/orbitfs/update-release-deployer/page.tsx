@@ -2,28 +2,29 @@
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 
-const UPDATE_PRODUCTS=["orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
+const UPDATE_PRODUCTS=["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
 
 export default function OrbitFSUpdateReleaseDeployer(){
  const sb=useMemo(()=>createClient(),[]);
  const [releases,setReleases]=useState<any[]>([]),[channels,setChannels]=useState<any[]>([]),[selected,setSelected]=useState<string>(""),[target,setTarget]=useState(""),[busy,setBusy]=useState(false),[msg,setMsg]=useState("");
+ async function adminHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:`Bearer ${session.access_token}`};}
  async function load(){
   setBusy(true);setMsg("");
   try{
-   const {data:{session}}=await sb.auth.getSession();
-   if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");
+   const auth=await adminHeaders();
    const target="/api/v1/releases?type=update";
-   const r=await fetch(`/api/admin/license-master?path=${encodeURIComponent(target)}`,{headers:{Authorization:`Bearer ${session.access_token}`,Accept:"application/json"},cache:"no-store"});
+   const r=await fetch(`/api/admin/license-master?path=${encodeURIComponent(target)}`,{headers:{...auth,Accept:"application/json"},cache:"no-store"});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||`License Master returned HTTP ${r.status}`);
    const rows=(Array.isArray(j.releases)?j.releases:Array.isArray(j)?j:[]).filter((x:any)=>String(x.release_type||x.releaseType||"").toLowerCase()==="update").sort((a:any,b:any)=>String(b.updated_at||b.created_at||"").localeCompare(String(a.updated_at||a.created_at||"")));
-   setReleases(rows);setSelected(current=>rows.some((r:any)=>r.id===current)?current:(rows[0]?.id||""));const cr=await fetch("/api/admin/orbitfs/release-channels",{cache:"no-store"});const cj=await cr.json().catch(()=>({}));setChannels((cj.channels||[]).filter((x:any)=>x.enabled&&x.customer_visible));
+   setReleases(rows);setSelected(current=>rows.some((r:any)=>r.id===current)?current:(rows[0]?.id||""));const cr=await fetch("/api/admin/orbitfs/release-channels",{headers:auth,cache:"no-store"});const cj=await cr.json().catch(()=>({}));setChannels((cj.channels||[]).filter((x:any)=>x.enabled&&x.customer_visible));
   }catch(e:any){setMsg(e instanceof TypeError?"Could not reach the License Master connection endpoint. Check the Billing Store → License Master connection and server-side API configuration.":(e?.message||"Could not load update release state."))}
   finally{setBusy(false)}
  }
  useEffect(()=>{void load()},[]);
  const chosen=releases.find(r=>r.id===selected)||releases[0]||null;
- async function promote(){if(!chosen||!target)return;setBusy(true);setMsg("");try{const r=await fetch("/api/admin/orbitfs/release-promote",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id,targetChannel:target})}),j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Could not promote release");setMsg("Release promoted to "+target+".");setTarget("");await load()}catch(e:any){setMsg(e?.message||"Could not promote release")}finally{setBusy(false)}}
+ async function promote(){if(!chosen||!target)return;setBusy(true);setMsg("");try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-promote",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id,targetChannel:target})}),j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Could not promote release");setMsg("Release promoted to "+target+".");setTarget("");await load()}catch(e:any){setMsg(e?.message||"Could not promote release")}finally{setBusy(false)}}
+ async function publishUpdate(){if(!chosen)return;setBusy(true);setMsg("");try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id})}),j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Could not publish update");setMsg("Update published to the Customer Portal.");await load()}catch(e:any){setMsg(e?.message||"Could not publish update")}finally{setBusy(false)}}
  const manifest=chosen?.manifest&&typeof chosen.manifest==="object"?chosen.manifest:{};
  const components=Array.isArray(manifest.components)?manifest.components:[];
  return <main className="orbitfsControlPage">
@@ -48,8 +49,9 @@ export default function OrbitFSUpdateReleaseDeployer(){
      <div className="orbitfsData"><span>Artifact checksum</span><b>{chosen?.checksum||chosen?.sha256||"—"}</b></div>
     </div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
-      {chosen&&chosen.status!=="published"&&<button type="button" disabled={busy} onClick={async()=>{const title=prompt("Customer-facing title",String(chosen.manifest?.title||""));if(title===null)return;setBusy(true);const {data:{session}}=await sb.auth.getSession();const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{"content-type":"application/json",...(session?.access_token?{Authorization:`Bearer ${session.access_token}`}: {})},body:JSON.stringify({releaseId:chosen.id,title})});const j=await r.json().catch(()=>({}));setBusy(false);setMsg(r.ok?"Release presentation updated.":j.error||"Could not edit release.");await load()}}>Edit release</button>}
-      {chosen?.status==="published"&&<button type="button" className="secondary" disabled={busy} onClick={async()=>{if(!confirm("Unpublish this update from the Customer Portal?"))return;setBusy(true);const r=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:chosen.id})});const j=await r.json().catch(()=>({}));setBusy(false);setMsg(r.ok?"Update unpublished.":j.error||"Could not unpublish update.");await load()}}>Unpublish</button>}
+      {chosen&&chosen.status!=="published"&&<button type="button" disabled={busy} onClick={async()=>{const title=prompt("Customer-facing title",String(chosen.manifest?.title||""));if(title===null)return;setBusy(true);try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id,title})});const j=await r.json().catch(()=>({}));setMsg(r.ok?"Release presentation updated.":j.error||"Could not edit release.")}finally{setBusy(false)}await load()}}>Edit release</button>}
+      {chosen&&chosen.status!=="published"&&(chosen.review_status||chosen.reviewStatus)==="approved"&&chosen.manifest?.validation?.status==="passed"&&<button type="button" disabled={busy} onClick={()=>void publishUpdate()}>Publish update to Customer Portal</button>}
+      {chosen?.status==="published"&&<button type="button" className="secondary" disabled={busy} onClick={async()=>{if(!confirm("Unpublish this update from the Customer Portal?"))return;setBusy(true);try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:chosen.id})});const j=await r.json().catch(()=>({}));setMsg(r.ok?"Update unpublished.":j.error||"Could not unpublish update.")}finally{setBusy(false)}await load()}}>Unpublish</button>}
     </div>
    </section>
 
@@ -57,7 +59,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
     <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">Manifest targeting</div><h2>Component update</h2></div></div>
     <div className="orbitfsDataGrid">
      <div className="orbitfsData"><span>Components</span><b>{components.length?components.join(", "):"—"}</b></div>
-     <div className="orbitfsData"><span>Minimum version</span><b>{manifest.minimum_version||"—"}</b></div>
+     <div className="orbitfsData"><span>Minimum Base version</span><b>{manifest.minimumBaseVersion||manifest.minimum_version||"—"}</b></div>
      <div className="orbitfsData"><span>Required</span><b>{manifest.required===true?"Yes":"No"}</b></div>
      <div className="orbitfsData"><span>Rollback version</span><b>{manifest.rollback_version||"—"}</b></div>
     </div>
