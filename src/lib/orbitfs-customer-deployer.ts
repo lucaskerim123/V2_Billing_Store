@@ -156,22 +156,27 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   await requireSystem(action==="rollback"?"rollback":action==="update"?"update":"deploy");
   if(!install.vercel_project_id)fail("Connect and select a customer Vercel project before deploying",409);
 
+  const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
+  if((binding as any)?.error)throw (binding as any).error;
+  const licenseId=(binding as any)?.data?.license_id?String((binding as any).data.license_id):null;
+  if(!licenseId)fail("Installation is not linked to an active License Manager licence",409);
+
   if(action==="rollback"){
     const previous=await previousDeployment(install);
     const previousDeploymentId=previous.vercel_deployment_id;
     const previousReleaseId=previous.release_id;
     if(install.release_channel&&String(install.release_channel)!==requestedChannel)fail("Installation release channel does not match the requested rollback channel",409);
-    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,channel:requestedChannel});
+    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId,channel:requestedChannel,productVersion:previous.release_version});
     await event(install,"deployment.rollback.started","info",`Rolling back to ${previous.release_version}`,{deploymentId:previousDeploymentId});
     const result=await vercelApi(install.auth_user_id,`/v9/projects/${encodeURIComponent(install.vercel_project_id)}/rollback/${encodeURIComponent(previousDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
-    const {data,error}=await licenseDb().from("orbitfs_installations").update({previous_release_version:install.release_version||null,release_version:previous.release_version,release_id:previousReleaseId,vercel_deployment_id:previousDeploymentId,last_deployment_at:new Date().toISOString(),last_error:null,state:"ready"}).eq("id",install.id).select().single();
-    if(error)throw error;await event(data,"deployment.rollback.completed","ok",`Rolled back to ${previous.release_version}`,{deploymentId:previousDeploymentId,result});return data;
+    const completedAt=new Date().toISOString();
+    const {data,error}=await licenseDb().from("orbitfs_installations").update({previous_release_version:install.release_version||null,release_version:previous.release_version,release_id:previousReleaseId,vercel_deployment_id:previousDeploymentId,last_deployment_at:completedAt,last_error:null,state:"ready"}).eq("id",install.id).select().single();
+    if(error)throw error;
+    await masterExecuteDeployment({action:"rollback",phase:"completed",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId,channel:requestedChannel,productVersion:previous.release_version,deploymentId:previousDeploymentId,projectId:install.vercel_project_id,projectName:install.vercel_project_name});
+    await event(data,"deployment.rollback.completed","ok",`Rolled back to ${previous.release_version}`,{deploymentId:previousDeploymentId,result});return data;
   }
 
   const release=await publishedRelease(version,action,requestedChannel,releaseId);
-  const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
-  if((binding as any)?.error)throw (binding as any).error;
-  const licenseId=(binding as any)?.data?.license_id?String((binding as any).data.license_id):null;
   await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId,channel:requestedChannel,productVersion:String(release.version)});
   if(action==="update"){
     const parsed=await readArtifact(release);
