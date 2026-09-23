@@ -45,24 +45,24 @@ export async function POST(req:Request){
     if(action==="grant"){
       const channel=String(body.channel||"").trim().toLowerCase(),userId=String(body.userId||body.user_id||"").trim();
       if(!channel||!userId)throw Object.assign(new Error("Channel and customer are required"),{status:400});
-      const c=await db.from("orbitfs_release_channels").select("id,enabled,customer_visible").eq("channel",channel).maybeSingle();
-      if(c.error)throw c.error;if(!c.data)throw Object.assign(new Error("Release channel was not found"),{status:404});
-      if(!c.data.enabled||!c.data.customer_visible)throw Object.assign(new Error("Release channel is not available to customers"),{status:400});
-      const x=await db.from("orbitfs_release_channel_access").upsert({channel_id:c.data.id,user_id:userId},{onConflict:"channel_id,user_id"}).select().single();
-      if(x.error)throw x.error;
+      const ch=await db.from("orbitfs_release_channels").select("id,enabled,customer_visible").eq("channel",channel).maybeSingle();
+      if(ch.error)throw ch.error;if(!ch.data)throw Object.assign(new Error("Release channel was not found"),{status:404});
+      if(!ch.data.enabled||!ch.data.customer_visible)throw Object.assign(new Error("Release channel is not available to customers"),{status:400});
       const binding=await db.from("license_bindings").select("license_id").eq("auth_user_id",userId).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle();
-      if(binding.error)throw binding.error;
-      if(binding.data?.license_id) await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({license_id:String(binding.data.license_id),channel,external_reference:userId})},"billing");
-      await db.from("orbitfs_release_channel_access_audit").insert({channel_id:c.data.id,user_id:userId,action:"grant",actor_user_id:auth.user.id,metadata:{source:"admin",licenseMasterSynced:Boolean(binding.data?.license_id)}});
-      return Response.json({access:x.data,licenseMasterSynced:Boolean(binding.data?.license_id)},{status:201});
+      if(binding.error)throw binding.error;if(!binding.data?.license_id)throw Object.assign(new Error("Customer has no active OrbitFS Base license"),{status:409});
+      await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:String(binding.data.license_id),channel,external_reference:userId})},"billing");
+      const x=await db.from("orbitfs_release_channel_access").upsert({channel_id:ch.data.id,user_id:userId},{onConflict:"channel_id,user_id"}).select().single();
+      if(x.error)throw x.error;
+      await db.from("orbitfs_release_channel_access_audit").insert({channel_id:ch.data.id,user_id:userId,action:"grant",actor_user_id:auth.user.id,metadata:{source:"admin",licenseMasterSynced:true}});
+      return Response.json({access:x.data,licenseMasterSynced:true},{status:201});
     }
     if(action==="revoke"){
       const id=String(body.id||"").trim();if(!id)throw Object.assign(new Error("Access ID is required"),{status:400});
       const existing=await db.from("orbitfs_release_channel_access").select("channel_id,user_id").eq("id",id).maybeSingle();if(existing.error)throw existing.error;if(!existing.data)throw Object.assign(new Error("Channel access was not found"),{status:404});
+      const channelRow=await db.from("orbitfs_release_channels").select("channel").eq("id",existing.data.channel_id).single();if(channelRow.error)throw channelRow.error;
+      const binding=await db.from("license_bindings").select("license_id").eq("auth_user_id",existing.data.user_id).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle();if(binding.error)throw binding.error;
+      if(binding.data?.license_id)await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"revoke",license_id:String(binding.data.license_id),channel:String(channelRow.data?.channel||"") ,external_reference:existing.data.user_id})},"billing");
       const x=await db.from("orbitfs_release_channel_access").delete().eq("id",id);if(x.error)throw x.error;
-      const binding=await db.from("license_bindings").select("license_id").eq("auth_user_id",existing.data.user_id).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle();
-      if(binding.error)throw binding.error;
-      if(binding.data?.license_id) await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({license_id:String(binding.data.license_id),channel:(await db.from("orbitfs_release_channels").select("channel").eq("id",existing.data.channel_id).single()).data?.channel,revoke:true,external_reference:existing.data.user_id})},"billing");
       await db.from("orbitfs_release_channel_access_audit").insert({channel_id:existing.data.channel_id,user_id:existing.data.user_id,action:"revoke",actor_user_id:auth.user.id,metadata:{source:"admin",licenseMasterSynced:Boolean(binding.data?.license_id)}});
       return Response.json({ok:true,licenseMasterSynced:Boolean(binding.data?.license_id)});
     }
