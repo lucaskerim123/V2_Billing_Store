@@ -22,8 +22,10 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     }
     const action=rawAction as DeployAction;
     if(!allowed.has(action))throw Object.assign(new Error("Unsupported deployment action"),{status:400});
-    const version=body.version?String(body.version).trim():undefined;
-    const releaseId=body.releaseId?String(body.releaseId).trim():undefined;
+    let version=body.version?String(body.version).trim():undefined;
+    let releaseId=body.releaseId?String(body.releaseId).trim():undefined;
+    if(version?.startsWith("release:")&&!releaseId){releaseId=version.slice(8).trim()||undefined;version=undefined}
+    if(version?.startsWith("update:"))version=version.slice(7).trim()||undefined;
     const channel=String(body.channel||install.release_channel||"stable").trim().toLowerCase();
     if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw Object.assign(new Error("Invalid release channel"),{status:400});
     const installation=await runCustomerDeployer(install,action,version,channel,releaseId);
