@@ -47,6 +47,10 @@ export default function OrbitFSUpdateReleaseDeployer(){
      <div className="orbitfsData"><span>Source commit</span><b>{chosen?.source_sha||chosen?.source_commit||"—"}</b></div>
      <div className="orbitfsData"><span>Artifact checksum</span><b>{chosen?.checksum||chosen?.sha256||"—"}</b></div>
     </div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
+      {chosen&&chosen.status!=="published"&&<button type="button" disabled={busy} onClick={async()=>{const title=prompt("Customer-facing title",String(chosen.manifest?.title||""));if(title===null)return;setBusy(true);const {data:{session}}=await sb.auth.getSession();const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{"content-type":"application/json",...(session?.access_token?{Authorization:`Bearer ${session.access_token}`}: {})},body:JSON.stringify({releaseId:chosen.id,title})});const j=await r.json().catch(()=>({}));setBusy(false);setMsg(r.ok?"Release presentation updated.":j.error||"Could not edit release.");await load()}}>Edit release</button>}
+      {chosen?.status==="published"&&<button type="button" className="secondary" disabled={busy} onClick={async()=>{if(!confirm("Unpublish this update from the Customer Portal?"))return;setBusy(true);const r=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:chosen.id})});const j=await r.json().catch(()=>({}));setBusy(false);setMsg(r.ok?"Update unpublished.":j.error||"Could not unpublish update.");await load()}}>Unpublish</button>}
+    </div>
    </section>
 
    <section className="orbitfsCard">
