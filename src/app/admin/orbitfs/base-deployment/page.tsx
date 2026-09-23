@@ -14,6 +14,8 @@ export default function BaseDeploymentAdmin(){
   const [releases,setReleases]=useState<Release[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
+  const [systemSettings,setSystemSettings]=useState<any>(null);
+  const [savingSetting,setSavingSetting]=useState("");
 
   async function headers():Promise<Record<string,string>>{
     const {data:{session}}=await createClient().auth.getSession();
@@ -24,10 +26,16 @@ export default function BaseDeploymentAdmin(){
     setLoading(true);setError("");
     try{
       const h=await headers();
-      const response=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:h,cache:"no-store"});
+      const [response,settingsResponse]=await Promise.all([
+        fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:h,cache:"no-store"}),
+        fetch("/api/admin/orbitfs/deployment-settings",{headers:h,cache:"no-store"})
+      ]);
       const body=await response.json().catch(()=>({}));
+      const settingsBody=await settingsResponse.json().catch(()=>({}));
       if(!response.ok)throw new Error(body.error||"Could not load Base releases from License Manager");
+      if(!settingsResponse.ok)throw new Error(settingsBody.error||"Could not load customer deployment controls");
       setReleases(Array.isArray(body.releases)?body.releases:[]);
+      setSystemSettings(settingsBody.settings||{});
     }catch(e:any){setError(e?.message||"Could not load Base release state")}
     finally{setLoading(false)}
   }
@@ -39,6 +47,29 @@ export default function BaseDeploymentAdmin(){
   const validation=(r:Release)=>String(r.validation?.status||"not run");
   const passing=(r:Release)=>(r.validation?.checks||[]).filter(x=>x.ok).length;
   const total=(r:Release)=>(r.validation?.checks||[]).length;
+
+  async function setDeploymentSetting(key:string,value:boolean){
+    setSavingSetting(key);setError("");
+    try{
+      const h=await headers();
+      const response=await fetch("/api/admin/orbitfs/deployment-settings",{
+        method:"PATCH",
+        headers:{...h,"content-type":"application/json"},
+        body:JSON.stringify({[key]:value})
+      });
+      const body=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(body.error||"Could not update customer deployment controls");
+      setSystemSettings(body.settings||{});
+    }catch(e:any){setError(e?.message||"Could not update customer deployment controls")}
+    finally{setSavingSetting("")}
+  }
+
+  const controls=[
+    ["enabled","Customer deployment system","Master Billing-side gate for customer deployment execution."],
+    ["customer_deploy_enabled","Base deployment","Allows customers to install or redeploy a published Base release."],
+    ["customer_updates_enabled","Update deployment","Allows manifest-driven published Update releases to be applied."],
+    ["customer_rollbacks_enabled","Rollback","Allows customer rollback to a previous successful Base deployment."]
+  ] as const;
 
   return <main className="adminShell">
     <header className="adminTop">
@@ -55,6 +86,14 @@ export default function BaseDeploymentAdmin(){
     </header>
 
     {error&&<p className="inlineStatus" style={{borderColor:"crimson"}}>{error}</p>}
+
+    <section className="panel">
+      <div className="sectionHead"><div><p className="eyebrow">CUSTOMER DEPLOYMENT GATES</p><h2>Execution controls</h2><p className="muted">These Billing Store gates control whether the customer deployer may execute Base installs, Updates and rollbacks. They do not change License Manager release authority.</p></div></div>
+      <div className="lmRuntimeList">
+        {controls.map(([key,label,description])=>{const enabled=Boolean(systemSettings?.[key]);return <div key={key}><div><b>{label}</b><span>{description}</span></div><div style={{display:"flex",gap:8,alignItems:"center"}}><strong>{enabled?"Enabled":"Disabled"}</strong><button type="button" disabled={loading||!!savingSetting||!systemSettings} onClick={()=>void setDeploymentSetting(key,!enabled)}>{savingSetting===key?"Saving…":enabled?"Disable":"Enable"}</button></div></div>})}
+      </div>
+      {!systemSettings&&<p className="muted">Deployment controls are unavailable until the Billing Store release-system settings can be read.</p>}
+    </section>
 
     <section className="panel">
       <p className="eyebrow">CURRENT PUBLISHED BASE</p>
