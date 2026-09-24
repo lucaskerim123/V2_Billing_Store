@@ -15,19 +15,23 @@ export default function Settings(){
  const [prefs,setPrefs]=useState<any>({theme:"system",accent:"blue",locale:"en-AU",email_news:true,email_support:true,email_orders:true});
  const [wallet,setWallet]=useState<any>({available_cents:0}),[ledger,setLedger]=useState<any[]>([]),[recharges,setRecharges]=useState<any[]>([]),[walletGateways,setWalletGateways]=useState<any[]>([]);
  const [walletAmount,setWalletAmount]=useState("20.00"),[walletCoupon,setWalletCoupon]=useState(""),[walletGateway,setWalletGateway]=useState(""),[walletMsg,setWalletMsg]=useState(""),[walletBusy,setWalletBusy]=useState<WalletBusy>(null),[openReceipt,setOpenReceipt]=useState<string|null>(null);
+ const [billingCfg,setBillingCfg]=useState<any>({allowCredit:true,topups:true,minTopup:500,maxTopup:100000});
  const [msg,setMsg]=useState(""),[pw,setPw]=useState({current:"",next:"",confirm:""});
 
  async function load(){
   const {data:{user}}=await sb.auth.getUser();if(!user)return;
-  const [{data:p},{data:c},{data:x},{data:b},{data:l},{data:r},{data:g}]=await Promise.all([
+  const [{data:p},{data:c},{data:x},{data:b},{data:l},{data:r},{data:g},{data:s}]=await Promise.all([
    sb.from("user_profiles").select("*").eq("id",user.id).single(),
    sb.from("customers").select("id,customer_number,email,name,auth_user_id").eq("auth_user_id",user.id).maybeSingle(),
    sb.from("user_preferences").select("*").eq("user_id",user.id).maybeSingle(),
    sb.from("account_balances").select("*").eq("user_id",user.id).maybeSingle(),
    sb.from("credit_ledger").select("*").eq("user_id",user.id).order("created_at",{ascending:false}).limit(20),
    sb.from("wallet_recharges").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false}).limit(30),
-   sb.rpc("wallet_recharge_gateways")
+   sb.rpc("wallet_recharge_gateways"),
+   sb.from("app_settings").select("key,value").in("key",["billing.allow_account_credit","billing.credit_topups_enabled","billing.minimum_credit_topup_cents","billing.maximum_credit_topup_cents"])
   ]);
+  const cfg=Object.fromEntries((s||[]).map((x:any)=>[x.key,x.value]));
+  setBillingCfg({allowCredit:cfg["billing.allow_account_credit"]!==false,topups:cfg["billing.credit_topups_enabled"]!==false,minTopup:Number(cfg["billing.minimum_credit_topup_cents"]||500),maxTopup:Number(cfg["billing.maximum_credit_topup_cents"]||100000)});
   setProfile({...p,email:user.email});setCustomer(c||null);if(x)setPrefs(x);setWallet(b||{available_cents:0});setLedger(l||[]);setRecharges(r||[]);
   const gateways=Array.isArray(g)?g:[];setWalletGateways(gateways);setWalletGateway(v=>v&&gateways.some((z:any)=>z.code===v)?v:(gateways[0]?.code||""));
  }
@@ -58,8 +62,9 @@ export default function Settings(){
   if(walletBusy)return;
   const dollars=Number(walletAmount),cents=Math.round(dollars*100);
   if(!Number.isFinite(dollars))return setWalletMsg("Enter a valid recharge amount.");
-  if(cents<500)return setWalletMsg("Minimum Wallet recharge is $5.00.");
-  if(cents>100000)return setWalletMsg("Maximum Wallet recharge is $1,000.00.");
+  if(!billingCfg.topups)return setWalletMsg("Wallet top-ups are currently disabled.");
+  if(cents<billingCfg.minTopup)return setWalletMsg(`Minimum Wallet recharge is ${money(billingCfg.minTopup)}.`);
+  if(cents>billingCfg.maxTopup)return setWalletMsg(`Maximum Wallet recharge is ${money(billingCfg.maxTopup)}.`);
   if(!walletGateway)return setWalletMsg("Choose a payment gateway.");
   setWalletBusy("topup");setWalletMsg("Creating Wallet recharge receipt…");
   const {data:recharge,error:createError}=await sb.rpc("create_wallet_recharge",{p_amount_cents:cents});
