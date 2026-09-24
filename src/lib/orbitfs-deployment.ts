@@ -126,451 +126,53 @@ export async function createSupabaseProject(install:any,input:any){
   const {data,error}=await licenseDb().from("orbitfs_installations").update({supabase_project_ref:ref,supabase_organization_id:org,supabase_project_name:p.name||name,supabase_region:p.region||smartRegionCode(region),state:"preparing_database",last_error:null}).eq("id",install.id).select().single();if(error)throw error;await event(data,"supabase.project_created","ok",`Customer Supabase project ${p.name||name} created`);return data;
 }
 
-const CURRENT_SCHEMA_COMPAT=String.raw`
--- ORBITFS_CURRENT_SCHEMA_COMPAT_V1
--- Brings the original fresh Base export up to the current orbitfs-phase1 schema.
-
-CREATE TABLE IF NOT EXISTS public.mcp_active_context_items (
-  context_id uuid NOT NULL,
-  item_key text NOT NULL,
-  "position" integer DEFAULT 0 NOT NULL,
-  payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-  updated_at timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT mcp_active_context_items_pkey PRIMARY KEY (context_id, item_key),
-  CONSTRAINT mcp_active_context_items_context_id_fkey FOREIGN KEY (context_id)
-    REFERENCES public.mcp_active_contexts(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS public.orbitfs_library_meta (
-  workspace_id uuid NOT NULL,
-  version integer DEFAULT 9 NOT NULL,
-  settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-  created_at timestamptz DEFAULT now() NOT NULL,
-  updated_at timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT orbitfs_library_meta_pkey PRIMARY KEY (workspace_id)
-);
-
-CREATE TABLE IF NOT EXISTS public.orbitfs_library_objects (
-  workspace_id uuid NOT NULL,
-  bucket text NOT NULL,
-  object_id text NOT NULL,
-  "position" integer DEFAULT 0 NOT NULL,
-  payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-  updated_at timestamptz DEFAULT now() NOT NULL,
-  CONSTRAINT orbitfs_library_objects_pkey PRIMARY KEY (workspace_id, bucket, object_id),
-  CONSTRAINT orbitfs_library_objects_bucket_check CHECK (
-    bucket = ANY (ARRAY[
-      'items'::text,'collections'::text,'groups'::text,'categories'::text,
-      'links'::text,'usage'::text,'sections'::text,'events'::text,
-      'sourceHistory'::text,'autoLinks'::text,'entities'::text,
-      'entityMentions'::text,'facts'::text,'factRelations'::text,
-      'records'::text,'changeRequests'::text
-    ])
-  )
-);
-
-ALTER TABLE public.orbitfs_files
-  ADD COLUMN IF NOT EXISTS parent_path text
-  GENERATED ALWAYS AS (
-    CASE
-      WHEN POSITION('/' IN path)=0 THEN ''
-      ELSE regexp_replace(path, '/[^/]+$', '')
-    END
-  ) STORED;
-
-GRANT USAGE ON SCHEMA private TO anon, authenticated, service_role;
-
-CREATE OR REPLACE FUNCTION private.orbitfs_server_allowed()
-RETURNS boolean
-LANGUAGE sql
-STABLE SECURITY DEFINER
-SET search_path TO 'public', 'private', 'extensions'
-AS $function$
-  select coalesce(
-    ((current_setting('request.headers', true))::jsonb ->> 'x-orbitfs-secret') =
-      (select value from private.orbitfs_runtime_config where key='server_secret')
-    or encode(
-      extensions.digest(
-        convert_to(coalesce((current_setting('request.headers', true))::jsonb ->> 'x-orbitfs-secret',''),'UTF8'),
-        'sha256'
-      ),
-      'hex'
-    ) = (select value from private.orbitfs_runtime_config where key='mcp_server_secret_sha256'),
-    false
-  );
-$function$;
-
-CREATE OR REPLACE FUNCTION public.mcp_monitoring_snapshot(p_activity_limit integer DEFAULT 100,p_session_limit integer DEFAULT 50)
-RETURNS jsonb LANGUAGE sql STABLE SET search_path TO 'public'
-AS $function$
-select jsonb_build_object(
-  'metrics',jsonb_build_object(
-    'clients',(select count(*) from public.mcp_clients),
-    'activeClients',(select count(*) from public.mcp_clients where status='active'),
-    'activeSessions',(select count(*) from public.mcp_sessions where status='active'),
-    'totalRequests',(select coalesce(sum(request_count),0) from public.mcp_sessions),
-    'oauthActive',(select count(*) from public.mcp_oauth_tokens where revoked_at is null and expires_at>now()),
-    'auditEvents24h',(select count(*) from public.mcp_audit_log where created_at>=now()-interval '24 hours'),
-    'lastClientSeenAt',(select max(last_seen_at) from public.mcp_clients),
-    'lastSessionSeenAt',(select max(last_seen_at) from public.mcp_sessions)
-  ),
-  'activity',coalesce((select jsonb_agg(to_jsonb(x) order by x.created_at desc) from (
-    select a.id,a.scope_id,a.actor_user_id,a.event_type,a.details,a.created_at,
-      coalesce(u.display_name,u.username,a.actor_user_id) as user_name,
-      case when a.scope_id='global' then 'Global' else coalesce(w.name,a.scope_id,'Global') end as workspace_name
-    from public.mcp_audit_log a
-    left join public.orbitfs_users u on u.id::text=a.actor_user_id
-    left join public.orbitfs_workspaces w on w.id::text=a.scope_id
-    order by a.created_at desc limit greatest(1,least(p_activity_limit,250))
-  ) x),'[]'::jsonb),
-  'sessions',coalesce((select jsonb_agg(to_jsonb(x) order by x.last_seen_at desc nulls last) from (
-    select s.id,s.client_id,s.user_id,s.username,s.workspace_id,s.provider,s.status,s.request_count,s.connected_at,s.last_seen_at,s.metadata,
-      coalesce(u.display_name,u.username,s.username,s.user_id) as user_name,
-      coalesce(c.client_name,s.client_id,'ChatGPT') as client_name,
-      coalesce(w.name,s.workspace_id,'Not selected') as workspace_name
-    from public.mcp_sessions s
-    left join public.orbitfs_users u on u.id::text=s.user_id
-    left join public.mcp_clients c on c.id=s.client_id
-    left join public.orbitfs_workspaces w on w.id::text=s.workspace_id
-    order by s.last_seen_at desc nulls last limit greatest(1,least(p_session_limit,100))
-  ) x),'[]'::jsonb)
-);
-$function$;
-
-CREATE OR REPLACE FUNCTION public.mcp_touch_cloud_session(p_user_id text,p_client_id text,p_username text,p_workspace_id text,p_context_key text,p_conversation_id text)
-RETURNS TABLE(id uuid,workspace_id text) LANGUAGE plpgsql SET search_path TO 'public'
-AS $function$
-declare v_id uuid;v_workspace text;v_client text;
-begin
-  select s.id,s.workspace_id into v_id,v_workspace from public.mcp_sessions s
-   where s.user_id=p_user_id and s.status='active' and s.metadata@>jsonb_build_object('contextKey',p_context_key)
-     and (p_client_id='chatgpt' or s.client_id=p_client_id)
-   order by s.last_seen_at desc limit 1;
-  if v_id is not null then
-    update public.mcp_sessions s set request_count=coalesce(s.request_count,0)+1,last_seen_at=now(),username=p_username,
-      metadata=coalesce(s.metadata,'{}'::jsonb)||jsonb_build_object('contextKey',p_context_key,'conversationId',p_conversation_id)
-      where s.id=v_id;
-    id:=v_id;workspace_id:=v_workspace;return next;return;
-  end if;
-  v_client:=case when p_client_id='chatgpt' then null when exists(select 1 from public.mcp_clients c where c.id=p_client_id) then p_client_id else null end;
-  insert into public.mcp_sessions(client_id,user_id,username,workspace_id,provider,status,request_count,metadata)
-  values(v_client,p_user_id,p_username,p_workspace_id,'chatgpt','active',1,jsonb_build_object('contextKey',p_context_key,'conversationId',p_conversation_id))
-  returning mcp_sessions.id,mcp_sessions.workspace_id into id,workspace_id;
-  return next;
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_library_state_get(p_workspace_id uuid)
-RETURNS jsonb LANGUAGE plpgsql SET search_path TO 'public','pg_temp'
-AS $function$
-declare v_meta public.orbitfs_library_meta%rowtype;v_state jsonb;v_bucket text;v_items jsonb;
-begin
-  select * into v_meta from public.orbitfs_library_meta where workspace_id=p_workspace_id;
-  if not found and not exists(select 1 from public.orbitfs_library_objects where workspace_id=p_workspace_id) then return null;end if;
-  v_state=jsonb_build_object('version',coalesce(v_meta.version,9),'workspaceId',p_workspace_id::text,'settings',coalesce(v_meta.settings,'{}'::jsonb),'createdAt',coalesce(v_meta.created_at,now()),'updatedAt',coalesce(v_meta.updated_at,now()));
-  foreach v_bucket in array array['items','collections','groups','categories','links','usage','sections','events','sourceHistory','autoLinks','entities','entityMentions','facts','factRelations','records','changeRequests'] loop
-    select coalesce(jsonb_agg(payload order by position,object_id),'[]'::jsonb) into v_items from public.orbitfs_library_objects where workspace_id=p_workspace_id and bucket=v_bucket;
-    v_state=v_state||jsonb_build_object(v_bucket,coalesce(v_items,'[]'::jsonb));
-  end loop;
-  return v_state;
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_library_state_patch(p_workspace_id uuid,p_upserts jsonb DEFAULT '[]'::jsonb,p_deletes jsonb DEFAULT '[]'::jsonb,p_meta jsonb DEFAULT '{}'::jsonb)
-RETURNS jsonb LANGUAGE plpgsql SET search_path TO 'public','pg_temp'
-AS $function$
-declare v_row jsonb;v_bucket text;v_id text;v_position integer;v_payload jsonb;v_updated timestamptz:=now();
-begin
-  insert into public.orbitfs_library_meta(workspace_id,version,settings,created_at,updated_at)
-  values(p_workspace_id,coalesce((p_meta->>'version')::integer,9),coalesce(p_meta->'settings','{}'::jsonb),v_updated,v_updated)
-  on conflict(workspace_id) do update set version=coalesce((p_meta->>'version')::integer,public.orbitfs_library_meta.version),settings=coalesce(p_meta->'settings',public.orbitfs_library_meta.settings),updated_at=v_updated;
-  for v_row in select value from jsonb_array_elements(case when jsonb_typeof(p_upserts)='array' then p_upserts else '[]'::jsonb end) loop
-    v_bucket=coalesce(v_row->>'bucket','');v_id=coalesce(v_row->>'objectId','');if v_bucket='' or v_id='' then continue;end if;
-    if v_bucket not in ('items','collections','groups','categories','links','usage','sections','events','sourceHistory','autoLinks','entities','entityMentions','facts','factRelations','records','changeRequests') then raise exception 'Invalid Library bucket: %',v_bucket;end if;
-    v_position=coalesce((v_row->>'position')::integer,0);v_payload=coalesce(v_row->'payload','null'::jsonb);
-    insert into public.orbitfs_library_objects(workspace_id,bucket,object_id,position,payload,updated_at) values(p_workspace_id,v_bucket,v_id,v_position,v_payload,v_updated)
-    on conflict(workspace_id,bucket,object_id) do update set position=excluded.position,payload=excluded.payload,updated_at=excluded.updated_at
-      where public.orbitfs_library_objects.position is distinct from excluded.position or public.orbitfs_library_objects.payload is distinct from excluded.payload;
-  end loop;
-  for v_row in select value from jsonb_array_elements(case when jsonb_typeof(p_deletes)='array' then p_deletes else '[]'::jsonb end) loop
-    delete from public.orbitfs_library_objects where workspace_id=p_workspace_id and bucket=v_row->>'bucket' and object_id=v_row->>'objectId';
-  end loop;
-  return jsonb_build_object('updatedAt',v_updated);
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_mcp_context_clear(p_user_id uuid,p_client_id text,p_workspace_id uuid,p_context_key text)
-RETURNS boolean LANGUAGE plpgsql SET search_path TO 'public','pg_temp'
-AS $function$
-declare v_count integer;begin delete from public.mcp_active_contexts where user_id=p_user_id and client_id=p_client_id and workspace_id=p_workspace_id and context_key=p_context_key;get diagnostics v_count=row_count;return v_count>0;end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_mcp_context_get(p_user_id uuid,p_client_id text,p_workspace_id uuid,p_context_key text)
-RETURNS jsonb LANGUAGE plpgsql SET search_path TO 'public','pg_temp'
-AS $function$
-declare v_id uuid;v_header jsonb;v_files jsonb;begin
-  select id,receipt into v_id,v_header from public.mcp_active_contexts where user_id=p_user_id and client_id=p_client_id and workspace_id=p_workspace_id and context_key=p_context_key;
-  if v_id is null then return null;end if;
-  select coalesce(jsonb_agg(payload order by position,item_key),'[]'::jsonb) into v_files from public.mcp_active_context_items where context_id=v_id;
-  return coalesce(v_header,'{}'::jsonb)||jsonb_build_object('files',coalesce(v_files,'[]'::jsonb));
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_mcp_context_patch(p_user_id uuid,p_client_id text,p_workspace_id uuid,p_context_key text,p_header jsonb DEFAULT '{}'::jsonb,p_upserts jsonb DEFAULT '[]'::jsonb,p_deletes jsonb DEFAULT '[]'::jsonb)
-RETURNS jsonb LANGUAGE plpgsql SET search_path TO 'public','pg_temp'
-AS $function$
-declare v_id uuid;v_row jsonb;v_key text;v_position integer;v_payload jsonb;begin
-  select id into v_id from public.mcp_active_contexts where user_id=p_user_id and client_id=p_client_id and workspace_id=p_workspace_id and context_key=p_context_key;
-  if v_id is null then insert into public.mcp_active_contexts(user_id,client_id,workspace_id,context_key,receipt,updated_at) values(p_user_id,p_client_id,p_workspace_id,p_context_key,coalesce(p_header,'{}'::jsonb)-'files',now()) returning id into v_id;
-  else update public.mcp_active_contexts set receipt=coalesce(p_header,'{}'::jsonb)-'files',updated_at=now() where id=v_id and receipt is distinct from (coalesce(p_header,'{}'::jsonb)-'files');if not found then update public.mcp_active_contexts set updated_at=now() where id=v_id;end if;end if;
-  for v_row in select value from jsonb_array_elements(case when jsonb_typeof(p_upserts)='array' then p_upserts else '[]'::jsonb end) loop
-    v_key=coalesce(v_row->>'itemKey','');if v_key='' then continue;end if;v_position=coalesce((v_row->>'position')::integer,0);v_payload=coalesce(v_row->'payload','{}'::jsonb);
-    insert into public.mcp_active_context_items(context_id,item_key,position,payload,updated_at) values(v_id,v_key,v_position,v_payload,now())
-    on conflict(context_id,item_key) do update set position=excluded.position,payload=excluded.payload,updated_at=excluded.updated_at where public.mcp_active_context_items.position is distinct from excluded.position or public.mcp_active_context_items.payload is distinct from excluded.payload;
-  end loop;
-  delete from public.mcp_active_context_items where context_id=v_id and item_key in (select value#>>'{}' from jsonb_array_elements(case when jsonb_typeof(p_deletes)='array' then p_deletes else '[]'::jsonb end));
-  return jsonb_build_object('id',v_id,'updatedAt',now());
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_mcp_context_ui(p_user_id uuid,p_client_id text,p_workspace_id uuid,p_context_key text)
-RETURNS jsonb LANGUAGE plpgsql SET search_path TO 'public','pg_temp'
-AS $function$
-declare v_id uuid;v_header jsonb;v_files jsonb;begin
-  select id,receipt into v_id,v_header from public.mcp_active_contexts where user_id=p_user_id and client_id=p_client_id and workspace_id=p_workspace_id and context_key=p_context_key;
-  if v_id is null then return null;end if;
-  select coalesce(jsonb_agg((payload-'content'-'data'-'raw'-'body'-'text'-'base64'-'blob'-'bytesData') order by position,item_key),'[]'::jsonb) into v_files from public.mcp_active_context_items where context_id=v_id;
-  return coalesce(v_header,'{}'::jsonb)||jsonb_build_object('files',coalesce(v_files,'[]'::jsonb));
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_mcp_folder_files(p_workspace_id text,p_base_path text DEFAULT '',p_recursive boolean DEFAULT true,p_max_files integer DEFAULT 100,p_max_depth integer DEFAULT 10)
-RETURNS TABLE(path text) LANGUAGE sql STABLE SET search_path TO 'public'
-AS $function$
-with candidates as (
-  select f.path,case when coalesce(p_base_path,'')='' then f.path else substring(f.path from length(rtrim(p_base_path,'/'))+2) end as relative_path
-  from public.orbitfs_files f where f.workspace_id=p_workspace_id::uuid and f.deleted_at is null and f.kind='file' and f.path not like '_trash/%' and (coalesce(p_base_path,'')='' or f.path like (rtrim(p_base_path,'/')||'/%'))
-)
-select c.path from candidates c where case when p_recursive then greatest(0,array_length(regexp_split_to_array(c.relative_path,'/'),1)-1)<=greatest(0,least(coalesce(p_max_depth,10),50)) else greatest(0,array_length(regexp_split_to_array(c.relative_path,'/'),1)-1)=0 end order by c.path limit greatest(1,least(coalesce(p_max_files,100),1000));
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_mcp_search_files(p_workspace_id text,p_query text,p_base_path text DEFAULT '',p_include_content boolean DEFAULT false,p_limit integer DEFAULT 50)
-RETURNS TABLE(id uuid,name text,path text,kind text,mime_type text,size_bytes bigint,updated_at timestamptz,score integer,excerpt text) LANGUAGE sql STABLE SET search_path TO 'public'
-AS $function$
-with matched as (
-  select f.id,f.name,f.path,f.kind,f.mime_type,f.size_bytes,f.updated_at,
-    ((case when position(lower(p_query) in lower(coalesce(f.name,'')))>0 then 5 else 0 end)+(case when position(lower(p_query) in lower(coalesce(f.path,'')))>0 then 3 else 0 end)+(case when p_include_content and position(lower(p_query) in lower(coalesce(f.content_text,'')))>0 then 2 else 0 end))::integer as score,
-    case when p_include_content and position(lower(p_query) in lower(coalesce(f.content_text,'')))>0 then substring(coalesce(f.content_text,'') from greatest(1,position(lower(p_query) in lower(coalesce(f.content_text,'')))-120) for 420) else '' end as excerpt
-  from public.orbitfs_files f where f.workspace_id=p_workspace_id::uuid and f.deleted_at is null and (coalesce(p_base_path,'')='' or f.path=p_base_path or f.path like (rtrim(p_base_path,'/')||'/%')) and (position(lower(p_query) in lower(coalesce(f.name,'')))>0 or position(lower(p_query) in lower(coalesce(f.path,'')))>0 or (p_include_content and position(lower(p_query) in lower(coalesce(f.content_text,'')))>0))
-)
-select id,name,path,kind,mime_type,size_bytes,updated_at,score,excerpt from matched order by score desc,path asc limit greatest(1,least(coalesce(p_limit,50),250));
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_mcp_monitoring_snapshot(p_activity_limit integer DEFAULT 100,p_session_limit integer DEFAULT 50)
-RETURNS jsonb LANGUAGE plpgsql STABLE SET search_path TO 'public'
-AS $function$
-declare v_metrics jsonb;v_activity jsonb;v_sessions jsonb;begin
-  if not private.orbitfs_server_allowed() then raise exception 'OrbitFS server authorization required' using errcode='42501';end if;
-  select jsonb_build_object('clients',(select count(*) from public.mcp_clients),'activeClients',(select count(*) from public.mcp_clients where status='active'),'activeSessions',(select count(*) from public.mcp_sessions where status='active'),'totalRequests',(select coalesce(sum(request_count),0) from public.mcp_sessions),'oauthActive',(select count(*) from public.mcp_oauth_tokens where revoked_at is null and expires_at>now()),'auditEvents24h',(select count(*) from public.mcp_audit_log where created_at>=now()-interval '24 hours'),'lastClientSeenAt',(select max(last_seen_at) from public.mcp_clients),'lastSessionSeenAt',(select max(last_seen_at) from public.mcp_sessions)) into v_metrics;
-  select coalesce(jsonb_agg(to_jsonb(q) order by q.created_at desc),'[]'::jsonb) into v_activity from (select a.id,a.scope_id,a.actor_user_id,a.event_type,a.details,a.created_at,coalesce(u.display_name,u.username,a.actor_user_id,'OrbitFS user') as user_name,coalesce(c.client_name,a.details->>'clientId','ChatGPT') as client_name,coalesce(w.name,case when a.scope_id='global' then 'Global' else a.scope_id end,'Global') as workspace_name from public.mcp_audit_log a left join public.orbitfs_users u on u.id::text=a.actor_user_id left join public.mcp_clients c on c.id=a.details->>'clientId' left join public.orbitfs_workspaces w on w.id::text=a.scope_id order by a.created_at desc limit greatest(1,least(coalesce(p_activity_limit,100),250))) q;
-  select coalesce(jsonb_agg(to_jsonb(q) order by q.last_seen_at desc),'[]'::jsonb) into v_sessions from (select s.id,s.client_id,s.user_id,s.username,s.workspace_id,s.provider,s.status,s.request_count,s.connected_at,s.last_seen_at,s.metadata,coalesce(s.username,u.display_name,u.username,s.user_id,'OrbitFS user') as user_name,coalesce(c.client_name,s.client_id,'ChatGPT') as client_name,coalesce(w.name,s.workspace_id,'Not selected') as workspace_name from public.mcp_sessions s left join public.orbitfs_users u on u.id::text=s.user_id left join public.mcp_clients c on c.id=s.client_id left join public.orbitfs_workspaces w on w.id::text=s.workspace_id order by s.last_seen_at desc limit greatest(1,least(coalesce(p_session_limit,50),100))) q;
-  return jsonb_build_object('metrics',v_metrics,'activity',v_activity,'sessions',v_sessions);
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_set_mcp_session_workspace(p_session_id uuid,p_workspace_id text)
-RETURNS boolean LANGUAGE plpgsql SET search_path TO 'public'
-AS $function$
-begin if not private.orbitfs_server_allowed() then raise exception 'OrbitFS server authorization required' using errcode='42501';end if;update public.mcp_sessions set workspace_id=p_workspace_id where id=p_session_id and workspace_id is distinct from p_workspace_id;return found;end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_touch_addon_request(p_addon_id text,p_min_interval_seconds integer DEFAULT 30)
-RETURNS boolean LANGUAGE plpgsql SET search_path TO 'public'
-AS $function$
-declare changed integer;begin update public.orbitfs_addons set runtime=coalesce(runtime,'{}'::jsonb)||jsonb_build_object('lastRequestAt',now()),updated_at=now() where id=p_addon_id and coalesce((runtime->>'lastRequestAt')::timestamptz,'epoch'::timestamptz)<=now()-make_interval(secs=>greatest(1,p_min_interval_seconds));get diagnostics changed=row_count;return changed>0;end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_touch_mcp_session(p_user_id text,p_client_id text,p_username text,p_workspace_id text,p_context_key text,p_conversation_id text)
-RETURNS jsonb LANGUAGE plpgsql SET search_path TO 'public','extensions'
-AS $function$
-declare v_id uuid;v_workspace text;v_client_id text;v_now timestamptz:=now();begin
-  if not private.orbitfs_server_allowed() then raise exception 'OrbitFS server authorization required' using errcode='42501';end if;
-  if coalesce(trim(p_user_id),'')='' or coalesce(trim(p_context_key),'')='' then raise exception 'MCP session identity is required' using errcode='22023';end if;
-  v_client_id:=case when coalesce(p_client_id,'chatgpt')='chatgpt' then null else p_client_id end;if v_client_id is not null and not exists(select 1 from public.mcp_clients where id=v_client_id) then v_client_id:=null;end if;
-  select s.id,s.workspace_id into v_id,v_workspace from public.mcp_sessions s where s.user_id=p_user_id and s.status='active' and coalesce(s.client_id,'chatgpt')=coalesce(v_client_id,'chatgpt') and s.metadata->>'contextKey'=p_context_key order by s.last_seen_at desc limit 1 for update;
-  if v_id is not null then update public.mcp_sessions set request_count=coalesce(request_count,0)+1,last_seen_at=v_now,username=p_username,metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object('contextKey',p_context_key,'conversationId',p_conversation_id) where id=v_id;return jsonb_build_object('id',v_id,'workspaceId',v_workspace,'created',false);end if;
-  begin insert into public.mcp_sessions(client_id,user_id,username,workspace_id,provider,status,request_count,metadata,last_seen_at) values(v_client_id,p_user_id,p_username,p_workspace_id,'chatgpt','active',1,jsonb_build_object('contextKey',p_context_key,'conversationId',p_conversation_id),v_now) returning id,workspace_id into v_id,v_workspace;
-  exception when unique_violation then select s.id,s.workspace_id into v_id,v_workspace from public.mcp_sessions s where s.user_id=p_user_id and s.status='active' and coalesce(s.client_id,'chatgpt')=coalesce(v_client_id,'chatgpt') and s.metadata->>'contextKey'=p_context_key order by s.last_seen_at desc limit 1;update public.mcp_sessions set request_count=coalesce(request_count,0)+1,last_seen_at=v_now,username=p_username,metadata=coalesce(metadata,'{}'::jsonb)||jsonb_build_object('contextKey',p_context_key,'conversationId',p_conversation_id) where id=v_id;end;
-  return jsonb_build_object('id',v_id,'workspaceId',v_workspace,'created',true);
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_throttle_last_seen_update()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public'
-AS $function$
-begin if (to_jsonb(new)-'last_seen_at')=(to_jsonb(old)-'last_seen_at') and coalesce(old.last_seen_at,'epoch'::timestamptz)>now()-interval '60 seconds' then return null;end if;return new;end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.orbitfs_throttle_mcp_session_update()
-RETURNS trigger LANGUAGE plpgsql SET search_path TO 'public'
-AS $function$
-begin if new.workspace_id is not distinct from old.workspace_id and new.status is not distinct from old.status and new.client_id is not distinct from old.client_id and new.user_id is not distinct from old.user_id and coalesce(old.last_seen_at,'epoch'::timestamptz)>now()-interval '30 seconds' then return null;end if;return new;end;
-$function$;
-
-DO $trigger$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='orbitfs_throttle_mcp_session_update' AND NOT tgisinternal) THEN CREATE TRIGGER orbitfs_throttle_mcp_session_update BEFORE UPDATE ON public.mcp_sessions FOR EACH ROW EXECUTE FUNCTION public.orbitfs_throttle_mcp_session_update();END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='orbitfs_sessions_throttle_last_seen' AND NOT tgisinternal) THEN CREATE TRIGGER orbitfs_sessions_throttle_last_seen BEFORE UPDATE ON public.orbitfs_sessions FOR EACH ROW EXECUTE FUNCTION public.orbitfs_throttle_last_seen_update();END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='orbitfs_users_throttle_last_seen' AND NOT tgisinternal) THEN CREATE TRIGGER orbitfs_users_throttle_last_seen BEFORE UPDATE ON public.orbitfs_users FOR EACH ROW EXECUTE FUNCTION public.orbitfs_throttle_last_seen_update();END IF;
-END
-$trigger$;
-
-CREATE INDEX IF NOT EXISTS mcp_active_context_items_context_position_idx ON public.mcp_active_context_items(context_id,"position");
-CREATE INDEX IF NOT EXISTS mcp_context_bundle_dependencies_depends_on_idx ON public.mcp_context_bundle_dependencies(depends_on_bundle_id);
-CREATE INDEX IF NOT EXISTS mcp_oauth_codes_client_id_idx ON public.mcp_oauth_codes(client_id);
-CREATE INDEX IF NOT EXISTS mcp_project_context_bundles_bundle_id_idx ON public.mcp_project_context_bundles(bundle_id);
-CREATE INDEX IF NOT EXISTS mcp_project_preset_bundles_bundle_id_idx ON public.mcp_project_preset_bundles(bundle_id);
-CREATE UNIQUE INDEX IF NOT EXISTS mcp_sessions_active_context_key_uidx ON public.mcp_sessions(user_id,COALESCE(client_id,'chatgpt'::text),((metadata->>'contextKey'::text))) WHERE status='active'::text AND COALESCE((metadata->>'contextKey'::text),''::text)<>''::text;
-CREATE INDEX IF NOT EXISTS mcp_sessions_client_id_idx ON public.mcp_sessions(client_id);
-CREATE INDEX IF NOT EXISTS mcp_sessions_context_lookup_idx ON public.mcp_sessions(user_id,status,last_seen_at DESC) WHERE status='active'::text;
-CREATE INDEX IF NOT EXISTS mcp_workspace_preset_bundles_bundle_id_idx ON public.mcp_workspace_preset_bundles(bundle_id);
-CREATE INDEX IF NOT EXISTS orbitfs_audit_log_actor_user_id_idx ON public.orbitfs_audit_log(actor_user_id);
-CREATE INDEX IF NOT EXISTS orbitfs_files_created_by_idx ON public.orbitfs_files(created_by);
-CREATE INDEX IF NOT EXISTS orbitfs_files_parent_id_idx ON public.orbitfs_files(parent_id);
-CREATE INDEX IF NOT EXISTS orbitfs_files_workspace_parent_active_idx ON public.orbitfs_files(workspace_id,parent_path,kind,name) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS orbitfs_group_members_user_id_idx ON public.orbitfs_group_members(user_id);
-CREATE INDEX IF NOT EXISTS orbitfs_library_approval_queue_decided_by_idx ON public.orbitfs_library_approval_queue(decided_by);
-CREATE INDEX IF NOT EXISTS orbitfs_library_approval_queue_item_id_idx ON public.orbitfs_library_approval_queue(item_id);
-CREATE INDEX IF NOT EXISTS orbitfs_library_approval_queue_requested_by_idx ON public.orbitfs_library_approval_queue(requested_by);
-CREATE INDEX IF NOT EXISTS orbitfs_library_items_created_by_idx ON public.orbitfs_library_items(created_by);
-CREATE INDEX IF NOT EXISTS orbitfs_library_objects_workspace_bucket_position_idx ON public.orbitfs_library_objects(workspace_id,bucket,"position");
-CREATE INDEX IF NOT EXISTS orbitfs_library_revisions_created_by_idx ON public.orbitfs_library_revisions(created_by);
-CREATE INDEX IF NOT EXISTS orbitfs_profiles_created_by_idx ON public.orbitfs_profiles(created_by);
-CREATE INDEX IF NOT EXISTS orbitfs_registration_requests_created_user_id_idx ON public.orbitfs_registration_requests(created_user_id);
-CREATE INDEX IF NOT EXISTS orbitfs_registration_requests_decided_by_idx ON public.orbitfs_registration_requests(decided_by);
-CREATE INDEX IF NOT EXISTS orbitfs_sessions_user_id_idx ON public.orbitfs_sessions(user_id);
-CREATE INDEX IF NOT EXISTS orbitfs_shares_created_by_idx ON public.orbitfs_shares(created_by);
-CREATE INDEX IF NOT EXISTS orbitfs_shares_file_id_idx ON public.orbitfs_shares(file_id);
-CREATE INDEX IF NOT EXISTS orbitfs_shares_workspace_id_idx ON public.orbitfs_shares(workspace_id);
-CREATE INDEX IF NOT EXISTS orbitfs_workspace_messages_created_by_idx ON public.orbitfs_workspace_messages(created_by);
-CREATE INDEX IF NOT EXISTS orbitfs_workspace_requests_decided_by_id_idx ON public.orbitfs_workspace_requests(decided_by_id);
-CREATE INDEX IF NOT EXISTS orbitfs_workspace_requests_requested_by_id_idx ON public.orbitfs_workspace_requests(requested_by_id);
-CREATE INDEX IF NOT EXISTS orbitfs_workspace_requests_target_user_id_idx ON public.orbitfs_workspace_requests(target_user_id);
-CREATE INDEX IF NOT EXISTS orbitfs_workspaces_created_by_idx ON public.orbitfs_workspaces(created_by);
-CREATE INDEX IF NOT EXISTS orbitfs_workspaces_owner_id_idx ON public.orbitfs_workspaces(owner_id);
-CREATE INDEX IF NOT EXISTS studio_analysis_findings_record_id_idx ON public.studio_analysis_findings(record_id);
-CREATE INDEX IF NOT EXISTS studio_analysis_records_source_id_idx ON public.studio_analysis_records(source_id);
-CREATE INDEX IF NOT EXISTS studio_events_document_id_idx ON public.studio_events(document_id);
-CREATE INDEX IF NOT EXISTS studio_links_document_id_idx ON public.studio_links(document_id);
-CREATE INDEX IF NOT EXISTS studio_sessions_document_id_idx ON public.studio_sessions(document_id);
-
-ALTER TABLE public.mcp_active_context_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.orbitfs_library_meta ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.orbitfs_library_objects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.studio_analysis_findings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.studio_analysis_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.studio_analysis_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.studio_analysis_sources ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.studio_analysis_state ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.studio_links ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS orbitfs_server_only ON public.mcp_active_context_items;
-CREATE POLICY orbitfs_server_only ON public.mcp_active_context_items FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-DROP POLICY IF EXISTS orbitfs_server_only ON public.orbitfs_library_meta;
-CREATE POLICY orbitfs_server_only ON public.orbitfs_library_meta FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-DROP POLICY IF EXISTS orbitfs_server_only ON public.orbitfs_library_objects;
-CREATE POLICY orbitfs_server_only ON public.orbitfs_library_objects FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-DROP POLICY IF EXISTS orbitfs_server_only ON public.studio_analysis_findings;
-CREATE POLICY orbitfs_server_only ON public.studio_analysis_findings FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-DROP POLICY IF EXISTS orbitfs_server_only ON public.studio_analysis_records;
-CREATE POLICY orbitfs_server_only ON public.studio_analysis_records FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-DROP POLICY IF EXISTS orbitfs_server_only ON public.studio_analysis_runs;
-CREATE POLICY orbitfs_server_only ON public.studio_analysis_runs FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-DROP POLICY IF EXISTS orbitfs_server_only ON public.studio_analysis_sources;
-CREATE POLICY orbitfs_server_only ON public.studio_analysis_sources FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-DROP POLICY IF EXISTS orbitfs_server_only ON public.studio_analysis_state;
-CREATE POLICY orbitfs_server_only ON public.studio_analysis_state FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-DROP POLICY IF EXISTS orbitfs_server_only ON public.studio_links;
-CREATE POLICY orbitfs_server_only ON public.studio_links FOR ALL TO anon,authenticated USING(private.orbitfs_server_allowed()) WITH CHECK(private.orbitfs_server_allowed());
-
-GRANT SELECT,INSERT,UPDATE,DELETE,REFERENCES,TRIGGER,TRUNCATE ON TABLE public.mcp_active_context_items,public.orbitfs_library_meta,public.orbitfs_library_objects TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION private.orbitfs_server_allowed() TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.mcp_monitoring_snapshot(integer,integer) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.mcp_touch_cloud_session(text,text,text,text,text,text) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_library_state_get(uuid) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_library_state_patch(uuid,jsonb,jsonb,jsonb) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_mcp_context_clear(uuid,text,uuid,text) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_mcp_context_get(uuid,text,uuid,text) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_mcp_context_patch(uuid,text,uuid,text,jsonb,jsonb,jsonb) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_mcp_context_ui(uuid,text,uuid,text) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_mcp_folder_files(text,text,boolean,integer,integer) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_mcp_search_files(text,text,text,boolean,integer) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_mcp_monitoring_snapshot(integer,integer) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_set_mcp_session_workspace(uuid,text) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_touch_addon_request(text,integer) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_touch_mcp_session(text,text,text,text,text,text) TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_throttle_last_seen_update() TO anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.orbitfs_throttle_mcp_session_update() TO anon,authenticated,service_role;
-`;
-
-function normalizeSchemaSql(input:string){
-  let sql=input;
-  const literalNewlines=(sql.match(/\\n/g)||[]).length;
-  if(literalNewlines>20)sql=sql.replace(/\\n/g,"\n");
-  sql=sql.replace(/\$function\$(?=\s*(?:CREATE|ALTER|GRANT|REVOKE|COMMIT|$))/g,"$function$;");
-  sql=sql.replace(/^\s*BEGIN\s*;\s*/i,"").replace(/^\s*COMMIT\s*;\s*$/gim,"");
-
-  const constraintRe=/^ALTER TABLE\s+[^;\n]+\s+ADD CONSTRAINT\s+[^;\n]+;\s*$/gim;
-  const constraints=sql.match(constraintRe)||[];
-  if(constraints.length){
-    sql=sql.replace(constraintRe,"");
-    const normal=constraints.filter(x=>!x.toUpperCase().includes("FOREIGN KEY")).map(x=>x.trim());
-    const foreign=constraints.filter(x=>x.toUpperCase().includes("FOREIGN KEY")).map(x=>x.trim());
-    const ordered=[...normal,...foreign].join("\n\n")+"\n\n";
-    const indexAt=sql.search(/^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\b/im);
-    const functionAt=sql.search(/^\s*CREATE\s+OR\s+REPLACE\s+FUNCTION\b/im);
-    const at=indexAt>=0?indexAt:functionAt>=0?functionAt:sql.length;
-    sql=sql.slice(0,at)+ordered+sql.slice(at);
-  }
-
-  const required=[/CREATE TABLE\s+private\.orbitfs_runtime_config/i,/CREATE TABLE\s+public\.orbitfs_users/i,/CREATE TABLE\s+public\.orbitfs_workspaces/i,/CREATE TABLE\s+public\.orbitfs_files/i,/CREATE TABLE\s+public\.mcp_sessions/i];
-  if(required.some(r=>!r.test(sql)))throw new Error("OrbitFS schema asset is not a complete Base schema export");
-  if((sql.match(/\$function\$/g)||[]).length%2!==0)throw new Error("OrbitFS schema asset has an unmatched $function$ block");
-  if(!sql.includes("ORBITFS_CURRENT_SCHEMA_COMPAT_V1"))sql=sql.trim()+"\n\n"+CURRENT_SCHEMA_COMPAT.trim();
-  return sql.trim();
-}
-async function schemaText(){
-  const s=await releaseSettings(),db=licenseDb(),d=await db.storage.from(s.schema_bucket).download(s.schema_path);if(d.error||!d.data)throw Object.assign(new Error("Fresh OrbitFS schema has not been uploaded in the Release Panel System"),{status:409});
-  if(d.data.size>SCHEMA_MAX_BYTES)throw new Error("OrbitFS schema asset is too large");const sql=normalizeSchemaSql(await d.data.text());if(!/create\s+table|create\s+schema/i.test(sql))throw new Error("OrbitFS schema asset is invalid");return {sql,sha256:createHash("sha256").update(sql).digest("hex"),source:"legacy-storage" as const};
-}
 async function releaseSchemaText(release:any){
   const manifest=release?.manifest&&typeof release.manifest==="object"?release.manifest:{};
+  const expectedSchemaVersion=String(manifest.databaseSchemaVersion||manifest.releaseInfo?.databaseSchemaVersion||"").trim();
   const expectedSchemaHash=String(manifest.databaseSchemaSha256||manifest.releaseInfo?.databaseSchemaSha256||"").trim().toLowerCase();
-  if(!expectedSchemaHash)return null;
-  const schemaPath=String(manifest.databaseSchemaPath||manifest.releaseInfo?.databaseSchemaPath||"supabase/customer-schema.sql").trim();
+  const schemaPath=String(manifest.databaseSchemaPath||manifest.releaseInfo?.databaseSchemaPath||"").trim();
+  const expectedMigrationCount=Number(manifest.databaseMigrationCount??manifest.releaseInfo?.databaseMigrationCount??0);
+  const expectedLatestMigration=String(manifest.databaseLatestMigration||manifest.releaseInfo?.databaseLatestMigration||"").trim();
+
+  if(!expectedSchemaVersion||!/^[a-f0-9]{64}$/.test(expectedSchemaHash)||schemaPath!=="supabase/customer-schema.sql"||!Number.isInteger(expectedMigrationCount)||expectedMigrationCount<1||!/^\d{14}$/.test(expectedLatestMigration)){
+    throw Object.assign(new Error(`Published Base release ${release?.version||""} does not contain the verified customer database snapshot required for automatic deployment. Publish a current Base release before initializing a customer database.`),{status:409});
+  }
+
   const artifact=await masterDownloadReleaseArtifact(String(release.id));
   if(artifact.bytes.byteLength>75*1024*1024)throw Object.assign(new Error("Base release artifact is too large"),{status:413});
   const artifactHash=createHash("sha256").update(artifact.bytes).digest("hex");
   const expectedArtifactHash=String(release.sha256||release.checksum||"").trim().toLowerCase();
-  if(expectedArtifactHash&&artifactHash!==expectedArtifactHash)throw Object.assign(new Error("Base release artifact checksum does not match License Manager"),{status:422});
+  if(!/^[a-f0-9]{64}$/.test(expectedArtifactHash)||artifactHash!==expectedArtifactHash)throw Object.assign(new Error("Base release artifact checksum does not match License Manager"),{status:422});
+
   let pkg:any;
-  try{pkg=JSON.parse(gunzipSync(artifact.bytes,{maxOutputLength:SCHEMA_MAX_BYTES*20}).toString("utf8"))}catch{throw Object.assign(new Error("Base release artifact could not be unpacked for database initialization"),{status:422})}
-  if(pkg?.format!=="orbitfs-base-deployment-v2"||String(pkg.version||"")!==String(release.version||""))throw Object.assign(new Error("Base release artifact identity is invalid"),{status:422});
+  try{pkg=JSON.parse(gunzipSync(artifact.bytes,{maxOutputLength:SCHEMA_MAX_BYTES*20}).toString("utf8"))}
+  catch{throw Object.assign(new Error("Base release artifact could not be unpacked for database initialization"),{status:422})}
+
+  if(pkg?.format!=="orbitfs-base-deployment-v2"||Number(pkg?.schemaVersion)!==2||String(pkg.version||"")!==String(release.version||""))throw Object.assign(new Error("Base release artifact identity is invalid"),{status:422});
+
+  const pkgSchemaVersion=String(pkg.databaseSchemaVersion||pkg.releaseInfo?.databaseSchemaVersion||"").trim();
   const pkgSchemaHash=String(pkg.databaseSchemaSha256||pkg.releaseInfo?.databaseSchemaSha256||"").trim().toLowerCase();
-  const pkgSchemaPath=String(pkg.databaseSchemaPath||pkg.releaseInfo?.databaseSchemaPath||schemaPath).trim();
-  if(pkgSchemaHash!==expectedSchemaHash||pkgSchemaPath!==schemaPath)throw Object.assign(new Error("Base release database snapshot metadata does not match License Manager"),{status:422});
+  const pkgSchemaPath=String(pkg.databaseSchemaPath||pkg.releaseInfo?.databaseSchemaPath||"").trim();
+  const pkgMigrationCount=Number(pkg.databaseMigrationCount??pkg.releaseInfo?.databaseMigrationCount??0);
+  const pkgLatestMigration=String(pkg.databaseLatestMigration||pkg.releaseInfo?.databaseLatestMigration||"").trim();
+
+  if(pkgSchemaVersion!==expectedSchemaVersion||pkgSchemaHash!==expectedSchemaHash||pkgSchemaPath!==schemaPath||pkgMigrationCount!==expectedMigrationCount||pkgLatestMigration!==expectedLatestMigration){
+    throw Object.assign(new Error("Base release database snapshot metadata does not match License Manager"),{status:422});
+  }
+
   const file=(Array.isArray(pkg.files)?pkg.files:[]).find((entry:any)=>String(entry?.file||"")===schemaPath);
   if(!file||file.encoding!=="base64"||typeof file.data!=="string")throw Object.assign(new Error("Base release does not contain its declared customer database snapshot"),{status:422});
   const bytes=Buffer.from(file.data,"base64");
   if(bytes.byteLength<1||bytes.byteLength>SCHEMA_MAX_BYTES)throw Object.assign(new Error("Base release customer database snapshot size is invalid"),{status:422});
   const sha256=createHash("sha256").update(bytes).digest("hex");
-  if(sha256!==expectedSchemaHash||String(file.sha256||"").toLowerCase()!==sha256)throw Object.assign(new Error("Base release customer database snapshot checksum failed"),{status:422});
+  if(sha256!==expectedSchemaHash||String(file.sha256||"").toLowerCase()!==sha256||Number(file.size)!==bytes.byteLength)throw Object.assign(new Error("Base release customer database snapshot checksum failed"),{status:422});
+
   const sql=bytes.toString("utf8");
   if(!["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log"].every(name=>sql.includes(name)))throw Object.assign(new Error("Base release customer database snapshot is incomplete"),{status:422});
-  return {sql,sha256,source:"release-artifact" as const,path:schemaPath,migrationCount:Number(pkg.databaseMigrationCount||pkg.releaseInfo?.databaseMigrationCount||0),latestMigration:String(pkg.databaseLatestMigration||pkg.releaseInfo?.databaseLatestMigration||"")};
+  if(/\b(?:begin|commit|rollback)\s*;/i.test(sql))throw Object.assign(new Error("Base release customer database snapshot contains unsupported explicit transaction control"),{status:422});
+
+  return {sql,sha256,source:"release-artifact" as const,path:schemaPath,schemaVersion:expectedSchemaVersion,migrationCount:expectedMigrationCount,latestMigration:expectedLatestMigration};
 }
-export async function schemaAssetStatus(){const s=await releaseSettings(),d=await licenseDb().storage.from(s.schema_bucket).download(s.schema_path);return {configured:!d.error&&!!d.data,size:d.data?.size||0,bucket:s.schema_bucket,path:s.schema_path,version:s.schema_version}}
-export async function uploadSchemaAsset(sql:string){const s=await releaseSettings();if(!sql||Buffer.byteLength(sql)>SCHEMA_MAX_BYTES)throw new Error("Schema asset is empty or too large");const normalized=normalizeSchemaSql(sql);if(Buffer.byteLength(normalized)>SCHEMA_MAX_BYTES)throw new Error("Normalized OrbitFS schema asset is too large");const db=licenseDb(),b=await db.storage.getBucket(s.schema_bucket);if(!b.data){const c=await db.storage.createBucket(s.schema_bucket,{public:false,fileSizeLimit:SCHEMA_MAX_BYTES});if(c.error&&!String(c.error.message).toLowerCase().includes("already"))throw c.error}const u=await db.storage.from(s.schema_bucket).upload(s.schema_path,Buffer.from(normalized),{contentType:"text/plain",upsert:true,cacheControl:"0"});if(u.error)throw u.error;return schemaAssetStatus()}
 
 async function assertSupabaseProjectReady(install:any){
   assertCustomerSupabaseRef(install.supabase_project_ref);
@@ -586,17 +188,13 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   if(!release?.id)throw Object.assign(new Error(releaseId?"Selected Base release is no longer published in License Master":"No published Base release is available for this channel"),{status:409});
   if(String(release.channel||channel)!==channel)throw Object.assign(new Error("Selected Base release does not match the installation release channel"),{status:409});
   await assertSupabaseProjectReady(install);
-  const s=await releaseSettings();
   const releaseSchema=String(release.manifest?.databaseSchemaVersion||release.manifest?.releaseInfo?.databaseSchemaVersion||"").trim();
-  const configuredSchema=String(s.schema_version||"").trim();
-  const packagedSchema=Boolean(release.manifest?.databaseSchemaSha256||release.manifest?.releaseInfo?.databaseSchemaSha256);
-  if(!packagedSchema&&releaseSchema&&configuredSchema&&releaseSchema!==configuredSchema)throw Object.assign(new Error(`Base release ${release.version} requires database schema ${releaseSchema}, but the configured legacy schema asset is ${configuredSchema}. Publish/select the matching schema before initializing this installation.`),{status:409});
-  const effectiveSchema=releaseSchema||configuredSchema||"1";
-  const schemaAsset=packagedSchema?await releaseSchemaText(release):await schemaText();
-  if(!schemaAsset)throw Object.assign(new Error("Base release declares a customer database snapshot but it could not be loaded"),{status:422});
+  if(!releaseSchema)throw Object.assign(new Error(`Published Base release ${release.version} does not declare a customer database schema version. Publish a current Base release before initializing this installation.`),{status:409});
+  const schemaAsset=await releaseSchemaText(release);
+  const effectiveSchema=schemaAsset.schemaVersion;
   const sql=schemaAsset.sql;
   await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:null}).eq("id",install.id);
-  await event(install,"database.initializing","info","Initializing current OrbitFS schema in customer Supabase project");
+  await event(install,"database.initializing","info",`Initializing customer database from OrbitFS Base ${release.version} release snapshot`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseMigrationCount:schemaAsset.migrationCount,databaseLatestMigration:schemaAsset.latestMigration});
   let dbSecret=String(await installationSecret(install.id,"db_secret")||"");
   if(!dbSecret){dbSecret=randomBytes(32).toString("hex");await storeInstallationSecret(install.id,"db_secret",dbSecret)}
   const safe=(value:string)=>value.replaceAll("'","''");
@@ -615,7 +213,7 @@ alter table public.orbitfs_schema_migrations enable row level security;
 revoke all on public.orbitfs_schema_migrations from anon, authenticated;
 grant all on public.orbitfs_schema_migrations to service_role;
 insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
-values ('${safe(baseMigrationId)}','${safe(schemaAsset.sha256)}','base','base/schema.sql','${safe(String(release.id))}','${safe(String(release.version))}',now())
+values ('${safe(baseMigrationId)}','${safe(schemaAsset.sha256)}','base','${safe(schemaAsset.path)}','${safe(String(release.id))}','${safe(String(release.version))}',now())
 on conflict (migration_id) do nothing;
 insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-files','orbitfs-files',false,1073741824) on conflict (id) do update set name=excluded.name,public=false,file_size_limit=excluded.file_size_limit;`;
   const installSql=`BEGIN;\n${sql}\n${runtimeSql}\nCOMMIT;`;

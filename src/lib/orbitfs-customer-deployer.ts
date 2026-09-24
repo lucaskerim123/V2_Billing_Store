@@ -75,8 +75,34 @@ async function readBasePackage(release:any):Promise<{pkg:Package;files:Array<{fi
   const pkg=parsed.root as Package;
   const releaseComponents=[...(Array.isArray(release?.manifest?.components)?release.manifest.components:[])].map((x:any)=>String(x||"").trim().toLowerCase()).filter(Boolean).sort();
   const packageComponents=[...(Array.isArray(pkg.components)?pkg.components:[])].map(x=>String(x||"").trim().toLowerCase()).filter(Boolean).sort();
-  if(releaseComponents.length&&packageComponents.length&&releaseComponents.join(",")!==packageComponents.join(","))fail("Release package components do not match License Master",422);
-  return {pkg,files:validateFiles(pkg.files,"Base package"),artifactSha256:parsed.artifactSha256};
+  if(releaseComponents.length&&packageComponents.length&&releaseComponents.join(",")!==packageComponents.join(","))fail("Release package components do not match License Manager",422);
+
+  const manifest=release?.manifest&&typeof release.manifest==="object"?release.manifest:{};
+  const expectedSchemaVersion=String(manifest.databaseSchemaVersion||manifest.releaseInfo?.databaseSchemaVersion||"").trim();
+  const expectedSchemaHash=String(manifest.databaseSchemaSha256||manifest.releaseInfo?.databaseSchemaSha256||"").trim().toLowerCase();
+  const expectedSchemaPath=String(manifest.databaseSchemaPath||manifest.releaseInfo?.databaseSchemaPath||"").trim();
+  const expectedMigrationCount=Number(manifest.databaseMigrationCount??manifest.releaseInfo?.databaseMigrationCount??0);
+  const expectedLatestMigration=String(manifest.databaseLatestMigration||manifest.releaseInfo?.databaseLatestMigration||"").trim();
+
+  if(!expectedSchemaVersion||!/^[a-f0-9]{64}$/.test(expectedSchemaHash)||expectedSchemaPath!=="supabase/customer-schema.sql"||!Number.isInteger(expectedMigrationCount)||expectedMigrationCount<1||!/^\d{14}$/.test(expectedLatestMigration)){
+    fail(`Published Base release ${release.version} is missing its verified customer database snapshot metadata`,422);
+  }
+
+  const packageSchemaVersion=String((pkg as any).databaseSchemaVersion||(pkg as any).releaseInfo?.databaseSchemaVersion||"").trim();
+  const packageSchemaHash=String((pkg as any).databaseSchemaSha256||(pkg as any).releaseInfo?.databaseSchemaSha256||"").trim().toLowerCase();
+  const packageSchemaPath=String((pkg as any).databaseSchemaPath||(pkg as any).releaseInfo?.databaseSchemaPath||"").trim();
+  const packageMigrationCount=Number((pkg as any).databaseMigrationCount??(pkg as any).releaseInfo?.databaseMigrationCount??0);
+  const packageLatestMigration=String((pkg as any).databaseLatestMigration||(pkg as any).releaseInfo?.databaseLatestMigration||"").trim();
+
+  if(packageSchemaVersion!==expectedSchemaVersion||packageSchemaHash!==expectedSchemaHash||packageSchemaPath!==expectedSchemaPath||packageMigrationCount!==expectedMigrationCount||packageLatestMigration!==expectedLatestMigration){
+    fail("Base package customer database metadata does not match License Manager",422);
+  }
+
+  const files=validateFiles(pkg.files,"Base package");
+  const schemaFile=files.find(file=>file.file===expectedSchemaPath);
+  if(!schemaFile||schemaFile.sha256!==expectedSchemaHash)fail("Base package customer database snapshot is missing or has the wrong checksum",422);
+
+  return {pkg,files,artifactSha256:parsed.artifactSha256};
 }
 type DatabaseMigration={id:string;file:string;component?:string;encoding:"base64";data:string;size:number;sha256:string};
 function sqlLiteral(value:unknown){return "'"+String(value??"").replaceAll("'","''")+"'";}
