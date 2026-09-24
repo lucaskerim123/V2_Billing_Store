@@ -22,7 +22,7 @@ begin
     '17 */6 * * *',
     $job$
       select net.http_post(
-        url := 'https://xwbjfhpgsvsjaykelufa.supabase.co/functions/v1/payment-gateway-canonical-sync',
+        url := rtrim(coalesce((select value #>> '{}' from public.app_settings where key='site.public_url'),(select value #>> '{}' from public.app_settings where key='site.website_url'),''),'/') || '/api/cron/payment-gateway-sync',
         body := '{}'::jsonb,
         headers := jsonb_build_object(
           'Content-Type','application/json',
