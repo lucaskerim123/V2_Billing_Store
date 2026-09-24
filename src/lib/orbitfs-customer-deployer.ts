@@ -471,8 +471,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       const recovery:any={databaseMigrations:"forward-compatible; not reversed",panel:null,engine:null};
       if(engineAttempted&&currentBaseUrl){
         try{
-          const rolledBack=await engineUpdateRequest(currentBaseUrl,install,release,requestedChannel,"rollback");
-          recovery.engine={ok:true,checkpointId:rolledBack.body?.checkpointId||null,restoredVersion:rolledBack.body?.restoredVersion||null};
+          const rolledBack=await rollbackEngineUpdatePayload(install,release,requestedChannel,currentBaseUrl);
+          recovery.engine={ok:true,checkpointId:rolledBack.checkpointId||null,restoredVersion:rolledBack.restoredVersion||null};
         }catch(recoveryError){recovery.engine={ok:false,error:recoveryError instanceof Error?recoveryError.message:String(recoveryError)}}
       }
       if(panelResult?.deploymentId&&install.vercel_project_id&&install.vercel_deployment_id){
