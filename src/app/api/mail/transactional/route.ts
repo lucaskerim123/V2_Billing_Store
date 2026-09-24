@@ -3,7 +3,7 @@ import {wrapOrbitFsHtml,wrapOrbitFsText} from "@/lib/mail-branding";
 import {loadMailRuntimeConfig,resolveMailDeliveryIdentity} from "@/lib/mail-config-server";
 import {orbitfsStoreOrigin} from "@/lib/site-origin";
 
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const pub=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 function render(value:string,vars:Record<string,string>){return String(value||'').replace(/{{\s*([\w.]+)\s*}}/g,(_,k)=>vars[k]??'')}
 async function providerJson(r:Response){const t=await r.text();if(!t)return {};try{return JSON.parse(t)}catch{return {message:t}}}
