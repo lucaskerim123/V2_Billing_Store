@@ -3,7 +3,7 @@ import {createHash,randomBytes} from "crypto";
 import {sendAutomation} from "@/lib/transactional-server";
 import {orbitfsStoreUrl} from "@/lib/site-origin";
 
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const allowedGuestDepartments=new Set(["General Support","Sales Enquiries","Sales"]);
@@ -17,6 +17,7 @@ function hashGuestCode(value:string){return createHash("sha256").update(normaliz
 async function createUniqueGuestCode(service:any){for(let attempt=0;attempt<8;attempt++){const code=createGuestCode(),hash=hashGuestCode(code);const {data,error}=await service.from("support_tickets").select("id").eq("source","public_web").contains("metadata",{guest_access_hash:hash}).limit(1);if(error)throw error;if(!data?.length)return {code,hash}}throw new Error("Could not allocate a unique guest support code.")}
 
 export async function POST(req:Request){
+ if(!url||!serviceKey)return Response.json({error:"Billing Store database is not configured."},{status:503});
  const body=await req.json().catch(()=>({}));
  const bearer=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
  const service=createClient(url,serviceKey,{auth:{persistSession:false}});
