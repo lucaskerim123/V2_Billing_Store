@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from 'next/server';
 import {sendPaidLifecycleForInvoice} from '@/lib/mail-lifecycle-server';
 import {syncPaidOrderToLicenseMaster} from '@/lib/license-master-sync';
 
-const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||'https://bealqgenrcytjzjoikmk.supabase.co';
+const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 
 async function fulfillWithRetry(orderId:string){
  let last:any=null;
