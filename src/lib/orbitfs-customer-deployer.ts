@@ -2,7 +2,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
-import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
@@ -214,11 +214,14 @@ async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBun
   return {deploymentId,deploymentUrl,fileCount:files.length};
 }
 async function engineUpdateRequest(baseUrl:string,install:any,release:any,channel:string,mode:"plan"|"apply"|"refresh"|"rollback"){
-  const secret=await customerInstallationDbSecret(String(install.id));
+  const [secret,vercel]=await Promise.all([
+    customerInstallationDbSecret(String(install.id)),
+    customerVercelCredentials(String(install.auth_user_id))
+  ]);
   const response=await fetch(`${baseUrl.replace(/\/$/,"")}/api/store/update-engine`,{
     method:"POST",
     headers:{"content-type":"application/json","x-orbitfs-db-secret":secret,"x-orbitfs-installation-id":String(install.installation_id||"")},
-    body:JSON.stringify({mode,releaseId:String(release.id),releaseChannel:channel}),
+    body:JSON.stringify({mode,releaseId:String(release.id),releaseChannel:channel,vercelToken:String(vercel?.token||""),teamId:String(vercel?.teamId||install.vercel_team_id||"")}),
     cache:"no-store",
     signal:AbortSignal.timeout(30000)
   });
@@ -235,6 +238,19 @@ async function applyEngineUpdatePayload(install:any,release:any,channel:string,b
   }
   if(result.status===202||result.body?.waiting===true)fail("Engine Host update did not become ready within the deployment window",504);
   return {deploymentId:String(result.body?.host?.deploymentId||""),hostUrl:String(result.body?.host?.hostUrl||""),state:String(result.body?.host?.state||"ready")};
+}
+async function rollbackEngineUpdatePayload(install:any,release:any,channel:string,baseUrl:string){
+  let result=await engineUpdateRequest(baseUrl,install,release,channel,"rollback");
+  const checkpointId=String(result.body?.checkpointId||"")||null;
+  const restoredVersion=String(result.body?.restoredVersion||"")||null;
+  const componentVersions=result.body?.componentVersions&&typeof result.body.componentVersions==="object"?result.body.componentVersions:{};
+  const deadline=Date.now()+120000;
+  while((result.status===202||result.body?.waiting===true)&&Date.now()<deadline){
+    await new Promise(resolve=>setTimeout(resolve,3000));
+    result=await engineUpdateRequest(baseUrl,install,release,channel,"refresh");
+  }
+  if(result.status===202||result.body?.waiting===true)fail("Engine Host rollback did not become ready within the deployment window",504);
+  return {...(result.body||{}),checkpointId,restoredVersion:restoredVersion||String(result.body?.host?.releaseVersion||""),componentVersions};
 }
 async function previousDeployment(install:any):Promise<{vercel_deployment_id:string;deployment_url:string|null;release_version:string;release_id:string;created_at:string}>{const {data,error}=await licenseDb().from("orbitfs_installation_releases").select("vercel_deployment_id,deployment_url,release_version,release_id,created_at,action").eq("installation_id",install.id).eq("status","ready").neq("action","update").not("vercel_deployment_id","is",null).order("created_at",{ascending:false}).limit(5);if(error)throw error;const previous=(data||[]).find((r:any)=>r.vercel_deployment_id!==install.vercel_deployment_id);if(!previous)throw Object.assign(new Error("No previous successful Base deployment is available for rollback"),{status:409});if(!previous.vercel_deployment_id||!previous.release_id||!previous.release_version)throw Object.assign(new Error("Previous Base deployment record is incomplete and cannot be rolled back"),{status:409});return {vercel_deployment_id:String(previous.vercel_deployment_id),deployment_url:previous.deployment_url?String(previous.deployment_url):null,release_version:String(previous.release_version),release_id:String(previous.release_id),created_at:String(previous.created_at||"")}}
 
@@ -270,8 +286,7 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
   try{
     if(wantsEngine){
       if(!baseUrl)fail("Installed OrbitFS Base URL is unavailable for Engine rollback",409);
-      const result=await engineUpdateRequest(baseUrl,install,pseudoRelease,channel,"rollback");
-      engineResult=result.body||null;
+      engineResult=await rollbackEngineUpdatePayload(install,pseudoRelease,channel,baseUrl);
     }
     if(wantsPanel){
       if(!install.vercel_project_id)fail("Customer Vercel project is unavailable for Panel rollback",409);
