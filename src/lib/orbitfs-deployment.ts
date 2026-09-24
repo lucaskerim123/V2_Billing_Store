@@ -198,8 +198,9 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   let dbSecret=String(await installationSecret(install.id,"db_secret")||"");
   if(!dbSecret){dbSecret=randomBytes(32).toString("hex");await storeInstallationSecret(install.id,"db_secret",dbSecret)}
   const safe=(value:string)=>value.replaceAll("'","''");
+  const dbSecretSha256=createHash("sha256").update(dbSecret).digest("hex");
   const baseMigrationId=`base-schema-${effectiveSchema}-${schemaAsset.sha256.slice(0,16)}`;
-  const runtimeSql=`insert into private.orbitfs_runtime_config(key,value,updated_at) values ('server_secret','${dbSecret}',now()),('ORBITFS_DB_SECRET','${dbSecret}',now()) on conflict (key) do update set value=excluded.value,updated_at=now();
+  const runtimeSql=`insert into private.orbitfs_runtime_secret(id,secret_sha256,updated_at) values (true,'${safe(dbSecretSha256)}',now()) on conflict (id) do update set secret_sha256=excluded.secret_sha256,updated_at=now();
 create table if not exists public.orbitfs_schema_migrations (
   migration_id text primary key,
   sha256 text not null,

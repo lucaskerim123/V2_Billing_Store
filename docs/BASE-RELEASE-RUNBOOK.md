@@ -63,7 +63,9 @@ The Store must never initialise OrbitFS against its own Store database. A custom
 
 Fresh Base initialization is release-bound: the Store downloads the exact published Base artifact selected for the installation through the authenticated License Manager deployer API, verifies the artifact checksum, verifies the declared `supabase/customer-schema.sql` SHA-256 and migration metadata, and executes that packaged snapshot in the customer's Supabase project. There is no storage-bucket or hand-uploaded schema fallback for customer Base deployment.
 
-A published Base release without verified database snapshot metadata is not deployable. If an existing customer Supabase project is selected, validate that the project is reachable and safe to use before writing installation state. If the administrator has disabled existing-project selection, reject the operation clearly.
+A published Base release without verified database snapshot metadata is not deployable. After applying the snapshot, the Store writes only the SHA-256 of the installation database secret into Base's `private.orbitfs_runtime_secret` authority table; the raw secret remains in Store-managed encrypted installation storage and the customer Vercel environment.
+
+If an existing customer Supabase project is selected, validate that the project is reachable and safe to use before writing installation state. If the administrator has disabled existing-project selection, reject the operation clearly.
 
 ## 6. Vercel deployment
 
