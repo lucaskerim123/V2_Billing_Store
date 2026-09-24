@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase";
+import DeliveryControls from "../DeliveryControls";
 
 type Release={
   id:string;version:string;channel:string;status:string;reviewStatus?:string;releaseType?:string;
@@ -56,10 +57,9 @@ export default function BaseDeploymentAdmin(){
 
     {error&&<p className="inlineStatus" style={{borderColor:"crimson"}}>{error}</p>}
 
-    <section className="panel">
-      <div className="sectionHead"><div><p className="eyebrow">DEPLOYMENT AUTHORITY</p><h2>License Manager controlled</h2><p className="muted">Base, Update and rollback authorization are controlled in License Manager. Billing Store only mirrors published releases and customer-facing publication state.</p></div><a className="buttonlink secondary" href="https://panel.incendiarynetworks.cc/settings" target="_blank" rel="noreferrer">Open API Control</a></div>
-    </section>
+    <DeliveryControls />
 
+    <div className="workspaceGrid">
     <section className="panel">
       <p className="eyebrow">CURRENT PUBLISHED BASE</p>
       {current?<div>
@@ -88,6 +88,7 @@ export default function BaseDeploymentAdmin(){
         {!queue.length&&<div><div><b>No pending Base candidates</b><span>New Base candidates will appear after the Base release workflow hands them to License Manager.</span></div><strong>Clear</strong></div>}
       </div>
     </section>
+    </div>
 
     <section className="panel">
       <div className="sectionHead"><div><p className="eyebrow">PUBLICATION HISTORY</p><h2>Published Base releases</h2></div><span className="badge">{published.length}</span></div>
