@@ -9,6 +9,7 @@ export async function GET(){
     authority:state.authority,
     fulfillment_mode:state.effectiveMode,
     notice:state.notice,
-    pulse_revision:state.pulseRevision
+    pulse_revision:state.pulseRevision,
+    store_maintenance:Boolean((state as any).storeMaintenance)
   },{headers:{"cache-control":"no-store"}});
 }
