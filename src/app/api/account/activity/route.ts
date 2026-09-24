@@ -5,7 +5,7 @@ function clientInfo(ua:string){const s=ua||"";const browser=/Edg\//.test(s)?"Edg
 
 export async function POST(req:NextRequest){
  const auth=req.headers.get("authorization")||"";if(!auth.startsWith("Bearer "))return NextResponse.json({error:"Unauthorized"},{status:401});
- const token=auth.slice(7),url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://bealqgenrcytjzjoikmk.supabase.co",key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
+ const token=auth.slice(7),url=process.env.NEXT_PUBLIC_SUPABASE_URL||"",key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
  const u=await fetch(`${url}/auth/v1/user`,{headers:{apikey:key,authorization:`Bearer ${token}`}});if(!u.ok)return NextResponse.json({error:"Unauthorized"},{status:401});const user=await u.json();
  const body=await req.json().catch(()=>({}));const eventType=clean(body.eventType||"activity",80),ua=clean(req.headers.get("user-agent"),1000),ip=clean((req.headers.get("x-forwarded-for")||req.headers.get("x-real-ip")||"").split(",")[0].trim(),80)||null;
  const requestId=clean(req.headers.get("x-vercel-id")||req.headers.get("x-request-id")||crypto.randomUUID(),180),detail={...(body.detail&&typeof body.detail==="object"?body.detail:{}),...clientInfo(ua)};
