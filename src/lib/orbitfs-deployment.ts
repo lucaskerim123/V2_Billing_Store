@@ -543,7 +543,7 @@ function normalizeSchemaSql(input:string){
 }
 async function schemaText(){
   const s=await releaseSettings(),db=licenseDb(),d=await db.storage.from(s.schema_bucket).download(s.schema_path);if(d.error||!d.data)throw Object.assign(new Error("Fresh OrbitFS schema has not been uploaded in the Release Panel System"),{status:409});
-  if(d.data.size>SCHEMA_MAX_BYTES)throw new Error("OrbitFS schema asset is too large");const sql=normalizeSchemaSql(await d.data.text());if(!/create\s+table|create\s+schema/i.test(sql))throw new Error("OrbitFS schema asset is invalid");return sql;
+  if(d.data.size>SCHEMA_MAX_BYTES)throw new Error("OrbitFS schema asset is too large");const sql=normalizeSchemaSql(await d.data.text());if(!/create\s+table|create\s+schema/i.test(sql))throw new Error("OrbitFS schema asset is invalid");return {sql,sha256:createHash("sha256").update(sql).digest("hex")};
 }
 export async function schemaAssetStatus(){const s=await releaseSettings(),d=await licenseDb().storage.from(s.schema_bucket).download(s.schema_path);return {configured:!d.error&&!!d.data,size:d.data?.size||0,bucket:s.schema_bucket,path:s.schema_path,version:s.schema_version}}
 export async function uploadSchemaAsset(sql:string){const s=await releaseSettings();if(!sql||Buffer.byteLength(sql)>SCHEMA_MAX_BYTES)throw new Error("Schema asset is empty or too large");const normalized=normalizeSchemaSql(sql);if(Buffer.byteLength(normalized)>SCHEMA_MAX_BYTES)throw new Error("Normalized OrbitFS schema asset is too large");const db=licenseDb(),b=await db.storage.getBucket(s.schema_bucket);if(!b.data){const c=await db.storage.createBucket(s.schema_bucket,{public:false,fileSizeLimit:SCHEMA_MAX_BYTES});if(c.error&&!String(c.error.message).toLowerCase().includes("already"))throw c.error}const u=await db.storage.from(s.schema_bucket).upload(s.schema_path,Buffer.from(normalized),{contentType:"text/plain",upsert:true,cacheControl:"0"});if(u.error)throw u.error;return schemaAssetStatus()}
@@ -567,12 +567,32 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   const configuredSchema=String(s.schema_version||"").trim();
   if(releaseSchema&&configuredSchema&&releaseSchema!==configuredSchema)throw Object.assign(new Error(`Base release ${release.version} requires database schema ${releaseSchema}, but the configured schema asset is ${configuredSchema}. Publish/select the matching schema before initializing this installation.`),{status:409});
   const effectiveSchema=releaseSchema||configuredSchema||"1";
-  const sql=await schemaText();
+  const schemaAsset=await schemaText(),sql=schemaAsset.sql;
   await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:null}).eq("id",install.id);
   await event(install,"database.initializing","info","Initializing current OrbitFS schema in customer Supabase project");
   let dbSecret=String(await installationSecret(install.id,"db_secret")||"");
   if(!dbSecret){dbSecret=randomBytes(32).toString("hex");await storeInstallationSecret(install.id,"db_secret",dbSecret)}
-  const runtimeSql=`insert into private.orbitfs_runtime_config(key,value,updated_at) values ('server_secret','${dbSecret}',now()),('ORBITFS_DB_SECRET','${dbSecret}',now()) on conflict (key) do update set value=excluded.value,updated_at=now(); insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-files','orbitfs-files',false,1073741824) on conflict (id) do update set name=excluded.name,public=false,file_size_limit=excluded.file_size_limit;`;
+  const safe=(value:string)=>value.replaceAll("'","''");
+  const baseMigrationId=`base-schema-${effectiveSchema}`;
+  const runtimeSql=`insert into private.orbitfs_runtime_config(key,value,updated_at) values ('server_secret','${dbSecret}',now()),('ORBITFS_DB_SECRET','${dbSecret}',now()) on conflict (key) do update set value=excluded.value,updated_at=now();
+create table if not exists public.orbitfs_schema_migrations (
+  migration_id text primary key,
+  sha256 text not null,
+  component text not null default 'shared',
+  source_file text not null,
+  release_id text,
+  release_version text,
+  applied_at timestamptz not null default now()
+);
+do $ begin
+  if exists(select 1 from public.orbitfs_schema_migrations where migration_id='${safe(baseMigrationId)}' and sha256<>'${safe(schemaAsset.sha256)}') then
+    raise exception 'OrbitFS Base schema ledger checksum mismatch for ${safe(baseMigrationId)}';
+  end if;
+end $;
+insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
+values ('${safe(baseMigrationId)}','${safe(schemaAsset.sha256)}','base','base/schema.sql','${safe(String(release.id))}','${safe(String(release.version))}',now())
+on conflict (migration_id) do nothing;
+insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-files','orbitfs-files',false,1073741824) on conflict (id) do update set name=excluded.name,public=false,file_size_limit=excluded.file_size_limit;`;
   const installSql=`BEGIN;\n${sql}\n${runtimeSql}\nCOMMIT;`;
   try{
     await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:installSql})});
@@ -582,7 +602,7 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
     await event(install,"database.failed","error",message);
     throw e;
   }
-  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema});return data;
+  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,baseMigrationId});return data;
 }
 
 async function publishableKey(install:any){
