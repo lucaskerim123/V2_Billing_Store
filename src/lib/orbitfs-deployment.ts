@@ -584,6 +584,9 @@ create table if not exists public.orbitfs_schema_migrations (
   release_version text,
   applied_at timestamptz not null default now()
 );
+alter table public.orbitfs_schema_migrations enable row level security;
+revoke all on public.orbitfs_schema_migrations from anon, authenticated;
+grant all on public.orbitfs_schema_migrations to service_role;
 insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
 values ('${safe(baseMigrationId)}','${safe(schemaAsset.sha256)}','base','base/schema.sql','${safe(String(release.id))}','${safe(String(release.version))}',now())
 on conflict (migration_id) do nothing;
