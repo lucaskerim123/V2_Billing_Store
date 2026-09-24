@@ -1,7 +1,7 @@
 import {randomBytes} from 'crypto';
 import {serviceRpc} from '@/lib/paymentServer';
 
-const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://bealqgenrcytjzjoikmk.supabase.co";
+const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const SERVICE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 async function serviceFetch(path:string,init:RequestInit={}){
