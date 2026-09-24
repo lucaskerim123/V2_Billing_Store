@@ -3,66 +3,105 @@
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 
+type Channel={id:string;channel:string;label:string;description?:string;enabled:boolean;customer_visible:boolean;access_mode:string;access_request_enabled:boolean;self_join_enabled:boolean};
+type Customer={id:string;display_name?:string;company_name?:string;email?:string;customer_number?:string};
+type Access={id?:string;channel_id?:string;channel?:string;license_id?:string;user_id?:string};
+
 export default function ReleaseChannelsAdmin(){
  const sb=useMemo(()=>createClient(),[]);
- const [data,setData]=useState<any>({channels:[],access:[],customers:[],requests:[]}),[busy,setBusy]=useState(""),[msg,setMsg]=useState("");
- const authHeaders=async()=>{const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:`Bearer ${session.access_token}`};};
- const load=async()=>{setBusy("load");setMsg("");try{const r=await fetch("/api/admin/orbitfs/release-channels",{headers:await authHeaders(),cache:"no-store"}),j=await r.json();if(!r.ok)throw new Error(j.error||"Could not load release channels");setData(j)}catch(e:any){setMsg(e.message||"Could not load release channels")}finally{setBusy("")}};
+ const [data,setData]=useState<any>({channels:[],access:[],customers:[],requests:[]});
+ const [selected,setSelected]=useState("");
+ const [query,setQuery]=useState("");
+ const [busy,setBusy]=useState("");
+ const [message,setMessage]=useState("");
+
+ async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
+ async function load(){
+  setBusy("load");setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-channels",{headers:await auth(),cache:"no-store"});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not load release channels");
+   setData(j);
+   const visible=(j.channels||[]).filter((c:Channel)=>c.enabled&&c.customer_visible);
+   setSelected(current=>visible.some((c:Channel)=>c.channel===current)?current:(visible.find((c:Channel)=>c.channel!=="stable")?.channel||visible[0]?.channel||""));
+  }catch(e:any){setMessage(e?.message||"Could not load release channels")}finally{setBusy("")}
+ }
  useEffect(()=>{void load()},[]);
- const customers=useMemo(()=>new Map<string,any>((data.customers||[]).map((x:any)=>[String(x.id),x])),[data.customers]);
- async function mutate(body:any){setBusy(body.action||"save");setMsg("");try{const r=await fetch("/api/admin/orbitfs/release-channels",{method:"POST",headers:{"content-type":"application/json",...(await authHeaders())},body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw new Error(j.error||"Operation failed");setMsg("Release channel state synced.");await load()}catch(e:any){setMsg(e.message||"Operation failed")}finally{setBusy("")}}
- const visible=(data.channels||[]).filter((c:any)=>c.enabled&&c.customer_visible);
- return <main className="adminShell">
-  <header className="adminTop">
-   <div><p className="eyebrow">ORBITFS CONTROL · RELEASE CHANNELS</p><h1>Customer release access</h1><p className="muted">License Manager owns channel definitions and entitlement policy. Billing Store mirrors that state and manages the customer-facing access workflow.</p></div>
-   <div className="actions"><button className="secondary" onClick={()=>void mutate({action:"sync"})} disabled={!!busy}>{busy==="sync"?"Syncing…":"Sync from License Manager"}</button><button className="secondary" onClick={()=>void load()} disabled={!!busy}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
+
+ async function mutate(body:any,success:string){
+  setBusy(String(body.action||"save"));setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-channels",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify(body)});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Channel access operation failed");
+   setMessage(success);await load();
+  }catch(e:any){setMessage(e?.message||"Channel access operation failed")}finally{setBusy("")}
+ }
+
+ const channels:Channel[]=(data.channels||[]).filter((c:Channel)=>c.enabled&&c.customer_visible);
+ const channel=channels.find(c=>c.channel===selected)||channels[0]||null;
+ const customers:Customer[]=(data.customers||[]).filter((u:Customer)=>{
+  const q=query.trim().toLowerCase();if(!q)return true;
+  return [u.display_name,u.company_name,u.email,u.customer_number].some(v=>String(v||"").toLowerCase().includes(q));
+ });
+ const accessFor=(userId:string)=>((data.access||[]) as Access[]).find(a=>a.channel===channel?.channel&&a.user_id===userId);
+
+ return <main className="orbitAdminPage">
+  <header className="orbitAdminHeader">
+   <div><p className="eyebrow">ORBITFS CONTROL · RELEASE CHANNELS</p><h1>Release channel access</h1><p className="muted">Manage customer access from Billing Store while License Manager remains the source of truth for the grant itself.</p></div>
+   <div className="orbitAdminActions"><button className="secondary" onClick={()=>void mutate({action:"sync"},"Channel definitions synced from License Manager.")} disabled={!!busy}>{busy==="sync"?"Syncing…":"Sync"}</button><button className="secondary" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
   </header>
 
-  {msg&&<p className="notice">{msg}</p>}
+  {message&&<div className="orbitInlineNotice">{message}</div>}
 
-  <div className="stats">
-   <article><span>Visible channels</span><b>{visible.length}</b><small>Customer-facing definitions</small></article>
-   <article><span>Pending requests</span><b>{(data.requests||[]).length}</b><small>Awaiting an access decision</small></article>
-   <article><span>Explicit grants</span><b>{(data.access||[]).length}</b><small>Assigned channel access</small></article>
-   <article><span>Customers</span><b>{(data.customers||[]).length}</b><small>Available for assignment</small></article>
+  <div className="orbitChannelLayout">
+   <aside className="orbitChannelRail">
+    <div className="orbitRailHead"><p className="eyebrow">CHANNELS</p><b>{channels.length} available</b></div>
+    {channels.map(c=><button key={c.id} className={"orbitChannelButton "+(channel?.channel===c.channel?"active":"")} onClick={()=>setSelected(c.channel)}>
+      <div><b>{c.label}</b><span>{c.channel}</span></div>
+      <small>{c.channel==="stable"?"Baseline":c.access_mode==="open"?"Open":c.self_join_enabled?"Self-join":c.access_request_enabled?"Request":"Assigned"}</small>
+    </button>)}
+   </aside>
+
+   <section className="orbitCompactPanel orbitChannelBody">
+    {channel?<><div className="orbitPanelHead">
+     <div><p className="eyebrow">CUSTOMER ACCESS</p><h2>{channel.label}</h2><p className="muted">{channel.description||"No description."}</p></div>
+     <div className="orbitBadgeGroup"><span className="state ready">{channel.channel}</span><span className="state">{channel.access_mode==="open"?"Open access":"Assigned access"}</span></div>
+    </div>
+
+    <div className="orbitPolicyStrip">
+     <div><span>Customer visible</span><b>{channel.customer_visible?"Yes":"No"}</b></div>
+     <div><span>Self-join</span><b>{channel.self_join_enabled||channel.access_mode==="open"?"Allowed":"Off"}</b></div>
+     <div><span>Requests</span><b>{channel.access_request_enabled?"Allowed":"Off"}</b></div>
+     <div><span>Authority</span><b>License Manager</b></div>
+    </div>
+
+    {channel.channel==="stable"||channel.access_mode==="open"?<div className="orbitEmptyCompact">{channel.channel==="stable"?"Stable is automatically available to every active customer.":"This channel is open; explicit customer grants are not required."}</div>:<>
+     <div className="orbitToolbar"><input placeholder="Search customers…" value={query} onChange={e=>setQuery(e.target.value)}/><span>{customers.length} customers</span></div>
+     <div className="orbitAccessTable">
+      {customers.map(u=>{const grant=accessFor(u.id);return <div className="orbitAccessRow" key={u.id}>
+       <div><b>{u.display_name||u.email||u.id}</b><span>{u.company_name||u.email||u.customer_number||"Customer"}</span></div>
+       <span className={grant?"state ready":"state"}>{grant?"Granted":"No access"}</span>
+       {grant?<button className="secondary" disabled={!!busy} onClick={()=>void mutate({action:"revoke",licenseId:grant.license_id,channel:channel.channel,userId:u.id},"Customer access revoked.")}>Revoke</button>:<button disabled={!!busy} onClick={()=>void mutate({action:"grant",channel:channel.channel,userId:u.id},"Customer access granted.")}>Grant access</button>}
+      </div>})}
+      {!customers.length&&<div className="orbitEmptyCompact">No customers match this search.</div>}
+     </div>
+    </>}
+    </>:<div className="orbitEmptyCompact">No customer-visible release channels are available.</div>}
+   </section>
   </div>
 
-  <section className="panel">
-   <div className="panelTitle"><div><p className="eyebrow">CHANNEL DEFINITIONS</p><h2>Authoritative channels</h2><p className="muted">Read-only mirror from License Manager. No channel policy is authored in Billing Store.</p></div></div>
-   <div className="workspaceGrid">
-    {visible.map((c:any)=><article className="workspaceBlock" key={c.id}>
-      <div className="sectionHead"><div><h2>{c.label}</h2><p className="muted">{c.description||"No description."}</p></div><span className="state ready">Enabled</span></div>
-      <div className="serviceSummary">
-       <div><span>Channel</span><b>{c.channel}</b></div>
-       <div><span>Access</span><b>{c.access_mode==="open"?"Open":"Assigned"}</b></div>
-       <div><span>Requests</span><b>{c.access_request_enabled?"Allowed":"Off"}</b></div>
-      </div>
-      <small className="muted">{c.self_join_enabled||c.access_mode==="open"?"Customer self-join is available.":"Access is granted by an administrator or approved request."}</small>
-    </article>)}
-    {!visible.length&&<div className="emptyState"><b>No customer-visible channels</b><p className="muted">Sync from License Manager to refresh channel definitions.</p></div>}
-   </div>
-  </section>
-
-  <section className="panel">
-   <div className="panelTitle"><div><p className="eyebrow">ACCESS REQUESTS</p><h2>Pending customer requests</h2><p className="muted">Approvals and rejections are sent back to License Manager immediately.</p></div><span className="badge">{(data.requests||[]).length}</span></div>
-   <div className="orderControlList">
-    {(data.requests||[]).map((r:any)=><div key={r.id}>
-      <div><b>{r.channel}</b><span>{r.external_reference||r.license_id} · requested {r.requested_at?new Date(r.requested_at).toLocaleString():"—"}</span></div>
-      <div className="inlineActions"><button disabled={!!busy} onClick={()=>void mutate({action:"request",licenseId:r.license_id,channel:r.channel,userId:r.external_reference})}>Approve</button><button className="secondary" disabled={!!busy} onClick={()=>void mutate({action:"reject",licenseId:r.license_id,channel:r.channel})}>Reject</button></div>
+  <section className="orbitCompactPanel">
+   <div className="orbitPanelHead"><div><p className="eyebrow">ACCESS REQUESTS</p><h2>Pending requests</h2></div><span className="orbitCount">{(data.requests||[]).length}</span></div>
+   <div className="orbitRequestTable">
+    {(data.requests||[]).map((r:any)=><div className="orbitRequestRow" key={r.id||r.license_id+":"+r.channel}>
+     <div><b>{r.channel}</b><span>{r.external_reference||r.license_id}</span></div>
+     <span>{r.requested_at?new Date(r.requested_at).toLocaleString():"Pending"}</span>
+     <div className="orbitRowActions"><button disabled={!!busy} onClick={()=>void mutate({action:"approve",licenseId:r.license_id,channel:r.channel,userId:r.external_reference},"Channel request approved.")}>Approve</button><button className="secondary" disabled={!!busy} onClick={()=>void mutate({action:"reject",licenseId:r.license_id,channel:r.channel},"Channel request rejected.")}>Reject</button></div>
     </div>)}
-    {!(data.requests||[]).length&&<div><div><b>No pending requests</b><span>There are no customer channel requests waiting for review.</span></div><span className="state ready">Clear</span></div>}
+    {!(data.requests||[]).length&&<div className="orbitEmptyCompact">No release channel requests are waiting for review.</div>}
    </div>
-  </section>
-
-  <section className="panel">
-   <div className="panelTitle"><div><p className="eyebrow">CUSTOMER ACCESS</p><h2>Channel assignments</h2><p className="muted">Stable remains the baseline. Additional channels are additive and do not replace Stable.</p></div></div>
-   {visible.map((c:any)=><div className="workspaceBlock" key={c.id} style={{marginTop:12}}>
-     <div className="sectionHead">
-      <div><h2>{c.label}</h2><p className="muted">{c.channel}{c.channel==="stable"?" · baseline":c.access_mode==="open"?" · open access":" · assigned access"}</p></div>
-      {c.channel!=="stable"&&c.access_mode!=="open"&&<select className="input" style={{maxWidth:360}} defaultValue="" onChange={e=>{const userId=e.target.value;if(userId)void mutate({action:"grant",channel:c.channel,userId})}}><option value="">Grant access to customer…</option>{(data.customers||[]).map((u:any)=><option key={u.id} value={u.id}>{u.display_name||u.email||u.id}{u.company_name?" · "+u.company_name:""}</option>)}</select>}
-     </div>
-     {c.channel==="stable"?<p className="muted">Every active customer receives Stable automatically.</p>:c.access_mode==="open"?<p className="muted">All active customers are eligible automatically.</p>:<div className="orderControlList">{(data.access||[]).filter((a:any)=>a.channel_id===c.id).map((a:any)=><div key={a.id}><div><b>{customers.get(a.user_id)?.display_name||customers.get(a.user_id)?.email||a.user_id}</b><span>{a.license_id||"License assignment"}</span></div><button className="secondary" disabled={!!busy} onClick={()=>void mutate({action:"revoke",licenseId:a.license_id,channel:a.channel,userId:a.user_id})}>Revoke</button></div>)}{!(data.access||[]).some((a:any)=>a.channel_id===c.id)&&<div><div><b>No explicit assignments</b><span>No customers currently have this channel assigned.</span></div><span className="state">None</span></div>}</div>}
-   </div>)}
   </section>
  </main>
 }
