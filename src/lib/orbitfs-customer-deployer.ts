@@ -223,7 +223,7 @@ async function engineUpdateRequest(baseUrl:string,install:any,release:any,channe
     headers:{"content-type":"application/json","x-orbitfs-db-secret":secret,"x-orbitfs-installation-id":String(install.installation_id||"")},
     body:JSON.stringify({mode,releaseId:String(release.id),releaseChannel:channel,vercelToken:String(vercel?.token||""),teamId:String(vercel?.teamId||install.vercel_team_id||"")}),
     cache:"no-store",
-    signal:AbortSignal.timeout(30000)
+    signal:AbortSignal.timeout(mode==='plan'||mode==='refresh'?30000:180000)
   });
   const body:any=await response.json().catch(()=>({}));
   if(!response.ok&&response.status!==202)fail(String(body?.error||`Installed Base Engine updater returned ${response.status}`),response.status<500?response.status:502);
