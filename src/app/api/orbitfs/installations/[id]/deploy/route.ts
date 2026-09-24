@@ -28,7 +28,8 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     if(version?.startsWith("update:"))version=version.slice(7).trim()||undefined;
     const channel=String(body.channel||install.release_channel||"stable").trim().toLowerCase();
     if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw Object.assign(new Error("Invalid release channel"),{status:400});
-    const installation=await runCustomerDeployer(install,action,version,channel,releaseId);
+    const reason=body.reason?String(body.reason).trim():undefined;
+    const installation=await runCustomerDeployer(install,action,version,channel,releaseId,reason);
     return Response.json({ok:true,installation},{headers:{"cache-control":"no-store"}});
   }catch(error){return httpError(error)}
 }
