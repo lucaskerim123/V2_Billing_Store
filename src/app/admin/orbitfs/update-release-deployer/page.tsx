@@ -35,9 +35,9 @@ export default function OrbitFSUpdateReleaseDeployer(){
 
   {msg&&<div className="orbitfsNotice">{msg}</div>}
   <DeliveryControls compact />
-  {chosen?.manifest?.validation?.status === "failed" && <section className="orbitfsCard" style={{marginTop:12,border:"1px solid currentColor"}}>
+  {manifest?.validation?.status === "failed" && <section className="orbitfsCard" style={{marginTop:12,border:"1px solid currentColor"}}>
    <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">VALIDATION FAILED</div><h2>Release is blocked</h2><p className="orbitfsMuted">Fix the failed checks below, then re-run validation in License Master. Nothing should be published while validation is failed.</p></div></div>
-   <div>{(Array.isArray(chosen.manifest.validation.checks)?chosen.manifest.validation.checks:[]).filter((c:any)=>!c.ok).map((c:any,i:number)=><div key={c.key||i} style={{padding:"10px 0",borderTop:"1px solid rgba(127,127,127,.2)"}}><b>✕ {c.key||"check"}</b><div className="orbitfsMuted">{c.message||"Validation check failed."}</div>{c.fix&&<div className="orbitfsMuted" style={{marginTop:4}}><b>Fix:</b> {c.fix}</div>}<pre style={{whiteSpace:"pre-wrap",marginTop:6}}>{c.prompt||("Fix the "+(c.key||"failed")+" validation check. Inspect the related release data/code, make the smallest production-safe fix, then run validation again.")}</pre></div>)}</div>
+   <div>{(Array.isArray(manifest.validation.checks)?manifest.validation.checks:[]).filter((c:any)=>!c.ok).map((c:any,i:number)=><div key={c.key||i} style={{padding:"10px 0",borderTop:"1px solid rgba(127,127,127,.2)"}}><b>✕ {c.key||"check"}</b><div className="orbitfsMuted">{c.message||"Validation check failed."}</div>{c.fix&&<div className="orbitfsMuted" style={{marginTop:4}}><b>Fix:</b> {c.fix}</div>}<pre style={{whiteSpace:"pre-wrap",marginTop:6}}>{c.prompt||("Fix the "+(c.key||"failed")+" validation check. Inspect the related release data/code, make the smallest production-safe fix, then run validation again.")}</pre></div>)}</div>
   </section>}
 
   <div className="orbitfsGrid" style={{marginTop:msg?10:0}}>
@@ -46,11 +46,11 @@ export default function OrbitFSUpdateReleaseDeployer(){
     <div className="orbitfsDataGrid">
      <div className="orbitfsData"><span>Status</span><b>{chosen?.status||"—"}</b></div>
      <div className="orbitfsData"><span>Technical review</span><b>{chosen?.review_status||chosen?.reviewStatus||"—"}</b></div><div className="orbitfsData"><span>Release channel</span><b>{chosen?.channel||"stable"}</b></div>
-     <div className="orbitfsData"><span>Source commit</span><b>{chosen?.source_sha||chosen?.source_commit||"—"}</b></div>
+     <div className="orbitfsData"><span>Source commit</span><b>{chosen?.sourceCommit||chosen?.source_sha||chosen?.source_commit||"—"}</b></div>
      <div className="orbitfsData"><span>Artifact checksum</span><b>{chosen?.checksum||chosen?.sha256||"—"}</b></div>
     </div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
-      {chosen&&chosen.status!=="published"&&<button type="button" disabled={busy} onClick={async()=>{const title=prompt("Customer-facing title",String(chosen.manifest?.title||""));if(title===null)return;setBusy(true);try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id,title})});const j=await r.json().catch(()=>({}));setMsg(r.ok?"Release presentation updated.":j.error||"Could not edit release.")}finally{setBusy(false)}await load()}}>Edit release</button>}
+      {chosen&&chosen.status!=="published"&&<button type="button" disabled={busy} onClick={async()=>{const title=prompt("Customer-facing title",String(manifest?.title||""));if(title===null)return;setBusy(true);try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id,title})});const j=await r.json().catch(()=>({}));setMsg(r.ok?"Release presentation updated.":j.error||"Could not edit release.")}finally{setBusy(false)}await load()}}>Edit release</button>}
       {chosen&&chosen.status!=="published"&&(chosen.review_status||chosen.reviewStatus)==="approved"&&chosen.manifest?.validation?.status==="passed"&&<button type="button" disabled={busy} onClick={()=>void publishUpdate()}>Publish update to Customer Portal</button>}
       {chosen?.status==="published"&&<button type="button" className="secondary" disabled={busy} onClick={async()=>{if(!confirm("Unpublish this update from the Customer Portal?"))return;setBusy(true);try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:chosen.id})});const j=await r.json().catch(()=>({}));setMsg(r.ok?"Update unpublished.":j.error||"Could not unpublish update.")}finally{setBusy(false)}await load()}}>Unpublish</button>}
     </div>
@@ -69,7 +69,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
 
   <section className="orbitfsCard" style={{marginTop:12}}>
    <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">Version control</div><h2>Release history</h2></div></div>
-   {releases.length?<div className="orbitfsReleaseList">{releases.map((r:any)=><button key={r.id} type="button" className={`orbitfsRelease ${selected===r.id?"selected":""}`} onClick={()=>setSelected(r.id)}><div><strong>{r.version||r.id}</strong><small>{r.status||"draft"} · {r.review_status||r.reviewStatus||"pending review"}</small><p>{r.changelog||r.notes||"No changelog recorded."}</p><small>{r.source_repo||"Source repository not recorded"} · {r.source_ref||"ref not recorded"}</small></div><span className="orbitfsBadge">{selected===r.id?"Selected":"Update"}</span></button>)}</div>:<div className="orbitfsEmpty">No update releases are currently recorded in License Master.</div>}
+   {releases.length?<div className="orbitfsReleaseList">{releases.map((r:any)=><button key={r.id} type="button" className={`orbitfsRelease ${selected===r.id?"selected":""}`} onClick={()=>setSelected(r.id)}><div><strong>{r.version||r.id}</strong><small>{r.status||"draft"} · {r.review_status||r.reviewStatus||"pending review"}</small><p>{r.changelog||r.notes||"No changelog recorded."}</p><small>{r.sourceRepo||r.source_repo||"Source repository not recorded"} · {r.sourceRef||r.source_ref||"ref not recorded"}</small></div><span className="orbitfsBadge">{selected===r.id?"Selected":"Update"}</span></button>)}</div>:<div className="orbitfsEmpty">No update releases are currently recorded in License Master.</div>}
   </section>
 
   <section className="orbitfsCard" style={{marginTop:12}}>
