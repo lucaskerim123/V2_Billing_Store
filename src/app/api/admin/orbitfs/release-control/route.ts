@@ -20,8 +20,8 @@ export async function POST(req:Request){
       if(action==="revert"&&release.status==="published")await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"withdraw"})},"billing");
       const archived=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"archive"})},"billing");
       const occurredAt=new Date().toISOString();
-      await reportDevPanelReleaseEvent({eventId:`update-${action}:${id}:${occurredAt}`,eventType:action==="revert"?"reverted":"archived",releaseId:id,releaseVersion:String(release.version||""),releaseType:"update",channel:String(release.channel||"stable"),reason,archived:true,status:"completed",occurredAt,sourceSystem:"billing_store"});
-      return Response.json({...archived,devPanelRecorded:true},{headers:{"cache-control":"no-store"}});
+      const panelReport=await reportDevPanelReleaseEvent({eventId:`update-${action}:${id}:${occurredAt}`,eventType:action==="revert"?"reverted":"archived",releaseId:id,releaseVersion:String(release.version||""),releaseType:"update",channel:String(release.channel||"stable"),reason,archived:true,status:"completed",occurredAt,sourceSystem:"billing_store"}).catch((error:any)=>({ok:false,error:error?.message||"Dev Panel event report failed"}));
+      return Response.json({...archived,devPanelRecorded:panelReport?.ok===true,devPanelWarning:panelReport?.ok===true?null:(panelReport?.error||panelReport?.reason||"Dev Panel event history was not recorded")},{headers:{"cache-control":"no-store"}});
     }
     const payload:any={action};
     if(action==="promote")payload.target_channel=String(body.targetChannel||body.target_channel||"").trim().toLowerCase();
