@@ -8,11 +8,16 @@ const db=()=>createClient(url,serviceKey,{auth:{persistSession:false,autoRefresh
 const validUsername=(value:string)=>/^[A-Za-z0-9._-]{3,32}$/.test(value);
 
 export async function POST(req:Request){
+ if(!url||!serviceKey)return Response.json({error:"Billing Store database is not configured."},{status:503});
  const body=await req.json().catch(()=>({}));
  const email=String(body.email||"").trim().toLowerCase(),password=String(body.password||""),username=String(body.username||"").trim();
  if(!validUsername(username))return Response.json({error:"Username must be 3–32 characters using letters, numbers, dots, underscores or hyphens."},{status:400});
  if(!email||!email.includes("@")||password.length<8)return Response.json({error:"Enter a valid email and a password with at least 8 characters."},{status:400});
  const client=db(),now=new Date().toISOString();
+ const {data:settingsRows}=await client.from("app_settings").select("key,value").in("key",["general.registration_enabled","general.require_email_verification"]);
+ const settings=Object.fromEntries((settingsRows||[]).map((x:any)=>[x.key,x.value]));
+ if(settings["general.registration_enabled"]===false)return Response.json({error:"New account registration is currently disabled."},{status:403});
+ const requireVerification=settings["general.require_email_verification"]!==false;
  const {data:existing}=await client.from("users").select("id,email,username,display_name,first_name,status,email_verified_at").ilike("email",email).maybeSingle();
  if(existing){
   const {data:customer}=await client.from("customers").select("id").eq("user_id",existing.id).maybeSingle();
@@ -34,14 +39,16 @@ export async function POST(req:Request){
   await setOrbitPassword(user.id,password);
   const {error:customerError}=await client.from("customers").insert({
    user_id:user.id,email,name:username,username,display_name:username,status:"active",
-   email_verified_at:null,metadata:{registration_source:"public"},updated_at:now
+   email_verified_at:requireVerification?null:now,metadata:{registration_source:"public"},updated_at:now
   });
   if(customerError)throw customerError;
-  await client.from("users").update({status:"active",updated_at:now}).eq("id",user.id);
-  const ip=(req.headers.get("x-forwarded-for")||"").split(",")[0].trim()||null;
-  await issueEmailVerification({id:user.id,email,name:username},new URL(req.url).origin,ip);
-  try{await client.from("admin_audit_log").insert({actor_id:null,action:"customer.registered",target_type:"customer",target_id:user.id,detail:{email,username,verification:"orbitfs"}})}catch{}
-  return Response.json({ok:true,user_id:user.id,message:"Account created. Check your email for the OrbitFS verification link before signing in."});
+  await client.from("users").update({status:"active",email_verified_at:requireVerification?null:now,updated_at:now}).eq("id",user.id);
+  if(requireVerification){
+    const ip=(req.headers.get("x-forwarded-for")||"").split(",")[0].trim()||null;
+    await issueEmailVerification({id:user.id,email,name:username},new URL(req.url).origin,ip);
+  }
+  try{await client.from("admin_audit_log").insert({actor_id:null,action:"customer.registered",target_type:"customer",target_id:user.id,detail:{email,username,verification:requireVerification?"orbitfs":"disabled_by_setting"}})}catch{}
+  return Response.json({ok:true,user_id:user.id,message:requireVerification?"Account created. Check your email for the OrbitFS verification link before signing in.":"Account created. You can sign in now."});
  }catch(e:any){
   await client.from("customer_sessions").delete().eq("user_id",user.id);
   await client.from("customer_credentials").delete().eq("user_id",user.id);
