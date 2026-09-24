@@ -13,7 +13,9 @@ export async function getLicenseMasterAvailability(){
       "products.fulfillment_mode",
       "products.pause_fulfillment_when_master_restricted",
       "products.pause_fulfillment_when_master_unreachable",
-      "general.master_restricted_notice"
+      "general.master_restricted_notice",
+      "general.maintenance_mode",
+      "general.maintenance_message"
     ]);
     if(error)throw error;
     settings=Object.fromEntries((rows||[]).map((r:any)=>[r.key,scalar(r.value)]));
@@ -24,6 +26,11 @@ export async function getLicenseMasterAvailability(){
   const pauseRestricted=settings["products.pause_fulfillment_when_master_restricted"]!==false;
   const pauseUnreachable=settings["products.pause_fulfillment_when_master_unreachable"]!==false;
   const notice=String(settings["general.master_restricted_notice"]||"OrbitFS licensing services are temporarily restricted. New licence fulfilment is paused until License Master is available.");
+  const storeMaintenance=Boolean(settings["general.maintenance_mode"]);
+  const storeMaintenanceMessage=String(settings["general.maintenance_message"]||"OrbitFS Store is temporarily under maintenance.");
+  if(storeMaintenance){
+    return {reachable:true,restricted:true,reason:"store_maintenance",authority:null,pulseRevision:0,configuredMode,effectiveMode:"manual" as FulfillmentMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,notice:storeMaintenanceMessage,storeMaintenance:true};
+  }
   try{
     const pulse=await masterPulseState();
     const authority=pulse?.authority||{};
