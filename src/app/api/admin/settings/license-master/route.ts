@@ -1,8 +1,7 @@
 import {masterProducts,masterRequest,masterPulse,masterPulseState} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 import {requireOrbitDeploymentAdmin} from "@/lib/orbitfs-deployment-auth";
-import {DEFAULT_MASTER_API_URL,normalizeMasterApiUrl} from "@/lib/license-master-config";
-const MASTER_URL=DEFAULT_MASTER_API_URL;
+import {getMasterApiUrl,normalizeMasterApiUrl} from "@/lib/license-master-config";
 const canonicalProducts=["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
 const cleanError=(e:any)=>String(e?.message||"License Master connection test failed").slice(0,1000);
 
@@ -21,7 +20,7 @@ export async function GET(req:Request){
   const rows=Array.isArray(products?.products)?products.products:[];
   const by=new Map(rows.map((p:any)=>[String(p.code||p.slug||"").toLowerCase(),p]));
   const connections=canonicalProducts.map(code=>({code,master:by.get(code)||null,local:local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code)||null,connected:Boolean(by.get(code)&&local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code&&p.license_api_mode==="master"&&p.license_api_enabled!==false))}));
-  return Response.json({connection:data||null,configuredUrl:data?.master_url||MASTER_URL,masterPanelUrl:"https://panel.incendiarynetworks.cc",connections,masterProducts:rows,pulse,runtimeMirror:runtime},{headers:{"cache-control":"no-store"}});
+  return Response.json({connection:data||null,configuredUrl:data?.master_url||await getMasterApiUrl(),masterPanelUrl:process.env.LICENSE_MASTER_ADMIN_URL||"",connections,masterProducts:rows,pulse,runtimeMirror:runtime},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:cleanError(e)},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}})}
 }
 
@@ -31,7 +30,7 @@ export async function POST(req:Request){
   const db=licenseDb(),body=await req.json().catch(()=>({})),action=String(body.action||"test").toLowerCase();
   if(action==="save"){
    const requested=String(body.masterUrl||"").trim(),masterUrl=normalizeMasterApiUrl(requested);
-   if(requested&&masterUrl!==requested.replace(/\/$/,""))return Response.json({error:"Invalid License Master API URL. Use the approved HTTPS License Master API endpoint."},{status:400});
+   if(!masterUrl||masterUrl!==requested.replace(/\/$/,""))return Response.json({error:"Invalid License Master API URL. Use an HTTPS /api/v1 endpoint and do not use localhost."},{status:400});
    const now=new Date().toISOString(),{data:row}=await db.from("license_master_connection").select("id").order("updated_at",{ascending:false}).limit(1).maybeSingle();
    if(row)await db.from("license_master_connection").update({master_url:masterUrl,enabled:true,updated_at:now,last_error:null}).eq("id",row.id);else await db.from("license_master_connection").insert({master_url:masterUrl,enabled:true,last_error:null});
    return Response.json({ok:true,configuredUrl:masterUrl},{headers:{"cache-control":"no-store"}});
@@ -54,10 +53,10 @@ export async function POST(req:Request){
    if(existing?.id)await db.from("license_api_settings").update(mirror).eq("id",existing.id);
    return Response.json({ok:true,pulse:remote},{headers:{"cache-control":"no-store"}});
   }
-  const started=Date.now();const [health,products,pulse]=await Promise.all([masterRequest("/api/v1/license/health",{method:"GET",cache:"no-store"},"billing"),masterProducts(),masterPulseState()]);
+  const started=Date.now();const configuredUrl=await getMasterApiUrl();const [health,products,pulse]=await Promise.all([masterRequest("/api/v1/license/health",{method:"GET",cache:"no-store"},"billing"),masterProducts(),masterPulseState()]);
   const rows=Array.isArray(products?.products)?products.products:[];if(!rows.some((p:any)=>canonicalProducts.includes(String(p.code||p.slug||"").toLowerCase())))throw new Error("License Master returned no canonical OrbitFS products.");
   const now=new Date().toISOString(),{data:row}=await db.from("license_master_connection").select("id").order("updated_at",{ascending:false}).limit(1).maybeSingle();
-  if(row)await db.from("license_master_connection").update({master_url:MASTER_URL,enabled:true,last_tested_at:now,last_success_at:now,last_error:null,updated_at:now}).eq("id",row.id);else await db.from("license_master_connection").insert({master_url:MASTER_URL,enabled:true,last_tested_at:now,last_success_at:now,last_error:null});
+  if(row)await db.from("license_master_connection").update({master_url:configuredUrl,enabled:true,last_tested_at:now,last_success_at:now,last_error:null,updated_at:now}).eq("id",row.id);else await db.from("license_master_connection").insert({master_url:configuredUrl,enabled:true,last_tested_at:now,last_success_at:now,last_error:null});
   return Response.json({ok:true,latencyMs:Date.now()-started,health,pulse,productCount:rows.length,products:rows},{headers:{"cache-control":"no-store"}});
  }catch(e:any){const message=cleanError(e);return Response.json({ok:false,error:message},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}})}
 }
