@@ -92,3 +92,190 @@ button,.buttonlink{transition:transform .14s,filter .14s,background .14s,border-
  .portalOverviewV2 .listrow button,.portalOverviewV2 .listrow .buttonlink{width:100%}
  .portalOverviewV2 .mono{max-width:100%;text-align:left}
 }
+
+
+/* OrbitFS release admin — compact production workspace */
+.orbitAdminPage{max-width:1380px;margin:0 auto;padding:18px 20px 48px}
+.orbitAdminHeader{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;padding:4px 0 14px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.orbitAdminHeader h1{font-size:26px;line-height:1.1;letter-spacing:-.025em;margin:3px 0 5px}
+.orbitAdminHeader .muted{max-width:760px;margin:0;font-size:12px}
+.orbitAdminActions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.orbitAdminActions button,.orbitAdminActions .buttonlink{min-height:34px;padding:8px 11px;font-size:11px;white-space:nowrap}
+.orbitAdminPage>.panel{margin:10px 0;padding:12px 14px;border-radius:10px}
+.orbitAdminPage>.panel .panelTitle{margin:0 0 10px}
+.orbitAdminPage>.panel .panelTitle h2{font-size:15px;margin:2px 0 3px}
+.orbitAdminPage>.panel .orderControlList{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.orbitAdminPage>.panel .orderControlList>div{display:flex;min-width:0;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:8px}
+.orbitAdminPage>.panel .orderControlList>div>div:first-child{display:grid;gap:2px}
+.orbitAdminPage>.panel .orderControlList>div>div:first-child span{display:none}
+.orbitAdminPage>.panel .switchControl{min-width:92px;justify-content:center}
+.orbitInlineNotice{margin:10px 0;padding:9px 11px;border:1px solid #35506c;border-radius:8px;background:#0c1928;font-size:12px}
+.orbitCompactPanel{margin:10px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:#0b1724}
+.orbitPanelHead{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:11px}
+.orbitPanelHead h2{font-size:17px;margin:2px 0 0}
+.orbitPanelHead .muted{font-size:11px;margin:4px 0 0;max-width:740px}
+.orbitCount{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border:1px solid #34465a;border-radius:7px;font-size:10px;color:var(--muted);white-space:nowrap}
+.orbitPipeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:8px 0 12px}
+.orbitStage{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #273b50;border-radius:8px;background:#091522;min-width:0}
+.orbitStage>span{display:grid;place-items:center;width:22px;height:22px;border:1px solid #435268;border-radius:50%;font-size:10px;flex:0 0 auto}
+.orbitStage>div{display:grid;gap:1px;min-width:0}
+.orbitStage b{font-size:11px}
+.orbitStage small{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.orbitStage.done{border-color:#315c44;background:#0c1e17}
+.orbitStage.done>span{border-color:#4f8664}
+.orbitStage.active{border-color:#41668f;background:#0d1d31}
+.orbitSplit{display:grid;grid-template-columns:minmax(310px,.82fr) minmax(0,1.18fr);gap:10px}
+.orbitReleaseQueue{display:grid;align-content:start;gap:6px;min-width:0}
+.orbitReleaseRow{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 11px;border:1px solid #27394d;border-radius:8px;background:#091522;text-align:left;color:var(--text)}
+.orbitReleaseRow:hover,.orbitReleaseRow.selected{background:#102238;border-color:#45688d}
+.orbitReleaseRow>div:first-child{display:grid;gap:2px;min-width:0}
+.orbitReleaseRow b{font-size:12px}
+.orbitReleaseRow>div:first-child span{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.orbitRowMeta{display:flex;gap:5px;align-items:center;flex:0 0 auto}
+.orbitRowMeta .state{font-size:8px;padding:3px 5px}
+.orbitReviewPane{border:1px solid #27394d;border-radius:8px;background:#091522;padding:12px;min-width:0}
+.orbitReviewTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
+.orbitReviewTop small{font-size:8px;letter-spacing:.08em;color:var(--muted)}
+.orbitReviewTop h3{font-size:20px;margin:1px 0 0}
+.orbitFactGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.orbitFactGrid>div{display:grid;gap:2px;padding:8px;border:1px solid #23364a;border-radius:7px;background:#0b1826;min-width:0}
+.orbitFactGrid>div.wide{grid-column:span 2}
+.orbitFactGrid span{font-size:8px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.orbitFactGrid b{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.orbitFactGrid .mono{font-size:9px}
+.orbitCheckLine{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}
+.orbitCheckLine span{padding:4px 7px;border:1px solid #3a4654;border-radius:99px;font-size:9px;color:#8796a7}
+.orbitCheckLine span.ok{border-color:#365f45;color:#a9d8b6;background:#0e2118}
+.orbitCheckLine span.ready{border-color:#4e6683;color:#b7cee7;background:#0d1d30}
+.orbitValidationList{display:grid;gap:5px;margin:8px 0}
+.orbitValidationList>div{display:grid;gap:2px;padding:8px;border:1px solid #604249;border-radius:7px;background:#211418}
+.orbitValidationList b{font-size:10px}
+.orbitValidationList span,.orbitValidationList small{font-size:9px;color:#c6adb2}
+.orbitHistoryTable,.orbitRequestTable{display:grid;gap:0;border:1px solid #26394d;border-radius:8px;overflow:hidden}
+.orbitHistoryRow,.orbitRequestRow{display:grid;grid-template-columns:minmax(220px,1fr) 120px 190px auto;gap:12px;align-items:center;padding:9px 11px;background:#091522;border-bottom:1px solid #203247;font-size:10px}
+.orbitHistoryRow:last-child,.orbitRequestRow:last-child{border-bottom:0}
+.orbitHistoryRow>div:first-child,.orbitRequestRow>div:first-child{display:grid;gap:2px;min-width:0}
+.orbitHistoryRow b,.orbitRequestRow b{font-size:11px}
+.orbitHistoryRow span,.orbitRequestRow span{color:var(--muted)}
+.orbitRowActions{display:flex;justify-content:flex-end;gap:5px;flex-wrap:wrap}
+.orbitRowActions button{padding:6px 8px;font-size:9px;min-height:28px}
+.orbitEmptyCompact{padding:16px;border:1px dashed #324357;border-radius:8px;color:var(--muted);font-size:11px;text-align:center}
+.orbitModalBackdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:18px;background:#02060bbd;backdrop-filter:blur(4px)}
+.orbitModal{width:min(720px,100%);max-height:90vh;overflow:auto;padding:16px;border:1px solid #34506d;border-radius:11px;background:#0a1623;box-shadow:0 24px 70px #0008}
+.orbitModal label{display:grid;gap:5px;margin:9px 0;font-size:10px;color:var(--muted)}
+.orbitModal input,.orbitModal textarea,.orbitModal select{width:100%;padding:9px 10px;border:1px solid #30445a;border-radius:7px;background:#071321;color:var(--text);font:inherit}
+.orbitFormGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.orbitFormGrid .wide{grid-column:1/-1}
+.orbitFormGrid .orbitCheckLabel{display:flex;align-items:center;gap:8px;color:var(--text)}
+.orbitFormGrid .orbitCheckLabel input{width:auto}
+
+/* OrbitFS channel access admin */
+.orbitChannelLayout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:10px;margin:10px 0}
+.orbitChannelRail{border:1px solid var(--line);border-radius:10px;background:#091522;overflow:hidden}
+.orbitRailHead{padding:11px;border-bottom:1px solid #25384c}
+.orbitRailHead b{font-size:12px}
+.orbitChannelButton{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 11px;border-radius:0;border:0;border-bottom:1px solid #1d3044;background:transparent;text-align:left;color:var(--text)}
+.orbitChannelButton:last-child{border-bottom:0}
+.orbitChannelButton:hover,.orbitChannelButton.active{background:#102238}
+.orbitChannelButton.active{box-shadow:inset 3px 0 #5c83aa}
+.orbitChannelButton>div{display:grid;gap:1px}
+.orbitChannelButton b{font-size:11px}
+.orbitChannelButton span,.orbitChannelButton small{font-size:9px;color:var(--muted)}
+.orbitChannelBody{margin:0}
+.orbitBadgeGroup{display:flex;gap:5px;flex-wrap:wrap}
+.orbitPolicyStrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.orbitPolicyStrip>div{display:grid;gap:2px;padding:8px;border:1px solid #283b4f;border-radius:7px;background:#091522}
+.orbitPolicyStrip span{font-size:8px;text-transform:uppercase;color:var(--muted)}
+.orbitPolicyStrip b{font-size:10px}
+.orbitToolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:9px 0}
+.orbitToolbar input{flex:1;max-width:360px;padding:8px 9px;border:1px solid #30445a;border-radius:7px;background:#071321;color:var(--text)}
+.orbitToolbar span{font-size:9px;color:var(--muted)}
+.orbitAccessTable{display:grid;border:1px solid #27394c;border-radius:8px;overflow:hidden}
+.orbitAccessRow{display:grid;grid-template-columns:minmax(180px,1fr) 90px 100px;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid #203247;background:#091522}
+.orbitAccessRow:last-child{border-bottom:0}
+.orbitAccessRow>div{display:grid;gap:2px}
+.orbitAccessRow b{font-size:10px}
+.orbitAccessRow>div span{font-size:9px;color:var(--muted)}
+.orbitAccessRow button{min-height:28px;padding:6px 8px;font-size:9px}
+
+/* Customer releases + channel join/request */
+.portalReleasePage{max-width:1240px;margin:0 auto;padding:8px 0 48px}
+.portalReleaseHeader{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;padding:4px 0 14px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.portalReleaseHeader h1{font-size:27px;line-height:1.1;margin:3px 0 5px;letter-spacing:-.025em}
+.portalReleaseHeader .muted{margin:0;font-size:12px}
+.portalHeaderActions{display:flex;gap:7px}
+.portalCompactPanel{margin:10px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:#0b1724}
+.portalWarning{display:flex;justify-content:space-between;gap:18px;align-items:center;border-color:#5d5138;background:#1a1710}
+.portalWarning h2{font-size:15px;margin:2px 0}
+.portalWarning p{max-width:620px;margin:0}
+.portalChannelGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.portalChannelCard{display:grid;gap:7px;padding:10px;border:1px solid #293c50;border-radius:8px;background:#091522}
+.portalChannelCard.active{border-color:#365f46;background:#0d1d17}
+.portalChannelTop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.portalChannelTop>div{display:grid;gap:1px}
+.portalChannelTop b{font-size:11px}
+.portalChannelTop>div span{font-size:9px;color:var(--muted)}
+.portalChannelCard p{font-size:10px;margin:0}
+.portalChannelCard small{font-size:9px;color:var(--muted);line-height:1.4}
+.portalChannelActions{display:flex;gap:6px;align-items:center;margin-top:auto}
+.portalChannelActions button{padding:6px 8px;min-height:28px;font-size:9px}
+.portalInstallRow{display:flex;justify-content:space-between;gap:18px;align-items:center}
+.portalInstallRow h2{font-size:16px;margin:2px 0 4px}
+.portalChannelPicker{display:grid;gap:5px;min-width:180px;font-size:9px;color:var(--muted)}
+.portalChannelPicker select{padding:8px 9px;border:1px solid #30445a;border-radius:7px;background:#071321;color:var(--text)}
+.portalUpdateStrip{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding:9px 10px;border:1px solid #35506b;border-radius:8px;background:#0d1e31}
+.portalUpdateStrip>div{display:grid;gap:2px}
+.portalUpdateStrip b{font-size:11px}.portalUpdateStrip span{font-size:9px;color:var(--muted)}
+.portalReleaseList{display:grid;gap:6px}
+.portalReleaseRow{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(280px,1fr) auto;gap:14px;align-items:center;padding:9px 10px;border:1px solid #26394c;border-radius:8px;background:#091522}
+.portalReleaseIdentity{display:flex;gap:8px;align-items:center;min-width:0}
+.portalReleaseIdentity>div{display:grid;gap:2px;min-width:0}
+.portalReleaseIdentity b{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.portalReleaseIdentity small{font-size:9px;color:var(--muted)}
+.portalReleaseRow>p{font-size:10px;color:var(--muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.portalReleaseActions{display:flex;justify-content:flex-end}
+.portalReleaseActions button{min-height:30px;padding:6px 9px;font-size:9px}
+
+@media(max-width:1050px){
+ .orbitAdminPage>.panel .orderControlList{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .orbitFactGrid{grid-template-columns:1fr 1fr}
+ .orbitHistoryRow,.orbitRequestRow{grid-template-columns:minmax(180px,1fr) 90px 150px auto}
+ .portalChannelGrid{grid-template-columns:1fr 1fr}
+ .portalReleaseRow{grid-template-columns:minmax(230px,1fr) minmax(220px,1fr) auto}
+}
+@media(max-width:760px){
+ .orbitAdminPage{padding:12px 12px 36px}
+ .orbitAdminHeader,.portalReleaseHeader{align-items:flex-start;flex-direction:column;gap:10px}
+ .orbitAdminActions,.portalHeaderActions{width:100%}
+ .orbitAdminActions>*{flex:1}
+ .orbitAdminPage>.panel .orderControlList{grid-template-columns:1fr 1fr}
+ .orbitPipeline{grid-template-columns:1fr 1fr}
+ .orbitSplit{grid-template-columns:1fr}
+ .orbitHistoryRow,.orbitRequestRow{grid-template-columns:1fr;gap:6px}
+ .orbitRowActions{justify-content:flex-start}
+ .orbitFormGrid{grid-template-columns:1fr}
+ .orbitFormGrid .wide{grid-column:auto}
+ .orbitChannelLayout{grid-template-columns:1fr}
+ .orbitChannelRail{display:flex;overflow:auto}
+ .orbitRailHead{min-width:150px;border-bottom:0;border-right:1px solid #25384c}
+ .orbitChannelButton{min-width:160px;border-bottom:0;border-right:1px solid #1d3044}
+ .orbitChannelButton.active{box-shadow:inset 0 -3px #5c83aa}
+ .orbitPolicyStrip{grid-template-columns:1fr 1fr}
+ .orbitAccessRow{grid-template-columns:1fr auto;gap:7px}
+ .orbitAccessRow>button{grid-column:1/-1;width:100%}
+ .portalReleasePage{padding:0 0 36px}
+ .portalChannelGrid{grid-template-columns:1fr}
+ .portalInstallRow,.portalWarning{align-items:stretch;flex-direction:column}
+ .portalChannelPicker{width:100%}
+ .portalReleaseRow{grid-template-columns:1fr;gap:7px}
+ .portalReleaseActions{justify-content:flex-start}
+ .portalReleaseActions button{width:100%}
+}
+@media(max-width:460px){
+ .orbitAdminPage>.panel .orderControlList{grid-template-columns:1fr}
+ .orbitPipeline{grid-template-columns:1fr}
+ .orbitFactGrid,.orbitPolicyStrip{grid-template-columns:1fr}
+ .orbitFactGrid>div.wide{grid-column:auto}
+ .orbitReleaseRow{align-items:flex-start;flex-direction:column}
+ .orbitRowMeta{width:100%;justify-content:flex-start}
+}
