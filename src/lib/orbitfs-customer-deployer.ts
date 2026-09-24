@@ -111,7 +111,9 @@ function validateDatabaseContract(bundle:UpdateBundle){
     if(sql.byteLength>2*1024*1024||total>8*1024*1024)fail("Customer database migration payload is too large",413);
     const sha=checksum(sql);
     if(Number(migration.size)!==sql.byteLength||String(migration.sha256||"").toLowerCase()!==sha)fail(`Customer database migration checksum mismatch: ${file}`,422);
-    if(/\b(?:begin|commit|rollback)\s*;/i.test(sql.toString("utf8")))fail(`Database migration contains unsupported explicit transaction control: ${file}`,422);
+    const sqlText=sql.toString("utf8");
+    if(/\b(?:begin|commit|rollback)\s*;/i.test(sqlText))fail(`Database migration contains unsupported explicit transaction control: ${file}`,422);
+    if(/\b(?:drop\s+table|drop\s+schema|truncate\s+(?:table\s+)?|alter\s+table[\s\S]{0,300}?drop\s+column)\b/i.test(sqlText))fail(`Destructive customer database migration is not permitted in an Update release: ${file}`,422);
     return {id,file,component:String(migration.component||"shared").trim().toLowerCase()||"shared",encoding:"base64" as const,data:migration.data,size:sql.byteLength,sha256:sha};
   });
   const engine=(bundle as any)?.payloads?.engine;
