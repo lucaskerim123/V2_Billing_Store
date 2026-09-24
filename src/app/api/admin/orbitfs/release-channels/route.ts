@@ -45,7 +45,7 @@ export async function GET(req:Request){
 
 export async function POST(req:Request){
   try{
-    const auth=await requireOrbitAdmin(req);
+    await requireOrbitAdmin(req);
     const body=await req.json().catch(()=>({})),action=String(body.action||"").toLowerCase(),db=licenseDb();
     if(action==="sync"){const channels=await syncFromMaster();return Response.json({ok:true,channels});}
     if(action==="grant"){
