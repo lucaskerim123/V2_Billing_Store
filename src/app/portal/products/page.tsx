@@ -19,14 +19,18 @@ export default function Products() {
   const [coupon, setCoupon] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [catalogCfg,setCatalogCfg]=useState<any>({allowCoupons:true,allowAddons:true,hideOutOfStock:false,sortMode:"sort_order"});
 
   async function loadStore() {
-    const [{ data: products }, { data: options }, { data: settings }, { data: cartData, error: cartError }] = await Promise.all([
+    const [{ data: products }, { data: options }, { data: settings }, { data: cartData, error: cartError }, {data:cfgRows}] = await Promise.all([
       sb.from("products").select("id,slug,name,description,price_cents,currency,metadata").eq("active", true).order("name"),
       sb.from("product_options").select("product_id").eq("active", true),
       sb.from("app_settings").select("key,value").eq("category","store"),
       sb.rpc("cart_summary"),
+      sb.from("app_settings").select("key,value").in("key",["products.allow_coupons","products.allow_addons","products.hide_out_of_stock","products.sort_mode"])
     ]);
+    const cfg=Object.fromEntries((cfgRows||[]).map((x:any)=>[x.key,x.value]));
+    setCatalogCfg({allowCoupons:cfg["products.allow_coupons"]!==false,allowAddons:cfg["products.allow_addons"]!==false,hideOutOfStock:cfg["products.hide_out_of_stock"]===true,sortMode:String(cfg["products.sort_mode"]||"sort_order")});
     setItems(products || []);
     setOptionProducts(new Set((options || []).map((x:any) => x.product_id)));
     setStoreText(Object.fromEntries((settings || []).map((x:any) => [x.key.split(".").pop(), typeof x.value === "string" ? x.value : String(x.value ?? "")])));
@@ -43,7 +47,7 @@ export default function Products() {
   useEffect(() => { loadStore(); }, []);
 
   const base = useMemo(() => items.find(p => p.metadata?.component === "base") || items[0], [items]);
-  const addons = useMemo(() => items.filter(p => p !== base), [items, base]);
+  const addons = useMemo(() => catalogCfg.allowAddons?items.filter(p => p !== base):[], [items, base, catalogCfg.allowAddons]);
   const hasOptions = (p:any) => optionProducts.has(p.id);
 
   async function directAdd(p:any) {
@@ -171,7 +175,7 @@ export default function Products() {
       </div>
 
       <aside className="storeCheckoutPanel buybox"><div className="storeTotals"><div><span>Subtotal</span><b>{money(cart.subtotal_cents)}</b></div><div><span>Discount</span><b>-{money(cart.discount_cents)}</b></div><div className="storeTotal"><span>Total</span><strong>{money(cart.total_cents)}</strong></div></div>
-        <div className="storeCheckoutBlock"><label>Coupon code</label><div className="couponApply"><input value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} placeholder="Coupon code"/><button className="secondary" onClick={applyCoupon}>Apply</button></div></div>
+        <div className="storeCheckoutBlock"><label>Coupon code</label><div className="couponApply"><input value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} placeholder="Coupon code"/>{catalogCfg.allowCoupons&&<button className="secondary" onClick={applyCoupon}>Apply</button>}</div></div>
         <div className="storeCheckoutBlock"><label>Payment method</label>{gateways.length ? <div className="storeGatewayList">{gateways.map((g: any) => <label className={`storeGateway ${gateway === g.code ? "active" : ""}`} key={g.code}><input type="radio" name="gateway" checked={gateway === g.code} onChange={() => setGateway(g.code)}/><span><b>{g.name}</b><small>{g.description}</small></span></label>)}</div> : <div className="notice"><b>No online payment method enabled</b><span>You can still create the invoice and pay it later.</span></div>}</div>
         <button disabled={!cart.item_count || busy} onClick={checkout}>{busy ? "Processing…" : gateway ? "Place order & pay" : "Create invoice"}</button><small>Checkout creates one order and one invoice containing every selected OrbitFS product.</small>{!!msg && <p className="storeMessage">{msg}</p>}
       </aside>
