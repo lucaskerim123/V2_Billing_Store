@@ -191,7 +191,10 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     }
   }
 
-  const release=await publishedRelease(version,action,requestedChannel,releaseId);
+  const effectiveReleaseId=action==="redeploy"&&!releaseId&&!version?String(install.release_id||"").trim()||undefined:releaseId;
+  const effectiveVersion=action==="redeploy"&&!effectiveReleaseId&&!version?String(install.release_version||"").trim()||undefined:version;
+  if(action==="redeploy"&&!effectiveReleaseId&&!effectiveVersion)fail("The installation does not have a Base release to redeploy",409);
+  const release=await publishedRelease(effectiveVersion,action,requestedChannel,effectiveReleaseId);
   await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null});
   try{
   if(action==="update"){
