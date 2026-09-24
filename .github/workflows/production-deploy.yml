@@ -87,38 +87,23 @@ jobs:
           npm install --global "vercel@$VERCEL_CLI_VERSION"
           vercel --version
 
-      - name: Pull production configuration only
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
-
-      - name: Verify pulled production project identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f .vercel/project.json
-          node - <<'NODE'
-          const fs=require('fs');
-          const project=JSON.parse(fs.readFileSync('.vercel/project.json','utf8'));
-          if(project.orgId!==process.env.VERCEL_ORG_ID) throw new Error('Vercel org mismatch');
-          if(project.projectId!==process.env.VERCEL_PROJECT_ID) throw new Error('Vercel project mismatch');
-          NODE
-
-      - name: Build exact production artifact without deploying
-        run: vercel build --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
-
-      - name: Inspect exact prebuilt production artifact
-        run: vercel deploy --prebuilt --dry --format=json --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
-
-      - name: Deploy exact validated prebuilt artifact to production
+      - name: Deploy exact checked-out source to Vercel production
         id: deploy
         shell: bash
         run: |
           set -euo pipefail
-          deployment_url="$(vercel deploy --prebuilt --archive=tgz --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID")"
+          deployment_url="$(vercel deploy --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID")"
           case "$deployment_url" in
             https://*) ;;
             *) echo "::error::Vercel did not return a production deployment URL"; exit 1 ;;
           esac
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+
+      - name: Verify deployed production target
+        shell: bash
+        run: |
+          set -euo pipefail
+          vercel inspect "${{ steps.deploy.outputs.url }}" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
 
       - name: Report deployed commit
         run: |
