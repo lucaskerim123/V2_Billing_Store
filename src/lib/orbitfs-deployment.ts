@@ -573,7 +573,7 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   let dbSecret=String(await installationSecret(install.id,"db_secret")||"");
   if(!dbSecret){dbSecret=randomBytes(32).toString("hex");await storeInstallationSecret(install.id,"db_secret",dbSecret)}
   const safe=(value:string)=>value.replaceAll("'","''");
-  const baseMigrationId=`base-schema-${effectiveSchema}`;
+  const baseMigrationId=`base-schema-${effectiveSchema}-${schemaAsset.sha256.slice(0,16)}`;
   const runtimeSql=`insert into private.orbitfs_runtime_config(key,value,updated_at) values ('server_secret','${dbSecret}',now()),('ORBITFS_DB_SECRET','${dbSecret}',now()) on conflict (key) do update set value=excluded.value,updated_at=now();
 create table if not exists public.orbitfs_schema_migrations (
   migration_id text primary key,
@@ -584,11 +584,6 @@ create table if not exists public.orbitfs_schema_migrations (
   release_version text,
   applied_at timestamptz not null default now()
 );
-do $ begin
-  if exists(select 1 from public.orbitfs_schema_migrations where migration_id='${safe(baseMigrationId)}' and sha256<>'${safe(schemaAsset.sha256)}') then
-    raise exception 'OrbitFS Base schema ledger checksum mismatch for ${safe(baseMigrationId)}';
-  end if;
-end $;
 insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
 values ('${safe(baseMigrationId)}','${safe(schemaAsset.sha256)}','base','base/schema.sql','${safe(String(release.id))}','${safe(String(release.version))}',now())
 on conflict (migration_id) do nothing;
