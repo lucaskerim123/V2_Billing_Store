@@ -49,6 +49,9 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Run production validation on this exact deployment commit
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
         run: |
           set -euo pipefail
           npm ci
