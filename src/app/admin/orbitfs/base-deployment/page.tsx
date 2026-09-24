@@ -64,8 +64,24 @@ export default function BaseDeploymentAdmin(){
     finally{setSavingSetting("")}
   }
 
+  async function editMaintenanceMessage(){
+    const current=String(systemSettings?.maintenance_message||"OrbitFS deployment services are temporarily unavailable while maintenance is in progress.");
+    const value=prompt("Customer maintenance notice",current)?.trim();
+    if(!value)return;
+    setSavingSetting("maintenance_message");setError("");
+    try{
+      const h=await headers();
+      const response=await fetch("/api/admin/orbitfs/deployment-settings",{method:"PATCH",headers:{...h,"content-type":"application/json"},body:JSON.stringify({maintenance_message:value})});
+      const body=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(body.error||"Could not update maintenance notice");
+      setSystemSettings(body.settings||{});
+    }catch(e:any){setError(e?.message||"Could not update maintenance notice")}
+    finally{setSavingSetting("")}
+  }
+
   const controls=[
     ["enabled","Customer deployment system","Master Billing-side gate for customer deployment execution."],
+    ["maintenance_mode","Maintenance mode","Temporarily blocks customer setup, Base deployment, Updates and rollbacks while keeping admin controls available."],
     ["customer_deploy_enabled","Base deployment","Allows customers to install or redeploy a published Base release."],
     ["customer_updates_enabled","Update deployment","Allows manifest-driven published Update releases to be applied."],
     ["customer_rollbacks_enabled","Rollback","Allows customer rollback to a previous successful Base deployment."]
@@ -90,7 +106,7 @@ export default function BaseDeploymentAdmin(){
     <section className="panel">
       <div className="sectionHead"><div><p className="eyebrow">CUSTOMER DEPLOYMENT GATES</p><h2>Execution controls</h2><p className="muted">These Billing Store gates control whether the customer deployer may execute Base installs, Updates and rollbacks. They do not change License Manager release authority.</p></div></div>
       <div className="lmRuntimeList">
-        {controls.map(([key,label,description])=>{const enabled=Boolean(systemSettings?.[key]);return <div key={key}><div><b>{label}</b><span>{description}</span></div><div style={{display:"flex",gap:8,alignItems:"center"}}><strong>{enabled?"Enabled":"Disabled"}</strong><button type="button" disabled={loading||!!savingSetting||!systemSettings} onClick={()=>void setDeploymentSetting(key,!enabled)}>{savingSetting===key?"Saving…":enabled?"Disable":"Enable"}</button></div></div>})}
+        {controls.map(([key,label,description])=>{const enabled=Boolean(systemSettings?.[key]);const maintenance=key==="maintenance_mode";return <div key={key}><div><b>{label}</b><span>{description}</span>{maintenance&&systemSettings?.maintenance_message&&<span><b>Customer notice:</b> {systemSettings.maintenance_message}</span>}</div><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><strong>{maintenance?(enabled?"ACTIVE":"NORMAL"):(enabled?"Enabled":"Disabled")}</strong>{maintenance&&<button type="button" disabled={loading||!!savingSetting||!systemSettings} onClick={()=>void editMaintenanceMessage()}>{savingSetting==="maintenance_message"?"Saving…":"Edit notice"}</button>}<button type="button" disabled={loading||!!savingSetting||!systemSettings} onClick={()=>void setDeploymentSetting(key,!enabled)}>{savingSetting===key?"Saving…":enabled?"Disable":"Enable"}</button></div></div>})}
       </div>
       {!systemSettings&&<p className="muted">Deployment controls are unavailable until the Billing Store release-system settings can be read.</p>}
     </section>
