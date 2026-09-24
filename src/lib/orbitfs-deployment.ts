@@ -3,6 +3,7 @@ import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
+import {requireLicenseMasterForDeployment} from "@/lib/license-master-availability";
 
 const SUPABASE_API="https://api.supabase.com/v1";
 const VERCEL_API="https://api.vercel.com";
@@ -42,6 +43,7 @@ export async function requireSystem(capability:"deploy"|"update"|"rollback"="dep
   if(capability==="deploy"&&!s.customer_deploy_enabled)throw Object.assign(new Error("Customer deployment is disabled"),{status:503});
   if(capability==="update"&&!s.customer_updates_enabled)throw Object.assign(new Error("Customer updates are disabled"),{status:503});
   if(capability==="rollback"&&!s.customer_rollbacks_enabled)throw Object.assign(new Error("Customer rollback is disabled"),{status:503});
+  await requireLicenseMasterForDeployment();
   return s;
 }
 
