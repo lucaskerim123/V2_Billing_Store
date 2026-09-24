@@ -1,6 +1,6 @@
--- Customer-specific OrbitFS release-channel access.
--- Billing Store owns who may consume a release channel; License Master remains
--- the release/artifact authority.
+-- Legacy Billing Store channel mirror retained for compatibility.
+-- License Manager is authoritative for channel definitions and technical entitlement state.
+-- Billing Store provides customer-facing join/request/grant/revoke workflows through License Manager APIs.
 
 create table if not exists public.orbitfs_release_channels (
   id uuid primary key default gen_random_uuid(),
