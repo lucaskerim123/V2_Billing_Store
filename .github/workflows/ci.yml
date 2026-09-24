@@ -33,7 +33,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: package-lock.json      - name: Verify immutable database migration baseline
+          cache-dependency-path: package-lock.json
+      - name: Verify immutable database migration baseline
         run: node scripts/prepare-supabase-migrations.mjs .orbitfs-supabase/supabase/migrations
 
       - name: Run complete production preflight
