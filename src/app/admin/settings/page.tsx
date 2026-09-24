@@ -20,7 +20,8 @@ const sections:Section[]=[
   {title:"Support settings",description:"Ticket defaults, customer actions, guest support and support lifecycle behaviour.",href:"/admin/settings/support",badge:"Support",tags:["Tickets","Guest access","Lifecycle"]}
  ]},
  {title:"Licensing, operations & access",description:"License Master connectivity, staff access, messaging, alerts and account enforcement.",cards:[
-  {title:"License Master connection",description:"Authority URL, connection status, API contract and bounded health test for the licensing authority.",href:"/admin/settings/license-master",badge:"Licensing",tags:["Authority","Health","API"]},
+  {title:"License Master connection",description:"Authority URL, connection status, runtime policy and health for the technical licensing authority.",href:"/admin/settings/license-master",badge:"Licensing",tags:["Authority","Health","API"]},
+  {title:"Licence commerce policy",description:"Billing-side enforcement triggers and customer Licence Controller permissions. License Master remains authoritative for licence state.",href:"/admin/settings/licensing",badge:"Policy",tags:["Enforcement","Customer controls","Grace"]},
   {title:"Staff System",description:"Staff identities, groups, primary roles and exact inherited permission maps.",href:"/admin/settings/staff",badge:"Access",tags:["Staff","Groups","Permissions"]},
   {title:"Permission map",description:"Inspect and maintain administrative permission definitions used by staff groups.",href:"/admin/settings/permissions",badge:"Permissions",tags:["RBAC","Capabilities","Audit"]},
   {title:"Themes",description:"Installed themes and active Store/Admin presentation packages.",href:"/admin/settings/themes",badge:"Themes",tags:["Store","Admin","Appearance"]},
