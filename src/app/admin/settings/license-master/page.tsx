@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export default function LicenseMasterSettings(){
  const [data,setData]=useState<any>(null),[busy,setBusy]=useState(false),[editing,setEditing]=useState(false),[msg,setMsg]=useState(""),[error,setError]=useState("");
- const [masterUrl,setMasterUrl]=useState("https://incendiarynetworks.cc/api/v1"),[adminUrl,setAdminUrl]=useState("https://panel.incendiarynetworks.cc");
+ const [masterUrl,setMasterUrl]=useState(""),[adminUrl,setAdminUrl]=useState("");
  const [policy,setPolicy]=useState<any>({validation_ttl_seconds:60,offline_grace_seconds:0,pulse_poll_seconds:15,max_failed_validations:3,allow_offline_grace:false});
  async function headers():Promise<Record<string,string>>{const {data:{session}}=await createClient().auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{};}
  async function request(body?:any){const h=await headers();const r=await fetch("/api/admin/settings/license-master",{method:body?"POST":"GET",headers:{...h,...(body?{"Content-Type":"application/json"}:{})},body:body?JSON.stringify(body):undefined,cache:"no-store"});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"License Master request failed");return j}
