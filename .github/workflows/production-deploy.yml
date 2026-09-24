@@ -56,13 +56,53 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
+      - name: Resolve currently deployed production commit
+        id: production_base
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_ORG_ID&target=production&state=READY&limit=1")"
+          base_sha="$(printf '%s' "$response" | jq -r '.deployments[0].meta.githubCommitSha // empty')"
+          if [ -z "$base_sha" ]; then
+            echo "::error::Could not resolve the Git commit currently deployed to Vercel production."
+            exit 1
+          fi
+          git cat-file -e "$base_sha^{commit}"
+          if ! git merge-base --is-ancestor "$base_sha" "$GITHUB_SHA"; then
+            echo "::error::Current production commit $base_sha is not an ancestor of selected main commit $GITHUB_SHA. Refusing a deployment with an ambiguous change-set."
+            exit 1
+          fi
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_BASE_SHA=$base_sha" >> "$GITHUB_ENV"
+          echo "Production base: $base_sha"
+          echo "Selected head:   $GITHUB_SHA"
+          echo "Pending commits:"
+          git log --reverse --oneline "$base_sha..$GITHUB_SHA"
+
+      - name: Verify complete pending change-set
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ steps.production_base.outputs.base_sha }}"
+          count="$(git rev-list --count "$base..$GITHUB_SHA")"
+          echo "Pending commit count: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "No unapplied commits are pending; production already matches this commit."
+          fi
+          echo "Changed files across the full pending range:"
+          git diff --name-status "$base..$GITHUB_SHA"
+
       - name: Run complete production validation
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
         run: npm run preflight
 
-      - name: Generate immutable release/change-set manifest
+      - name: Generate cumulative production change-set manifest
+        env:
+          RELEASE_BASE_SHA: ${{ steps.production_base.outputs.base_sha }}
         run: node scripts/release-manifest.mjs
 
       - name: Upload release/change-set manifest
@@ -105,7 +145,12 @@ jobs:
           set -euo pipefail
           vercel inspect "${{ steps.deploy.outputs.url }}" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
 
-      - name: Report deployed commit
+      - name: Report deployed change-set
         run: |
-          echo "Production deployment completed for immutable commit $GITHUB_SHA."
+          base="${{ steps.production_base.outputs.base_sha }}"
+          count="$(git rev-list --count "$base..$GITHUB_SHA")"
+          echo "Production deployment completed."
+          echo "Previous production commit: $base"
+          echo "New production commit:      $GITHUB_SHA"
+          echo "Applied commits:             $count"
           echo "Deployment: ${{ steps.deploy.outputs.url }}"
