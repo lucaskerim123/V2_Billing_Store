@@ -3,84 +3,154 @@ import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import DeliveryControls from "../DeliveryControls";
 
-const UPDATE_PRODUCTS=["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
+type UpdateRelease={
+ id:string;version:string;channel?:string;status?:string;reviewStatus?:string;releaseType?:string;
+ title?:string;description?:string;changelog?:string;customerNotes?:string;internalNotes?:string;
+ severity?:string;required?:boolean;rollout?:string;minimumVersion?:string|null;rollbackVersion?:string|null;
+ components?:string[];sourceCommit?:string|null;sourceRepo?:string|null;sourceRef?:string|null;checksum?:string|null;
+ validation?:{status?:string;checks?:Array<{key?:string;ok?:boolean;message?:string;fix?:string}>}|null;
+ publishedAt?:string|null;updatedAt?:string|null;
+};
 
 export default function OrbitFSUpdateReleaseDeployer(){
  const sb=useMemo(()=>createClient(),[]);
- const [releases,setReleases]=useState<any[]>([]),[channels,setChannels]=useState<any[]>([]),[selected,setSelected]=useState<string>(""),[target,setTarget]=useState(""),[busy,setBusy]=useState(false),[msg,setMsg]=useState("");
- async function adminHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:`Bearer ${session.access_token}`};}
+ const [releases,setReleases]=useState<UpdateRelease[]>([]);
+ const [selectedId,setSelectedId]=useState("");
+ const [busy,setBusy]=useState("");
+ const [message,setMessage]=useState("");
+ const [editing,setEditing]=useState(false);
+ const [draft,setDraft]=useState({title:"",description:"",changelog:"",customer_notes:"",internal_notes:"",severity:"normal",required:false,rollout:"public",minimum_version:"",rollback_version:""});
+
+ async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
  async function load(){
-  setBusy(true);setMsg("");
+  setBusy("load");setMessage("");
   try{
-   const auth=await adminHeaders();
-   const r=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=update",{headers:{...auth,Accept:"application/json"},cache:"no-store"});
+   const r=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=update",{headers:{...(await auth()),Accept:"application/json"},cache:"no-store"});
    const j=await r.json().catch(()=>({}));
-   if(!r.ok)throw Error(j.error||`License Master returned HTTP ${r.status}`);
-   const rows=(Array.isArray(j.releases)?j.releases:Array.isArray(j)?j:[]).filter((x:any)=>String(x.release_type||x.releaseType||"").toLowerCase()==="update").sort((a:any,b:any)=>String(b.updatedAt||b.updated_at||b.created_at||"").localeCompare(String(a.updatedAt||a.updated_at||a.created_at||"")));
-   setReleases(rows);setSelected(current=>rows.some((r:any)=>r.id===current)?current:(rows[0]?.id||""));const cr=await fetch("/api/admin/orbitfs/release-channels",{headers:auth,cache:"no-store"});const cj=await cr.json().catch(()=>({}));setChannels((cj.channels||[]).filter((x:any)=>x.enabled&&x.customer_visible));
-  }catch(e:any){setMsg(e instanceof TypeError?"Could not reach the License Master connection endpoint. Check the Billing Store → License Master connection and server-side API configuration.":(e?.message||"Could not load update release state."))}
-  finally{setBusy(false)}
+   if(!r.ok)throw Error(j.error||"Could not load Update releases");
+   const rows=(Array.isArray(j.releases)?j.releases:[]).filter((x:any)=>String(x.releaseType||x.release_type||"").toLowerCase()==="update");
+   setReleases(rows);
+   setSelectedId(current=>rows.some((x:UpdateRelease)=>x.id===current)?current:(rows.find((x:UpdateRelease)=>x.status!=="published")?.id||rows[0]?.id||""));
+  }catch(e:any){setMessage(e?.message||"Could not load Update release state")}finally{setBusy("")}
  }
  useEffect(()=>{void load()},[]);
- const chosen=releases.find(r=>r.id===selected)||releases[0]||null;
- async function promote(){if(!chosen||!target)return;setBusy(true);setMsg("");try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-promote",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id,targetChannel:target})}),j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Could not promote release");setMsg("Release promoted to "+target+".");setTarget("");await load()}catch(e:any){setMsg(e?.message||"Could not promote release")}finally{setBusy(false)}}
- async function publishUpdate(){if(!chosen)return;setBusy(true);setMsg("");try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id})}),j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Could not publish update");setMsg("Update published to the Customer Portal.");await load()}catch(e:any){setMsg(e?.message||"Could not publish update")}finally{setBusy(false)}}
- const manifest=chosen?.manifest&&typeof chosen.manifest==="object"?chosen.manifest:{components:chosen?.components||[],validation:chosen?.validation||null,minimumVersion:chosen?.minimumVersion,rollbackVersion:chosen?.rollbackVersion,required:chosen?.required,title:chosen?.title};
- const components=Array.isArray(manifest.components)?manifest.components:[];
- return <main className="orbitfsControlPage">
-  <section className="orbitfsControlHero">
-   <div><div className="orbitfsEyebrow">MY ORBITFS · RELEASE UPDATES</div><h1>Update Release Control</h1><p>Version control, technical validation state, manifest targeting and rollback metadata for OrbitFS component updates. Customer infrastructure deployment is deliberately outside this screen.</p></div>
-   <div className="orbitfsHeroActions"><button type="button" onClick={()=>void load()} disabled={busy}>{busy?"Refreshing…":"Refresh"}</button></div>
-  </section>
 
-  {msg&&<div className="orbitfsNotice">{msg}</div>}
+ const selected=releases.find(r=>r.id===selectedId)||releases[0]||null;
+ const pending=useMemo(()=>releases.filter(r=>r.status!=="published"),[releases]);
+ const published=useMemo(()=>releases.filter(r=>r.status==="published"),[releases]);
+ const validationPassed=selected?.validation?.status==="passed";
+ const reviewApproved=selected?.reviewStatus==="approved";
+ const canPublish=Boolean(selected&&selected.status!=="published"&&validationPassed&&reviewApproved&&selected.checksum);
+
+ function beginEdit(r:UpdateRelease){
+  setSelectedId(r.id);
+  setDraft({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||"",internal_notes:r.internalNotes||"",severity:r.severity||"normal",required:r.required===true,rollout:r.rollout||"public",minimum_version:r.minimumVersion||"",rollback_version:r.rollbackVersion||""});
+  setEditing(true);
+ }
+ async function savePresentation(){
+  if(!selected)return;
+  setBusy("edit");setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,...draft})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not update release");
+   setEditing(false);setMessage("Update release details saved.");await load();
+  }catch(e:any){setMessage(e?.message||"Could not update release")}finally{setBusy("")}
+ }
+ async function publish(){
+  if(!selected||!canPublish)return;
+  setBusy("publish");setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not publish update");
+   setMessage("Update published to the customer portal.");await load();
+  }catch(e:any){setMessage(e?.message||"Could not publish update")}finally{setBusy("")}
+ }
+ async function unpublish(r:UpdateRelease){
+  if(!confirm("Unpublish v"+r.version+" from the customer portal?"))return;
+  setBusy("unpublish:"+r.id);setMessage("");
+  try{
+   const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:r.id})});
+   const j=await res.json().catch(()=>({}));
+   if(!res.ok)throw Error(j.error||"Could not unpublish update");
+   setMessage("Update removed from customer publication.");await load();
+  }catch(e:any){setMessage(e?.message||"Could not unpublish update")}finally{setBusy("")}
+ }
+
+ return <main className="orbitAdminPage">
+  <header className="orbitAdminHeader">
+   <div><p className="eyebrow">ORBITFS CONTROL · UPDATES</p><h1>Update releases</h1><p className="muted">Final customer publication workspace for technically approved, validated manifest-driven updates.</p></div>
+   <div className="orbitAdminActions"><button className="secondary" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
+  </header>
+
+  {message&&<div className="orbitInlineNotice">{message}</div>}
   <DeliveryControls compact />
-  {manifest?.validation?.status === "failed" && <section className="orbitfsCard" style={{marginTop:12,border:"1px solid currentColor"}}>
-   <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">VALIDATION FAILED</div><h2>Release is blocked</h2><p className="orbitfsMuted">Fix the failed checks below, then re-run validation in License Master. Nothing should be published while validation is failed.</p></div></div>
-   <div>{(Array.isArray(manifest.validation.checks)?manifest.validation.checks:[]).filter((c:any)=>!c.ok).map((c:any,i:number)=><div key={c.key||i} style={{padding:"10px 0",borderTop:"1px solid rgba(127,127,127,.2)"}}><b>✕ {c.key||"check"}</b><div className="orbitfsMuted">{c.message||"Validation check failed."}</div>{c.fix&&<div className="orbitfsMuted" style={{marginTop:4}}><b>Fix:</b> {c.fix}</div>}<pre style={{whiteSpace:"pre-wrap",marginTop:6}}>{c.prompt||("Fix the "+(c.key||"failed")+" validation check. Inspect the related release data/code, make the smallest production-safe fix, then run validation again.")}</pre></div>)}</div>
-  </section>}
 
-  <div className="orbitfsGrid" style={{marginTop:msg?10:0}}>
-   <section className="orbitfsCard">
-    <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">Selected release</div><h2>{chosen?.version||"No update release selected"}</h2></div><span className="orbitfsBadge">{chosen?.release_type||chosen?.releaseType||"update"}</span></div>
-    <div className="orbitfsDataGrid">
-     <div className="orbitfsData"><span>Status</span><b>{chosen?.status||"—"}</b></div>
-     <div className="orbitfsData"><span>Technical review</span><b>{chosen?.review_status||chosen?.reviewStatus||"—"}</b></div><div className="orbitfsData"><span>Release channel</span><b>{chosen?.channel||"stable"}</b></div>
-     <div className="orbitfsData"><span>Source commit</span><b>{chosen?.sourceCommit||chosen?.source_sha||chosen?.source_commit||"—"}</b></div>
-     <div className="orbitfsData"><span>Artifact checksum</span><b>{chosen?.checksum||chosen?.sha256||"—"}</b></div>
+  <section className="orbitCompactPanel">
+   <div className="orbitPanelHead"><div><p className="eyebrow">FINAL REVIEW</p><h2>Publication queue</h2></div><span className="orbitCount">{pending.length} pending</span></div>
+   <div className="orbitSplit">
+    <div className="orbitReleaseQueue">
+     {pending.map(r=><button key={r.id} type="button" className={"orbitReleaseRow "+(selected?.id===r.id?"selected":"")} onClick={()=>setSelectedId(r.id)}>
+      <div><b>v{r.version}</b><span>{r.title||"OrbitFS update"} · {r.channel||"stable"}</span></div>
+      <div className="orbitRowMeta"><span className={r.validation?.status==="passed"?"state ready":"state"}>{r.validation?.status||"validation pending"}</span><span className={r.reviewStatus==="approved"?"state ready":"state"}>{r.reviewStatus||"review pending"}</span></div>
+     </button>)}
+     {!pending.length&&<div className="orbitEmptyCompact">No Update releases are waiting for final publication.</div>}
     </div>
-    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
-      {chosen&&chosen.status!=="published"&&<button type="button" disabled={busy} onClick={async()=>{const title=prompt("Customer-facing title",String(manifest?.title||""));if(title===null)return;setBusy(true);try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id,title})});const j=await r.json().catch(()=>({}));setMsg(r.ok?"Release presentation updated.":j.error||"Could not edit release.")}finally{setBusy(false)}await load()}}>Edit release</button>}
-      {chosen&&chosen.status!=="published"&&(chosen.review_status||chosen.reviewStatus)==="approved"&&chosen.manifest?.validation?.status==="passed"&&<button type="button" disabled={busy} onClick={()=>void publishUpdate()}>Publish update to Customer Portal</button>}
-      {chosen?.status==="published"&&<button type="button" className="secondary" disabled={busy} onClick={async()=>{if(!confirm("Unpublish this update from the Customer Portal?"))return;setBusy(true);try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:chosen.id})});const j=await r.json().catch(()=>({}));setMsg(r.ok?"Update unpublished.":j.error||"Could not unpublish update.")}finally{setBusy(false)}await load()}}>Unpublish</button>}
+
+    <div className="orbitReviewPane">
+     {selected?<>
+      <div className="orbitReviewTop"><div><small>SELECTED UPDATE</small><h3>v{selected.version}</h3></div><span className={selected.status==="published"?"state ready":"state"}>{selected.status||"pending"}</span></div>
+      <div className="orbitFactGrid">
+       <div><span>Technical review</span><b>{selected.reviewStatus||"Pending"}</b></div>
+       <div><span>Validation</span><b>{selected.validation?.status||"Not run"}</b></div>
+       <div><span>Channel</span><b>{selected.channel||"stable"}</b></div>
+       <div><span>Required</span><b>{selected.required?"Yes":"No"}</b></div>
+       <div><span>Minimum Base</span><b>{selected.minimumVersion||"—"}</b></div>
+       <div><span>Rollback</span><b>{selected.rollbackVersion||"—"}</b></div>
+       <div className="wide"><span>Components</span><b>{selected.components?.length?selected.components.join(", "):"—"}</b></div>
+       <div className="wide"><span>Checksum</span><b className="mono">{selected.checksum||"—"}</b></div>
+      </div>
+      <div className="orbitCheckLine"><span className={reviewApproved?"ok":""}>Technical approval</span><span className={validationPassed?"ok":""}>Validation</span><span className={selected.checksum?"ok":""}>Artifact</span><span className={selected.status==="published"?"ok":canPublish?"ready":""}>Portal</span></div>
+      {selected.validation?.status==="failed"&&<div className="orbitValidationList">{(selected.validation.checks||[]).filter(c=>!c.ok).map((c,i)=><div key={c.key||i}><b>{c.key||"Validation check"}</b><span>{c.message||"Validation failed."}</span>{c.fix&&<small>Fix: {c.fix}</small>}</div>)}</div>}
+      <div className="orbitAdminActions">
+       <button className="secondary" onClick={()=>beginEdit(selected)}>Edit</button>
+       {selected.status!=="published"&&<button onClick={()=>void publish()} disabled={!canPublish||busy==="publish"}>{busy==="publish"?"Publishing…":"Publish to customer portal"}</button>}
+       {selected.status==="published"&&<button className="secondary" onClick={()=>void unpublish(selected)} disabled={busy.startsWith("unpublish")}>Unpublish</button>}
+      </div>
+     </>:<div className="orbitEmptyCompact">Select an Update release to review.</div>}
     </div>
-   </section>
-
-   <section className="orbitfsCard">
-    <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">Manifest targeting</div><h2>Component update</h2></div></div>
-    <div className="orbitfsDataGrid">
-     <div className="orbitfsData"><span>Components</span><b>{components.length?components.join(", "):"—"}</b></div>
-     <div className="orbitfsData"><span>Minimum Base version</span><b>{manifest.minimumBaseVersion||manifest.minimum_version||"—"}</b></div>
-     <div className="orbitfsData"><span>Required</span><b>{manifest.required===true?"Yes":"No"}</b></div>
-     <div className="orbitfsData"><span>Rollback version</span><b>{manifest.rollback_version||"—"}</b></div>
-    </div>
-   </section>
-  </div>
-
-  <section className="orbitfsCard" style={{marginTop:12}}>
-   <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">Version control</div><h2>Release history</h2></div></div>
-   {releases.length?<div className="orbitfsReleaseList">{releases.map((r:any)=><button key={r.id} type="button" className={`orbitfsRelease ${selected===r.id?"selected":""}`} onClick={()=>setSelected(r.id)}><div><strong>{r.version||r.id}</strong><small>{r.status||"draft"} · {r.review_status||r.reviewStatus||"pending review"}</small><p>{r.changelog||r.notes||"No changelog recorded."}</p><small>{r.sourceRepo||r.source_repo||"Source repository not recorded"} · {r.sourceRef||r.source_ref||"ref not recorded"}</small></div><span className="orbitfsBadge">{selected===r.id?"Selected":"Update"}</span></button>)}</div>:<div className="orbitfsEmpty">No update releases are currently recorded in License Master.</div>}
-  </section>
-
-  <section className="orbitfsCard" style={{marginTop:12}}>
-   <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">Authority boundaries</div><h2>Release control responsibilities</h2></div></div>
-   <div className="orbitfsAuthority">
-    <div className="orbitfsAuthorityRow"><b>Technical approval</b><span>License Master validates and approves the update before Billing Store performs final customer-facing publication.</span></div>
-    <div className="orbitfsAuthorityRow"><b>Manifest targeting</b><span>The release manifest identifies the components and update targets. It is the source of truth for the customer update deployer.</span></div>
-    <div className="orbitfsAuthorityRow"><b>Rollback</b><span>Rollback metadata is recorded with the release. Actual customer rollback is executed by the customer deployment system.</span></div>
-    <div className="orbitfsAuthorityRow"><b>Provider execution</b><span>This admin release screen never accepts customer provider credentials and never deploys customer infrastructure.</span></div>
-    <div className="orbitfsAuthorityRow"><b>Supported components</b><span>{UPDATE_PRODUCTS.join(", ")}.</span></div>
    </div>
   </section>
+
+  <section className="orbitCompactPanel">
+   <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE HISTORY</p><h2>Update history</h2></div><span className="orbitCount">{releases.length}</span></div>
+   <div className="orbitHistoryTable">
+    {releases.map(r=><div className="orbitHistoryRow" key={r.id}>
+     <div><b>v{r.version}</b><span>{r.title||"OrbitFS update"}</span></div>
+     <span>{r.channel||"stable"}</span>
+     <span>{r.status||"draft"}</span>
+     <div className="orbitRowActions"><button className="secondary" onClick={()=>beginEdit(r)}>Edit</button><button className="secondary" onClick={()=>setSelectedId(r.id)}>View</button>{r.status==="published"&&<button className="secondary" onClick={()=>void unpublish(r)}>Unpublish</button>}</div>
+    </div>)}
+    {!releases.length&&<div className="orbitEmptyCompact">No Update release history is available.</div>}
+   </div>
+  </section>
+
+  {editing&&selected&&<div className="orbitModalBackdrop" onMouseDown={()=>setEditing(false)}>
+   <div className="orbitModal" onMouseDown={e=>e.stopPropagation()}>
+    <div className="orbitPanelHead"><div><p className="eyebrow">UPDATE PRESENTATION</p><h2>Edit v{selected.version}</h2></div><button className="secondary" onClick={()=>setEditing(false)}>Close</button></div>
+    <div className="orbitFormGrid">
+     <label>Title<input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/></label>
+     <label>Severity<select value={draft.severity} onChange={e=>setDraft({...draft,severity:e.target.value})}><option value="normal">Normal</option><option value="important">Important</option><option value="critical">Critical</option></select></label>
+     <label className="wide">Description<textarea rows={3} value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})}/></label>
+     <label className="wide">Changelog<textarea rows={6} value={draft.changelog} onChange={e=>setDraft({...draft,changelog:e.target.value})}/></label>
+     <label className="wide">Customer notes<textarea rows={4} value={draft.customer_notes} onChange={e=>setDraft({...draft,customer_notes:e.target.value})}/></label>
+     <label>Minimum Base<input value={draft.minimum_version} onChange={e=>setDraft({...draft,minimum_version:e.target.value})}/></label>
+     <label>Rollback version<input value={draft.rollback_version} onChange={e=>setDraft({...draft,rollback_version:e.target.value})}/></label>
+     <label className="orbitCheckLabel"><input type="checkbox" checked={draft.required} onChange={e=>setDraft({...draft,required:e.target.checked})}/> Required update</label>
+    </div>
+    <div className="orbitAdminActions"><button onClick={()=>void savePresentation()} disabled={busy==="edit"}>{busy==="edit"?"Saving…":"Save changes"}</button><button className="secondary" onClick={()=>setEditing(false)}>Cancel</button></div>
+   </div>
+  </div>}
  </main>
 }
