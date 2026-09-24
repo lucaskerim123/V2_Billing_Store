@@ -43,3 +43,19 @@ export async function getLicenseMasterAvailability(){
     return {reachable:false,restricted:true,reason:"unreachable",authority:null,pulseRevision:0,configuredMode,effectiveMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,notice,error:String(error?.message||"License Master unavailable")};
   }
 }
+
+
+export async function requireLicenseMasterForMutation(){
+  const state=await getLicenseMasterAvailability();
+  if(!state.reachable||state.restricted){
+    const reason=state.reason==="maintenance"
+      ?"License Manager is in maintenance mode."
+      :state.reason==="api_disabled"
+        ?"License Manager API authority is disabled."
+        :state.reason==="licensing_disabled"
+          ?"License Manager licensing authority is disabled."
+          :"License Manager is unavailable.";
+    throw Object.assign(new Error(reason),{status:503,code:"LICENSE_AUTHORITY_UNAVAILABLE",authority:state.authority||null});
+  }
+  return state;
+}
