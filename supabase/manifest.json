@@ -1,8 +1,8 @@
 {
   "type": "actual-export-generator",
-  "source_project": "OrbitFS Store",
-  "project_ref": "xwbjfhpgsvsjaykelufa",
-  "purpose": "Standalone billing + license-system database export",
+  "source_project": "OrbitFS V2 Billing Store",
+  "project_ref": "runtime-configured",
+  "purpose": "Standalone Billing Store commerce/customer database export; License Manager is separate technical authority",
   "schema": "live public schema dump at execution time",
   "data_policy": "configuration/default data only; runtime/customer data excluded",
   "tables_with_data": [
