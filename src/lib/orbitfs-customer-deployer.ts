@@ -189,6 +189,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       const completedAt=new Date().toISOString();
       const {data,error}=await licenseDb().from("orbitfs_installations").update({previous_release_version:rolledBackVersion,release_version:previous.release_version,release_id:previousReleaseId,vercel_deployment_id:previousDeploymentId,last_deployment_at:completedAt,last_error:null,state:"ready"}).eq("id",install.id).select().single();
       if(error)throw error;
+      await masterExecuteDeployment({action:"rollback",phase:"completed",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version,previousVersion:rolledBackVersion,deploymentId:previousDeploymentId,projectId:install.vercel_project_id,projectName:install.vercel_project_name});
       await Promise.allSettled([
         reportDevPanelReleaseEvent({
           eventId:`base-rollback:${install.installation_id}:${rolledBackReleaseId}:${previousReleaseId}:${completedAt}`,
