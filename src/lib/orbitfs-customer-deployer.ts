@@ -2,7 +2,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
-import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
@@ -213,12 +213,12 @@ async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBun
   const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url;
   return {deploymentId,deploymentUrl,fileCount:files.length};
 }
-async function engineUpdateRequest(baseUrl:string,install:any,release:any,channel:string,mode:"apply"|"refresh"){
-  const [secret,vercel]=await Promise.all([customerInstallationDbSecret(String(install.id)),customerVercelCredentials(String(install.auth_user_id))]);
+async function engineUpdateRequest(baseUrl:string,install:any,release:any,channel:string,mode:"plan"|"apply"|"refresh"){
+  const secret=await customerInstallationDbSecret(String(install.id));
   const response=await fetch(`${baseUrl.replace(/\/$/,"")}/api/store/update-engine`,{
     method:"POST",
     headers:{"content-type":"application/json","x-orbitfs-db-secret":secret,"x-orbitfs-installation-id":String(install.installation_id||"")},
-    body:JSON.stringify({mode,releaseId:String(release.id),releaseChannel:channel,vercelToken:vercel.token,teamId:vercel.teamId||""}),
+    body:JSON.stringify({mode,releaseId:String(release.id),releaseChannel:channel}),
     cache:"no-store",
     signal:AbortSignal.timeout(30000)
   });
@@ -352,7 +352,15 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(!wantsEngine&&engine)fail("Update Bundle contains an Engine payload without Engine targets",422);
     if(engine)validateFiles(engine.files,"Engine update payload");
     const databaseMigrations=validateDatabaseContract(bundle);
-    await event(install,"update.started","info",`Applying OrbitFS Update ${release.version}`,{releaseId:release.id,components,checksum:parsed.artifactSha256,databaseMigrationCount:databaseMigrations.length});
+    const currentBaseUrl=String(install.production_url||install.deployment_url||"").trim();
+    let enginePreflight:any=null;
+    if(wantsEngine){
+      if(!currentBaseUrl)fail("Installed OrbitFS Base URL is unavailable for Engine update preflight",409);
+      const planned=await engineUpdateRequest(currentBaseUrl,install,release,requestedChannel,"plan");
+      enginePreflight=planned.body?.plan||null;
+      if(planned.body?.release?.checkpointRequired!==true)fail("Installed Base rejected the Engine update checkpoint contract",409);
+    }
+    await event(install,"update.started","info",`Applying OrbitFS Update ${release.version}`,{releaseId:release.id,components,checksum:parsed.artifactSha256,databaseMigrationCount:databaseMigrations.length,enginePreflight});
     const databaseResult=await applyCustomerDatabaseMigrations(install,release,bundle);
     const panelResult=panel?await deployPanelUpdatePayload(install,release,bundle,panel,parsed.artifactSha256,requestedChannel):null;
     const engineBaseUrl=String(panelResult?.deploymentUrl||install.production_url||install.deployment_url||"").trim();
