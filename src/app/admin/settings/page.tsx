@@ -16,8 +16,7 @@ const sections:Section[]=[
   {title:"Billing & Wallet",description:"Currency, Wallet behaviour, recharge limits, tax and payment rules.",href:"/admin/settings/billing",badge:"Billing",tags:["Currency","Wallet","Tax"]},
   {title:"Invoices",description:"Numbering, due dates, reminders, overdue actions, branding and invoice content.",href:"/admin/settings/invoices",badge:"Invoices",tags:["Lifecycle","Numbering","Reminders"]},
   {title:"Payment gateways",description:"Stripe, PayPal and other providers, webhooks, supported currencies and availability.",href:"/admin/payments/setup",badge:"Gateways",tags:["Stripe","PayPal","Webhooks"]},
-  {title:"Products & catalogue",description:"Fulfilment, addons, upgrades, coupons, quantities, stock and checkout defaults.",href:"/admin/settings/products",badge:"Catalogue",tags:["Fulfilment","Add-ons","Stock"]},
-  {title:"Support settings",description:"Ticket defaults, customer actions, guest support and support lifecycle behaviour.",href:"/admin/settings/support",badge:"Support",tags:["Tickets","Guest access","Lifecycle"]}
+  {title:"Products & catalogue",description:"Fulfilment, addons, upgrades, coupons, quantities, stock and checkout defaults.",href:"/admin/settings/products",badge:"Catalogue",tags:["Fulfilment","Add-ons","Stock"]}
  ]},
  {title:"Licensing, operations & access",description:"License Master connectivity, staff access, messaging, alerts and account enforcement.",cards:[
   {title:"License Master connection",description:"Authority URL, connection status, runtime policy and health for the technical licensing authority.",href:"/admin/settings/license-master",badge:"Licensing",tags:["Authority","Health","API"]},
@@ -25,6 +24,7 @@ const sections:Section[]=[
   {title:"Staff System",description:"Staff identities, groups, primary roles and exact inherited permission maps.",href:"/admin/settings/staff",badge:"Access",tags:["Staff","Groups","Permissions"]},
   {title:"Permission map",description:"Inspect and maintain administrative permission definitions used by staff groups.",href:"/admin/settings/permissions",badge:"Permissions",tags:["RBAC","Capabilities","Audit"]},
   {title:"Themes",description:"Installed themes and active Store/Admin presentation packages.",href:"/admin/settings/themes",badge:"Themes",tags:["Store","Admin","Appearance"]},
+  {title:"Support settings",description:"Ticket defaults, customer actions, guest support and support lifecycle behaviour.",href:"/admin/settings/support",badge:"Support",tags:["Tickets","Guest access","Lifecycle"]},
   {title:"Support workflow",description:"Departments, routing, staffing, escalations and automatic ticket messages.",href:"/admin/support/settings",badge:"Support ops",tags:["Departments","Routing","Escalation"]},
   {title:"OrbitFS Alert System",description:"Configure alert delivery, composer defaults, safety limits and available alert types.",href:"/admin/settings/alerts",badge:"Alerts",tags:["Types","Delivery","Targeting"]},
   {title:"Outbound Mail",description:"System email behaviour, sender identities, automation and reusable templates.",href:"/admin/settings/outbound-mail",badge:"Messaging",tags:["Senders","Automation","Templates"]},
