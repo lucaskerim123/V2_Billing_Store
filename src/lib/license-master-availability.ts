@@ -6,14 +6,20 @@ type FulfillmentMode="automatic"|"manual"|"paused";
 function scalar(v:any){return v&&typeof v==="object"&&"value" in v?v.value:v}
 
 export async function getLicenseMasterAvailability(){
-  const db=licenseDb();
-  const {data:rows}=await db.from("app_settings").select("key,value").in("key",[
-    "products.fulfillment_mode",
-    "products.pause_fulfillment_when_master_restricted",
-    "products.pause_fulfillment_when_master_unreachable",
-    "general.master_restricted_notice"
-  ]);
-  const settings=Object.fromEntries((rows||[]).map((r:any)=>[r.key,scalar(r.value)]));
+  let settings:any={};
+  try{
+    const db=licenseDb();
+    const {data:rows,error}=await db.from("app_settings").select("key,value").in("key",[
+      "products.fulfillment_mode",
+      "products.pause_fulfillment_when_master_restricted",
+      "products.pause_fulfillment_when_master_unreachable",
+      "general.master_restricted_notice"
+    ]);
+    if(error)throw error;
+    settings=Object.fromEntries((rows||[]).map((r:any)=>[r.key,scalar(r.value)]));
+  }catch(error:any){
+    return {reachable:false,restricted:true,reason:"billing_database_unavailable",authority:null,pulseRevision:0,configuredMode:"manual" as FulfillmentMode,effectiveMode:"manual" as FulfillmentMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,notice:"OrbitFS order fulfilment is temporarily paused while the Billing Store database is unavailable.",error:String(error?.message||"Billing Store database unavailable")};
+  }
   const configuredMode=String(settings["products.fulfillment_mode"]||"automatic") as FulfillmentMode;
   const pauseRestricted=settings["products.pause_fulfillment_when_master_restricted"]!==false;
   const pauseUnreachable=settings["products.pause_fulfillment_when_master_unreachable"]!==false;
