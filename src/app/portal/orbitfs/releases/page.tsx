@@ -13,7 +13,7 @@ export default function OrbitFSReleaseDeployer(){
  const [loading,setLoading]=useState(true);
  const [selectedChannel,setSelectedChannel]=useState("");
 
- async function sessionHeaders(){const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:"Bearer "+session.access_token}:{};}
+ async function sessionHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:"Bearer "+session.access_token}:{};}
 
  async function load(){
   setLoading(true);setMessage("");
