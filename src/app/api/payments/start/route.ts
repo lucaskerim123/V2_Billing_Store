@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from 'next/server';
 import {paymentRuntime,runtimeJson} from '@/lib/paymentRuntime';
 import {orbitfsStoreOrigin} from '@/lib/site-origin';
 
-const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||'https://xwbjfhpgsvsjaykelufa.supabase.co';
+const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||'';
 
 async function rpc(auth:string,name:string,body:any){
