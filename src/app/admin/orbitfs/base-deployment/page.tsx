@@ -14,8 +14,6 @@ export default function BaseDeploymentAdmin(){
   const [releases,setReleases]=useState<Release[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
-  const [systemSettings,setSystemSettings]=useState<any>(null);
-  const [savingSetting,setSavingSetting]=useState("");
 
   async function headers():Promise<Record<string,string>>{
     const {data:{session}}=await createClient().auth.getSession();
@@ -26,16 +24,10 @@ export default function BaseDeploymentAdmin(){
     setLoading(true);setError("");
     try{
       const h=await headers();
-      const [response,settingsResponse]=await Promise.all([
-        fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:h,cache:"no-store"}),
-        fetch("/api/admin/orbitfs/deployment-settings",{headers:h,cache:"no-store"})
-      ]);
+      const response=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:h,cache:"no-store"});
       const body=await response.json().catch(()=>({}));
-      const settingsBody=await settingsResponse.json().catch(()=>({}));
       if(!response.ok)throw new Error(body.error||"Could not load Base releases from License Manager");
-      if(!settingsResponse.ok)throw new Error(settingsBody.error||"Could not load customer deployment controls");
       setReleases(Array.isArray(body.releases)?body.releases:[]);
-      setSystemSettings(settingsBody.settings||{});
     }catch(e:any){setError(e?.message||"Could not load Base release state")}
     finally{setLoading(false)}
   }
@@ -47,45 +39,6 @@ export default function BaseDeploymentAdmin(){
   const validation=(r:Release)=>String(r.validation?.status||"not run");
   const passing=(r:Release)=>(r.validation?.checks||[]).filter(x=>x.ok).length;
   const total=(r:Release)=>(r.validation?.checks||[]).length;
-
-  async function setDeploymentSetting(key:string,value:boolean){
-    setSavingSetting(key);setError("");
-    try{
-      const h=await headers();
-      const response=await fetch("/api/admin/orbitfs/deployment-settings",{
-        method:"PATCH",
-        headers:{...h,"content-type":"application/json"},
-        body:JSON.stringify({[key]:value})
-      });
-      const body=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(body.error||"Could not update customer deployment controls");
-      setSystemSettings(body.settings||{});
-    }catch(e:any){setError(e?.message||"Could not update customer deployment controls")}
-    finally{setSavingSetting("")}
-  }
-
-  async function editMaintenanceMessage(){
-    const current=String(systemSettings?.maintenance_message||"OrbitFS deployment services are temporarily unavailable while maintenance is in progress.");
-    const value=prompt("Customer maintenance notice",current)?.trim();
-    if(!value)return;
-    setSavingSetting("maintenance_message");setError("");
-    try{
-      const h=await headers();
-      const response=await fetch("/api/admin/orbitfs/deployment-settings",{method:"PATCH",headers:{...h,"content-type":"application/json"},body:JSON.stringify({maintenance_message:value})});
-      const body=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(body.error||"Could not update maintenance notice");
-      setSystemSettings(body.settings||{});
-    }catch(e:any){setError(e?.message||"Could not update maintenance notice")}
-    finally{setSavingSetting("")}
-  }
-
-  const controls=[
-    ["enabled","Customer deployment system","Master Billing-side gate for customer deployment execution."],
-    ["maintenance_mode","Maintenance mode","Temporarily blocks customer setup, Base deployment, Updates and rollbacks while keeping admin controls available."],
-    ["customer_deploy_enabled","Base deployment","Allows customers to install or redeploy a published Base release."],
-    ["customer_updates_enabled","Update deployment","Allows manifest-driven published Update releases to be applied."],
-    ["customer_rollbacks_enabled","Rollback","Allows customer rollback to a previous successful Base deployment."]
-  ] as const;
 
   return <main className="adminShell">
     <header className="adminTop">
@@ -104,11 +57,7 @@ export default function BaseDeploymentAdmin(){
     {error&&<p className="inlineStatus" style={{borderColor:"crimson"}}>{error}</p>}
 
     <section className="panel">
-      <div className="sectionHead"><div><p className="eyebrow">CUSTOMER DEPLOYMENT GATES</p><h2>Execution controls</h2><p className="muted">These Billing Store gates control whether the customer deployer may execute Base installs, Updates and rollbacks. They do not change License Manager release authority.</p></div></div>
-      <div className="lmRuntimeList">
-        {controls.map(([key,label,description])=>{const enabled=Boolean(systemSettings?.[key]);const maintenance=key==="maintenance_mode";return <div key={key}><div><b>{label}</b><span>{description}</span>{maintenance&&systemSettings?.maintenance_message&&<span><b>Customer notice:</b> {systemSettings.maintenance_message}</span>}</div><div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><strong>{maintenance?(enabled?"ACTIVE":"NORMAL"):(enabled?"Enabled":"Disabled")}</strong>{maintenance&&<button type="button" disabled={loading||!!savingSetting||!systemSettings} onClick={()=>void editMaintenanceMessage()}>{savingSetting==="maintenance_message"?"Saving…":"Edit notice"}</button>}<button type="button" disabled={loading||!!savingSetting||!systemSettings} onClick={()=>void setDeploymentSetting(key,!enabled)}>{savingSetting===key?"Saving…":enabled?"Disable":"Enable"}</button></div></div>})}
-      </div>
-      {!systemSettings&&<p className="muted">Deployment controls are unavailable until the Billing Store release-system settings can be read.</p>}
+      <div className="sectionHead"><div><p className="eyebrow">DEPLOYMENT AUTHORITY</p><h2>License Manager controlled</h2><p className="muted">Base, Update and rollback authorization are controlled in License Manager. Billing Store only mirrors published releases and customer-facing publication state.</p></div><a className="buttonlink secondary" href="https://panel.incendiarynetworks.cc/settings" target="_blank" rel="noreferrer">Open API Control</a></div>
     </section>
 
     <section className="panel">
