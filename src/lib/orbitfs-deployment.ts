@@ -35,10 +35,11 @@ export async function releaseSettings(){
   const {data,error}=await licenseDb().from("orbitfs_release_system_settings").select("*").eq("id","primary").single();
   if(error)throw error;return data;
 }
-export async function publicReleaseSettings(){const s=await releaseSettings();return {enabled:s.enabled,customer_deploy_enabled:s.customer_deploy_enabled,customer_updates_enabled:s.customer_updates_enabled,customer_rollbacks_enabled:s.customer_rollbacks_enabled,allow_existing_supabase_project:s.allow_existing_supabase_project,allow_create_supabase_project:s.allow_create_supabase_project,supabase_oauth_enabled:s.supabase_oauth_enabled,vercel_oauth_enabled:s.vercel_oauth_enabled,schema_version:s.schema_version,release_channel:s.release_channel}}
+export async function publicReleaseSettings(){const s=await releaseSettings();return {enabled:s.enabled,maintenance_mode:s.maintenance_mode===true,maintenance_message:String(s.maintenance_message||""),customer_deploy_enabled:s.customer_deploy_enabled,customer_updates_enabled:s.customer_updates_enabled,customer_rollbacks_enabled:s.customer_rollbacks_enabled,allow_existing_supabase_project:s.allow_existing_supabase_project,allow_create_supabase_project:s.allow_create_supabase_project,supabase_oauth_enabled:s.supabase_oauth_enabled,vercel_oauth_enabled:s.vercel_oauth_enabled,schema_version:s.schema_version,release_channel:s.release_channel}}
 export async function requireSystem(capability:"deploy"|"update"|"rollback"="deploy"){
   const s=await releaseSettings();
   if(!s.enabled)throw Object.assign(new Error("OrbitFS Release Panel System is disabled"),{status:503});
+  if(s.maintenance_mode===true)throw Object.assign(new Error(String(s.maintenance_message||"OrbitFS deployment services are temporarily unavailable while maintenance is in progress.")),{status:503});
   if(capability==="deploy"&&!s.customer_deploy_enabled)throw Object.assign(new Error("Customer deployment is disabled"),{status:503});
   if(capability==="update"&&!s.customer_updates_enabled)throw Object.assign(new Error("Customer updates are disabled"),{status:503});
   if(capability==="rollback"&&!s.customer_rollbacks_enabled)throw Object.assign(new Error("Customer rollback is disabled"),{status:503});
