@@ -14,7 +14,7 @@ export async function customerReleaseChannels(userId:string){
   const channels=Array.isArray(channelResult?.channels)?channelResult.channels:[];
   const access=Array.isArray(accessResult?.access)?accessResult.access:[];
   const explicit=new Set(access.map((x:any)=>String(x.channel||"").trim().toLowerCase()).filter(Boolean));
-  const allowed=channels.filter((c:any)=>c.enabled!==false&&c.customer_visible!==false).filter((c:any)=>c.channel==="stable"||c.access_mode==="open"||c.self_join_enabled===true||explicit.has(String(c.channel).toLowerCase())).map((c:any)=>String(c.channel).toLowerCase());
+  const allowed=channels.filter((c:any)=>c.enabled!==false&&c.customer_visible!==false).filter((c:any)=>c.channel==="stable"||c.access_mode==="open"||explicit.has(String(c.channel).toLowerCase())).map((c:any)=>String(c.channel).toLowerCase());
   if(!allowed.includes("stable")&&channels.some((c:any)=>c.channel==="stable"&&c.enabled!==false&&c.customer_visible!==false))allowed.unshift("stable");
   return [...new Set(allowed)];
 }
