@@ -39,15 +39,7 @@ export async function POST(req:Request){
       method:"POST",
       body:JSON.stringify({action:action==="leave"?"revoke":action,license_id:licenseId,channel,external_reference:user.id})
     },"billing");
-    if(action==="join"||action==="request"||action==="leave"){
-      const ch=await db.from("orbitfs_release_channels").select("id").eq("channel",channel).maybeSingle();
-      if(ch.data?.id&&action==="join"){
-        await db.from("orbitfs_release_channel_access").upsert({channel_id:ch.data.id,user_id:user.id},{onConflict:"channel_id,user_id"});
-      }
-      if(ch.data?.id&&action==="leave"){
-        await db.from("orbitfs_release_channel_access").delete().eq("channel_id",ch.data.id).eq("user_id",user.id);
-      }
-    }
+    // License Manager is authoritative for channel access. Billing Store does not persist a competing access record.
     return Response.json(result,{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
