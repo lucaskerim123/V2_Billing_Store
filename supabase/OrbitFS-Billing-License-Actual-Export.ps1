@@ -1,5 +1,5 @@
 param(
-  [string]$ProjectRef = "xwbjfhpgsvsjaykelufa",
+  [string]$ProjectRef = "",
   [string]$DbUrl = ""
 )
 
@@ -11,7 +11,7 @@ if (-not $DbUrl) {
   $DbUrl = Read-Host "DB URL"
 }
 
-$Out = Join-Path (Get-Location) ("OrbitFS-Billing-License-Export-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+$Out = Join-Path (Get-Location) ("OrbitFS-Billing-Store-Export-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 
 $Schema = Join-Path $Out "01_schema.sql"
@@ -21,7 +21,7 @@ $Roles = Join-Path $Out "03_roles.sql"
 Write-Host "Exporting the actual public schema, functions, triggers, RLS policies, indexes, sequences and related database objects..."
 supabase db dump --db-url $DbUrl --schema public --file $Schema
 
-Write-Host "Exporting only the reusable billing/license configuration data..."
+Write-Host "Exporting only the reusable Billing Store configuration data..."
 $keep = @(
   "app_settings",
   "system_settings",
@@ -62,7 +62,7 @@ supabase @args
 
 Write-Host "Writing a restore/readme file..."
 @"
-OrbitFS Billing + License Database Export
+OrbitFS V2 Billing Store Database Export
 =========================================
 
 Source project: $ProjectRef
@@ -95,7 +95,7 @@ Restore order:
   3. Configure new Supabase/Auth secrets and external provider secrets.
   4. Do NOT copy production auth users or runtime/customer data.
 
-The schema contains the full billing + license-system database structure even
+The schema contains the full Billing Store commerce/customer database structure; License Manager remains a separate technical authority even
 though the data export is intentionally restricted to reusable configuration.
 "@ | Set-Content -Encoding UTF8 (Join-Path $Out "README.txt")
 
