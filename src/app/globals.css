@@ -279,3 +279,29 @@ button,.buttonlink{transition:transform .14s,filter .14s,background .14s,border-
  .orbitReleaseRow{align-items:flex-start;flex-direction:column}
  .orbitRowMeta{width:100%;justify-content:flex-start}
 }
+
+
+/* OrbitFS delivery gate toolbar */
+.orbitDeliveryBar{margin:10px 0;padding:10px 11px;border:1px solid #274158;border-radius:9px;background:#0a1622;display:grid;gap:8px}
+.orbitDeliveryBar.compact{padding:8px 10px}
+.orbitDeliveryBarHead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.orbitDeliveryBarHead>div{display:flex;align-items:baseline;gap:9px;min-width:0}
+.orbitDeliveryBarHead .eyebrow{margin:0;font-size:8px}
+.orbitDeliveryBarHead b{font-size:11px;font-weight:700}
+.orbitMiniButton{min-height:27px!important;padding:5px 8px!important;font-size:9px!important}
+.orbitDeliveryControls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.orbitGateButton{display:inline-flex;align-items:center;gap:7px;min-height:31px;padding:6px 9px;border:1px solid #34495e;border-radius:7px;background:#0d1b2a;color:var(--text);font-size:9px;font-weight:650;white-space:nowrap}
+.orbitGateButton:hover{background:#11243a}
+.orbitGateButton strong{font-size:8px;letter-spacing:.06em;color:#9fb0c2}
+.orbitGateButton.on{border-color:#315f49;background:#0d2118}
+.orbitGateButton.on strong{color:#a9d7b7}
+.orbitGateButton.off{border-color:#65464b;background:#211519}
+.orbitGateButton.off strong{color:#e0aab2}
+.orbitGateButton.warn{border-color:#69583a;background:#211c11}
+.orbitGateButton.warn strong{color:#dec58e}
+.orbitGateDot{width:7px;height:7px;border-radius:50%;background:#738294;box-shadow:0 0 0 2px #7382941f}
+.orbitGateButton.on .orbitGateDot{background:#71b487}.orbitGateButton.off .orbitGateDot{background:#c27680}.orbitGateButton.warn .orbitGateDot{background:#c7a75f}
+.orbitDeliveryHint{display:flex;gap:12px;flex-wrap:wrap;font-size:9px;color:var(--muted)}
+.orbitDeliveryMessage{margin:0!important;padding:7px 9px!important;font-size:10px!important}
+@media(max-width:760px){.orbitDeliveryControls{display:grid;grid-template-columns:1fr 1fr}.orbitGateButton{width:100%;justify-content:flex-start}.orbitDeliveryBarHead>div{display:grid;gap:1px}}
+@media(max-width:420px){.orbitDeliveryControls{grid-template-columns:1fr}}
