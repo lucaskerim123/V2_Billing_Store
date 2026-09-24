@@ -13,6 +13,7 @@ begin
    line:=coalesce(r.price_cents,0)*r.quantity; subtotal:=subtotal+line;
    items:=items||jsonb_build_array(jsonb_build_object('id',r.id,'product_id',r.product_id,'name',r.name,'slug',r.slug,'quantity',r.quantity,'configuration',r.configuration,'line_total_cents',line,'currency',r.currency,'license_product_key',public.canonical_license_component_key(r.license_product_key)));
  end loop;
+ if coalesce((select (value#>>'{}')::boolean from public.app_settings where key='products.allow_coupons'),true)=false then coupon:=null; end if;
  if coupon is not null and subtotal>0 then
    select * into c from public.coupons where lower(code)=lower(coupon) and active=true and (starts_at is null or starts_at<=now()) and (ends_at is null or ends_at>=now()) and subtotal>=min_order_cents;
    if found then
@@ -65,7 +66,7 @@ begin
  end loop;
  if coupon is not null then select * into c from public.coupons where lower(code)=lower(coupon) limit 1; if c.id is not null then insert into public.coupon_redemptions(coupon_id,invoice_id,auth_user_id,discount_cents) values(c.id,inv,uid,discount); end if; end if;
  delete from public.shopping_cart_items where cart_id=cid; update public.shopping_carts set coupon_code=null,updated_at=now() where id=cid;
- if total=0 then perform public.grant_paid_order_entitlements(ord,uid); elsif p_pay_with_credit then payres:=public.pay_invoice_with_credit(inv); end if;
+ if total=0 then perform public.grant_paid_order_entitlements(ord,uid); elsif p_pay_with_credit or coalesce((select (value#>>'{}')::boolean from public.app_settings where key='billing.auto_apply_credit'),false) then payres:=public.pay_invoice_with_credit(inv); end if;
  return jsonb_build_object('order_id',ord,'order_number',ordno,'invoice_id',inv,'invoice_number',invno,'subtotal_cents',subtotal,'discount_cents',discount,'tax_cents',tax,'total_cents',total,'currency',currency_code,'paid',total=0 or coalesce(payres->>'status','')='paid','contains_gifts',exists(select 1 from public.gift_deliveries where source_order_id=ord));
 end $_$;
 
