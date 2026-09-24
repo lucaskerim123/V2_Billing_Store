@@ -1,0 +1,300 @@
+{
+  "format": "orbitfs-supabase-baseline-v1",
+  "project_ref": "bealqgenrcytjzjoikmk",
+  "authority": "V2 Billing Store",
+  "legacy_source": "database/migrations",
+  "created_at": "2026-09-25",
+  "files": {
+    "database/migrations/20260903_invoice_refund_status_and_mail_cleanup.sql": "0663beea55df37018b5c49dd3a02d035e4e86494",
+    "database/migrations/20260903_notification_center_v1.sql": "92515a03410b6d00c8a30e2572c3d77043af6408",
+    "database/migrations/20260903_notification_center_v2_admin_send.sql": "4f04aed40a3d0b231313d63781ef049f3e9bd71c",
+    "database/migrations/20260903_orbitfs_alert_system_v3.sql": "b143fb73d3c80903404193409dfb0567177287ef",
+    "database/migrations/20260903_password_reset_public_support_v1.sql": "0116975ff2376cad89a777da68a407d9c7104919",
+    "database/migrations/20260903_quick_send_all_templates.sql": "80bc8efc02bd66d9c9ae8a7b5e59d53cf2d729d3",
+    "database/migrations/20260903_support_department_routing_guards.sql": "e75cbb0b2c2422d09d01a98150262990d71accf8",
+    "database/migrations/20260903_support_department_structure.sql": "f8410cd75ce62335ab6d0ab547a1d5c74cbc0247",
+    "database/migrations/20260903_support_department_transfer_claim.sql": "749911ef36e1d02abed8ddde39babf63781789fc",
+    "database/migrations/20260903_support_escalation_claim_required.sql": "eda6b3c207bf52182d8a9cb2205a01eb1c79d634",
+    "database/migrations/20260903_support_system_v2_admin_label.sql": "fd02b0bfcf10a3f0da11c37ecd7405f34d925583",
+    "database/migrations/20260903_support_system_v2_auto_close_worker.sql": "91b426ad9f5989a656991a979fcb5700aa34303a",
+    "database/migrations/20260903_support_system_v2_customer_close_policy.sql": "53cdf24a137856059c53e022e5ee75af575ef338",
+    "database/migrations/20260903_support_system_v2_default_kb_categories.sql": "ce92e8f246fea9096128ed41b0bbe885b0349328",
+    "database/migrations/20260903_support_system_v2_department_access.sql": "659f5abcc548685ec9903b5b9654c2d3c2f8851a",
+    "database/migrations/20260903_support_system_v2_department_staff_guards.sql": "19263d857778454754bd628353e4b232dd5101d3",
+    "database/migrations/20260903_support_system_v2_escalation_guards.sql": "046ba6e768c8e8f58ffa76b1c04e7cd6b811999e",
+    "database/migrations/20260903_support_system_v2_escalation_message_order.sql": "c27f8b59f2d88f8372ad8820591e7371d2cfce16",
+    "database/migrations/20260903_support_system_v2_role_hierarchy_permissions.sql": "1f17ac3750b9fdb4a27e91b91aac26a89452711a",
+    "database/migrations/20260903_support_system_v2_routing_department_scope.sql": "385c94fbe92380deb1979d9263c49574cc980391",
+    "database/migrations/20260903_support_system_v2_routing.sql": "dad89badb8290c06beb3e8b5f4803f1a63d19053",
+    "database/migrations/20260903_support_system_v2.sql": "dcbfcdd0f16cd898afe6e230bfe07a016c455e57",
+    "database/migrations/20260904_fix_billing_license_enforcement_scan_v2.sql": "f8986fcafa30b8cf734455895ab32f0d4a41268a",
+    "database/migrations/20260905_account_enforcement_v2.sql": "b1a6bb2eadfcca1002a96cd3adc242e0769864dd",
+    "database/migrations/20260905_admin_license_runtime_snapshot.sql": "27f71f05833674d7cf5e6c343fd515fd1695d2dd",
+    "database/migrations/20260905_fix_staff_group_legacy_profile_role.sql": "85ef69b3c8c90600c5602e446fe06cac8ab2ca65",
+    "database/migrations/20260905_mail_queue_clear_all.sql": "cbdc33a53b110403392b242f00741c2a6b9eca3c",
+    "database/migrations/20260905_preserve_senior_support_role.sql": "6d26fcf5c28c296fb8642cadbcbe3cf1f234211b",
+    "database/migrations/20260905_restricted_account_payment_guard.sql": "fc11059504593b33df2292c2ba85b30b1337f480",
+    "database/migrations/20260905_staff_departments_support_claims.sql": "188b870f54570975bfad203567e04b35103f6001",
+    "database/migrations/20260905_staff_group_mail_permissions_v2.sql": "df695118146ea5e98c38a7c57a8c8456c268a80e",
+    "database/migrations/20260905_standardize_orbitfs_studio_component.sql": "70eccef5482826cb7f5ca58debc1bed9c8d33b01",
+    "database/migrations/20260905_superadmin_license_override.sql": "a4067c18c421fcf27a2f8b1e36d74739f4167573",
+    "database/migrations/20260906_canonical_mail_links.sql": "b2cf7ecf4836c9f6a802b57575dcbb0e1b93d2be",
+    "database/migrations/20260906_customers_authoritative_sync.sql": "fa4574d190df58fdcc41d5e4a7c637355c00f238",
+    "database/migrations/20260906_gateway_canonical_sync.sql": "bbc2c58d563dd1c2758fb54ee37949fab6867c20",
+    "database/migrations/20260906_guest_support_access_codes.sql": "72a088f753b5b858cac53e9f9765a20c64dee450",
+    "database/migrations/20260906_mailbox_crud.sql": "cc4f6b5bbd6e6fd7c863dd862d7a6b4bea17b1f2",
+    "database/migrations/20260906_mailbox_types_personal_assignment.sql": "f3d599148194adc774b07a21f7b4b83f48a92fbb",
+    "database/migrations/20260906_news_system_v2.sql": "b71ac4db6427114230e31f020b22303e8a1b6b34",
+    "database/migrations/20260906_orbitfs_customer_authority_email_verification.sql": "49fc6086d90cc3a371e11978dc87638cb2c28535",
+    "database/migrations/20260906_orbitfs_customer_verification_model.sql": "1f2026f36d58339d0a65362b346187f3e82a96f2",
+    "database/migrations/20260906_personal_mail_implied_permissions.sql": "c0a268606423413a04f3c07e5d0e3e37eabcc778",
+    "database/migrations/20260906_standalone_invoice_state_management.sql": "0a4fe6db5ab658377c3c55af71b0003834e6c8fd",
+    "database/migrations/20260906_store_canonical_links.sql": "16a6c79088425200b6f3e78358d246e2008190d1",
+    "database/migrations/20260908_fix_customer_auth_link_integrity.sql": "e01c042e63fde959c3d48227239a4629f3a9b8a4",
+    "database/migrations/20260908_mail_site_url_variable.sql": "39fbc52519735365b53fbd096955042e81b633b5",
+    "database/migrations/20260908_orbitfs_installation_lifecycle_continuity.sql": "a3bfac9c74d97f8a8a1a9213babfe44084050a36",
+    "database/migrations/20260908_orbitfs_installations_phase2.sql": "a2403a2281ccf4c5293d54939becf60973493288",
+    "database/migrations/20260908_orbitfs_panel_health_path.sql": "85cad2d8b7484f4f063cff0e76b9f3bed3b7b6de",
+    "database/migrations/20260908_orbitfs_panel_publisher_control.sql": "9c34c8e634cee583d30bcce36323bb34a877eba1",
+    "database/migrations/20260908_orbitfs_release_bundles.sql": "0da5a1c593bff8a1dbd4f396b5e4f4ff9da71217",
+    "database/migrations/20260908_orbitfs_release_coordinator_credentials.sql": "9ac57c26253802d1f457a8edf66127594bc54398",
+    "database/migrations/20260908_orbitfs_release_system_phase34.sql": "f613fd68d5c23f5ee445d991c899285b430ee39c",
+    "database/migrations/20260908_store_customer_credentials.sql": "b87f4ec2de54b04921abf52bcfa008a263d4250c",
+    "database/migrations/20260910_reinstall_admin_staff_snapshot_rpc.sql": "cb1f212fadd4fb3c1a289c66eaee9f19e2a78269",
+    "database/migrations/20260912_orbitfs_release_channel_and_admin_deployer.sql": "4dc5bdddbcb14f20d1d3707b9d20da1e8d6dc232",
+    "database/migrations/20260917_customer_numbers.sql": "9df7f135effdb56dadc22782f6e9fe2f3c469a12",
+    "database/migrations/20260917_first_admin_bootstrap.sql": "745ff3b3fae4cd69b805cb2a12a70d496d7854fd",
+    "database/migrations/20260917_license_master_authority_v1.sql": "c58c2da2cc0ce61c4c53c64851429166aade8edb",
+    "database/migrations/20260917_post_rebuild_configuration_repair.sql": "3a6711233af03f4809e2a0705a2a428b45d4db01",
+    "database/migrations/20260917_unified_auth_tokens.sql": "3ad7dde27ea3315473267693b504f30c5d364fde",
+    "database/migrations/20260917_unified_users_staff_customer_architecture.sql": "3b2231256f8ce5901f56fd321fd6caca51b50a20",
+    "database/migrations/20260918_orbitfs_release_channel_access.sql": "2ea33ef39ad4ffb976d349b99ea1c6ecf3e34c8d",
+    "database/migrations/20260920_orbitfs_release_archive_and_independent_versions.sql": "bb411e9ae9d6dd27a0b38a98f98deb9c418d84df",
+    "database/migrations/20260920_orbitfs_release_bundle_channel.sql": "939c016785e7125ce39ce6db2123d53c7d654eab",
+    "database/migrations/20260920_orbitfs_release_channels_and_promotion.sql": "95929f150a672e471ab6968143e4fb5652eebd55",
+    "database/migrations/20260922_fix_unified_auth_customer_credentials.sql": "87dabe5bba2cf5c86b86cadd0d9d3aa42558271b",
+    "database/migrations/20260922_orbitfs_installation_release_channel.sql": "41cdd442bb1b07e087f710db934e00ae7e11146d",
+    "database/migrations/20260923_orbitfs_channel_access_controls.sql": "ad786835b5d8a15d140e6bd88c21177205e6ecae",
+    "database/migrations/20260923100000_license_master_reconciliation_truth.sql": "14f3efb260c2c0920d437bdab0aa96c824486a55",
+    "database/migrations/20260923103000_remove_legacy_local_license_issuer.sql": "d9403d24fcd82a2695a41581f245351132dab82c",
+    "database/migrations/20260923110000_finalize_license_master_authority.sql": "393dba1f79adb3b736f3d904471954790549e808",
+    "database/migrations/20260923111500_remove_legacy_license_rpc_overloads.sql": "893dbaa3f3688e3f278615e655e52e93e78cccb8",
+    "database/migrations/20260924_commerce_settings_enforcement.sql": "c3ec6018c23ac7d3129c85ed59c0a65e3fb532f1",
+    "database/migrations/20260924_download_theme_system_repair.sql": "1af817e308121db3c0c58b6620d23df2d5494646",
+    "database/migrations/20260924_gateway_sync_runtime_endpoint.sql": "93f5ffba3f85e230acd847d02c45cee4eb8b599a",
+    "database/migrations/20260924_normalize_license_master_api_v1.sql": "372d4aaf79ead344d5f7bc0dbd76b27dcee2f86a",
+    "database/migrations/20260924_orbitfs_customer_deployment_maintenance.sql": "b347f0c036fba76b8ad2ac9e06cf83afe38101be",
+    "database/migrations/20260924_orbitfs_independent_update_tracking.sql": "7db96e38409dd783b52b8529621c62523f8cc842",
+    "database/migrations/20260924_restore_complete_settings.sql": "012a960c7ae9108fd785f68aab3af6adf7e0efda",
+    "database/migrations/20260924_support_auto_close_settings.sql": "1b5c37dea43fcc480c9454eeb49c06c2b202ea88",
+    "database/migrations/20260924_support_rpc_repair.sql": "dfca54e3deacb769e6ae8cada5f1750d0ee762dd",
+    "database/migrations/20260924_support_settings_enforcement.sql": "c48003500efeb26b110ac054273341e6bdc30b34",
+    "database/migrations/20260924_tax_settings_checkout.sql": "8ffb5410a50f9d5250039deaeb4d3adbcb2bfae3"
+  },
+  "remote_migrations": [
+    {
+      "version": "20260916170825",
+      "name": "enable_http_for_schema_bootstrap"
+    },
+    {
+      "version": "20260916172046",
+      "name": "orbitfs_release_bundles"
+    },
+    {
+      "version": "20260916172235",
+      "name": "rebuild_billing_store_schema_from_repository_dump_v3"
+    },
+    {
+      "version": "20260916172341",
+      "name": "rebuild_billing_store_schema_from_repository_dump_v5"
+    },
+    {
+      "version": "20260916172407",
+      "name": "create_license_master_connection"
+    },
+    {
+      "version": "20260916172425",
+      "name": "license_master_authority_fulfilment"
+    },
+    {
+      "version": "20260916172653",
+      "name": "restore_app_private_authorization_functions"
+    },
+    {
+      "version": "20260916172719",
+      "name": "remove_export_helper_table"
+    },
+    {
+      "version": "20260916190954",
+      "name": "first_admin_bootstrap"
+    },
+    {
+      "version": "20260916195518",
+      "name": "remove_duplicate_indexes_and_rebuild_guard"
+    },
+    {
+      "version": "20260916195841",
+      "name": "bound_runtime_statement_and_lock_timeouts"
+    },
+    {
+      "version": "20260916200119",
+      "name": "enforce_runtime_statement_and_connection_limits"
+    },
+    {
+      "version": "20260916203127",
+      "name": "restore_billing_store_baseline_configuration"
+    },
+    {
+      "version": "20260916210822",
+      "name": "optimize_billing_payment_paths"
+    },
+    {
+      "version": "20260916210845",
+      "name": "optimize_billing_rls_auth_initplans"
+    },
+    {
+      "version": "20260916210857",
+      "name": "index_billing_fk_paths"
+    },
+    {
+      "version": "20260916212310",
+      "name": "unified_users_staff_customer_architecture"
+    },
+    {
+      "version": "20260916212316",
+      "name": "unified_auth_tokens"
+    },
+    {
+      "version": "20260916212336",
+      "name": "attach_staff_accounts_as_customers"
+    },
+    {
+      "version": "20260916212417",
+      "name": "lock_down_canonical_identity_tables"
+    },
+    {
+      "version": "20260916212905",
+      "name": "restore_current_account_mail_templates"
+    },
+    {
+      "version": "20260916212913",
+      "name": "remove_legacy_auth_token_tables_and_duplicate_identity_columns"
+    },
+    {
+      "version": "20260916213728",
+      "name": "20260917_unified_users_staff_customer_architecture_final"
+    },
+    {
+      "version": "20260916213737",
+      "name": "20260917_unified_auth_tokens_and_mail_final"
+    },
+    {
+      "version": "20260918104559",
+      "name": "orbitfs_release_channel_access"
+    },
+    {
+      "version": "20260919175701",
+      "name": "20260920_orbitfs_release_channels_and_promotion"
+    },
+    {
+      "version": "20260919175755",
+      "name": "20260920_orbitfs_release_bundle_channel"
+    },
+    {
+      "version": "20260919192522",
+      "name": "orbitfs_release_archive_and_independent_versions"
+    },
+    {
+      "version": "20260921183751",
+      "name": "orbitfs_installation_release_channel"
+    },
+    {
+      "version": "20260921185837",
+      "name": "orbitfs_provider_connector_reset"
+    },
+    {
+      "version": "20260922111231",
+      "name": "20260922_fix_unified_auth_customer_credentials"
+    },
+    {
+      "version": "20260922114315",
+      "name": "20260917_post_rebuild_configuration_repair"
+    },
+    {
+      "version": "20260922114322",
+      "name": "20260922_orbitfs_installation_release_channel"
+    },
+    {
+      "version": "20260922114401",
+      "name": "20260922_post_rebuild_configuration_completion_v2"
+    },
+    {
+      "version": "20260922133924",
+      "name": "remove_duplicate_customer_credentials_index"
+    },
+    {
+      "version": "20260922135045",
+      "name": "harden_billing_metrics_view_and_component_function"
+    },
+    {
+      "version": "20260922135132",
+      "name": "harden_billing_public_rpc_surface"
+    },
+    {
+      "version": "20260922141332",
+      "name": "revoke_anon_sensitive_security_definer_functions"
+    },
+    {
+      "version": "20260922141359",
+      "name": "remove_public_execute_sensitive_security_definers"
+    },
+    {
+      "version": "20260922141443",
+      "name": "index_all_public_foreign_keys"
+    },
+    {
+      "version": "20260922141534",
+      "name": "remove_duplicate_fk_indexes"
+    },
+    {
+      "version": "20260922141759",
+      "name": "optimize_auth_rls_policy_evaluation"
+    },
+    {
+      "version": "20260922141834",
+      "name": "fix_auth_uid_rls_initplans"
+    },
+    {
+      "version": "20260922182328",
+      "name": "remove_legacy_local_license_issuer"
+    },
+    {
+      "version": "20260922182335",
+      "name": "finalize_license_master_authority"
+    },
+    {
+      "version": "20260922182340",
+      "name": "remove_legacy_license_rpc_overloads"
+    },
+    {
+      "version": "20260922182351",
+      "name": "license_master_reconciliation_truth"
+    },
+    {
+      "version": "20260924182437",
+      "name": "orbitfs_channel_access_controls_20260923"
+    },
+    {
+      "version": "20260924182444",
+      "name": "orbitfs_customer_deployment_maintenance_20260924"
+    },
+    {
+      "version": "20260924182450",
+      "name": "orbitfs_independent_update_tracking_20260924"
+    },
+    {
+      "version": "20260924182609",
+      "name": "restore_complete_settings_20260924"
+    }
+  ]
+}
