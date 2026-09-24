@@ -1,9 +1,11 @@
 import {licenseDb} from "@/lib/license-api";
 import {masterRequest} from "@/lib/master-api";
 
-export async function customerReleaseChannels(userId:string){
+export async function customerReleaseChannels(userId:string,bindingId?:string|null){
   const db=licenseDb();
-  const binding=await db.from("license_bindings").select("license_id").eq("auth_user_id",userId).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  let query=db.from("license_bindings").select("id,license_id").eq("auth_user_id",userId).eq("license_product_key","orbitfs_base").is("archived_at",null);
+  if(bindingId)query=query.eq("id",bindingId);
+  const binding=await query.order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(binding.error)throw binding.error;
   const licenseId=String(binding.data?.license_id||"");
   if(!licenseId)return ["stable"];
