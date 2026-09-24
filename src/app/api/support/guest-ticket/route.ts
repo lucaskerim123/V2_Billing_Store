@@ -1,7 +1,7 @@
 import {createClient} from "@supabase/supabase-js";
 import {createHash} from "crypto";
 
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const allowedGuestDepartments=new Set(["General Support","Sales Enquiries","Sales"]);
 
@@ -38,6 +38,7 @@ async function ticketPayload(service:any,resolved:any){
 function payloadResponse(payload:any){return payload?.error?Response.json({error:payload.error},{status:payload.status||500}):Response.json(payload)}
 
 export async function POST(req:Request){
+ if(!url||!serviceKey)return Response.json({error:"Billing Store database is not configured."},{status:503});
  const service=createClient(url,serviceKey,{auth:{persistSession:false}}),body=await req.json().catch(()=>({})),action=String(body.action||"open"),code=String(body.code||""),ip=requestIp(req);
  if(await tooManyFailures(service,ip))return Response.json({error:"Too many incorrect ticket code attempts. Please wait 15 minutes and try again."},{status:429});
  const resolved:any=await findTicket(service,code);
