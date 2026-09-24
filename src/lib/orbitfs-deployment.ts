@@ -648,7 +648,6 @@ export async function configureVercelUpdateIdentity(install:any,input:{version:s
   const channel=String(input.channel||install.release_channel||"stable").trim().toLowerCase();
   if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw new Error("Invalid OrbitFS release channel");
   const vars:Record<string,string>={
-    ORBITFS_APP_VERSION:String(input.version||"").trim(),
     ORBITFS_RELEASE_CHANNEL:channel,
     ORBITFS_UPDATE_RELEASE_VERSION:String(input.version||"").trim(),
     ORBITFS_UPDATE_RELEASE_ID:String(input.releaseId||"").trim(),
