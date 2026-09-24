@@ -1,7 +1,7 @@
 import {createClient} from "@supabase/supabase-js";
 import {issuePasswordReset,resolveResetUser} from "@/lib/password-reset-server";
 
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 
 export async function POST(req:Request){
