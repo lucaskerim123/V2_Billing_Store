@@ -254,7 +254,7 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
   const applied=install?.metadata?.appliedUpdate&&typeof install.metadata.appliedUpdate==="object"?install.metadata.appliedUpdate:null;
   const releaseId=String(applied?.releaseId||"").trim(),releaseVersion=String(applied?.version||"").trim();
   if(!releaseId||!releaseVersion)fail("No applied Update release is available to roll back",409);
-  const components=[...new Set((Array.isArray(applied?.components)?applied.components:[]).map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean))];
+  const components:string[]=[...new Set<string>((Array.isArray(applied?.components)?applied.components:[]).map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean))];
   if(!components.length)fail("Applied Update component history is incomplete",409);
   const channel=String(applied?.channel||install.release_channel||"stable").trim().toLowerCase();
   const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
