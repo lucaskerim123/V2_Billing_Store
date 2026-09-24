@@ -1,6 +1,6 @@
 # OrbitFS release pipeline
 
-License Master is authoritative for release records and source capture. Base source is `lucaskerim123/V1-vercel-base` / `base-release`; existing-installation updates are `lucaskerim123/V1-vercel-engine` / `release-updates`.
+License Master is authoritative for release records and source capture. Base source is `lucaskerim123/V1-vercel-base` / `base-release`; existing-installation updates are `lucaskerim123/V1-vercel-engine` / `UPDATE_RELEASE`.
 
 Billing Store receives Master releases, applies final rollout visibility and customer-facing metadata, then publishes through License Master. My OrbitFS consumes published releases and uses the existing deployment control plane for customer deploy/update/rollback.
 
@@ -11,6 +11,9 @@ Billing Store owns customer-facing channel assignment. Every active customer has
 
 License Master remains authoritative for channel definitions, release records, technical validation, promotion and artifact eligibility. Billing Store mirrors channel definitions, assigns customers to channels, and hands promotion requests to License Master.
 
-A release keeps the same release ID, artifact, manifest and checksum when promoted. Promotion changes the release channel and is audited by License Master; it does not rebuild or re-upload the artifact.
+Promotion creates a new channel-specific release record linked to the source release. It preserves the exact immutable artifact, checksum, source commit, technical approval and validation result; it does not rebuild or re-upload the artifact. The promoted record remains unpublished until Billing Store performs the final customer-facing publication step.
 
 The same channel entitlement model applies to Base and Update releases. Customer update discovery uses the channels available to the customer's account and never relies on the legacy rollout field as an access-control mechanism.
+
+
+The legacy `rollout` field is presentation metadata only. It must not grant or deny release access. Customer eligibility is determined by the installation release channel and License Master channel policy/access assignments.
