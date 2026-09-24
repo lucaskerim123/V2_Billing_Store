@@ -160,8 +160,8 @@ async function reportDeploymentFailure(install:any,input:{action:DeployAction;re
 export async function runCustomerDeployer(install:any,action:DeployAction,version?:string,channel?:string,releaseId?:string){
   const requestedChannel=String(channel||install.release_channel||"stable").trim().toLowerCase();
   if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(requestedChannel))fail("Invalid release channel",400);
-  const allowedChannels=await customerReleaseChannels(String(install.auth_user_id));
-  if(!allowedChannels.includes(requestedChannel))fail(`Release channel "${requestedChannel}" is not available for this customer`,403);
+  const allowedChannels=await customerReleaseChannels(String(install.auth_user_id),install.license_binding_id||null);
+  if(!allowedChannels.includes(requestedChannel))fail(`Release channel "${requestedChannel}" is not available for this installation's licence`,403);
   await requireSystem(action==="rollback"?"rollback":action==="update"?"update":"deploy");
   if(!install.vercel_project_id)fail("Connect and select a customer Vercel project before deploying",409);
 
