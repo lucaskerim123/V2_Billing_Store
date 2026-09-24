@@ -18,11 +18,11 @@ jobs:
     environment:
       name: production
     env:
-      NEXT_PUBLIC_SUPABASE_URL: https://bealqgenrcytjzjoikmk.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_PQVgZOdSyHRbgXRz6ALXGQ_Qe-Uyrzz
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: team_W3fS0X03YCjNkD2BoqRj6Uld
-      VERCEL_PROJECT_ID: prj_3ARdg4cRikU2OiMeZjZDvQ3JuEZd
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout complete repository history at selected commit
         uses: actions/checkout@v6
@@ -65,12 +65,17 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-      - name: Verify deployment credentials
+      - name: Verify production configuration
         run: |
           set -euo pipefail
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
           test -n "$VERCEL_TOKEN"
           test -n "$VERCEL_ORG_ID"
           test -n "$VERCEL_PROJECT_ID"
+          case "$NEXT_PUBLIC_SUPABASE_URL" in
+            *localhost*|*127.0.0.1*|*ci-placeholder*) echo "Refusing non-production Supabase URL"; exit 1 ;;
+          esac
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
