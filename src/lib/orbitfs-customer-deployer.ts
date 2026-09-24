@@ -2,7 +2,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
-import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,event,requireSystem,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
@@ -77,6 +77,89 @@ async function readBasePackage(release:any):Promise<{pkg:Package;files:Array<{fi
   const packageComponents=[...(Array.isArray(pkg.components)?pkg.components:[])].map(x=>String(x||"").trim().toLowerCase()).filter(Boolean).sort();
   if(releaseComponents.length&&packageComponents.length&&releaseComponents.join(",")!==packageComponents.join(","))fail("Release package components do not match License Master",422);
   return {pkg,files:validateFiles(pkg.files,"Base package"),artifactSha256:parsed.artifactSha256};
+}
+type DatabaseMigration={id:string;file:string;component?:string;encoding:"base64";data:string;size:number;sha256:string};
+function sqlLiteral(value:unknown){return "'"+String(value??"").replaceAll("'","''")+"'";}
+function managementRows(value:any):any[]{
+  if(Array.isArray(value)){
+    if(value.length===1&&value[0]&&typeof value[0]==="object"){
+      const nested=managementRows(value[0]);if(nested.length)return nested;
+    }
+    return value;
+  }
+  if(!value||typeof value!=="object")return [];
+  for(const key of ["rows","data","result","results"]){
+    const candidate=(value as any)[key];
+    if(Array.isArray(candidate))return candidate;
+    if(candidate&&typeof candidate==="object"){const nested=managementRows(candidate);if(nested.length)return nested;}
+  }
+  return [];
+}
+function validateDatabaseContract(bundle:UpdateBundle){
+  const database=(bundle as any).database;
+  if(!database||typeof database!=="object"||Array.isArray(database))fail("Update Bundle database migration contract is missing",422);
+  const migrations:Array<any>=Array.isArray(database.migrations)?database.migrations:[];
+  if(database.format!=="orbitfs-db-migrations-v1"||database.mode!=="shared-panel"||database.provider!=="supabase")fail("Update Bundle database migration contract is invalid",422);
+  if(Number(database.migrationCount||0)!==migrations.length||Number((bundle as any).databaseMigrationCount||0)!==migrations.length)fail("Update Bundle database migration count is invalid",422);
+  const seen=new Set<string>();let total=0;
+  const normalized:DatabaseMigration[]=migrations.map((migration:any)=>{
+    const id=String(migration?.id||"").trim(),file=String(migration?.file||"").replaceAll("\\","/");
+    if(!/^[0-9A-Za-z][0-9A-Za-z._-]{0,127}$/.test(id)||seen.has(id))fail("Update Bundle contains an invalid or duplicate database migration id",422);
+    seen.add(id);
+    if(!/^supabase\/migrations\/[A-Za-z0-9._\/-]+\.sql$/.test(file)||migration?.encoding!=="base64"||typeof migration?.data!=="string")fail(`Invalid customer database migration: ${file||id}`,422);
+    const sql=Buffer.from(migration.data,"base64");total+=sql.byteLength;
+    if(sql.byteLength>2*1024*1024||total>8*1024*1024)fail("Customer database migration payload is too large",413);
+    const sha=checksum(sql);
+    if(Number(migration.size)!==sql.byteLength||String(migration.sha256||"").toLowerCase()!==sha)fail(`Customer database migration checksum mismatch: ${file}`,422);
+    if(/\b(?:begin|commit|rollback)\s*;/i.test(sql.toString("utf8")))fail(`Database migration contains unsupported explicit transaction control: ${file}`,422);
+    return {id,file,component:String(migration.component||"shared").trim().toLowerCase()||"shared",encoding:"base64" as const,data:migration.data,size:sql.byteLength,sha256:sha};
+  });
+  const engine=(bundle as any)?.payloads?.engine;
+  if(engine&&JSON.stringify(engine.database||null)!==JSON.stringify(database))fail("Update Bundle database contract does not match its Engine payload",422);
+  if((bundle as any)?.releaseAnalysis?.flags?.schemaChanged===true&&!normalized.length)fail("Update contains database/schema changes but no customer database migration",422);
+  return normalized;
+}
+async function applyCustomerDatabaseMigrations(install:any,release:any,bundle:UpdateBundle){
+  const migrations=validateDatabaseContract(bundle);
+  if(!install.supabase_project_ref)fail("Customer Supabase project is not configured for database migrations",409);
+  const project=String(install.supabase_project_ref);
+  const query=async(sql:string)=>supabaseApi(String(install.auth_user_id),`/projects/${encodeURIComponent(project)}/database/query`,{method:"POST",body:JSON.stringify({query:sql})});
+  await query(`create table if not exists public.orbitfs_schema_migrations (
+    migration_id text primary key,
+    sha256 text not null,
+    component text not null default 'shared',
+    source_file text not null,
+    release_id text,
+    release_version text,
+    applied_at timestamptz not null default now()
+  );`);
+  if(!migrations.length)return {required:0,applied:0,skipped:0,ids:[] as string[]};
+  const existingRaw=await query("select migration_id,sha256 from public.orbitfs_schema_migrations order by applied_at asc;");
+  const rows=managementRows(existingRaw);
+  const existing=new Map(rows.filter((row:any)=>row&&row.migration_id).map((row:any)=>[String(row.migration_id),String(row.sha256||"").toLowerCase()]));
+  let applied=0,skipped=0;const ids:string[]=[];
+  for(const migration of migrations){
+    const known=existing.get(migration.id);
+    if(known){
+      if(known!==migration.sha256)fail(`Customer database migration ${migration.id} was previously applied with a different checksum. Publish a new migration instead of changing migration history.`,409);
+      skipped++;ids.push(migration.id);continue;
+    }
+    const sql=Buffer.from(migration.data,"base64").toString("utf8");
+    await event(install,"database.migration.started","info",`Applying database migration ${migration.id}`,{releaseId:release.id,releaseVersion:release.version,file:migration.file,component:migration.component,sha256:migration.sha256});
+    try{
+      await query(`begin;
+${sql}
+insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
+values (${sqlLiteral(migration.id)},${sqlLiteral(migration.sha256)},${sqlLiteral(migration.component||"shared")},${sqlLiteral(migration.file)},${sqlLiteral(release.id)},${sqlLiteral(release.version)},now());
+commit;`);
+    }catch(error){
+      await event(install,"database.migration.failed","error",`Database migration ${migration.id} failed`,{releaseId:release.id,file:migration.file,error:error instanceof Error?error.message:String(error)});
+      throw error;
+    }
+    applied++;ids.push(migration.id);existing.set(migration.id,migration.sha256);
+    await event(install,"database.migration.completed","ok",`Database migration ${migration.id} applied`,{releaseId:release.id,file:migration.file,component:migration.component,sha256:migration.sha256});
+  }
+  return {required:migrations.length,applied,skipped,ids};
 }
 function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
 function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
@@ -263,13 +346,15 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(wantsEngine&&!engine)fail("Update Bundle targets Engine components but has no Engine payload",422);
     if(!wantsEngine&&engine)fail("Update Bundle contains an Engine payload without Engine targets",422);
     if(engine)validateFiles(engine.files,"Engine update payload");
-    await event(install,"update.started","info",`Applying OrbitFS Update ${release.version}`,{releaseId:release.id,components,checksum:parsed.artifactSha256});
+    const databaseMigrations=validateDatabaseContract(bundle);
+    await event(install,"update.started","info",`Applying OrbitFS Update ${release.version}`,{releaseId:release.id,components,checksum:parsed.artifactSha256,databaseMigrationCount:databaseMigrations.length});
+    const databaseResult=await applyCustomerDatabaseMigrations(install,release,bundle);
     const panelResult=panel?await deployPanelUpdatePayload(install,release,bundle,panel,parsed.artifactSha256,requestedChannel):null;
     const engineBaseUrl=String(panelResult?.deploymentUrl||install.production_url||install.deployment_url||"").trim();
     if(wantsEngine&&!engineBaseUrl)fail("Installed OrbitFS Base URL is unavailable for the Engine update",409);
     const engineResult=wantsEngine?await applyEngineUpdatePayload(install,release,requestedChannel,engineBaseUrl):null;
     const appliedAt=new Date().toISOString();
-    const updateState={version:String(release.version),releaseId:String(release.id),sha256:parsed.artifactSha256,sourceCommit:String(bundle.sourceCommit||expectedSource(release)||""),channel:requestedChannel,components,appliedAt,panelDeploymentId:panelResult?.deploymentId||null,engineDeploymentId:engineResult?.deploymentId||null};
+    const updateState={version:String(release.version),releaseId:String(release.id),sha256:parsed.artifactSha256,sourceCommit:String(bundle.sourceCommit||expectedSource(release)||""),channel:requestedChannel,components,appliedAt,panelDeploymentId:panelResult?.deploymentId||null,engineDeploymentId:engineResult?.deploymentId||null,databaseMigrations:databaseResult};
     const patch:any={
       release_channel:requestedChannel,
       vercel_deployment_id:panelResult?.deploymentId||install.vercel_deployment_id,
