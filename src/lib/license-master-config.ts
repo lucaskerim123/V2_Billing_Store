@@ -1,15 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
 
-export const DEFAULT_MASTER_API_URL = "https://incendiarynetworks.cc/api/v1";
+export const DEFAULT_MASTER_API_URL = String(process.env.LICENSE_MASTER_URL||"").trim().replace(/\/+$/,"");
 
 function validMasterUrl(value: string) {
   try {
     const u = new URL(value.trim());
     const host = u.hostname.toLowerCase();
-    const approvedHost = host === "incendiarynetworks.cc";
     if (
       u.protocol !== "https:" ||
-      !approvedHost ||
+      host==="localhost" ||
+      host==="127.0.0.1" ||
       u.pathname.replace(/\/+$/, "") !== "/api/v1" ||
       u.username ||
       u.password ||
@@ -23,10 +23,10 @@ function validMasterUrl(value: string) {
 }
 
 export function normalizeMasterApiUrl(value: string) {
-  return validMasterUrl(value) || DEFAULT_MASTER_API_URL;
+  return validMasterUrl(value) || "";
 }
 
-let cachedUrl = DEFAULT_MASTER_API_URL;
+let cachedUrl = validMasterUrl(DEFAULT_MASTER_API_URL) || "";
 let cachedAt = 0;
 
 export async function getMasterApiUrl() {
@@ -53,7 +53,8 @@ export async function getMasterApiUrl() {
     }
   }
 
-  cachedUrl = resolved || DEFAULT_MASTER_API_URL;
+  cachedUrl = resolved || validMasterUrl(DEFAULT_MASTER_API_URL) || "";
   cachedAt = now;
+  if(!cachedUrl)throw new Error("LICENSE_MASTER_URL is not configured and no enabled License Master connection exists");
   return cachedUrl;
 }
