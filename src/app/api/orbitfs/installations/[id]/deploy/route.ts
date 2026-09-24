@@ -14,7 +14,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     if(rawAction==="set_channel"){
       const channel=String(body.channel||"").trim().toLowerCase();
       if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw Object.assign(new Error("Invalid release channel"),{status:400});
-      const allowedChannels=await customerReleaseChannels(user.id);
+      const allowedChannels=await customerReleaseChannels(user.id,install.license_binding_id||null);
       if(!allowedChannels.includes(channel))throw Object.assign(new Error("Release channel is not available for this customer"),{status:403});
       const {data,error}=await (await import("@/lib/license-api")).licenseDb().from("orbitfs_installations").update({release_channel:channel,updated_at:new Date().toISOString()}).eq("id",install.id).eq("auth_user_id",user.id).select().single();
       if(error)throw error;
