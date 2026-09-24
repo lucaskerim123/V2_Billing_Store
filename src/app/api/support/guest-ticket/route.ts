@@ -40,6 +40,10 @@ function payloadResponse(payload:any){return payload?.error?Response.json({error
 export async function POST(req:Request){
  if(!url||!serviceKey)return Response.json({error:"Billing Store database is not configured."},{status:503});
  const service=createClient(url,serviceKey,{auth:{persistSession:false}}),body=await req.json().catch(()=>({})),action=String(body.action||"open"),code=String(body.code||""),ip=requestIp(req);
+ const {data:supportSettings}=await service.from("app_settings").select("key,value").in("key",["support.enabled","support.guest_enabled"]);
+ const cfg=Object.fromEntries((supportSettings||[]).map((x:any)=>[x.key,x.value]));
+ if(cfg["support.enabled"]===false)return Response.json({error:"Support is temporarily unavailable."},{status:503});
+ if(cfg["support.guest_enabled"]===false)return Response.json({error:"Guest support is currently disabled."},{status:403});
  if(await tooManyFailures(service,ip))return Response.json({error:"Too many incorrect ticket code attempts. Please wait 15 minutes and try again."},{status:429});
  const resolved:any=await findTicket(service,code);
  if(resolved.error){if(resolved.status===404)await recordFailure(service,ip);return Response.json({error:resolved.error},{status:resolved.status||400})}
