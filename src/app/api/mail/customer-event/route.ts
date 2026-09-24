@@ -1,6 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
 import {sendAutomation} from "@/lib/transactional-server";
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const pub=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 const service=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const money=(c:any,currency="AUD")=>new Intl.NumberFormat("en-AU",{style:"currency",currency}).format(Number(c||0)/100);
