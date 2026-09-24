@@ -1,8 +1,9 @@
 import {createHash,randomBytes} from "node:crypto";
+import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
 import {getPanelRelease} from "@/lib/panel-release";
-import {masterExecuteDeployment,masterSyncDeployment,masterReleases} from "@/lib/master-api";
+import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterSyncDeployment,masterReleases} from "@/lib/master-api";
 
 const SUPABASE_API="https://api.supabase.com/v1";
 const VERCEL_API="https://api.vercel.com";
@@ -543,7 +544,33 @@ function normalizeSchemaSql(input:string){
 }
 async function schemaText(){
   const s=await releaseSettings(),db=licenseDb(),d=await db.storage.from(s.schema_bucket).download(s.schema_path);if(d.error||!d.data)throw Object.assign(new Error("Fresh OrbitFS schema has not been uploaded in the Release Panel System"),{status:409});
-  if(d.data.size>SCHEMA_MAX_BYTES)throw new Error("OrbitFS schema asset is too large");const sql=normalizeSchemaSql(await d.data.text());if(!/create\s+table|create\s+schema/i.test(sql))throw new Error("OrbitFS schema asset is invalid");return {sql,sha256:createHash("sha256").update(sql).digest("hex")};
+  if(d.data.size>SCHEMA_MAX_BYTES)throw new Error("OrbitFS schema asset is too large");const sql=normalizeSchemaSql(await d.data.text());if(!/create\s+table|create\s+schema/i.test(sql))throw new Error("OrbitFS schema asset is invalid");return {sql,sha256:createHash("sha256").update(sql).digest("hex"),source:"legacy-storage" as const};
+}
+async function releaseSchemaText(release:any){
+  const manifest=release?.manifest&&typeof release.manifest==="object"?release.manifest:{};
+  const expectedSchemaHash=String(manifest.databaseSchemaSha256||manifest.releaseInfo?.databaseSchemaSha256||"").trim().toLowerCase();
+  if(!expectedSchemaHash)return null;
+  const schemaPath=String(manifest.databaseSchemaPath||manifest.releaseInfo?.databaseSchemaPath||"supabase/customer-schema.sql").trim();
+  const artifact=await masterDownloadReleaseArtifact(String(release.id));
+  if(artifact.bytes.byteLength>75*1024*1024)throw Object.assign(new Error("Base release artifact is too large"),{status:413});
+  const artifactHash=createHash("sha256").update(artifact.bytes).digest("hex");
+  const expectedArtifactHash=String(release.sha256||release.checksum||"").trim().toLowerCase();
+  if(expectedArtifactHash&&artifactHash!==expectedArtifactHash)throw Object.assign(new Error("Base release artifact checksum does not match License Manager"),{status:422});
+  let pkg:any;
+  try{pkg=JSON.parse(gunzipSync(artifact.bytes,{maxOutputLength:SCHEMA_MAX_BYTES*20}).toString("utf8"))}catch{throw Object.assign(new Error("Base release artifact could not be unpacked for database initialization"),{status:422})}
+  if(pkg?.format!=="orbitfs-base-deployment-v2"||String(pkg.version||"")!==String(release.version||""))throw Object.assign(new Error("Base release artifact identity is invalid"),{status:422});
+  const pkgSchemaHash=String(pkg.databaseSchemaSha256||pkg.releaseInfo?.databaseSchemaSha256||"").trim().toLowerCase();
+  const pkgSchemaPath=String(pkg.databaseSchemaPath||pkg.releaseInfo?.databaseSchemaPath||schemaPath).trim();
+  if(pkgSchemaHash!==expectedSchemaHash||pkgSchemaPath!==schemaPath)throw Object.assign(new Error("Base release database snapshot metadata does not match License Manager"),{status:422});
+  const file=(Array.isArray(pkg.files)?pkg.files:[]).find((entry:any)=>String(entry?.file||"")===schemaPath);
+  if(!file||file.encoding!=="base64"||typeof file.data!=="string")throw Object.assign(new Error("Base release does not contain its declared customer database snapshot"),{status:422});
+  const bytes=Buffer.from(file.data,"base64");
+  if(bytes.byteLength<1||bytes.byteLength>SCHEMA_MAX_BYTES)throw Object.assign(new Error("Base release customer database snapshot size is invalid"),{status:422});
+  const sha256=createHash("sha256").update(bytes).digest("hex");
+  if(sha256!==expectedSchemaHash||String(file.sha256||"").toLowerCase()!==sha256)throw Object.assign(new Error("Base release customer database snapshot checksum failed"),{status:422});
+  const sql=bytes.toString("utf8");
+  if(!["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log"].every(name=>sql.includes(name)))throw Object.assign(new Error("Base release customer database snapshot is incomplete"),{status:422});
+  return {sql,sha256,source:"release-artifact" as const,path:schemaPath,migrationCount:Number(pkg.databaseMigrationCount||pkg.releaseInfo?.databaseMigrationCount||0),latestMigration:String(pkg.databaseLatestMigration||pkg.releaseInfo?.databaseLatestMigration||"")};
 }
 export async function schemaAssetStatus(){const s=await releaseSettings(),d=await licenseDb().storage.from(s.schema_bucket).download(s.schema_path);return {configured:!d.error&&!!d.data,size:d.data?.size||0,bucket:s.schema_bucket,path:s.schema_path,version:s.schema_version}}
 export async function uploadSchemaAsset(sql:string){const s=await releaseSettings();if(!sql||Buffer.byteLength(sql)>SCHEMA_MAX_BYTES)throw new Error("Schema asset is empty or too large");const normalized=normalizeSchemaSql(sql);if(Buffer.byteLength(normalized)>SCHEMA_MAX_BYTES)throw new Error("Normalized OrbitFS schema asset is too large");const db=licenseDb(),b=await db.storage.getBucket(s.schema_bucket);if(!b.data){const c=await db.storage.createBucket(s.schema_bucket,{public:false,fileSizeLimit:SCHEMA_MAX_BYTES});if(c.error&&!String(c.error.message).toLowerCase().includes("already"))throw c.error}const u=await db.storage.from(s.schema_bucket).upload(s.schema_path,Buffer.from(normalized),{contentType:"text/plain",upsert:true,cacheControl:"0"});if(u.error)throw u.error;return schemaAssetStatus()}
@@ -565,9 +592,12 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   const s=await releaseSettings();
   const releaseSchema=String(release.manifest?.databaseSchemaVersion||release.manifest?.releaseInfo?.databaseSchemaVersion||"").trim();
   const configuredSchema=String(s.schema_version||"").trim();
-  if(releaseSchema&&configuredSchema&&releaseSchema!==configuredSchema)throw Object.assign(new Error(`Base release ${release.version} requires database schema ${releaseSchema}, but the configured schema asset is ${configuredSchema}. Publish/select the matching schema before initializing this installation.`),{status:409});
+  const packagedSchema=Boolean(release.manifest?.databaseSchemaSha256||release.manifest?.releaseInfo?.databaseSchemaSha256);
+  if(!packagedSchema&&releaseSchema&&configuredSchema&&releaseSchema!==configuredSchema)throw Object.assign(new Error(`Base release ${release.version} requires database schema ${releaseSchema}, but the configured legacy schema asset is ${configuredSchema}. Publish/select the matching schema before initializing this installation.`),{status:409});
   const effectiveSchema=releaseSchema||configuredSchema||"1";
-  const schemaAsset=await schemaText(),sql=schemaAsset.sql;
+  const schemaAsset=packagedSchema?await releaseSchemaText(release):await schemaText();
+  if(!schemaAsset)throw Object.assign(new Error("Base release declares a customer database snapshot but it could not be loaded"),{status:422});
+  const sql=schemaAsset.sql;
   await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:null}).eq("id",install.id);
   await event(install,"database.initializing","info","Initializing current OrbitFS schema in customer Supabase project");
   let dbSecret=String(await installationSecret(install.id,"db_secret")||"");
@@ -600,7 +630,7 @@ insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-fil
     await event(install,"database.failed","error",message);
     throw e;
   }
-  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,baseMigrationId});return data;
+  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseSchemaSource:schemaAsset.source,databaseMigrationCount:"migrationCount" in schemaAsset?schemaAsset.migrationCount:null,databaseLatestMigration:"latestMigration" in schemaAsset?schemaAsset.latestMigration:null,baseMigrationId});return data;
 }
 
 async function publishableKey(install:any){
