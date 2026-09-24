@@ -173,6 +173,35 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('support.customer_priority_enabled','true'::jsonb,'support',true,now())
 on conflict(key) do nothing;
 
+-- Normalize every known setting into the admin area that owns it.
+-- This also repairs legacy "customization" / plural category values without overwriting values.
+update public.app_settings
+set category=case
+  when key like 'identity.%' then 'identity'
+  when key like 'general.%' then 'general'
+  when key like 'billing.%' then 'billing'
+  when key like 'invoice.%' then 'invoice'
+  when key like 'products.%' then 'products'
+  when key like 'license.%' then 'license'
+  when key like 'support.%' then 'support'
+  when key like 'site.%' then 'site'
+  when key like 'store.%' then 'store'
+  when key like 'alerts.%' then 'alerts'
+  else category
+end,
+updated_at=now()
+where
+  (key like 'identity.%' and category is distinct from 'identity') or
+  (key like 'general.%' and category is distinct from 'general') or
+  (key like 'billing.%' and category is distinct from 'billing') or
+  (key like 'invoice.%' and category is distinct from 'invoice') or
+  (key like 'products.%' and category is distinct from 'products') or
+  (key like 'license.%' and category is distinct from 'license') or
+  (key like 'support.%' and category is distinct from 'support') or
+  (key like 'site.%' and category is distinct from 'site') or
+  (key like 'store.%' and category is distinct from 'store') or
+  (key like 'alerts.%' and category is distinct from 'alerts');
+
 -- Keep the internal sync secret present without exposing it through the settings UI.
 insert into public.app_settings(key,value,category,public_read,updated_at)
 select 'internal.gateway_sync_token',
