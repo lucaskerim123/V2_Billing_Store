@@ -19,7 +19,7 @@ export default function DeliveryControls({compact=false}:{compact?:boolean}){
   const [busy,setBusy]=useState("");
   const [message,setMessage]=useState("");
 
-  async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:`Bearer ${session.access_token}`};}
+  async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
   async function load(){
     setBusy("load");setMessage("");
     try{
@@ -36,33 +36,56 @@ export default function DeliveryControls({compact=false}:{compact?:boolean}){
       const j=await r.json().catch(()=>({}));
       if(!r.ok)throw Error(j.error||"Could not update delivery control");
       setSettings({...defaults,...(j.settings||settings),[key]:value});
-      setMessage("Billing Store delivery controls updated.");
+      setMessage("Delivery controls updated.");
     }catch(e:any){setMessage(e?.message||"Could not update delivery control")}finally{setBusy("")}
   }
   useEffect(()=>{void load()},[]);
 
-  const rows=[
-    {key:"enabled" as const,label:"Customer delivery",detail:"Master Billing Store shutdown for Base installs, Updates and rollback entry points."},
-    {key:"customer_deploy_enabled" as const,label:"Base installs",detail:"Allows customers to start or redeploy a published Base release."},
-    {key:"customer_updates_enabled" as const,label:"Updates",detail:"Allows customers to apply published manifest-driven Update releases."},
-    {key:"customer_rollbacks_enabled" as const,label:"Rollback",detail:"Allows customer rollback where a valid checkpoint is available."},
+  const controls=[
+    {key:"enabled" as const,label:"Customer delivery",short:"Delivery"},
+    {key:"customer_deploy_enabled" as const,label:"Base installs",short:"Base"},
+    {key:"customer_updates_enabled" as const,label:"Update installs",short:"Updates"},
+    {key:"customer_rollbacks_enabled" as const,label:"Rollback",short:"Rollback"},
   ];
 
-  return <section className="panel">
-    <div className="panelTitle">
-      <div><p className="eyebrow">BILLING STORE · CUSTOMER DELIVERY</p><h2>Delivery switches</h2><p className="muted">These are Billing Store availability gates only. License Manager still owns technical authorization, licensing state and release validation.</p></div>
-      <button className="secondary" onClick={()=>void load()} disabled={!!busy}>{busy==="load"?"Refreshing…":"Refresh"}</button>
+  return <section className={"orbitDeliveryBar "+(compact?"compact":"")}>
+    <div className="orbitDeliveryBarHead">
+      <div><p className="eyebrow">CUSTOMER DELIVERY</p><b>Billing Store gates</b></div>
+      <button className="secondary orbitMiniButton" onClick={()=>void load()} disabled={!!busy}>{busy==="load"?"Refreshing…":"Refresh"}</button>
     </div>
-    <div className="orderControlList">
-      {rows.map(row=><div key={row.key}>
-        <div><b>{row.label}</b><span>{row.detail}</span></div>
-        <button type="button" className={`switchControl ${settings[row.key]?"on":""}`} disabled={!!busy} onClick={()=>void patch(row.key,!settings[row.key])}><span/><b>{settings[row.key]?"Enabled":"Disabled"}</b></button>
-      </div>)}
-      {!compact&&<div>
-        <div><b>Maintenance mode</b><span>Temporarily blocks customer delivery while keeping release information visible.</span></div>
-        <button type="button" className={`switchControl ${settings.maintenance_mode?"on":""}`} disabled={!!busy} onClick={()=>void patch("maintenance_mode",!settings.maintenance_mode)}><span/><b>{settings.maintenance_mode?"Active":"Normal"}</b></button>
-      </div>}
+
+    <div className="orbitDeliveryControls">
+      {controls.map(control=>{
+        const on=settings[control.key];
+        return <button
+          key={control.key}
+          type="button"
+          className={"orbitGateButton "+(on?"on":"off")}
+          disabled={!!busy}
+          onClick={()=>void patch(control.key,!on)}
+          title={control.label}
+        >
+          <span className="orbitGateDot"/>
+          <span>{compact?control.short:control.label}</span>
+          <strong>{on?"ON":"OFF"}</strong>
+        </button>
+      })}
+      {!compact&&<button
+        type="button"
+        className={"orbitGateButton "+(settings.maintenance_mode?"warn":"on")}
+        disabled={!!busy}
+        onClick={()=>void patch("maintenance_mode",!settings.maintenance_mode)}
+      >
+        <span className="orbitGateDot"/>
+        <span>Maintenance</span>
+        <strong>{settings.maintenance_mode?"ACTIVE":"NORMAL"}</strong>
+      </button>}
     </div>
-    {message&&<p className="notice" style={{marginTop:12}}>{message}</p>}
+
+    {!compact&&<div className="orbitDeliveryHint">
+      <span>These switches only control Billing Store customer availability.</span>
+      <span>License Manager remains the technical authority.</span>
+    </div>}
+    {message&&<div className="orbitInlineNotice orbitDeliveryMessage">{message}</div>}
   </section>;
 }
