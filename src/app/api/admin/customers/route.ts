@@ -3,7 +3,7 @@ import {createClient} from "@supabase/supabase-js";
 import {sendAutomation} from "@/lib/transactional-server";
 import {issuePasswordReset} from "@/lib/password-reset-server";
 
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
