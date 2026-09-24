@@ -1,15 +1,14 @@
 import {licenseDb} from "@/lib/license-api";
 
-const DEFAULT_MASTER_API_BASE = "https://incendiarynetworks.cc/api/v1";
+const DEFAULT_MASTER_API_BASE = String(process.env.LICENSE_MASTER_URL||"").trim().replace(/\/+$/,"");
 
 function assertMasterApiUrl(value: string) {
   const u = new URL(value);
   if (u.protocol !== "https:" || u.search || u.hash || u.pathname.replace(/\/+$/, "") !== "/api/v1") {
     throw new Error("License Master API URL must be an HTTPS /api/v1 endpoint");
   }
-  if (u.hostname.toLowerCase() !== "incendiarynetworks.cc") {
-    throw new Error("Only the canonical License Master API host is supported");
-  }
+  const host=u.hostname.toLowerCase();
+  if(host==="localhost"||host==="127.0.0.1")throw new Error("License Master API URL cannot use a local-only host");
 }
 
 async function configuredMasterApiBase() {
@@ -22,6 +21,7 @@ async function configuredMasterApiBase() {
       return value;
     }
   } catch {}
+  if(!DEFAULT_MASTER_API_BASE)throw new Error("LICENSE_MASTER_URL is not configured and no enabled License Master connection exists");
   assertMasterApiUrl(DEFAULT_MASTER_API_BASE);
   return DEFAULT_MASTER_API_BASE;
 }
