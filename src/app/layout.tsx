@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import SiteTitle from "@/components/SiteTitle";
 import PublicSiteConfig from "@/components/PublicSiteConfig";
+import LicenseMasterStatusNotice from "@/components/LicenseMasterStatusNotice";
 import "./globals.css";
 import "./store.css";
 import "./public-config.css";
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <body className="min-h-full flex flex-col">
       <PublicSiteConfig />
       <SiteTitle />
+      <LicenseMasterStatusNotice />
       <style>{`
         /* The homepage star/nebula layers were behind the .orbitHome background because
            home.css gives the pseudo-elements negative z-index values. Keep those visual
