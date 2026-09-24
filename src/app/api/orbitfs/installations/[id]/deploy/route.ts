@@ -13,7 +13,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const rawAction=String(body.action||"deploy");
     const install=await loadInstallation(id,user.id);
     if(rawAction==="set_channel"){
-      await requireLicenseMasterForMutation();
+      await requireLicenseMasterForDeployment();
       const channel=String(body.channel||"").trim().toLowerCase();
       if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw Object.assign(new Error("Invalid release channel"),{status:400});
       const allowedChannels=await customerReleaseChannels(user.id,install.license_binding_id||null);
