@@ -562,6 +562,11 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   if(!release?.id)throw Object.assign(new Error(releaseId?"Selected Base release is no longer published in License Master":"No published Base release is available for this channel"),{status:409});
   if(String(release.channel||channel)!==channel)throw Object.assign(new Error("Selected Base release does not match the installation release channel"),{status:409});
   await assertSupabaseProjectReady(install);
+  const s=await releaseSettings();
+  const releaseSchema=String(release.manifest?.databaseSchemaVersion||release.manifest?.releaseInfo?.databaseSchemaVersion||"").trim();
+  const configuredSchema=String(s.schema_version||"").trim();
+  if(releaseSchema&&configuredSchema&&releaseSchema!==configuredSchema)throw Object.assign(new Error(`Base release ${release.version} requires database schema ${releaseSchema}, but the configured schema asset is ${configuredSchema}. Publish/select the matching schema before initializing this installation.`),{status:409});
+  const effectiveSchema=releaseSchema||configuredSchema||"1";
   const sql=await schemaText();
   await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:null}).eq("id",install.id);
   await event(install,"database.initializing","info","Initializing current OrbitFS schema in customer Supabase project");
@@ -577,7 +582,7 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
     await event(install,"database.failed","error",message);
     throw e;
   }
-  const s=await releaseSettings(),releaseSchema=String(release.manifest?.schemaVersion||release.manifest?.schema_version||s.schema_version||"1"),{data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:releaseSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS schema ${s.schema_version}`);return data;
+  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema});return data;
 }
 
 async function publishableKey(install:any){
