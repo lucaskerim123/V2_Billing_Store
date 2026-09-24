@@ -1,101 +1,132 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
-import Link from "next/link";
 import {createClient} from "@/lib/supabase";
 import DeliveryControls from "../DeliveryControls";
 
 type Release={
-  id:string;version:string;channel:string;status:string;reviewStatus?:string;releaseType?:string;
-  title?:string;description?:string;changelog?:string;sourceCommit?:string;sourceRepo?:string;sourceRef?:string;
-  artifactName?:string;artifactRunId?:number|null;checksum?:string;publishedAt?:string|null;updatedAt?:string|null;
-  validation?:{status?:string;checks?:Array<{key?:string;ok?:boolean;message?:string}>}|null;
+ id:string;version:string;channel?:string;status?:string;reviewStatus?:string;releaseType?:string;
+ title?:string;description?:string;changelog?:string;customerNotes?:string;sourceCommit?:string;sourceRepo?:string;sourceRef?:string;
+ artifactName?:string;artifactRunId?:number|null;checksum?:string;publishedAt?:string|null;updatedAt?:string|null;
+ validation?:{status?:string;checks?:Array<{key?:string;ok?:boolean;message?:string}>}|null;
 };
 
 export default function BaseDeploymentAdmin(){
-  const [releases,setReleases]=useState<Release[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState("");
+ const sb=useMemo(()=>createClient(),[]);
+ const [releases,setReleases]=useState<Release[]>([]);
+ const [selectedId,setSelectedId]=useState("");
+ const [loading,setLoading]=useState(true);
+ const [busy,setBusy]=useState("");
+ const [message,setMessage]=useState("");
+ const [editing,setEditing]=useState(false);
+ const [draft,setDraft]=useState({title:"",description:"",changelog:"",customer_notes:""});
 
-  async function headers():Promise<Record<string,string>>{
-    const {data:{session}}=await createClient().auth.getSession();
-    return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{};
-  }
+ async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
+ async function load(){
+  setLoading(true);setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:await auth(),cache:"no-store"});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not load Base releases from License Manager");
+   const rows=Array.isArray(j.releases)?j.releases:[];
+   setReleases(rows);
+   setSelectedId(current=>rows.some((x:Release)=>x.id===current)?current:(rows.find((x:Release)=>x.status!=="published")?.id||rows[0]?.id||""));
+  }catch(e:any){setMessage(e?.message||"Could not load Base release state")}finally{setLoading(false)}
+ }
+ useEffect(()=>{void load()},[]);
+ const selected=releases.find(r=>r.id===selectedId)||releases[0]||null;
+ const queue=useMemo(()=>releases.filter(r=>r.status!=="published"),[releases]);
+ const published=useMemo(()=>releases.filter(r=>r.status==="published"),[releases]);
 
-  async function load(){
-    setLoading(true);setError("");
-    try{
-      const h=await headers();
-      const response=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:h,cache:"no-store"});
-      const body=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(body.error||"Could not load Base releases from License Manager");
-      setReleases(Array.isArray(body.releases)?body.releases:[]);
-    }catch(e:any){setError(e?.message||"Could not load Base release state")}
-    finally{setLoading(false)}
-  }
+ const validationPassed=selected?.validation?.status==="passed";
+ const reviewApproved=selected?.reviewStatus==="approved";
+ const artifactReady=Boolean(selected?.artifactName||selected?.checksum);
+ const portalPublished=selected?.status==="published";
+ const canPublish=Boolean(selected&&validationPassed&&reviewApproved&&artifactReady);
 
-  useEffect(()=>{void load()},[]);
-  const published=useMemo(()=>releases.filter(r=>r.status==="published"),[releases]);
-  const current=published[0]||null;
-  const queue=useMemo(()=>releases.filter(r=>r.status!=="published"),[releases]);
-  const validation=(r:Release)=>String(r.validation?.status||"not run");
-  const passing=(r:Release)=>(r.validation?.checks||[]).filter(x=>x.ok).length;
-  const total=(r:Release)=>(r.validation?.checks||[]).length;
+ function beginEdit(r:Release){setSelectedId(r.id);setDraft({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||""});setEditing(true)}
+ async function savePresentation(){
+  if(!selected)return;
+  setBusy("edit");setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,...draft})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not update customer-facing release details");
+   setMessage("Customer-facing Base release details updated.");
+   setEditing(false);await load();
+  }catch(e:any){setMessage(e?.message||"Could not update release details")}finally{setBusy("")}
+ }
 
-  return <main className="adminShell">
-    <header className="adminTop">
-      <div>
-        <p className="eyebrow">ORBITFS CONTROL · BASE DEPLOYMENT</p>
-        <h1>Base Deployment</h1>
-        <p className="muted">License Manager owns Base validation, Base Deployment review, approval and publication. Billing Store mirrors the published Base release into My OrbitFS and the customer Base deployer.</p>
-      </div>
-      <div className="actions">
-        <a className="buttonlink secondary" href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">Open License Manager</a>
-        <Link className="buttonlink secondary" href="/admin/orbitfs/update-release-deployer">Update Release System</Link>
-        <button className="buttonlink secondary" type="button" onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button>
-      </div>
-    </header>
+ const stage=(done:boolean,current:boolean)=>"orbitStage "+(done?"done":current?"active":"");
 
-    {error&&<p className="inlineStatus" style={{borderColor:"crimson"}}>{error}</p>}
+ return <main className="orbitAdminPage">
+  <header className="orbitAdminHeader">
+   <div><p className="eyebrow">ORBITFS CONTROL · BASE RELEASES</p><h1>Base deployment</h1><p className="muted">Compact intake, readiness review and customer publication view. Technical approval remains authoritative in License Manager.</p></div>
+   <div className="orbitAdminActions"><button className="secondary" onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button><a className="buttonlink secondary" href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">Open License Manager</a></div>
+  </header>
 
-    <DeliveryControls />
+  {message&&<div className="orbitInlineNotice">{message}</div>}
+  <DeliveryControls compact />
 
-    <div className="workspaceGrid">
-    <section className="panel">
-      <p className="eyebrow">CURRENT PUBLISHED BASE</p>
-      {current?<div>
-        <h2>{current.title||`OrbitFS Base ${current.version}`}</h2>
-        <p className="muted">{current.description||"Published Base release available to the customer deployment flow."}</p>
-        <div className="lmRuntimeList">
-          <div><div><b>Version</b><span>{current.version}</span></div><strong>Published</strong></div>
-          <div><div><b>Channel</b><span>{current.channel||"stable"}</span></div><strong>{current.reviewStatus||"approved"}</strong></div>
-          <div><div><b>Source</b><span>{current.sourceRepo||"—"} {current.sourceRef?`· ${current.sourceRef}`:""}</span></div><strong className="mono">{current.sourceCommit||"—"}</strong></div>
-          <div><div><b>Artifact</b><span>{current.artifactName||"—"}</span></div><strong>{current.artifactRunId?`Run ${current.artifactRunId}`:"—"}</strong></div>
-          <div><div><b>Integrity</b><span>{current.checksum||"—"}</span></div><strong>{validation(current)}</strong></div>
-        </div>
-      </div>:<div className="emptyState"><b>No published Base release</b><p className="muted">Approve and publish a validated Base candidate in License Manager.</p></div>}
-    </section>
+  <section className="orbitCompactPanel">
+   <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE INTAKE</p><h2>Base release flow</h2></div><span className="orbitCount">{queue.length} pending</span></div>
+   <div className="orbitPipeline">
+    <div className={stage(Boolean(selected),true)}><span>1</span><div><b>Intake</b><small>{selected?"v"+selected.version:"Waiting for release"}</small></div></div>
+    <div className={stage(validationPassed,Boolean(selected)&&!validationPassed)}><span>2</span><div><b>Validation</b><small>{selected?.validation?.status||"not run"}</small></div></div>
+    <div className={stage(reviewApproved,validationPassed&&!reviewApproved)}><span>3</span><div><b>Technical review</b><small>{selected?.reviewStatus||"pending"}</small></div></div>
+    <div className={stage(portalPublished,canPublish&&!portalPublished)}><span>4</span><div><b>Customer publication</b><small>{portalPublished?"live in portal":canPublish?"ready to publish":"blocked"}</small></div></div>
+   </div>
 
-    <section className="panel">
-      <div className="sectionHead"><div><p className="eyebrow">LICENSE MANAGER QUEUE</p><h2>Base candidates</h2><p className="muted">Read-only mirror. Technical actions and Base publication stay in License Manager.</p></div><span className="badge">{queue.length}</span></div>
-      <div className="lmRuntimeList">
-        {queue.map(r=><div key={r.id}>
-          <div>
-            <b>{r.version} · {r.channel||"stable"}</b>
-            <span>{r.reviewStatus||"pending"} · validation {validation(r)} · {passing(r)}/{total(r)} checks</span>
-          </div>
-          <strong>{r.status}</strong>
-        </div>)}
-        {!queue.length&&<div><div><b>No pending Base candidates</b><span>New Base candidates will appear after the Base release workflow hands them to License Manager.</span></div><strong>Clear</strong></div>}
-      </div>
-    </section>
+   <div className="orbitSplit">
+    <div className="orbitReleaseQueue">
+     {queue.length?queue.map(r=><button key={r.id} type="button" className={"orbitReleaseRow "+(selected?.id===r.id?"selected":"")} onClick={()=>setSelectedId(r.id)}>
+      <div><b>v{r.version}</b><span>{r.title||"Base release"} · {r.channel||"stable"}</span></div>
+      <div className="orbitRowMeta"><span className={r.validation?.status==="passed"?"state ready":"state"}>{r.validation?.status||"validation pending"}</span><span className={r.reviewStatus==="approved"?"state ready":"state"}>{r.reviewStatus||"review pending"}</span></div>
+     </button>):<div className="orbitEmptyCompact">No Base releases are waiting for review.</div>}
     </div>
 
-    <section className="panel">
-      <div className="sectionHead"><div><p className="eyebrow">PUBLICATION HISTORY</p><h2>Published Base releases</h2></div><span className="badge">{published.length}</span></div>
-      <div className="lmRuntimeList">
-        {published.map(r=><div key={r.id}><div><b>{r.version} · {r.channel||"stable"}</b><span>{r.publishedAt?new Date(r.publishedAt).toLocaleString():"Published"} · {r.sourceCommit||"source commit unavailable"}</span></div><strong>Published</strong></div>)}
-        {!published.length&&<div><div><b>No publication history</b><span>No Base release has been published yet.</span></div><strong>—</strong></div>}
+    <div className="orbitReviewPane">
+     {selected?<><div className="orbitReviewTop"><div><small>SELECTED RELEASE</small><h3>v{selected.version}</h3></div><span className={portalPublished?"state ready":"state"}>{portalPublished?"Published":selected.status||"pending"}</span></div>
+      <div className="orbitFactGrid">
+       <div><span>Validation</span><b>{selected.validation?.status||"Not run"}</b></div>
+       <div><span>Review</span><b>{selected.reviewStatus||"Pending"}</b></div>
+       <div><span>Channel</span><b>{selected.channel||"stable"}</b></div>
+       <div><span>Artifact</span><b>{artifactReady?"Ready":"Missing"}</b></div>
+       <div className="wide"><span>Source</span><b className="mono">{selected.sourceCommit||"—"}</b></div>
+       <div className="wide"><span>Checksum</span><b className="mono">{selected.checksum||"—"}</b></div>
       </div>
-    </section>
-  </main>;
+      <div className="orbitCheckLine"><span className={validationPassed?"ok":""}>Validation</span><span className={reviewApproved?"ok":""}>Approval</span><span className={artifactReady?"ok":""}>Artifact</span><span className={portalPublished?"ok":canPublish?"ready":""}>Portal</span></div>
+      <div className="orbitAdminActions">
+       <button className="secondary" type="button" onClick={()=>beginEdit(selected)}>Edit portal details</button>
+       {!portalPublished&&<a className={"buttonlink "+(canPublish?"":"secondary")} href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">{canPublish?"Publish in License Manager":"Complete review in License Manager"}</a>}
+       {portalPublished&&<span className="state ready">Available to customers</span>}
+      </div>
+     </>:<div className="orbitEmptyCompact">Select a release to review.</div>}
+    </div>
+   </div>
+  </section>
+
+  <section className="orbitCompactPanel">
+   <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE HISTORY</p><h2>Published Base releases</h2></div><span className="orbitCount">{published.length}</span></div>
+   <div className="orbitHistoryTable">
+    {published.map(r=><div className="orbitHistoryRow" key={r.id}>
+     <div><b>v{r.version}</b><span>{r.title||"Base release"}</span></div>
+     <span>{r.channel||"stable"}</span>
+     <span>{r.publishedAt?new Date(r.publishedAt).toLocaleString():"Published"}</span>
+     <div className="orbitRowActions"><button className="secondary" onClick={()=>beginEdit(r)}>Edit</button><button className="secondary" onClick={()=>setSelectedId(r.id)}>View</button></div>
+    </div>)}
+    {!published.length&&<div className="orbitEmptyCompact">No published Base release history yet.</div>}
+   </div>
+  </section>
+
+  {editing&&selected&&<div className="orbitModalBackdrop" onMouseDown={()=>setEditing(false)}>
+   <div className="orbitModal" onMouseDown={e=>e.stopPropagation()}>
+    <div className="orbitPanelHead"><div><p className="eyebrow">CUSTOMER PRESENTATION</p><h2>Edit v{selected.version}</h2></div><button className="secondary" onClick={()=>setEditing(false)}>Close</button></div>
+    <label>Title<input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/></label>
+    <label>Description<textarea rows={3} value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})}/></label>
+    <label>Changelog<textarea rows={6} value={draft.changelog} onChange={e=>setDraft({...draft,changelog:e.target.value})}/></label>
+    <label>Customer notes<textarea rows={4} value={draft.customer_notes} onChange={e=>setDraft({...draft,customer_notes:e.target.value})}/></label>
+    <div className="orbitAdminActions"><button onClick={()=>void savePresentation()} disabled={busy==="edit"}>{busy==="edit"?"Saving…":"Save portal details"}</button><button className="secondary" onClick={()=>setEditing(false)}>Cancel</button></div>
+   </div>
+  </div>}
+ </main>
 }
