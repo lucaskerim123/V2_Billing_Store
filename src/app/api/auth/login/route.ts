@@ -8,6 +8,7 @@ const service=()=>createClient(url,serviceKey,{auth:{persistSession:false,autoRe
 export const runtime="nodejs";
 
 export async function POST(req:Request){
+ if(!url||!serviceKey)return Response.json({error:"Billing Store database is not configured."},{status:503});
  const body=await req.json().catch(()=>({}));
  const email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
  if(!email||!password)return Response.json({error:"Enter your email and password."},{status:400});
