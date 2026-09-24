@@ -23,7 +23,7 @@ export default function Products() {
 
   async function loadStore() {
     const [{ data: products }, { data: options }, { data: settings }, { data: cartData, error: cartError }, {data:cfgRows}] = await Promise.all([
-      sb.from("products").select("id,slug,name,description,price_cents,currency,metadata").eq("active", true).order("name"),
+      sb.from("products").select("id,slug,name,description,price_cents,currency,metadata,track_stock,stock_on_hand,stock_reserved,allow_backorders,sort_order,created_at").eq("active", true),
       sb.from("product_options").select("product_id").eq("active", true),
       sb.from("app_settings").select("key,value").eq("category","store"),
       sb.rpc("cart_summary"),
@@ -31,7 +31,10 @@ export default function Products() {
     ]);
     const cfg=Object.fromEntries((cfgRows||[]).map((x:any)=>[x.key,x.value]));
     setCatalogCfg({allowCoupons:cfg["products.allow_coupons"]!==false,allowAddons:cfg["products.allow_addons"]!==false,hideOutOfStock:cfg["products.hide_out_of_stock"]===true,sortMode:String(cfg["products.sort_mode"]||"sort_order")});
-    setItems(products || []);
+    let visible=(products||[]).filter((p:any)=>!cfg["products.hide_out_of_stock"]||!p.track_stock||p.allow_backorders||(Number(p.stock_on_hand||0)-Number(p.stock_reserved||0)>0));
+    const sortMode=String(cfg["products.sort_mode"]||"sort_order");
+    visible=[...visible].sort((a:any,b:any)=>sortMode==="name"?String(a.name||"").localeCompare(String(b.name||"")):sortMode==="price"?Number(a.price_cents||0)-Number(b.price_cents||0):sortMode==="newest"?new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime():Number(a.sort_order||0)-Number(b.sort_order||0)||String(a.name||"").localeCompare(String(b.name||"")));
+    setItems(visible);
     setOptionProducts(new Set((options || []).map((x:any) => x.product_id)));
     setStoreText(Object.fromEntries((settings || []).map((x:any) => [x.key.split(".").pop(), typeof x.value === "string" ? x.value : String(x.value ?? "")])));
     setCart(cartData || { items: [], item_count: 0, subtotal_cents: 0, discount_cents: 0, total_cents: 0 });
@@ -175,7 +178,7 @@ export default function Products() {
       </div>
 
       <aside className="storeCheckoutPanel buybox"><div className="storeTotals"><div><span>Subtotal</span><b>{money(cart.subtotal_cents)}</b></div><div><span>Discount</span><b>-{money(cart.discount_cents)}</b></div><div className="storeTotal"><span>Total</span><strong>{money(cart.total_cents)}</strong></div></div>
-        <div className="storeCheckoutBlock"><label>Coupon code</label><div className="couponApply"><input value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} placeholder="Coupon code"/>{catalogCfg.allowCoupons&&<button className="secondary" onClick={applyCoupon}>Apply</button>}</div></div>
+        {catalogCfg.allowCoupons&&<div className="storeCheckoutBlock"><label>Coupon code</label><div className="couponApply"><input value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} placeholder="Coupon code"/><button className="secondary" onClick={applyCoupon}>Apply</button></div></div>}
         <div className="storeCheckoutBlock"><label>Payment method</label>{gateways.length ? <div className="storeGatewayList">{gateways.map((g: any) => <label className={`storeGateway ${gateway === g.code ? "active" : ""}`} key={g.code}><input type="radio" name="gateway" checked={gateway === g.code} onChange={() => setGateway(g.code)}/><span><b>{g.name}</b><small>{g.description}</small></span></label>)}</div> : <div className="notice"><b>No online payment method enabled</b><span>You can still create the invoice and pay it later.</span></div>}</div>
         <button disabled={!cart.item_count || busy} onClick={checkout}>{busy ? "Processing…" : gateway ? "Place order & pay" : "Create invoice"}</button><small>Checkout creates one order and one invoice containing every selected OrbitFS product.</small>{!!msg && <p className="storeMessage">{msg}</p>}
       </aside>
