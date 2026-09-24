@@ -82,9 +82,10 @@ function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versio
 async function registerBaseInstallation(install:any,deploymentUrl:string,deploymentId:string){
   const baseUrl=String(deploymentUrl||'').replace(/\/$/,'');
   if(!baseUrl)fail("Base deployment did not return a public URL",502);
+  const secret=await customerInstallationDbSecret(String(install.id));
   const response=await fetch(`${baseUrl}/api/setup/bootstrap`,{
     method:"POST",
-    headers:{"content-type":"application/json","x-orbitfs-installation-id":String(install.installation_id||"")},
+    headers:{"content-type":"application/json","x-orbitfs-db-secret":secret,"x-orbitfs-installation-id":String(install.installation_id||"")},
     body:JSON.stringify({
       installationRoute:"billing_store",
       registeredBy:String(install.auth_user_id||"billing-store"),
