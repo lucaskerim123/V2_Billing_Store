@@ -4,7 +4,7 @@ import {masterRequest} from "@/lib/master-api";
 
 export const dynamic="force-dynamic";
 
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 const productPrice=(p:any)=>p.metadata?.free_product?"Free":p.priceAmount==null?"View details":new Intl.NumberFormat("en-AU",{style:"currency",currency:p.priceCurrency||"AUD",maximumFractionDigits:0}).format(Number(p.priceAmount||0));
 const componentOrder:Record<string,number>={base:0,mcp:1,apex:2,studio:3};
