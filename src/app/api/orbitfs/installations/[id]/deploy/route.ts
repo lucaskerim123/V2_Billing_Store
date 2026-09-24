@@ -1,4 +1,4 @@
-import {requireLicenseMasterForMutation} from "@/lib/license-master-availability";
+import {requireLicenseMasterForDeployment} from "@/lib/license-master-availability";
 import {httpError,loadInstallation,requireOrbitUser,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {runCustomerDeployer} from "@/lib/orbitfs-customer-deployer";
