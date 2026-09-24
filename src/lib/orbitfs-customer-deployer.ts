@@ -132,7 +132,10 @@ async function applyCustomerDatabaseMigrations(install:any,release:any,bundle:Up
     release_id text,
     release_version text,
     applied_at timestamptz not null default now()
-  );`);
+  );
+  alter table public.orbitfs_schema_migrations enable row level security;
+  revoke all on public.orbitfs_schema_migrations from anon, authenticated;
+  grant all on public.orbitfs_schema_migrations to service_role;`);
   if(!migrations.length)return {required:0,applied:0,skipped:0,ids:[] as string[]};
   const existingRaw=await query("select migration_id,sha256 from public.orbitfs_schema_migrations order by applied_at asc;");
   const rows=managementRows(existingRaw);
