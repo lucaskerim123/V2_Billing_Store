@@ -38,6 +38,11 @@ export async function releaseSettings(){
 export async function publicReleaseSettings(){const s=await releaseSettings();return {enabled:s.enabled,maintenance_mode:s.maintenance_mode===true,maintenance_message:String(s.maintenance_message||""),customer_deploy_enabled:s.customer_deploy_enabled,customer_updates_enabled:s.customer_updates_enabled,customer_rollbacks_enabled:s.customer_rollbacks_enabled,allow_existing_supabase_project:s.allow_existing_supabase_project,allow_create_supabase_project:s.allow_create_supabase_project,supabase_oauth_enabled:s.supabase_oauth_enabled,vercel_oauth_enabled:s.vercel_oauth_enabled,schema_version:s.schema_version,release_channel:s.release_channel}}
 export async function requireSystem(capability:"deploy"|"update"|"rollback"="deploy"){
   const s=await releaseSettings();
+  if(s.enabled===false)throw Object.assign(new Error("OrbitFS customer delivery is shut down by Billing Store"),{status:503});
+  if(s.maintenance_mode===true)throw Object.assign(new Error(String(s.maintenance_message||"OrbitFS deployment maintenance is active")),{status:503});
+  if(capability==="deploy"&&s.customer_deploy_enabled===false)throw Object.assign(new Error("Base deployment is disabled by Billing Store"),{status:403});
+  if(capability==="update"&&s.customer_updates_enabled===false)throw Object.assign(new Error("Update deployment is disabled by Billing Store"),{status:403});
+  if(capability==="rollback"&&s.customer_rollbacks_enabled===false)throw Object.assign(new Error("Rollback is disabled by Billing Store"),{status:403});
   await requireLicenseMasterForDeployment(capability);
   return s;
 }
