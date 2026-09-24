@@ -4,6 +4,7 @@ import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
 import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,event,requireSystem,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
+import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
 const MAX_FILES=5000,MAX_FILE_BYTES=25*1024*1024,MAX_TOTAL_BYTES=70*1024*1024;
 const SAFE_PATH=/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)(?:\.git|\.vercel|node_modules)(?:\/|$))[A-Za-z0-9._@+\-\/]+$/;
@@ -158,7 +159,7 @@ async function reportDeploymentFailure(install:any,input:{action:DeployAction;re
   ]);
 }
 
-export async function runCustomerDeployer(install:any,action:DeployAction,version?:string,channel?:string,releaseId?:string){
+export async function runCustomerDeployer(install:any,action:DeployAction,version?:string,channel?:string,releaseId?:string,reason?:string){
   const requestedChannel=String(channel||install.release_channel||"stable").trim().toLowerCase();
   if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(requestedChannel))fail("Invalid release channel",400);
   const allowedChannels=await customerReleaseChannels(String(install.auth_user_id),install.license_binding_id||null);
@@ -172,21 +173,64 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(!authorityLicenseId)fail("Installation is not linked to an active License Manager licence",409);
 
   if(action==="rollback"){
+    const rollbackReason=String(reason||"").trim();
+    if(!rollbackReason)fail("A rollback reason is required",400);
     const previous=await previousDeployment(install);
     const previousDeploymentId=previous.vercel_deployment_id;
     const previousReleaseId=previous.release_id;
+    const rolledBackReleaseId=String(install.release_id||"").trim();
+    const rolledBackVersion=String(install.release_version||"").trim();
+    if(!rolledBackReleaseId||!rolledBackVersion)fail("Current Base release metadata is incomplete and cannot be recorded as rolled back",409);
     if(install.release_channel&&String(install.release_channel)!==requestedChannel)fail("Installation release channel does not match the requested rollback channel",409);
-    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version,previousVersion:install.release_version||null});
+    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version,previousVersion:rolledBackVersion});
     try{
-      await event(install,"deployment.rollback.started","info",`Rolling back to ${previous.release_version}`,{deploymentId:previousDeploymentId});
+      await event(install,"deployment.rollback.started","info",`Rolling back to ${previous.release_version}`,{deploymentId:previousDeploymentId,reason:rollbackReason});
       const result=await vercelApi(install.auth_user_id,`/v9/projects/${encodeURIComponent(install.vercel_project_id)}/rollback/${encodeURIComponent(previousDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
       const completedAt=new Date().toISOString();
-      const {data,error}=await licenseDb().from("orbitfs_installations").update({previous_release_version:install.release_version||null,release_version:previous.release_version,release_id:previousReleaseId,vercel_deployment_id:previousDeploymentId,last_deployment_at:completedAt,last_error:null,state:"ready"}).eq("id",install.id).select().single();
+      const {data,error}=await licenseDb().from("orbitfs_installations").update({previous_release_version:rolledBackVersion,release_version:previous.release_version,release_id:previousReleaseId,vercel_deployment_id:previousDeploymentId,last_deployment_at:completedAt,last_error:null,state:"ready"}).eq("id",install.id).select().single();
       if(error)throw error;
-      await masterExecuteDeployment({action:"rollback",phase:"completed",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version,previousVersion:install.release_version||null,deploymentId:previousDeploymentId,projectId:install.vercel_project_id,projectName:install.vercel_project_name});
-      await event(data,"deployment.rollback.completed","ok",`Rolled back to ${previous.release_version}`,{deploymentId:previousDeploymentId,result});return data;
+      await Promise.allSettled([
+        reportDevPanelReleaseEvent({
+          eventId:`base-rollback:${install.installation_id}:${rolledBackReleaseId}:${previousReleaseId}:${completedAt}`,
+          eventType:"rolled_back",
+          releaseId:rolledBackReleaseId,
+          releaseVersion:rolledBackVersion,
+          targetReleaseId:previousReleaseId,
+          targetVersion:previous.release_version,
+          releaseType:"base",
+          channel:requestedChannel,
+          installationId:install.installation_id,
+          reason:rollbackReason,
+          archived:false,
+          status:"completed",
+          occurredAt:completedAt,
+          metadata:{deploymentId:previousDeploymentId,projectId:install.vercel_project_id,projectName:install.vercel_project_name}
+        }),
+        event(data,"deployment.rollback.completed","ok",`Rolled back from ${rolledBackVersion} to ${previous.release_version}`,{deploymentId:previousDeploymentId,result,reason:rollbackReason})
+      ]);
+      return data;
     }catch(error){
-      await reportDeploymentFailure(install,{action:"rollback",releaseId:previousReleaseId,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version},error);
+      const message=error instanceof Error?error.message:String(error||"Rollback failed");
+      const failedAt=new Date().toISOString();
+      await Promise.allSettled([
+        reportDevPanelReleaseEvent({
+          eventId:`base-rollback-failed:${install.installation_id}:${rolledBackReleaseId}:${failedAt}`,
+          eventType:"rollback_failed",
+          releaseId:rolledBackReleaseId,
+          releaseVersion:rolledBackVersion,
+          targetReleaseId:previousReleaseId,
+          targetVersion:previous.release_version,
+          releaseType:"base",
+          channel:requestedChannel,
+          installationId:install.installation_id,
+          reason:rollbackReason+" — "+message,
+          archived:false,
+          status:"failed",
+          occurredAt:failedAt
+        }),
+        licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message}).eq("id",install.id),
+        event(install,"deployment.rollback.failed","error",message,{reason:rollbackReason,releaseId:rolledBackReleaseId})
+      ]);
       throw error;
     }
   }
