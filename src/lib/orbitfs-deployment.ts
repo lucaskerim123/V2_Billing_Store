@@ -2,7 +2,6 @@ import {createHash,randomBytes} from "node:crypto";
 import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
-import {getPanelRelease} from "@/lib/panel-release";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
 
 const SUPABASE_API="https://api.supabase.com/v1";
@@ -705,29 +704,6 @@ export async function configureVercelUpdateIdentity(install:any,input:{version:s
     ORBITFS_UPDATE_COMPONENTS:JSON.stringify(Array.isArray(input.components)?input.components:[])
   };
   for(const [name,value] of Object.entries(vars)){if(value)await upsertVercelEnv(install,name,value)}
-}
-
-async function uploadVercelFiles(install:any,files:any[]){const {token,teamId}=await vercelAccessToken(install.auth_user_id),out=[];for(const file of files){const bytes=file.encoding==="base64"?Buffer.from(file.data,"base64"):Buffer.from(file.data,"utf8"),sha=createHash("sha1").update(bytes).digest("hex");let r=await fetch(`${VERCEL_API}${withTeam("/v2/files",teamId)}`,{method:"POST",headers:{authorization:`Bearer ${token}`,"content-type":"application/octet-stream","content-length":String(bytes.length),"x-vercel-digest":sha},body:new Uint8Array(bytes)});if(!r.ok&&r.status===404)r=await fetch(`${VERCEL_API}${withTeam("/v2/now/files",teamId)}`,{method:"POST",headers:{authorization:`Bearer ${token}`,"content-type":"application/octet-stream","content-length":String(bytes.length),"x-now-digest":sha},body:new Uint8Array(bytes)});if(!r.ok&&r.status!==409)throw new Error(`Vercel file upload failed for ${file.file}: ${await r.text()}`);out.push({file:file.file,sha,size:bytes.length})}return out}
-
-function assertReleaseSchemaCompatible(install:any,release:any){
-  const installed=String(install.schema_version||""),required=String(release.metadata?.schemaVersion||release.manifest?.schemaVersion||"1");
-  if(installed&&required!==installed)throw Object.assign(new Error(`Panel ${release.metadata.version} requires database schema ${required}, but this installation is schema ${installed}. Apply the required database migration before updating.`),{status:409});
-}
-export async function deployPanel(install:any,action:DeployAction,version?:string){
-  if(action==="rollback")await requireSystem("rollback");else if(action==="update")await requireSystem("update");else await requireSystem("deploy");
-  if(!install.database_initialized_at||!install.supabase_project_ref)throw Object.assign(new Error("Initialize the customer's OrbitFS database first"),{status:409});
-  const target=action==="redeploy"?(install.release_version||"latest"):(version||"latest"),release=await getPanelRelease(target);assertReleaseSchemaCompatible(install,release);
-  const vercel=await vercelAccessToken(install.auth_user_id),publishable=await publishableKey(install),dbSecret=await installationSecret(install.id,"db_secret");
-  if(!dbSecret)throw Object.assign(new Error("OrbitFS database secret is missing"),{status:409});
-  const state=action==="update"||action==="rollback"?"updating":"deploying";
-  const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
-  if((binding as any)?.error)throw (binding as any).error;
-  const licenseId=(binding as any)?.data?.license_id?String((binding as any).data.license_id):"";
-  if(!licenseId)throw Object.assign(new Error("License Master license binding is missing for this installation"),{status:409,code:"LICENSE_BINDING_MISSING"});
-  await licenseDb().from("orbitfs_installations").update({state,last_error:null,latest_available_release:release.metadata.version}).eq("id",install.id);
-  const result=await masterExecuteDeployment({installationId:install.installation_id,userRef:install.auth_user_id,bindingId:install.license_binding_id,licenseId,releaseId:release.metadata.releaseId,action,actorRef:install.auth_user_id,vercelAccessToken:vercel.token,vercelTeamId:vercel.teamId,vercelProjectId:install.vercel_project_id,vercelProjectName:install.vercel_project_name,env:{SUPABASE_URL:`https://${install.supabase_project_ref}.supabase.co`,SUPABASE_PUBLISHABLE_KEY:publishable,ORBITFS_DB_SECRET:dbSecret}});
-  const r=result.result||result;const patch={state,release_version:release.metadata.version,release_id:release.metadata.releaseId,release_sha256:release.metadata.sha256,release_source_commit:release.metadata.sourceCommit,vercel_project_id:r.projectId||install.vercel_project_id,vercel_project_name:r.projectName||install.vercel_project_name,vercel_deployment_id:r.deploymentId||null,deployment_url:r.deploymentUrl||null,last_deployment_at:new Date().toISOString(),last_error:null};
-  const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();if(error)throw error;await event(data,`panel.${action}`,"ok",`${action} Panel ${release.metadata.version} submitted by Master deployment service`,r);return data;
 }
 
 export async function syncDeployment(install:any){
