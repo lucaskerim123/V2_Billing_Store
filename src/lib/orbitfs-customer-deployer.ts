@@ -191,8 +191,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     }
   }
 
-  const effectiveReleaseId=action==="redeploy"&&!releaseId&&!version?String(install.release_id||"").trim()||undefined:releaseId;
-  const effectiveVersion=action==="redeploy"&&!effectiveReleaseId&&!version?String(install.release_version||"").trim()||undefined:version;
+  const pinInstalledBase=(action==="deploy"||action==="redeploy")&&!releaseId&&!version;
+  const effectiveReleaseId=pinInstalledBase?String(install.release_id||"").trim()||undefined:releaseId;
+  const effectiveVersion=pinInstalledBase&&!effectiveReleaseId?String(install.release_version||"").trim()||undefined:version;
   if(action==="redeploy"&&!effectiveReleaseId&&!effectiveVersion)fail("The installation does not have a Base release to redeploy",409);
   const release=await publishedRelease(effectiveVersion,action,requestedChannel,effectiveReleaseId);
   await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null});
@@ -245,6 +246,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   }
   await configureVercel(install,String(release.version),undefined,requestedChannel,String(release.id),String(release.sha256||release.checksum||""),String(release.source_sha||release.source_commit||release.manifest?.sourceCommit||""));
   const parsed=await readBasePackage(release);
+  const packageDatabaseSchema=String((parsed.pkg as any).databaseSchemaVersion||(parsed.pkg as any).releaseInfo?.databaseSchemaVersion||release.manifest?.databaseSchemaVersion||"").trim();
+  const installedDatabaseSchema=String(install.schema_version||"").trim();
+  if(packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
   const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:parsed.files.map(f=>({file:f.file,data:f.data})),projectSettings:parsed.pkg.projectSettings||{},meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||""),orbitfsInstallationRoute:"billing_store"}};
   await event(install,"deployment.started","info",`Deploying ${release.version}`,{action,releaseId:release.id,fileCount:parsed.files.length,checksum:parsed.artifactSha256});
   const created=await vercelApi(install.auth_user_id,"/v13/deployments",{method:"POST",body:JSON.stringify(body)});if(!created?.id&&!created?.uid)fail("Vercel did not return a deployment id",502);
