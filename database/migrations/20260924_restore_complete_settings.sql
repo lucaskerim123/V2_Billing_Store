@@ -173,8 +173,30 @@ insert into public.app_settings(key,value,category,public_read,updated_at) value
 ('support.customer_priority_enabled','true'::jsonb,'support',true,now())
 on conflict(key) do nothing;
 
--- Normalize every known setting into the admin area that owns it.
--- This also repairs legacy "customization" / plural category values without overwriting values.
+-- Migrate legacy settings into their current authoritative keys before hiding the aliases.
+-- Values are preserved so a rebuilt Store keeps existing branding/commerce choices.
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='identity.site_name' and src.key='site.brand_name';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='identity.store_name' and src.key='site.store_name';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='identity.portal_name' and src.key='site.portal_name';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='identity.login_title' and src.key='site.login_heading';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='identity.register_title' and src.key='site.registration_heading';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='billing.currency' and src.key='site.currency';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='billing.allow_account_credit' and src.key='orders.allow_credit';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='general.registration_enabled' and src.key='site.registration_enabled';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='store.hero_title' and src.key='site.store_heading';
+update public.app_settings dst set value=src.value,updated_at=greatest(dst.updated_at,src.updated_at)
+from public.app_settings src where dst.key='store.hero_lead' and src.key='site.store_subheading';
+
+-- Normalize active settings into the admin area that owns them.
 update public.app_settings
 set category=case
   when key like 'identity.%' then 'identity'
@@ -184,23 +206,31 @@ set category=case
   when key like 'products.%' then 'products'
   when key like 'license.%' then 'license'
   when key like 'support.%' then 'support'
-  when key like 'site.%' then 'site'
+  when key like 'downloads.%' then 'downloads'
   when key like 'store.%' then 'store'
   when key like 'alerts.%' then 'alerts'
+  when key like 'site.%' then 'site'
   else category
 end,
 updated_at=now()
-where
-  (key like 'identity.%' and category is distinct from 'identity') or
-  (key like 'general.%' and category is distinct from 'general') or
-  (key like 'billing.%' and category is distinct from 'billing') or
-  (key like 'invoice.%' and category is distinct from 'invoice') or
-  (key like 'products.%' and category is distinct from 'products') or
-  (key like 'license.%' and category is distinct from 'license') or
-  (key like 'support.%' and category is distinct from 'support') or
-  (key like 'site.%' and category is distinct from 'site') or
-  (key like 'store.%' and category is distinct from 'store') or
-  (key like 'alerts.%' and category is distinct from 'alerts');
+where key not in (
+  'site.brand_name','site.store_name','site.portal_name','site.login_heading',
+  'site.registration_heading','site.currency','site.registration_enabled',
+  'site.store_heading','site.store_subheading'
+);
+
+-- Keep old keys for rollback/history, but do not present dead duplicate controls.
+update public.app_settings
+set category='legacy',public_read=false,updated_at=now()
+where key in (
+  'site.brand_name','site.store_name','site.portal_name','site.login_heading',
+  'site.registration_heading','site.currency','site.registration_enabled',
+  'site.store_heading','site.store_subheading','orders.allow_credit'
+);
+
+update public.app_settings
+set category='internal',public_read=false,updated_at=now()
+where key='mail.automation_reconcile_started_at';
 
 -- Keep the internal sync secret present without exposing it through the settings UI.
 insert into public.app_settings(key,value,category,public_read,updated_at)
