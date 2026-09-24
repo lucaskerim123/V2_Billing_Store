@@ -65,7 +65,7 @@ export async function POST(req:Request){
       const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"revoke",license_id:licenseId,channel,external_reference:body.userId||body.user_id||null})},"billing");
       return Response.json({ok:true,access:remote?.access||null,licenseMasterSynced:true});
     }
-    if(action==="request"){
+    if(action==="request"||action==="approve"){
       const licenseId=String(body.licenseId||body.license_id||"").trim(),channel=String(body.channel||"").trim().toLowerCase();
       if(!licenseId||!channel)throw Object.assign(new Error("License and channel are required"),{status:400});
       return Response.json(await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:licenseId,channel,external_reference:body.userId||body.user_id||null})},"billing"));
