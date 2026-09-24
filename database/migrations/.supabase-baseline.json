@@ -89,7 +89,8 @@
     "database/migrations/20260924_support_auto_close_settings.sql": "1b5c37dea43fcc480c9454eeb49c06c2b202ea88",
     "database/migrations/20260924_support_rpc_repair.sql": "dfca54e3deacb769e6ae8cada5f1750d0ee762dd",
     "database/migrations/20260924_support_settings_enforcement.sql": "c48003500efeb26b110ac054273341e6bdc30b34",
-    "database/migrations/20260924_tax_settings_checkout.sql": "8ffb5410a50f9d5250039deaeb4d3adbcb2bfae3"
+    "database/migrations/20260924_tax_settings_checkout.sql": "8ffb5410a50f9d5250039deaeb4d3adbcb2bfae3",
+    "database/migrations/20260925_verify_supabase_migration_automation.sql": "374dafd8ebc09967a6abded25a490663527c0f53"
   },
   "remote_migrations": [
     {
