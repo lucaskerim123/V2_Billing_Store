@@ -1,12 +1,30 @@
 import {licenseDb} from "@/lib/license-api";
 import {masterIssue} from "@/lib/master-api";
+import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 
 const CANONICAL=new Set(["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio"]);
 const ALIASES:Record<string,string>={orbitfs_panel:"orbitfs_base",orbitfs_sorter:"orbitfs_apex"};
 const MAX_ITEMS=20;
 function canonicalComponent(value:any){const key=String(value||"").trim().toLowerCase();return ALIASES[key]||key}
 
-export async function syncPaidOrderToLicenseMaster(orderId:string){
+export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manual?:boolean}={}){
+  const authority=await getLicenseMasterAvailability();
+  const allowed=options.manual?authority.manualFulfillmentAllowed:authority.automaticFulfillmentAllowed;
+  if(!allowed){
+    const db=licenseDb();
+    const id=String(orderId||"").trim();
+    if(id){
+      const now=new Date().toISOString();
+      const {data:order}=await db.from("orders").select("metadata").eq("id",id).maybeSingle();
+      await db.from("orders").update({
+        fulfillment_status:"pending",
+        service_status:"pending",
+        metadata:{...(order?.metadata||{}),fulfillment_hold_reason:authority.reason,fulfillment_mode:authority.effectiveMode,license_master_restricted:true,license_master_reachable:authority.reachable},
+        updated_at:now
+      }).eq("id",id);
+    }
+    return {ok:true,skipped:true,reason:"fulfillment_on_hold",authority};
+  }
   const id=String(orderId||"").trim();if(!id)throw new Error("Order ID is required");
   const db=licenseDb();
   const {data:order,error:orderError}=await db.from("orders").select("id,order_number,auth_user_id,status,payment_status,fulfillment_status").eq("id",id).maybeSingle();
