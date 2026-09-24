@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import DeliveryControls from "../DeliveryControls";
 
 const UPDATE_PRODUCTS=["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
 
@@ -12,11 +13,10 @@ export default function OrbitFSUpdateReleaseDeployer(){
   setBusy(true);setMsg("");
   try{
    const auth=await adminHeaders();
-   const target="/api/v1/releases?type=update";
-   const r=await fetch(`/api/admin/license-master?path=${encodeURIComponent(target)}`,{headers:{...auth,Accept:"application/json"},cache:"no-store"});
+   const r=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=update",{headers:{...auth,Accept:"application/json"},cache:"no-store"});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||`License Master returned HTTP ${r.status}`);
-   const rows=(Array.isArray(j.releases)?j.releases:Array.isArray(j)?j:[]).filter((x:any)=>String(x.release_type||x.releaseType||"").toLowerCase()==="update").sort((a:any,b:any)=>String(b.updated_at||b.created_at||"").localeCompare(String(a.updated_at||a.created_at||"")));
+   const rows=(Array.isArray(j.releases)?j.releases:Array.isArray(j)?j:[]).filter((x:any)=>String(x.release_type||x.releaseType||"").toLowerCase()==="update").sort((a:any,b:any)=>String(b.updatedAt||b.updated_at||b.created_at||"").localeCompare(String(a.updatedAt||a.updated_at||a.created_at||"")));
    setReleases(rows);setSelected(current=>rows.some((r:any)=>r.id===current)?current:(rows[0]?.id||""));const cr=await fetch("/api/admin/orbitfs/release-channels",{headers:auth,cache:"no-store"});const cj=await cr.json().catch(()=>({}));setChannels((cj.channels||[]).filter((x:any)=>x.enabled&&x.customer_visible));
   }catch(e:any){setMsg(e instanceof TypeError?"Could not reach the License Master connection endpoint. Check the Billing Store → License Master connection and server-side API configuration.":(e?.message||"Could not load update release state."))}
   finally{setBusy(false)}
@@ -25,7 +25,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
  const chosen=releases.find(r=>r.id===selected)||releases[0]||null;
  async function promote(){if(!chosen||!target)return;setBusy(true);setMsg("");try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-promote",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id,targetChannel:target})}),j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Could not promote release");setMsg("Release promoted to "+target+".");setTarget("");await load()}catch(e:any){setMsg(e?.message||"Could not promote release")}finally{setBusy(false)}}
  async function publishUpdate(){if(!chosen)return;setBusy(true);setMsg("");try{const auth=await adminHeaders();const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({releaseId:chosen.id})}),j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||"Could not publish update");setMsg("Update published to the Customer Portal.");await load()}catch(e:any){setMsg(e?.message||"Could not publish update")}finally{setBusy(false)}}
- const manifest=chosen?.manifest&&typeof chosen.manifest==="object"?chosen.manifest:{};
+ const manifest=chosen?.manifest&&typeof chosen.manifest==="object"?chosen.manifest:{components:chosen?.components||[],validation:chosen?.validation||null,minimumVersion:chosen?.minimumVersion,rollbackVersion:chosen?.rollbackVersion,required:chosen?.required,title:chosen?.title};
  const components=Array.isArray(manifest.components)?manifest.components:[];
  return <main className="orbitfsControlPage">
   <section className="orbitfsControlHero">
@@ -34,9 +34,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
   </section>
 
   {msg&&<div className="orbitfsNotice">{msg}</div>}
-  <section className="orbitfsCard" style={{marginTop:12}}>
-   <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">DEPLOYMENT AUTHORITY</div><h2>License Manager controlled</h2><p className="orbitfsMuted">Update deployment and rollback authorization are controlled in License Manager. Billing Store keeps only the final customer-facing publication gate.</p></div><a className="buttonlink secondary" href="https://panel.incendiarynetworks.cc/settings" target="_blank" rel="noreferrer">Open License Manager API Control</a></div>
-  </section>
+  <DeliveryControls compact />
   {chosen?.manifest?.validation?.status === "failed" && <section className="orbitfsCard" style={{marginTop:12,border:"1px solid currentColor"}}>
    <div className="orbitfsCardHeader"><div><div className="orbitfsKicker">VALIDATION FAILED</div><h2>Release is blocked</h2><p className="orbitfsMuted">Fix the failed checks below, then re-run validation in License Master. Nothing should be published while validation is failed.</p></div></div>
    <div>{(Array.isArray(chosen.manifest.validation.checks)?chosen.manifest.validation.checks:[]).filter((c:any)=>!c.ok).map((c:any,i:number)=><div key={c.key||i} style={{padding:"10px 0",borderTop:"1px solid rgba(127,127,127,.2)"}}><b>✕ {c.key||"check"}</b><div className="orbitfsMuted">{c.message||"Validation check failed."}</div>{c.fix&&<div className="orbitfsMuted" style={{marginTop:4}}><b>Fix:</b> {c.fix}</div>}<pre style={{whiteSpace:"pre-wrap",marginTop:6}}>{c.prompt||("Fix the "+(c.key||"failed")+" validation check. Inspect the related release data/code, make the smallest production-safe fix, then run validation again.")}</pre></div>)}</div>
