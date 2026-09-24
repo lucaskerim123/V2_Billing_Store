@@ -1,2 +1,2 @@
 import AdminSettingsEditor from "@/components/AdminSettingsEditor";
-export default function Page(){return <AdminSettingsEditor category="customization" title="Site customisation" description="Brand name, portal/store labels, accent colour and other database-driven presentation settings."/>}
+export default function Page(){return <AdminSettingsEditor category="site" title="Site customisation" description="Branding, colours, layout, homepage, links, portal text and canonical Store URLs."/>}
