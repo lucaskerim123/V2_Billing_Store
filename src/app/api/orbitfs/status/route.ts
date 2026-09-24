@@ -1,3 +1,4 @@
+import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 import {createClient} from "@supabase/supabase-js";
 import {masterLicenses,masterReleases} from "@/lib/master-api";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
@@ -9,14 +10,15 @@ async function currentUser(req:Request){const token=(req.headers.get("authorizat
 export async function GET(req:Request){
  try{
   const user=await currentUser(req),db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}}),q=(p:any)=>Promise.resolve(p).catch(()=>({data:[],error:null}));
-  const [customerResult,bindings,connections,installations,settings,masterLicenseResult,channelAccess]=await Promise.all([
+  const [customerResult,bindings,connections,installations,settings,masterLicenseResult,channelAccess,masterAvailability]=await Promise.all([
    q(db.from("customers").select("id,customer_number,name,email").eq("auth_user_id",user.id).maybeSingle()),
    q(db.from("license_bindings").select("*").eq("auth_user_id",user.id).is("archived_at",null).order("created_at",{ascending:false})),
    q(db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_installations").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle()),
    masterLicenses().catch(()=>({licenses:[]})),
-   Promise.resolve(["stable"])
+   Promise.resolve(["stable"]),
+   getLicenseMasterAvailability()
   ]);
   const customer=customerResult.data||null;
   const installationRows=installations.data||[],bindingRows=bindings.data||[],masterLicensesRows=masterLicenseResult?.licenses||[];
@@ -65,6 +67,6 @@ export async function GET(req:Request){
   const latestBase=latestMaster("base"),latestUpdate=latestMaster("update");
   const settingsChannels=allowedChannels;
   const s=settings.data||{};
-  return Response.json({customer:{id:customer?.id||null,customer_id:customer?.customer_number||null,customer_number:customer?.customer_number||null,name:customer?.name||null,email:customer?.email||null},settings:{enabled:s.enabled!==false,maintenance_mode:s.maintenance_mode===true,maintenance_message:String(s.maintenance_message||""),customer_deploy_enabled:s.customer_deploy_enabled!==false,customer_updates_enabled:s.customer_updates_enabled!==false,customer_rollbacks_enabled:s.customer_rollbacks_enabled!==false,supabase_oauth_enabled:s.supabase_oauth_enabled!==false,vercel_oauth_enabled:s.vercel_oauth_enabled!==false,allow_existing_supabase_project:s.allow_existing_supabase_project!==false,allow_create_supabase_project:s.allow_create_supabase_project!==false,schema_version:s.schema_version||"1",release_channel:settingsChannels[0]||"stable",release_channels:settingsChannels},bindings:enrichedBindings,connections:connectionRows,installations:installationRows.map((row:any)=>install&&row.id===install.id?install:row),events:eventRows.data||[],releases:installHistory,publishedReleases:publishedMaster,latestRelease:latestUpdate||latestBase,latestBase,latestUpdate,master:{licenses:masterLicensesRows,releases:masterReleaseRows}},{headers:{"cache-control":"no-store"}});
+  return Response.json({customer:{id:customer?.id||null,customer_id:customer?.customer_number||null,customer_number:customer?.customer_number||null,name:customer?.name||null,email:customer?.email||null},settings:{enabled:s.enabled!==false,maintenance_mode:s.maintenance_mode===true,maintenance_message:String(s.maintenance_message||""),license_authority_available:masterAvailability.reachable===true&&masterAvailability.restricted!==true,license_authority_reason:String(masterAvailability.reason||"unknown"),license_authority_notice:String(masterAvailability.notice||""),customer_deploy_enabled:s.customer_deploy_enabled!==false,customer_updates_enabled:s.customer_updates_enabled!==false,customer_rollbacks_enabled:s.customer_rollbacks_enabled!==false,supabase_oauth_enabled:s.supabase_oauth_enabled!==false,vercel_oauth_enabled:s.vercel_oauth_enabled!==false,allow_existing_supabase_project:s.allow_existing_supabase_project!==false,allow_create_supabase_project:s.allow_create_supabase_project!==false,schema_version:s.schema_version||"1",release_channel:settingsChannels[0]||"stable",release_channels:settingsChannels},bindings:enrichedBindings,connections:connectionRows,installations:installationRows.map((row:any)=>install&&row.id===install.id?install:row),events:eventRows.data||[],releases:installHistory,publishedReleases:publishedMaster,latestRelease:latestUpdate||latestBase,latestBase,latestUpdate,master:{licenses:masterLicensesRows,releases:masterReleaseRows}},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:e?.message||"Could not load OrbitFS status"},{status:Number(e?.status)||500,headers:{"cache-control":"no-store"}})}
 }
