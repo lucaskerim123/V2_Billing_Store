@@ -7,7 +7,7 @@ const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://xwbjfhpgsvsjaykelufa.su
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const allowedGuestDepartments=new Set(["General Support","Sales Enquiries","Sales"]);
-const guestLifetimeMs=48*60*60*1000;
+
 const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function formatGuestCode(raw:string){return (raw.match(/.{1,2}/g)||[raw]).join("-")}
@@ -20,10 +20,14 @@ export async function POST(req:Request){
  const body=await req.json().catch(()=>({}));
  const bearer=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
  const service=createClient(url,serviceKey,{auth:{persistSession:false}});
+ const {data:settingRows}=await service.from("app_settings").select("key,value").in("key",["support.enabled","support.guest_enabled","support.guest_retention_hours","support.customer_priority_enabled","support.default_priority"]);
+ const settings=Object.fromEntries((settingRows||[]).map((x:any)=>[x.key,x.value]));
+ if(settings["support.enabled"]===false)return Response.json({error:"Support is temporarily unavailable."},{status:503});
  let user:any=null;
  if(bearer){const db=createClient(url,publicKey,{global:{headers:{Authorization:`Bearer ${bearer}`}},auth:{persistSession:false}});user=(await db.auth.getUser(bearer)).data.user}
  const name=String(body.name||"").trim(),email=String(body.email||"").trim().toLowerCase(),departmentId=String(body.department||""),subject=String(body.subject||"").trim(),message=String(body.body||"").trim();
  if(!subject||!message)return Response.json({error:"Subject and message are required."},{status:400});
+ if(!user&&settings["support.guest_enabled"]===false)return Response.json({error:"Guest support is currently disabled. Please sign in to contact Support."},{status:403});
  if(!user&&(!name||!email||!email.includes("@")))return Response.json({error:"Your name and a valid email address are required."},{status:400});
  const {data:department}=await service.from("support_departments").select("id,name,enabled").eq("id",departmentId).maybeSingle();
  if(!department?.enabled)return Response.json({error:"Choose an available support department."},{status:400});
@@ -41,9 +45,12 @@ export async function POST(req:Request){
  }
  const now=new Date().toISOString();
  let guestCode:string|null=null,guestHash:string|null=null,guestExpiresAt:string|null=null;
- if(!user){try{const allocated=await createUniqueGuestCode(service);guestCode=allocated.code;guestHash=allocated.hash;guestExpiresAt=new Date(Date.now()+guestLifetimeMs).toISOString()}catch(e:any){return Response.json({error:e?.message||"Could not create guest ticket access."},{status:500})}}
+ if(!user){try{const allocated=await createUniqueGuestCode(service);guestCode=allocated.code;guestHash=allocated.hash;const retentionHours=Math.min(168,Math.max(1,Number(settings["support.guest_retention_hours"]||48)));guestExpiresAt=new Date(Date.now()+retentionHours*60*60*1000).toISOString()}catch(e:any){return Response.json({error:e?.message||"Could not create guest ticket access."},{status:500})}}
  const guestMetadata=!user?{guest:true,guest_support_level:"basic",guest_access_hash:guestHash,guest_code_length:normalizeGuestCode(String(guestCode)).length,guest_access_expires_at:guestExpiresAt,request_ip:ip}:{};
- const {data:ticket,error}=await service.from("support_tickets").insert({user_id:user?.id||null,department_id:department.id,subject,status:"open",priority:user?String(body.priority||"normal"):"normal",source:user?"customer_web":"public_web",last_client_reply_at:now,metadata:{...guestMetadata,contact_name:customerName,contact_email:customerEmail}}).select("id,ticket_number").single();
+ const defaultPriority=String(settings["support.default_priority"]||"normal");
+ const requestedPriority=String(body.priority||defaultPriority);
+ const priority=user&&settings["support.customer_priority_enabled"]!==false?requestedPriority:defaultPriority;
+ const {data:ticket,error}=await service.from("support_tickets").insert({user_id:user?.id||null,department_id:department.id,subject,status:"open",priority,source:user?"customer_web":"public_web",last_client_reply_at:now,metadata:{...guestMetadata,contact_name:customerName,contact_email:customerEmail}}).select("id,ticket_number").single();
  if(error||!ticket)return Response.json({error:error?.message||"Could not open ticket."},{status:500});
  const {error:messageError}=await service.from("support_ticket_messages").insert({ticket_id:ticket.id,author_user_id:user?.id||null,author_role:"user",body:message,internal_note:false,attachments:[]});
  if(messageError){await service.from("support_tickets").delete().eq("id",ticket.id);return Response.json({error:messageError.message},{status:500})}
