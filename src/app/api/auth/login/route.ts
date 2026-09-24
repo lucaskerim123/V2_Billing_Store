@@ -62,7 +62,10 @@ export async function POST(req:Request){
   }
  }
  if(!user)return Response.json({error:"Invalid email or password."},{status:401});
- if(!user.email_verified_at)return Response.json({error:"Verify your email address before signing in."},{status:403});
+ const settingsDb=service();
+ const {data:verificationSetting}=await settingsDb.from("app_settings").select("value").eq("key","general.require_email_verification").maybeSingle();
+ const requireVerification=verificationSetting?.value!==false;
+ if(requireVerification&&!user.email_verified_at)return Response.json({error:"Verify your email address before signing in."},{status:403});
  await createOrbitSession(user.id,req);
  return Response.json({ok:true,user:{id:user.id,email:user.email,display_name:user.display_name||user.first_name||user.email}});
 }
