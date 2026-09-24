@@ -1,6 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
 import {sendAutomation} from "@/lib/transactional-server";
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"https://bealqgenrcytjzjoikmk.supabase.co";
+const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const pub=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 export async function POST(req:Request){
   const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
