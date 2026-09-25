@@ -84,7 +84,7 @@ export default function OrbitFSReleaseDeployer(){
   if(r.ok)await load();
  }
 
- if(loading)return <main className="portalReleasePage"><section className="portalCompactPanel"><h2>Loading releases…</h2><p className="muted">Checking publication and deployment access.</p></section></main>;
+ if(loading)return <main className="portalReleasePage orbitfsReleasesV3"><section className="portalCompactPanel"><h2>Loading releases…</h2><p className="muted">Checking publication and deployment access.</p></section></main>;
  if(!data)return <main className="portalReleasePage"><section className="portalCompactPanel"><h2>Release service unavailable</h2><p className="muted">{message||"Could not load release status."}</p><button onClick={()=>void load()}>Retry</button></section></main>;
 
  return <main className="portalReleasePage">
