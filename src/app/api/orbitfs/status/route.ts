@@ -30,11 +30,44 @@ export async function GET(req:Request){
   const customerNumber=String(customer?.customer_number||"").trim();
   const customerMasterLicenses=customerNumber?masterLicensesRows.filter((x:any)=>String(x.customer_external_id||"").trim()===customerNumber).filter((x:any)=>!["revoked","expired"].includes(String(x.status||"").toLowerCase())):[];
   let connectionRows=(connections.data||[]).map((x:any)=>({...x,metadata:{...(x.metadata||{})}}));
-  const enrichedBindings=bindingRows.flatMap((b:any)=>{const remote=customerMasterLicenses.find((x:any)=>String(x.id)===String(b.license_id));return remote?[{...b,remote_state:remote.status||b.remote_state,expires_at:remote.expires_at||b.expires_at,master_license_id:remote.id,license_product_key:b.license_product_key||remote.product||remote.product_code}]:[]});
+  const enrichedBindings=bindingRows.flatMap((b:any)=>{
+    const remote=customerMasterLicenses.find((x:any)=>String(x.id)===String(b.license_id));
+    if(!remote)return [];
+    const product=String(b.license_product_key||remote.product||remote.product_code||"").toLowerCase();
+    return [{
+      id:b.id,
+      license_id:remote.id,
+      license_product_key:product,
+      label:b.label||remote.product_name||product,
+      license_key_last4:remote.license_key_last4||b.license_key_last4||null,
+      authoritative_status:String(remote.status||"unknown"),
+      authoritative_expires_at:remote.expires_at||null,
+      status:String(remote.status||"unknown"),
+      expires_at:remote.expires_at||null,
+      components:remote.components||{},
+      activations:Array.isArray(remote.activations)?remote.activations:[],
+      api_source:"license_master",
+      linked_order_id:b.order_id||null,
+      linked_order_item_id:b.order_item_id||null
+    }];
+  });
   for(const remote of customerMasterLicenses){
     if(!enrichedBindings.some((b:any)=>String(b.license_id)===String(remote.id))){
       const product=String(remote.product||remote.product_code||"").toLowerCase();
-      enrichedBindings.push({id:`master-${remote.id}`,license_id:remote.id,license_product_key:product,desired_state:remote.status,remote_state:remote.status,license_key_last4:remote.license_key_last4||null,expires_at:remote.expires_at||null,label:product,api_source:"license_master"});
+      enrichedBindings.push({
+        id:`master-${remote.id}`,
+        license_id:remote.id,
+        license_product_key:product,
+        label:remote.product_name||product,
+        license_key_last4:remote.license_key_last4||null,
+        authoritative_status:String(remote.status||"unknown"),
+        authoritative_expires_at:remote.expires_at||null,
+        status:String(remote.status||"unknown"),
+        expires_at:remote.expires_at||null,
+        components:remote.components||{},
+        activations:Array.isArray(remote.activations)?remote.activations:[],
+        api_source:"license_master"
+      });
     }
   }
   const base=enrichedBindings.find((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel)||enrichedBindings[0]||null,install=base?installationRows.find((x:any)=>x.license_binding_id===base.id):null;
@@ -71,6 +104,6 @@ export async function GET(req:Request){
   const latestBase=latestMaster("base"),latestUpdate=latestMaster("update");
   const settingsChannels=allowedChannels;
   const s=settings.data||{},authority=masterAvailability.authority||{};
-  return Response.json({customer:{id:customer?.id||null,customer_id:customer?.customer_number||null,customer_number:customer?.customer_number||null,name:customer?.name||null,email:customer?.email||null},settings:{enabled:s.enabled!==false&&masterAvailability.reachable===true&&authority.system_enabled!==false,maintenance_mode:s.maintenance_mode===true||authority.maintenance_mode===true,maintenance_message:String(s.maintenance_mode===true?s.maintenance_message||"OrbitFS deployment maintenance is active":masterAvailability.notice||""),license_authority_available:masterAvailability.reachable===true&&masterAvailability.restricted!==true,release_authority_available:masterAvailability.releaseAuthorityAvailable===true,deployment_authority_available:masterAvailability.deploymentAuthorityAvailable===true,license_authority_reason:String(masterAvailability.reason||"unknown"),license_authority_notice:String(masterAvailability.notice||""),customer_deploy_enabled:s.enabled!==false&&s.maintenance_mode!==true&&s.customer_deploy_enabled!==false&&masterAvailability.baseDeploymentAvailable===true,customer_updates_enabled:s.enabled!==false&&s.maintenance_mode!==true&&s.customer_updates_enabled!==false&&masterAvailability.updateDeploymentAvailable===true,customer_rollbacks_enabled:s.enabled!==false&&s.maintenance_mode!==true&&s.customer_rollbacks_enabled!==false&&masterAvailability.rollbackAvailable===true,supabase_oauth_enabled:s.supabase_oauth_enabled!==false,vercel_oauth_enabled:s.vercel_oauth_enabled!==false,allow_existing_supabase_project:s.allow_existing_supabase_project!==false,allow_create_supabase_project:s.allow_create_supabase_project!==false,schema_version:s.schema_version||"1",release_channel:settingsChannels[0]||"stable",release_channels:settingsChannels},bindings:enrichedBindings,connections:connectionRows,installations:installationRows.map((row:any)=>install&&row.id===install.id?install:row),events:eventRows.data||[],releases:installHistory,publishedReleases:publishedMaster,latestRelease:latestUpdate||latestBase,latestBase,latestUpdate,master:{licenses:masterLicensesRows,releases:masterReleaseRows}},{headers:{"cache-control":"no-store"}});
+  return Response.json({customer:{id:customer?.id||null,customer_id:customer?.customer_number||null,customer_number:customer?.customer_number||null,name:customer?.name||null,email:customer?.email||null},settings:{enabled:masterAvailability.reachable===true&&authority.system_enabled!==false,maintenance_mode:authority.maintenance_mode===true,maintenance_message:String(masterAvailability.notice||""),license_authority_available:masterAvailability.reachable===true&&masterAvailability.restricted!==true,release_authority_available:masterAvailability.releaseAuthorityAvailable===true,deployment_authority_available:masterAvailability.deploymentAuthorityAvailable===true,license_authority_reason:String(masterAvailability.reason||"unknown"),license_authority_notice:String(masterAvailability.notice||""),customer_deploy_enabled:masterAvailability.baseDeploymentAvailable===true,customer_updates_enabled:masterAvailability.updateDeploymentAvailable===true,customer_rollbacks_enabled:masterAvailability.rollbackAvailable===true,supabase_oauth_enabled:s.supabase_oauth_enabled!==false,vercel_oauth_enabled:s.vercel_oauth_enabled!==false,allow_existing_supabase_project:s.allow_existing_supabase_project!==false,allow_create_supabase_project:s.allow_create_supabase_project!==false,schema_version:s.schema_version||"1",release_channel:settingsChannels[0]||"stable",release_channels:settingsChannels,authority_source:"license_manager"},bindings:enrichedBindings,connections:connectionRows,installations:installationRows.map((row:any)=>install&&row.id===install.id?install:row),events:eventRows.data||[],releases:installHistory,publishedReleases:publishedMaster,latestRelease:latestUpdate||latestBase,latestBase,latestUpdate,master:{licenses:masterLicensesRows,releases:masterReleaseRows}},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:e?.message||"Could not load OrbitFS status"},{status:Number(e?.status)||500,headers:{"cache-control":"no-store"}})}
 }
