@@ -137,7 +137,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
        <div className="wide"><span>Components</span><b>{selected.components?.length?selected.components.join(", "):"—"}</b></div>
        <div className="wide"><span>Checksum</span><b className="mono">{selected.checksum||"—"}</b></div>
       </div>
-      <div className="orbitCheckLine"><span className={reviewApproved?"ok":""}>Technical approval</span><span className={validationPassed?"ok":""}>Validation</span><span className={selected.checksum?"ok":""}>Artifact</span><span className={selected.channel?"ok":""}>Channel</span><span className={presentationReady?"ok":""}>Customer presentation</span><span className={selected.status==="published"?"ok":canPublish?"ready":""}>Publish gate</span></div>{blockers.length>0&&selected.status!=="published"&&<div className="orbitReviewBlockers"><b>Final review blocked by</b><div>{blockers.map(item=><span key={item}>{item}</span>)}</div></div>
+      <div className="orbitCheckLine"><span className={reviewApproved?"ok":""}>Technical approval</span><span className={validationPassed?"ok":""}>Validation</span><span className={selected.checksum?"ok":""}>Artifact</span><span className={selected.channel?"ok":""}>Channel</span><span className={presentationReady?"ok":""}>Customer presentation</span><span className={selected.status==="published"?"ok":canPublish?"ready":""}>Publish gate</span></div>{blockers.length>0&&selected.status!=="published"&&<div className="orbitReviewBlockers"><b>Final review blocked by</b><div>{blockers.map(item=><span key={item}>{item}</span>)}</div></div>}
       <div className="orbitFinalReview">
        <div>
         <label>Customer channel</label>
