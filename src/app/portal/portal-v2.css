@@ -140,3 +140,107 @@
  .downloadFileRow{grid-template-columns:1fr}.downloadFileAction button{width:100%}
  .portalShellV3 .storeBaseFeature{padding:16px}
 }
+
+
+/* Complete Billing Store customer-side redesign pass */
+.portalShellV3 .portalOverviewHero{align-items:flex-start}
+.portalShellV3 .portalOverviewStats{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.portalShellV3 .portalStatCard{padding:13px 14px;border-radius:9px;background:#0a1928}
+.portalShellV3 .portalStatIcon{width:29px;height:29px;border-radius:7px;font-size:10px}
+.portalShellV3 .portalStatCard strong{font-size:17px}
+.portalShellV3 .portalStatCard small{font-size:8px}
+.portalShellV3 .portalOrbitfsHub{padding:16px;border-radius:10px;box-shadow:none}
+.portalShellV3 .portalOrbitfsHead{padding-bottom:13px}
+.portalShellV3 .portalOrbitfsHead h2{font-size:20px}
+.portalShellV3 .portalOrbitfsGrid{gap:8px;padding-top:10px}
+.portalShellV3 .portalOrbitfsGrid>a{padding:11px;border-radius:9px}
+.portalShellV3 .portalOrbitfsStep{width:29px;height:29px;border-radius:7px}
+.portalShellV3 .portalOverviewGrid,.portalShellV3 .portalOverviewBottom{gap:10px}
+.portalShellV3 .portalQuickActions>a{padding:10px 11px;border-radius:8px}
+.portalShellV3 .portalActivityHeader{padding:14px 15px 9px}
+.portalShellV3 .portalActivityHeader h2{font-size:17px}
+.portalShellV3 .portalActivityBody{padding:3px 15px 8px}
+.portalShellV3 .portalActivityTabs button{padding:9px 10px;font-size:10px}
+
+/* Product detail */
+.productDetailV3{display:grid;gap:14px}
+.productDetailV3>.portalTop{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.productDetailV3>.portalTop h1{margin:4px 0 6px;font-size:clamp(25px,2.5vw,34px)}
+.productDetailV3 .purchaseLayout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.6fr);gap:12px;align-items:start}
+.productDetailV3 .purchaseLayout>.panel{margin:0;padding:16px}
+.productDetailV3 .purchaseLayout h2{margin:0 0 10px;font-size:18px}
+.productDetailV3 .purchaseLayout .form{gap:11px}
+.productDetailV3 .purchaseLayout label{font-size:11px}
+.productDetailV3 .buybox{position:sticky;top:74px;padding:16px;border-radius:10px}
+.productDetailV3 .buybox strong{font-size:24px}
+.productDetailV3 .notice{border-radius:8px}
+.productDetailV3 .toggle{padding:10px}
+
+/* Order + invoice details */
+.portalShellV3 .recordDetailPage{gap:12px}
+.portalShellV3 .recordDetailHero{padding:2px 0 4px}
+.portalShellV3 .recordDetailGrid{gap:10px}
+.portalShellV3 .recordDetailGrid>.panel{padding:15px}
+.portalShellV3 .recordProductRow{padding:11px 0}
+.portalShellV3 .linkedRecordCard{padding:11px;border-radius:8px}
+.portalShellV3 .paymentHistoryRow{padding:10px 0}
+.portalShellV3 .recordPaymentPanel .form{gap:10px}
+.portalShellV3 .invoiceDocument{border-radius:8px}
+.portalShellV3 .invoiceDocHeader{padding:20px 22px}
+.portalShellV3 .invoiceDocBusiness strong,.portalShellV3 .invoiceDocMeta h2{font-size:20px}
+.portalShellV3 .invoiceDocBillTo,.portalShellV3 .invoiceDocItemHead,.portalShellV3 .invoiceDocItemRow,.portalShellV3 .invoiceDocTotals,.portalShellV3 .invoiceDocPaymentDetails,.portalShellV3 .invoiceDocFooter{padding-left:22px;padding-right:22px}
+
+/* Support ticket detail */
+.supportTicketV3{display:grid;gap:12px}
+.supportTicketV3>.portalTop{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.supportTicketV3>.portalTop h1{margin:4px 0 6px;font-size:clamp(23px,2.3vw,32px)}
+.supportTicketV3 .stats.four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.supportTicketV3 .stats.four article{padding:11px 12px;border:1px solid #22364a;border-radius:8px;background:#0a1826}
+.supportTicketV3 .stats.four small{font-size:8px}.supportTicketV3 .stats.four strong{font-size:13px}
+.supportTicketV3>.panel{margin:0;padding:15px}
+.supportTicketV3 .thread{display:grid;gap:8px}
+.supportTicketV3 .message{padding:11px 12px;border-radius:8px}
+.supportTicketV3 .message>div{display:flex;justify-content:space-between;gap:10px}
+.supportTicketV3 .message p{margin:6px 0 0;font-size:12px;line-height:1.55}
+.supportTicketV3 .supportReplyBox textarea{min-height:150px}
+.supportTicketV3 .attachmentItem{min-height:34px}
+
+/* Knowledge base */
+.supportKbV3,.supportKbArticleV3{display:grid;gap:12px}
+.supportKbV3>.portalTop,.supportKbArticleV3>.portalTop{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.supportKbV3>.portalTop h1,.supportKbArticleV3>.portalTop h1{margin:4px 0 6px;font-size:clamp(24px,2.5vw,33px)}
+.supportKbV3>.panel,.supportKbArticleV3>.panel{margin:0;padding:15px}
+.supportKbV3 .supportKbSearch{padding:12px 14px}
+.supportKbV3 .supportKbFeatured{gap:8px}
+.supportKbV3 .supportKbFeatured button{padding:11px;border-radius:8px}
+.supportKbV3 .supportKbPublicList article{border-radius:8px}
+.supportKbV3 .supportKbPublicList article>button{padding:11px 12px}
+.supportKbV3 .supportKbBody{padding:0 12px 12px}
+.supportKbArticleV3 .supportKbArticleBody{max-width:980px}
+.supportKbArticleV3 .supportKbArticleContent{font-size:13px;line-height:1.68}
+
+/* Settings + wallet */
+.portalShellV3 .accountSettingsHero{align-items:flex-start;padding:2px 0 4px}
+.portalShellV3 .accountIdentity{padding:8px 10px;border:1px solid #23394d;border-radius:8px;background:#091724}
+.portalShellV3 .settingsPreferenceGrid{gap:12px}
+.portalShellV3 .walletSettingsActions{gap:10px}
+.portalShellV3 .walletBalanceBadge{padding:10px 12px;border-radius:8px}
+.portalShellV3 .walletBalanceBadge strong{font-size:20px}
+.portalShellV3 .walletRechargeRow{padding:10px 0}
+.portalShellV3 .walletActivityRow{padding:9px 0}
+
+@media(max-width:900px){
+ .productDetailV3 .purchaseLayout{grid-template-columns:1fr}
+ .productDetailV3 .buybox{position:static}
+ .supportTicketV3 .stats.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+ .portalShellV3 .portalOverviewStats{grid-template-columns:1fr 1fr}
+ .productDetailV3>.portalTop,.supportTicketV3>.portalTop,.supportKbV3>.portalTop,.supportKbArticleV3>.portalTop{flex-direction:column}
+ .supportTicketV3 .stats.four{grid-template-columns:1fr 1fr}
+ .portalShellV3 .recordDetailGrid{gap:8px}
+}
+@media(max-width:430px){
+ .portalShellV3 .portalOverviewStats{grid-template-columns:1fr}
+ .supportTicketV3 .stats.four{grid-template-columns:1fr}
+}
