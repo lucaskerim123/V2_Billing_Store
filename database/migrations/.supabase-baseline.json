@@ -90,6 +90,8 @@
     "database/migrations/20260924_support_rpc_repair.sql": "dfca54e3deacb769e6ae8cada5f1750d0ee762dd",
     "database/migrations/20260924_support_settings_enforcement.sql": "c48003500efeb26b110ac054273341e6bdc30b34",
     "database/migrations/20260924_tax_settings_checkout.sql": "8ffb5410a50f9d5250039deaeb4d3adbcb2bfae3",
+    "database/migrations/20260925_orbitfs_release_presentation_overrides.sql": "4ad9afadd4db6abcef4ea8347f08e627a40c8f94",
+    "database/migrations/20260925_restore_orbitfs_release_system_snapshot.sql": "9e4a566308e18a9a83e357771700f8fe0c6cbf5d",
     "database/migrations/20260925_verify_supabase_migration_automation.sql": "374dafd8ebc09967a6abded25a490663527c0f53"
   },
   "remote_migrations": [
@@ -296,6 +298,22 @@
     {
       "version": "20260924182609",
       "name": "restore_complete_settings_20260924"
+    },
+    {
+      "version": "20260924202852",
+      "name": "restore_orbitfs_release_system_snapshot_20260925"
+    },
+    {
+      "version": "20260924205020",
+      "name": "orbitfs_release_presentation_overrides_20260925"
+    },
+    {
+      "version": "20260925000945",
+      "name": "restore_orbitfs_release_system_snapshot_20260925"
+    },
+    {
+      "version": "20260925000951",
+      "name": "orbitfs_release_presentation_overrides_20260925"
     }
   ]
 }
