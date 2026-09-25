@@ -36,7 +36,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    if(!r.ok)throw Error(j.error||"Could not load Update releases");
    const rows=(Array.isArray(j.releases)?j.releases:[]).filter((x:any)=>String(x.releaseType||x.release_type||"").toLowerCase()==="update");
    setReleases(rows);
-   setChannels((Array.isArray(cj.channels)?cj.channels:[]).filter((x:any)=>x.enabled!==false));
+   setChannels((Array.isArray(cj.channels)?cj.channels:[]).filter((x:any)=>x.enabled!==false&&x.customer_visible!==false));
    setSelectedId(current=>rows.some((x:UpdateRelease)=>x.id===current)?current:(rows.find((x:UpdateRelease)=>x.status!=="published")?.id||rows[0]?.id||""));
   }catch(e:any){setMessage(e?.message||"Could not load Update release state")}finally{setBusy("")}
  }
@@ -49,7 +49,9 @@ export default function OrbitFSUpdateReleaseDeployer(){
  const validationPassed=selected?.validation?.status==="passed";
  const reviewApproved=selected?.reviewStatus==="approved";
  const presentationReady=Boolean(selected?.title&&selected?.changelog);
- const canPublish=Boolean(selected&&selected.status!=="published"&&validationPassed&&reviewApproved&&selected.checksum&&selected.channel&&presentationReady);
+ const rolloutPublishable=String(selected?.rollout||"public").toLowerCase()!=="internal";
+ const canPublish=Boolean(selected&&selected.status!=="published"&&validationPassed&&reviewApproved&&selected.checksum&&selected.channel&&presentationReady&&rolloutPublishable);
+ const blockers=[!reviewApproved&&"Technical approval",!validationPassed&&"Validation",!selected?.checksum&&"Artifact checksum",!selected?.channel&&"Customer channel",!presentationReady&&"Customer title + changelog",!rolloutPublishable&&"Internal rollout cannot publish"].filter(Boolean) as string[];
 
  function beginEdit(r:UpdateRelease){
   setSelectedId(r.id);
@@ -135,7 +137,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
        <div className="wide"><span>Components</span><b>{selected.components?.length?selected.components.join(", "):"—"}</b></div>
        <div className="wide"><span>Checksum</span><b className="mono">{selected.checksum||"—"}</b></div>
       </div>
-      <div className="orbitCheckLine"><span className={reviewApproved?"ok":""}>Technical approval</span><span className={validationPassed?"ok":""}>Validation</span><span className={selected.checksum?"ok":""}>Artifact</span><span className={selected.channel?"ok":""}>Channel</span><span className={presentationReady?"ok":""}>Customer presentation</span><span className={selected.status==="published"?"ok":canPublish?"ready":""}>Publish gate</span></div>
+      <div className="orbitCheckLine"><span className={reviewApproved?"ok":""}>Technical approval</span><span className={validationPassed?"ok":""}>Validation</span><span className={selected.checksum?"ok":""}>Artifact</span><span className={selected.channel?"ok":""}>Channel</span><span className={presentationReady?"ok":""}>Customer presentation</span><span className={selected.status==="published"?"ok":canPublish?"ready":""}>Publish gate</span></div>{blockers.length>0&&selected.status!=="published"&&<div className="orbitReviewBlockers"><b>Final review blocked by</b><div>{blockers.map(item=><span key={item}>{item}</span>)}</div></div>
       <div className="orbitFinalReview">
        <div>
         <label>Customer channel</label>
