@@ -79,3 +79,64 @@
  .portalShellV3 .portalOverviewHero h1,.portalShellV3 .portalTop h1,.portalShellV3 .portalReleaseHeader h1{font-size:24px}
  .portalShellV3 .panel,.portalShellV3 .portalCompactPanel{border-radius:8px}
 }
+
+
+/* Billing-side page cleanup under the new shell */
+.portalShellV3 .recordsPage,.portalShellV3 .recordDetailPage,.portalShellV3 .supportPageV3,.portalShellV3 .downloadsPageV3,.portalShellV3 .accountSettingsV2,.portalShellV3 .storePage{gap:14px}
+.portalShellV3 .recordsHeader h1,.portalShellV3 .recordDetailHero h1,.portalShellV3 .accountSettingsHero h1,.portalShellV3 .storeHero h1{font-size:clamp(25px,2.5vw,34px);margin:4px 0 6px}
+.portalShellV3 .recordsSectionHead,.portalShellV3 .settingsSectionHead{padding:15px}
+.portalShellV3 .recordsSectionHead h2,.portalShellV3 .settingsSectionHead h2{font-size:18px}
+.portalShellV3 .recordsCount{height:27px;min-width:27px;font-size:10px}
+.portalShellV3 .recordCompactRow{padding:12px 14px}
+.portalShellV3 .recordCompactHead{padding:8px 14px;font-size:9px}
+.portalShellV3 .recordSummaryGrid article{padding:14px;border-radius:9px}
+.portalShellV3 .recordSummaryGrid strong{font-size:17px}
+.portalShellV3 .storeHero{padding:3px 0 0}
+.portalShellV3 .storeLead{font-size:13px;max-width:700px}
+.portalShellV3 .storeBaseFeature{padding:20px 22px;border-radius:11px;gap:20px}
+.portalShellV3 .storeBaseCopy h2{font-size:25px;margin:10px 0 7px}
+.portalShellV3 .storeBaseCopy>p{font-size:13px}
+.portalShellV3 .storeBaseAction{padding:16px;border-radius:10px}
+.portalShellV3 .storeBaseAction strong{font-size:23px}
+.portalShellV3 .storeAddonCard{padding:15px 17px;border-radius:10px}
+.portalShellV3 .storeAddonCard h3{font-size:18px;margin:8px 0 5px}
+.portalShellV3 .storeAddonMeta strong{font-size:17px}
+.portalShellV3 .storeCheckoutPanel{top:74px}
+.portalShellV3 .accountSettingsNav{padding:4px;border-radius:9px}
+.portalShellV3 .accountSettingsNav button{min-height:32px;padding:7px 10px;font-size:10px}
+.portalShellV3 .accountSettingsCard{padding:16px}
+.portalShellV3 .walletActionBox{padding:14px;border-radius:9px}
+.portalShellV3 .settingsSaveBar{border-radius:9px}
+
+/* Downloads */
+.downloadsPageV3{display:grid;gap:14px}
+.downloadsHead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+.downloadsSummary{display:grid;gap:2px;min-width:120px;padding:10px 12px;border:1px solid #294258;border-radius:9px;background:#0a1825;text-align:right}
+.downloadsSummary small{font-size:8px;letter-spacing:.1em;color:#70859a}.downloadsSummary strong{font-size:20px}
+.downloadsEntitlementList{display:grid;gap:10px}
+.downloadEntitlement{padding:0!important;overflow:hidden}
+.downloadEntitlementHead{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:14px 15px;border-bottom:1px solid #203246}
+.downloadEntitlementHead h2{margin:3px 0 4px;font-size:17px}.downloadEntitlementHead span{font-size:10px;color:var(--muted)}
+.downloadFiles{display:grid}.downloadFileRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:12px 15px;border-bottom:1px solid #1b2a3b}.downloadFileRow:last-child{border-bottom:0}
+.downloadFileIdentity{display:grid;gap:3px;min-width:0}.downloadFileIdentity b{font-size:12px}.downloadFileIdentity span{font-size:10px;color:var(--muted)}.downloadFileIdentity small{font-size:8px;color:#6f8498;overflow-wrap:anywhere}
+.downloadFileAction button{min-width:88px}
+.downloadsEmpty,.downloadsEmptyRow{padding:18px}.downloadsEmpty h2{font-size:18px;margin:0 0 6px}.downloadsEmptyRow{font-size:11px;color:var(--muted)}
+
+/* Support */
+.supportPageV3{display:grid;gap:13px}
+.supportPageV3 .portalTop{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+.supportPageV3 .portalTop h1{margin:4px 0 6px;font-size:clamp(25px,2.5vw,34px)}
+.supportPageV3 .recordTabs{margin:0;padding:4px;border:1px solid #24384c;border-radius:9px;background:#091625}
+.supportPageV3 .recordTabs button{min-height:31px;padding:7px 10px;border-radius:6px;font-size:10px}
+.supportPageV3 .supportCreate{padding:16px}
+.supportPageV3 .supportCreate textarea{min-height:170px}
+.supportPageV3 .ticketCard{padding:12px 0}
+.supportPageV3 .ticketCard b{font-size:12px}
+.supportPageV3 .ticketCard span{font-size:10px}
+
+@media(max-width:760px){
+ .downloadsHead,.supportPageV3 .portalTop{align-items:flex-start;flex-direction:column}
+ .downloadsSummary{width:100%;text-align:left}
+ .downloadFileRow{grid-template-columns:1fr}.downloadFileAction button{width:100%}
+ .portalShellV3 .storeBaseFeature{padding:16px}
+}
