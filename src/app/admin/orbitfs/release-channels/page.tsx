@@ -49,8 +49,8 @@ export default function ReleaseChannelsAdmin(){
 
  return <main className="orbitAdminPage">
   <header className="orbitAdminHeader">
-   <div><p className="eyebrow">ORBITFS CONTROL · RELEASE CHANNELS</p><h1>Release channel access</h1><p className="muted">Manage customer access from Billing Store while License Manager remains the source of truth for the grant itself.</p></div>
-   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void mutate({action:"sync"},"Channel definitions synced from License Manager.")} disabled={!!busy}>{busy==="sync"?"Syncing…":"Sync"}</button><button className="orbitAction orbitActionQuiet" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
+   <div><p className="eyebrow">ORBITFS CONTROL · RELEASE CHANNELS</p><h1>Release channel access</h1><p className="muted">Channel definitions and access state are read live from License Manager. Billing Store only provides the customer/staff workflow.</p></div>
+   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void mutate({action:"sync"},"Channel definitions refreshed from License Manager.")} disabled={!!busy}>{busy==="sync"?"Refreshing…":"Refresh from License Manager"}</button><button className="orbitAction orbitActionQuiet" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
