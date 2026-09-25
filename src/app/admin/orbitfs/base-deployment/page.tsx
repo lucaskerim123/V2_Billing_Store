@@ -1,7 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
-import DeliveryControls from "../DeliveryControls";
 
 type Release={
  id:string;version:string;channel?:string;status?:string;reviewStatus?:string;releaseType?:string;
@@ -61,12 +60,10 @@ export default function BaseDeploymentAdmin(){
  return <main className="orbitAdminPage">
   <header className="orbitAdminHeader">
    <div><p className="eyebrow">ORBITFS CONTROL · BASE RELEASES</p><h1>Base deployment</h1><p className="muted">Compact intake, readiness review and customer publication view. Technical approval remains authoritative in License Manager.</p></div>
-   <div className="orbitAdminActions"><button className="secondary" onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button><a className="buttonlink secondary" href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">Open License Manager</a></div>
+   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button><a className="buttonlink orbitAction orbitActionSecondary" href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">Open License Manager</a></div>
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
-  <DeliveryControls compact />
-
   <section className="orbitCompactPanel">
    <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE INTAKE</p><h2>Base release flow</h2></div><span className="orbitCount">{queue.length} pending</span></div>
    <div className="orbitPipeline">
@@ -96,8 +93,8 @@ export default function BaseDeploymentAdmin(){
       </div>
       <div className="orbitCheckLine"><span className={validationPassed?"ok":""}>Validation</span><span className={reviewApproved?"ok":""}>Approval</span><span className={artifactReady?"ok":""}>Artifact</span><span className={portalPublished?"ok":canPublish?"ready":""}>Portal</span></div>
       <div className="orbitAdminActions">
-       <button className="secondary" type="button" onClick={()=>beginEdit(selected)}>Edit portal details</button>
-       {!portalPublished&&<a className={"buttonlink "+(canPublish?"":"secondary")} href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">{canPublish?"Publish in License Manager":"Complete review in License Manager"}</a>}
+       <button className="orbitAction orbitActionSecondary" type="button" onClick={()=>beginEdit(selected)}>Edit portal details</button>
+       {!portalPublished&&<a className={"buttonlink orbitAction "+(canPublish?"orbitActionPrimary":"orbitActionSecondary")} href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">{canPublish?"Publish in License Manager":"Complete review in License Manager"}</a>}
        {portalPublished&&<span className="state ready">Available to customers</span>}
       </div>
      </>:<div className="orbitEmptyCompact">Select a release to review.</div>}
@@ -112,7 +109,7 @@ export default function BaseDeploymentAdmin(){
      <div><b>v{r.version}</b><span>{r.title||"Base release"}</span></div>
      <span>{r.channel||"stable"}</span>
      <span>{r.publishedAt?new Date(r.publishedAt).toLocaleString():"Published"}</span>
-     <div className="orbitRowActions"><button className="secondary" onClick={()=>beginEdit(r)}>Edit</button><button className="secondary" onClick={()=>setSelectedId(r.id)}>View</button></div>
+     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>setSelectedId(r.id)}>View</button></div>
     </div>)}
     {!published.length&&<div className="orbitEmptyCompact">No published Base release history yet.</div>}
    </div>
@@ -120,12 +117,12 @@ export default function BaseDeploymentAdmin(){
 
   {editing&&selected&&<div className="orbitModalBackdrop" onMouseDown={()=>setEditing(false)}>
    <div className="orbitModal" onMouseDown={e=>e.stopPropagation()}>
-    <div className="orbitPanelHead"><div><p className="eyebrow">CUSTOMER PRESENTATION</p><h2>Edit v{selected.version}</h2></div><button className="secondary" onClick={()=>setEditing(false)}>Close</button></div>
+    <div className="orbitPanelHead"><div><p className="eyebrow">CUSTOMER PRESENTATION</p><h2>Edit v{selected.version}</h2></div><button className="orbitAction orbitActionQuiet" onClick={()=>setEditing(false)}>Close</button></div>
     <label>Title<input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/></label>
     <label>Description<textarea rows={3} value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})}/></label>
     <label>Changelog<textarea rows={6} value={draft.changelog} onChange={e=>setDraft({...draft,changelog:e.target.value})}/></label>
     <label>Customer notes<textarea rows={4} value={draft.customer_notes} onChange={e=>setDraft({...draft,customer_notes:e.target.value})}/></label>
-    <div className="orbitAdminActions"><button onClick={()=>void savePresentation()} disabled={busy==="edit"}>{busy==="edit"?"Saving…":"Save portal details"}</button><button className="secondary" onClick={()=>setEditing(false)}>Cancel</button></div>
+    <div className="orbitAdminActions"><button className="orbitAction orbitActionPrimary" onClick={()=>void savePresentation()} disabled={busy==="edit"}>{busy==="edit"?"Saving…":"Save portal details"}</button><button className="orbitAction orbitActionQuiet" onClick={()=>setEditing(false)}>Cancel</button></div>
    </div>
   </div>}
  </main>
