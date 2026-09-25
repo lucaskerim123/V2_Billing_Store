@@ -244,3 +244,87 @@
  .portalShellV3 .portalOverviewStats{grid-template-columns:1fr}
  .supportTicketV3 .stats.four{grid-template-columns:1fr}
 }
+
+
+/* My OrbitFS customer-side redesign */
+.orbitfsBaseV3,.orbitfsLicenseController,.orbitfsReleasesV3{display:grid;gap:12px}
+.orbitfsBaseV3 .portalOverviewHero,.orbitfsLicenseController .portalOverviewHero,.orbitfsReleasesV3 .portalReleaseHeader{padding:2px 0 4px;align-items:flex-start}
+.orbitfsBaseV3 .portalOverviewHero h1,.orbitfsLicenseController .portalOverviewHero h1,.orbitfsReleasesV3 .portalReleaseHeader h1{margin:4px 0 6px;font-size:clamp(25px,2.5vw,34px)}
+.orbitfsBaseV3>.panel,.orbitfsLicenseController>.panel,.orbitfsReleasesV3>.portalCompactPanel{margin:0}
+.orbitfsBaseV3 .panel,.orbitfsLicenseController .panel,.orbitfsReleasesV3 .portalCompactPanel{padding:15px;border-radius:9px}
+.orbitfsBaseV3 .panelTitle,.orbitfsLicenseController .panelTitle,.orbitfsReleasesV3 .orbitPanelHead{gap:12px}
+.orbitfsBaseV3 .panelTitle h2,.orbitfsLicenseController h2,.orbitfsReleasesV3 .orbitPanelHead h2{margin:3px 0 5px;font-size:18px}
+.orbitfsBaseV3 .portalOverviewGrid,.orbitfsLicenseController .portalOverviewGrid{gap:10px}
+.orbitfsBaseV3 .portalOverviewBottom{gap:10px}
+.orbitfsBaseV3 .portalOverviewStats{gap:8px}
+.orbitfsBaseV3 .portalStatCard{padding:11px 12px}
+.orbitfsBaseV3 .portalStatCard strong{font-size:15px}
+.orbitfsBaseV3 .portalStatCard span:last-child{font-size:10px}
+.orbitfsBaseV3 .controllerActions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.orbitfsBaseV3 .controllerActions button,.orbitfsBaseV3 .controllerActions .buttonlink{min-height:33px;padding:7px 10px;font-size:10px}
+.orbitfsBaseV3 .controllerActions label{min-height:33px}
+.orbitfsBaseV3 details.panel{padding:0;overflow:hidden}
+.orbitfsBaseV3 details.panel>summary{padding:14px 15px;list-style:none}
+.orbitfsBaseV3 details.panel>summary::-webkit-details-marker{display:none}
+.orbitfsBaseV3 details.panel[open]>summary{border-bottom:1px solid #203246}
+.orbitfsBaseV3 details.panel>summary~*{margin-left:15px;margin-right:15px}
+.orbitfsBaseV3 details.panel>summary~*:last-child{margin-bottom:15px}
+.orbitfsBaseV3 details.panel .form{gap:10px}
+.orbitfsBaseV3 .listrow{padding:10px 0}
+.orbitfsBaseV3 .listrow b{font-size:11px}
+.orbitfsBaseV3 .listrow span{font-size:9px}
+.orbitfsBaseV3 .inlineStatus{margin:0}
+.orbitfsBaseV3 aside .portalQuickActions>a{padding:9px 10px}
+
+/* License controller */
+.orbitfsLicenseController .portalOverviewGrid{grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr)}
+.orbitfsLicenseController .portalOverviewGrid>section{margin:0;padding:15px}
+.orbitfsLicenseController .portalOverviewGrid>section:first-child>.panel{margin-top:9px!important;padding:13px;border-radius:8px;background:#091826}
+.orbitfsLicenseController .portalOverviewGrid>section:first-child>.panel h2{font-size:16px}
+.orbitfsLicenseController .listrow{padding:9px 0}
+.orbitfsLicenseController .listrow b{font-size:10px}
+.orbitfsLicenseController .listrow span{font-size:10px}
+.orbitfsLicenseController code{display:block;padding:10px;border:1px solid #294158;border-radius:7px;background:#07131f;font-size:10px}
+.orbitfsLicenseController .portalOverviewGrid>section:last-child button{min-height:33px;padding:7px 10px;font-size:10px}
+
+/* Releases and channels */
+.orbitfsReleasesV3 .portalReleaseHeader{display:flex;justify-content:space-between;gap:18px}
+.orbitfsReleasesV3 .portalHeaderActions{display:flex;gap:7px;flex-wrap:wrap}
+.orbitfsReleasesV3 .portalHeaderActions .buttonlink{min-height:32px;padding:7px 10px;font-size:10px}
+.orbitfsReleasesV3 .portalCompactPanel{padding:14px}
+.orbitfsReleasesV3 .portalChannelGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.orbitfsReleasesV3 .portalChannelCard{padding:11px;border-radius:8px}
+.orbitfsReleasesV3 .portalChannelTop b{font-size:12px}
+.orbitfsReleasesV3 .portalChannelCard p{font-size:10px;line-height:1.45}
+.orbitfsReleasesV3 .portalChannelCard small{font-size:9px}
+.orbitfsReleasesV3 .portalInstallRow{gap:12px}
+.orbitfsReleasesV3 .portalChannelPicker{min-width:170px}
+.orbitfsReleasesV3 .portalUpdateStrip{padding:11px;border-radius:8px}
+.orbitfsReleasesV3 .portalReleaseList{display:grid;gap:7px}
+.orbitfsReleasesV3 .portalReleaseRow{display:grid;grid-template-columns:minmax(210px,.8fr) minmax(0,1.5fr) auto;gap:14px;align-items:center;padding:11px 12px;border:1px solid #203246;border-radius:8px;background:#091724}
+.orbitfsReleasesV3 .portalReleaseIdentity{min-width:0}
+.orbitfsReleasesV3 .portalReleaseIdentity b{font-size:11px}
+.orbitfsReleasesV3 .portalReleaseIdentity small{font-size:9px}
+.orbitfsReleasesV3 .portalReleaseRow>p{margin:0;font-size:10px;line-height:1.5;color:var(--muted)}
+.orbitfsReleasesV3 .portalReleaseActions button{min-height:31px;padding:6px 9px;font-size:9px}
+
+@media(max-width:1050px){
+ .orbitfsLicenseController .portalOverviewGrid{grid-template-columns:1fr}
+ .orbitfsReleasesV3 .portalChannelGrid{grid-template-columns:1fr 1fr}
+ .orbitfsReleasesV3 .portalReleaseRow{grid-template-columns:1fr auto}
+ .orbitfsReleasesV3 .portalReleaseRow>p{grid-column:1/-1}
+}
+@media(max-width:700px){
+ .orbitfsBaseV3 .portalOverviewStats{grid-template-columns:1fr 1fr}
+ .orbitfsReleasesV3 .portalReleaseHeader{flex-direction:column}
+ .orbitfsReleasesV3 .portalHeaderActions{width:100%}
+ .orbitfsReleasesV3 .portalHeaderActions .buttonlink{flex:1;text-align:center}
+ .orbitfsReleasesV3 .portalChannelGrid{grid-template-columns:1fr}
+ .orbitfsReleasesV3 .portalInstallRow{align-items:flex-start;flex-direction:column}
+ .orbitfsReleasesV3 .portalChannelPicker{width:100%}
+ .orbitfsReleasesV3 .portalReleaseRow{grid-template-columns:1fr}
+ .orbitfsReleasesV3 .portalReleaseActions button{width:100%}
+}
+@media(max-width:430px){
+ .orbitfsBaseV3 .portalOverviewStats{grid-template-columns:1fr}
+}
