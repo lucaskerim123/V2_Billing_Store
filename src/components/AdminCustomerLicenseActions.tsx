@@ -9,8 +9,7 @@ type Binding = {
   license_id: string;
   label: string;
   license_key_last4?: string | null;
-  remote_state?: string | null;
-  desired_state?: string | null;
+  status?: string | null;
   activations: any[];
 };
 
@@ -147,7 +146,7 @@ export default function AdminCustomerLicenseActions() {
             <div>
               <b>{binding.label}</b>
               <span style={{ display: "block", opacity: 0.7, fontSize: 12 }}>
-                {binding.license_id} · {binding.license_key_last4 ? `••••${binding.license_key_last4}` : "Key protected"} · {binding.remote_state || binding.desired_state || "unknown"}
+                {binding.license_id} · {binding.license_key_last4 ? `••••${binding.license_key_last4}` : "Key protected"} · {binding.status || "unknown"}
               </span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
