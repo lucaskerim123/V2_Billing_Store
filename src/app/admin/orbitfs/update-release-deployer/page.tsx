@@ -1,7 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
-import DeliveryControls from "../DeliveryControls";
 
 type UpdateRelease={
  id:string;version:string;channel?:string;status?:string;reviewStatus?:string;releaseType?:string;
@@ -106,12 +105,10 @@ export default function OrbitFSUpdateReleaseDeployer(){
  return <main className="orbitAdminPage">
   <header className="orbitAdminHeader">
    <div><p className="eyebrow">ORBITFS CONTROL · UPDATES</p><h1>Update releases</h1><p className="muted">Final customer publication workspace for technically approved, validated manifest-driven updates.</p></div>
-   <div className="orbitAdminActions"><button className="secondary" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
+   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
-  <DeliveryControls compact />
-
   <section className="orbitCompactPanel">
    <div className="orbitPanelHead"><div><p className="eyebrow">FINAL REVIEW</p><h2>Publication queue</h2></div><span className="orbitCount">{pending.length} pending</span></div>
    <div className="orbitSplit">
@@ -147,7 +144,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
           {channels.map((ch:any)=><option key={ch.channel} value={ch.channel}>{ch.label||ch.channel}{ch.customer_visible===false?" · internal":""}</option>)}
           {!channels.length&&<option value={selected.channel||"stable"}>{selected.channel||"stable"}</option>}
          </select>
-         <button className="secondary" disabled={selected.status==="published"||busy==="channel"||!targetChannel||targetChannel===selected.channel||!reviewApproved||!validationPassed} onClick={()=>void setChannel()}>{busy==="channel"?"Setting…":"Set channel"}</button>
+         <button className="orbitAction orbitActionChannel" disabled={selected.status==="published"||busy==="channel"||!targetChannel||targetChannel===selected.channel||!reviewApproved||!validationPassed} onClick={()=>void setChannel()}>{busy==="channel"?"Setting…":"Set channel"}</button>
         </div>
         <small className="muted">Changing channel creates the approved customer-publication revision in License Manager; it does not redo technical validation.</small>
        </div>
@@ -160,9 +157,9 @@ export default function OrbitFSUpdateReleaseDeployer(){
       </div>
       {selected.validation?.status==="failed"&&<div className="orbitValidationList">{(selected.validation.checks||[]).filter(c=>!c.ok).map((c,i)=><div key={c.key||i}><b>{c.key||"Validation check"}</b><span>{c.message||"Validation failed."}</span>{c.fix&&<small>Fix: {c.fix}</small>}</div>)}</div>}
       <div className="orbitAdminActions">
-       <button className="secondary" onClick={()=>beginEdit(selected)}>Review customer presentation</button>
-       {selected.status!=="published"&&<button onClick={()=>void publish()} disabled={!canPublish||busy==="publish"}>{busy==="publish"?"Publishing…":"Approve final review & publish"}</button>}
-       {selected.status==="published"&&<button className="secondary" onClick={()=>void unpublish(selected)} disabled={busy.startsWith("unpublish")}>Unpublish</button>}
+       <button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(selected)}>Review customer presentation</button>
+       {selected.status!=="published"&&<button className="orbitAction orbitActionPublish" onClick={()=>void publish()} disabled={!canPublish||busy==="publish"}>{busy==="publish"?"Publishing…":"Approve final review & publish"}</button>}
+       {selected.status==="published"&&<button className="orbitAction orbitActionDanger" onClick={()=>void unpublish(selected)} disabled={busy.startsWith("unpublish")}>Unpublish</button>}
       </div>
      </>:<div className="orbitEmptyCompact">Select an Update release to review.</div>}
     </div>
@@ -176,7 +173,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
      <div><b>v{r.version}</b><span>{r.title||"OrbitFS update"}</span></div>
      <span>{r.channel||"stable"}</span>
      <span>{r.status||"draft"}</span>
-     <div className="orbitRowActions"><button className="secondary" onClick={()=>beginEdit(r)}>Edit</button><button className="secondary" onClick={()=>setSelectedId(r.id)}>View</button>{r.status==="published"&&<button className="secondary" onClick={()=>void unpublish(r)}>Unpublish</button>}</div>
+     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>setSelectedId(r.id)}>View</button>{r.status==="published"&&<button className="orbitAction orbitActionDanger" onClick={()=>void unpublish(r)}>Unpublish</button>}</div>
     </div>)}
     {!releases.length&&<div className="orbitEmptyCompact">No Update release history is available.</div>}
    </div>
@@ -184,7 +181,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
 
   {editing&&selected&&<div className="orbitModalBackdrop" onMouseDown={()=>setEditing(false)}>
    <div className="orbitModal" onMouseDown={e=>e.stopPropagation()}>
-    <div className="orbitPanelHead"><div><p className="eyebrow">UPDATE PRESENTATION</p><h2>Edit v{selected.version}</h2></div><button className="secondary" onClick={()=>setEditing(false)}>Close</button></div>
+    <div className="orbitPanelHead"><div><p className="eyebrow">UPDATE PRESENTATION</p><h2>Edit v{selected.version}</h2></div><button className="orbitAction orbitActionQuiet" onClick={()=>setEditing(false)}>Close</button></div>
     <div className="orbitFormGrid">
      <label>Title<input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/></label>
      <label>Severity<select value={draft.severity} onChange={e=>setDraft({...draft,severity:e.target.value})}><option value="normal">Normal</option><option value="important">Important</option><option value="critical">Critical</option></select></label>
@@ -197,7 +194,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
      <label>Rollback version<input value={draft.rollback_version} onChange={e=>setDraft({...draft,rollback_version:e.target.value})}/></label>
      <label className="orbitCheckLabel"><input type="checkbox" checked={draft.required} onChange={e=>setDraft({...draft,required:e.target.checked})}/> Required update</label>
     </div>
-    <div className="orbitAdminActions"><button onClick={()=>void savePresentation()} disabled={busy==="edit"}>{busy==="edit"?"Saving…":"Save changes"}</button><button className="secondary" onClick={()=>setEditing(false)}>Cancel</button></div>
+    <div className="orbitAdminActions"><button className="orbitAction orbitActionPrimary" onClick={()=>void savePresentation()} disabled={busy==="edit"}>{busy==="edit"?"Saving…":"Save review changes"}</button><button className="orbitAction orbitActionQuiet" onClick={()=>setEditing(false)}>Cancel</button></div>
    </div>
   </div>}
  </main>
