@@ -328,3 +328,208 @@
 @media(max-width:430px){
  .orbitfsBaseV3 .portalOverviewStats{grid-template-columns:1fr}
 }
+
+
+/* Adaptive customer portal layout + single-action interaction model */
+.portalShellV3 .portalOverviewStats,
+.orbitfsReleasesV3 .portalChannelGrid,
+.portalShellV3 .recordSummaryGrid,
+.portalShellV3 .walletSettingsActions{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))!important;
+}
+.portalShellV3 .portalOrbitfsGrid{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))!important;
+}
+.portalShellV3 .recordsSplit{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));
+}
+.portalShellV3 .settingsPreferenceGrid{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));
+}
+.portalShellV3 .storeAddonList{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));
+}
+.portalShellV3 .storeAddonCard{
+  grid-template-columns:minmax(0,1fr) auto;
+}
+.portalShellV3 .panel,
+.portalShellV3 .portalCompactPanel,
+.portalShellV3 .recordsSection,
+.portalShellV3 .accountSettingsCard{
+  min-width:0;
+}
+.portalShellV3 .listrow,
+.portalShellV3 .recordCompactRow,
+.portalShellV3 .downloadFileRow,
+.portalShellV3 .portalReleaseRow{
+  overflow-wrap:anywhere;
+}
+
+/* Guided primary action bar */
+.orbitPrimaryActionBar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:14px;
+  align-items:center;
+  padding:13px 14px;
+  border:1px solid #2d5561;
+  border-radius:10px;
+  background:linear-gradient(135deg,#0b1f2b,#0a1724);
+}
+.orbitPrimaryActionBar.compact{margin-top:10px}
+.orbitPrimaryActionCopy{display:grid;gap:3px;min-width:0}
+.orbitPrimaryActionCopy small{font-size:8px;font-weight:850;letter-spacing:.13em;color:#76bfb5}
+.orbitPrimaryActionCopy b{font-size:14px}
+.orbitPrimaryActionCopy span{max-width:760px;font-size:10px;line-height:1.45;color:var(--muted)}
+.orbitPrimaryActionControls{display:flex;align-items:center;gap:8px}
+.orbitHeroAction{
+  min-width:148px!important;
+  min-height:38px!important;
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  padding:8px 14px!important;
+  border:1px solid #4a9588!important;
+  background:linear-gradient(180deg,#1f6459,#174b45)!important;
+  color:#effffb!important;
+  box-shadow:0 0 0 1px #63c1ae1c,0 10px 26px #0004!important;
+  font-size:10px!important;
+  font-weight:800!important;
+}
+.orbitHeroAction:hover{background:linear-gradient(180deg,#287569,#1b5a51)!important}
+.orbitActionMenu{position:relative}
+.orbitActionMenu>summary{
+  list-style:none;
+  min-height:38px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 11px;
+  border:1px solid #30465b;
+  border-radius:7px;
+  background:#0b1927;
+  color:#b7c7d7;
+  font-size:9px;
+  font-weight:750;
+  cursor:pointer;
+}
+.orbitActionMenu>summary::-webkit-details-marker{display:none}
+.orbitActionMenu[open]>summary{border-color:#477086;color:#fff;background:#102337}
+.orbitActionMenu>div{
+  position:absolute;
+  right:0;
+  top:calc(100% + 7px);
+  z-index:30;
+  width:min(290px,80vw);
+  display:grid;
+  gap:8px;
+  padding:10px;
+  border:1px solid #2b4358;
+  border-radius:9px;
+  background:#091522;
+  box-shadow:0 18px 42px #0009;
+}
+.orbitActionMenu label{display:grid;gap:5px;font-size:9px;color:#8da1b6}
+.orbitActionMenu select{width:100%}
+.orbitActionMenu button,.orbitActionMenu .buttonlink{width:100%;justify-content:center;text-align:center}
+
+/* Release/setup stage rail inspired by publication flow */
+.orbitStageRail{
+  position:relative;
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+.orbitStageRail:before{
+  content:"";
+  position:absolute;
+  left:7%;
+  right:7%;
+  top:50%;
+  height:1px;
+  background:linear-gradient(90deg,#3c9e87,#4d769e);
+  opacity:.45;
+  pointer-events:none;
+}
+.orbitStageRail .portalStatCard{
+  position:relative;
+  z-index:1;
+  min-height:86px;
+  border-color:#29495a;
+  background:#0a1825;
+}
+.orbitStageRail .portalStatCard:hover{border-color:#497b82;background:#0d202d}
+.orbitStageRail .portalStatCard[style*="opacity: 1"],
+.orbitStageRail .portalStatCard[style*="opacity:1"]{
+  border-color:#5ea89a;
+  box-shadow:0 0 0 1px #5ea89a24,0 0 28px #4f9d8e12;
+}
+.orbitStageRail .portalStatIcon{
+  border:1px solid #477c77;
+  background:#0d302f;
+  color:#9ee4d6;
+}
+.orbitStageRail .portalStatCard strong{font-size:13px}
+
+/* Release centre becomes one clear recommendation + supporting data */
+.orbitfsReleasesV3 .portalUpdateStrip{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  border:1px solid #3f7168;
+  background:linear-gradient(135deg,#0c2629,#0b1a27);
+}
+.orbitfsReleasesV3 .portalUpdateStrip b{font-size:13px}
+.orbitfsReleasesV3 .portalUpdateStrip span{font-size:10px;color:var(--muted)}
+.orbitfsReleasesV3 .portalUpdateStrip button{
+  min-width:150px;
+  min-height:36px;
+  background:linear-gradient(180deg,#21665a,#174c45);
+  border-color:#4c9a8c;
+}
+.orbitfsReleasesV3 .portalReleaseActions .state.current{
+  white-space:nowrap;
+  border-color:#35556e;
+  background:#10243a;
+  color:#9ec7eb;
+}
+
+/* Keep controls usable without awkward overflow */
+.portalShellV3 button,
+.portalShellV3 .buttonlink,
+.portalShellV3 select,
+.portalShellV3 input{
+  max-width:100%;
+}
+.portalShellV3 .inlineActions,
+.portalShellV3 .controllerActions,
+.portalShellV3 .portalHeaderActions{
+  flex-wrap:wrap;
+}
+.portalShellV3 .recordCompactRow,
+.portalShellV3 .portalReleaseRow{
+  min-width:0;
+}
+
+/* Mobile/tablet auto-adjustment */
+@media(max-width:900px){
+  .orbitPrimaryActionBar{grid-template-columns:1fr}
+  .orbitPrimaryActionControls{justify-content:flex-start}
+  .orbitStageRail{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .orbitStageRail:before{display:none}
+}
+@media(max-width:640px){
+  .orbitPrimaryActionControls{display:grid;grid-template-columns:minmax(0,1fr) auto}
+  .orbitHeroAction{min-width:0!important;width:100%}
+  .orbitActionMenu>summary{min-width:76px}
+  .orbitActionMenu>div{position:fixed;left:10px;right:10px;bottom:10px;top:auto;width:auto}
+  .orbitStageRail{
+    grid-template-columns:1fr!important;
+  }
+  .orbitfsReleasesV3 .portalUpdateStrip{grid-template-columns:1fr}
+  .orbitfsReleasesV3 .portalUpdateStrip button{width:100%}
+  .portalShellV3 .storeAddonCard{grid-template-columns:1fr}
+}
