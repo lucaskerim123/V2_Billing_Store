@@ -1,5 +1,5 @@
 import {licenseDb} from "@/lib/license-api";
-import {consumeOAuthState,releaseSettings,saveProviderConnection} from "@/lib/orbitfs-deployment";
+import {consumeOAuthState,billingOrbitfsConfig,saveProviderConnection} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
 
 const STORE_ORIGIN=(process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.SITE_URL||"https://orbitfsstore.vercel.app").replace(/\/+$/,"");
@@ -11,7 +11,7 @@ export async function GET(req:Request){
     if(!code)throw new Error(u.searchParams.get("error_description")||u.searchParams.get("error")||"Supabase authorization did not return a code");
     const state=await consumeOAuthState(stateValue,"supabase");
     returnPath=state.return_path||returnPath;
-    const s=await releaseSettings(),secret=String(await serviceRpc("service_orbitfs_release_secret",{p_key:"supabase_client_secret"})||"");
+    const s=await billingOrbitfsConfig(),secret=String(await serviceRpc("service_orbitfs_release_secret",{p_key:"supabase_client_secret"})||"");
     if(!s.supabase_client_id||!secret)throw new Error("OrbitFS Supabase OAuth App is not configured");
     const redirect=`${STORE_ORIGIN}/api/orbitfs/oauth/supabase/callback`;
     const form=new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:redirect});
