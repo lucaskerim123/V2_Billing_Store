@@ -31,15 +31,17 @@ function smartRegionCode(value:string){
   return "americas";
 }
 
-export async function releaseSettings(){
-  const {data,error}=await licenseDb().from("orbitfs_release_system_settings").select("*").eq("id","primary").single();
-  if(error)throw error;return data;
+export async function billingOrbitfsConfig(){
+  const {data,error}=await licenseDb().from("orbitfs_release_system_settings")
+    .select("allow_existing_supabase_project,allow_create_supabase_project,supabase_oauth_enabled,vercel_oauth_enabled,supabase_client_id,vercel_client_id,default_supabase_region,panel_project_prefix,health_path,schema_version")
+    .eq("id","primary").single();
+  if(error)throw error;
+  return data;
 }
-export async function publicReleaseSettings(){const s=await releaseSettings();return {enabled:s.enabled,maintenance_mode:s.maintenance_mode===true,maintenance_message:String(s.maintenance_message||""),customer_deploy_enabled:s.customer_deploy_enabled,customer_updates_enabled:s.customer_updates_enabled,customer_rollbacks_enabled:s.customer_rollbacks_enabled,allow_existing_supabase_project:s.allow_existing_supabase_project,allow_create_supabase_project:s.allow_create_supabase_project,supabase_oauth_enabled:s.supabase_oauth_enabled,vercel_oauth_enabled:s.vercel_oauth_enabled,schema_version:s.schema_version,release_channel:s.release_channel}}
 export async function requireSystem(capability:"deploy"|"update"|"rollback"="deploy"){
-  const s=await releaseSettings();
+  const config=await billingOrbitfsConfig();
   await requireLicenseMasterForDeployment(capability);
-  return s;
+  return config;
 }
 
 export async function loadInstallation(id:string,userId:string,allowAdmin=false){
@@ -83,7 +85,7 @@ async function supabaseAccessToken(userId:string){
   const conn=await connection(userId,"supabase");if(!conn||conn.status!=="connected")throw Object.assign(new Error("Customer Supabase account is not connected"),{status:409});
   let token=await providerSecret(userId,"supabase","access_token");if(!token)throw Object.assign(new Error("Supabase connection token is missing"),{status:409});
   if(conn.token_expires_at&&new Date(conn.token_expires_at).getTime()<Date.now()+60000){
-    const refresh=await providerSecret(userId,"supabase","refresh_token"),s=await releaseSettings(),secret=await releaseSecret("supabase_client_secret");
+    const refresh=await providerSecret(userId,"supabase","refresh_token"),s=await billingOrbitfsConfig(),secret=await releaseSecret("supabase_client_secret");
     if(!refresh||!s.supabase_client_id||!secret)throw Object.assign(new Error("Supabase connection needs to be reconnected"),{status:409});
     const form=new URLSearchParams({grant_type:"refresh_token",refresh_token:refresh});
     const basic=Buffer.from(`${s.supabase_client_id}:${secret}`).toString("base64");
@@ -238,7 +240,7 @@ async function publishableKey(install:any){
 }
 async function ensureVercelProject(install:any){
   if(install.vercel_project_id)return install;
-  const s=await releaseSettings(),{teamId}=await vercelAccessToken(install.auth_user_id),name=`${s.panel_project_prefix}-${install.installation_id.slice(-8)}`.toLowerCase().replace(/[^a-z0-9-]/g,"-");let p:any;
+  const s=await billingOrbitfsConfig(),{teamId}=await vercelAccessToken(install.auth_user_id),name=`${s.panel_project_prefix}-${install.installation_id.slice(-8)}`.toLowerCase().replace(/[^a-z0-9-]/g,"-");let p:any;
   try{p=await vercelApi(install.auth_user_id,"/v11/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit"})})}catch(e:any){if(!String(e.message).includes("404"))throw e;try{p=await vercelApi(install.auth_user_id,"/v10/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit"})})}catch(e2:any){if(!String(e2.message).includes("404"))throw e2;p=await vercelApi(install.auth_user_id,"/v9/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit"})})}}
   const {data,error}=await licenseDb().from("orbitfs_installations").update({vercel_team_id:teamId||p.accountId||p.teamId||null,vercel_project_id:p.id,vercel_project_name:p.name||name,state:"configuring",last_error:null}).eq("id",install.id).select().single();if(error)throw error;await event(data,"vercel.project_created","ok",`OrbitFS Panel project ${p.name||name} created in customer Vercel account`);return data;
 }
@@ -310,6 +312,6 @@ export async function syncDeployment(install:any){
   if(state!=="READY")return install;
   const resultUrl=result?.url?`https://${String(result.url).replace(/^https?:\/\//,"")}`:null;
   const url=install.production_url||install.deployment_url||resultUrl||null;let healthy=false;
-  if(url){try{const s=await releaseSettings(),r=await fetch(new URL(s.health_path||"/api/health",url),{redirect:"follow",cache:"no-store"});healthy=r.status<500}catch{healthy=false}}
+  if(url){try{const s=await billingOrbitfsConfig(),r=await fetch(new URL(s.health_path||"/api/health",url),{redirect:"follow",cache:"no-store"});healthy=r.status<500}catch{healthy=false}}
   const patch={state:"ready",health_status:healthy?"healthy":"degraded",last_health_at:new Date().toISOString(),production_url:url,last_error:healthy?null:"Panel deployed but health check did not succeed"},{data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();if(error)throw error;await event(data,"panel.ready",healthy?"ok":"warning",healthy?"OrbitFS Panel is ready in the customer Vercel account":"Panel deployed; health check is degraded",{url});return data;
 }
