@@ -139,7 +139,7 @@ export default function OrbitFSReleaseDeployer(){
      return <article className="portalReleaseRow" key={r.id||r.version}>
       <div className="portalReleaseIdentity"><span className="state">{r.release_type==="base"?"BASE":"UPDATE"}</span><div><b>v{r.version} · {r.title||"OrbitFS release"}</b><small>{r.channel||"stable"} · {r.published_at?new Date(r.published_at).toLocaleDateString():"Published"}</small></div></div>
       <p>{r.description||r.changelog||"No customer release notes supplied."}</p>
-      <div className="portalReleaseActions">{installed?<span className="state ready">Installed</span>:<button disabled={!!busy||!install||deploymentUnavailable||(r.release_type==="update"?!settings.customer_updates_enabled:!settings.customer_deploy_enabled)} onClick={()=>void deploy(r)}>{busy==="deploy:"+r.version?"Starting…":r.release_type==="base"?"Deploy Base":"Deploy update"}</button>}</div>
+      <div className="portalReleaseActions">{installed?<span className="state ready">Installed</span>:r.release_type==="update"&&latestUpdate&&String(r.id||r.releaseId||"")===String(latestUpdate.id||latestUpdate.releaseId||"")?<span className="state current">Recommended above</span>:<button disabled={!!busy||!install||deploymentUnavailable||(r.release_type==="update"?!settings.customer_updates_enabled:!settings.customer_deploy_enabled)} onClick={()=>void deploy(r)}>{busy==="deploy:"+r.version?"Starting…":r.release_type==="base"?"Deploy Base":"Deploy update"}</button>}</div>
      </article>
     })}
     {!releases.length&&<div className="orbitEmptyCompact">No published releases are currently available for your channel access.</div>}
