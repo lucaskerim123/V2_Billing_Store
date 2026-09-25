@@ -1,13 +1,92 @@
-import {licenseDb} from "@/lib/license-api";
-import {masterReleases,masterRequest} from "@/lib/master-api";
+import {masterReleases} from "@/lib/master-api";
+import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
-import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
-async function bounded<T>(promise:PromiseLike<T>,fallback:T,ms=2500):Promise<T>{let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([Promise.resolve(promise),new Promise<T>(resolve=>{timer=setTimeout(()=>resolve(fallback),ms)})])}finally{if(timer)clearTimeout(timer)}}
-function normalizeLocal(r:any){return r?{...r,releaseId:r.releaseId||r.release_id||r.id,sourceCommit:r.sourceCommit||r.base_source_commit||r.engine_source_commit||null,schemaVersion:r.schemaVersion||r.schema_version||null,releaseChannel:r.releaseChannel||r.release_channel||"stable",minimumVersion:r.minimumVersion||r.minimum_version||null,publishedAt:r.publishedAt||r.published_at||null,updatedAt:r.updatedAt||r.updated_at||null,required:r.required===true,components:Array.isArray(r.components)?r.components:[]}:null}
-function normalizeMaster(r:any){const m=r?.manifest&&typeof r.manifest==="object"?r.manifest:{};return{id:r.id,releaseId:r.id,version:String(r.version||""),channel:r.channel||"stable",status:r.status||"draft",review_status:r.review_status||"pending",reviewStatus:r.review_status||"pending",release_type:r.release_type||r.releaseType||"update",releaseType:r.release_type||r.releaseType||"update",title:m.title||`OrbitFS ${(r.release_type||r.releaseType)==="base"?"Base":"Update"} ${r.version}`,description:m.description||null,changelog:r.changelog||r.notes||null,customerNotes:m.customer_notes||m.customerNotes||"",internalNotes:m.internal_notes||m.internalNotes||"",severity:m.severity||"normal",required:m.required===true,rollout:m.rollout||"public",minimumVersion:m.minimum_version||m.minimumVersion||null,rollbackVersion:m.rollback_version||m.rollbackVersion||null,components:Array.isArray(m.components)?m.components:[],sourceCommit:r.source_sha||null,sourceRepo:r.source_repo||null,sourceRef:r.source_ref||null,checksum:r.checksum||null,artifactUrl:r.artifact_url||null,artifactName:r.artifact_name||null,artifactRunId:r.artifact_run_id||null,publishedAt:r.published_at||null,updatedAt:r.updated_at||r.created_at||null,validation:m.validation||null,archivedAt:r.archived_at||r.archivedAt||null}}
-export async function POST(req:Request){try{await requireOrbitAdmin(req);const body=await req.json().catch(()=>({}));const action=String(body?.action||"").toLowerCase();const releaseId=String(body?.releaseId||body?.release_id||"").trim();if(!releaseId)return Response.json({error:"releaseId is required"},{status:400});const current=await masterRequest("/api/v1/releases/"+encodeURIComponent(releaseId),{method:"GET"},"billing");const release=current?.release;if(!release)return Response.json({error:"RELEASE_NOT_FOUND"},{status:404});if(String(release.release_type||"")!=="update")return Response.json({error:"BILLING_UPDATE_RELEASES_ONLY"},{status:403});if(action==="publish"){if(release.archived_at)return Response.json({error:"RELEASE_ARCHIVED"},{status:409});if(release.review_status!=="approved")return Response.json({error:"RELEASE_NOT_TECHNICALLY_APPROVED"},{status:409});if(release.manifest?.validation?.status!=="passed")return Response.json({error:"RELEASE_VALIDATION_NOT_PASSED"},{status:409});if(!release.artifact_url&&!(release.artifact_repo&&release.artifact_name))return Response.json({error:"RELEASE_ARTIFACT_MISSING"},{status:409});return Response.json(await masterRequest("/api/v1/releases/"+encodeURIComponent(releaseId),{method:"POST",body:JSON.stringify({action:"publish"})},"billing"))}if(action==="withdraw")return Response.json(await masterRequest(`/api/v1/releases/${encodeURIComponent(releaseId)}`,{method:"POST",body:JSON.stringify({action:"withdraw"})},"billing"));if(action==="promote")return Response.json(await masterRequest(`/api/v1/releases/${encodeURIComponent(releaseId)}`,{method:"POST",body:JSON.stringify({action:"promote",target_channel:String(body.targetChannel||body.target_channel||"").trim().toLowerCase()})},"billing"));if(action==="archive"||action==="revert"){const reason=String(body.reason||"").trim();if(!reason)return Response.json({error:"A reason is required"},{status:400});if(action==="revert"&&release.status==="published")await masterRequest(`/api/v1/releases/${encodeURIComponent(releaseId)}`,{method:"POST",body:JSON.stringify({action:"withdraw"})},"billing");const archived=await masterRequest(`/api/v1/releases/${encodeURIComponent(releaseId)}`,{method:"POST",body:JSON.stringify({action:"archive"})},"billing");const occurredAt=new Date().toISOString();const panelReport=await reportDevPanelReleaseEvent({eventId:`update-${action}:${releaseId}:${occurredAt}`,eventType:action==="revert"?"reverted":"archived",releaseId,releaseVersion:String(release.version||""),releaseType:"update",channel:String(release.channel||"stable"),reason,archived:true,status:"completed",occurredAt,sourceSystem:"billing_store"}).catch((error:any)=>({ok:false,error:error?.message||"Dev Panel event report failed"}));return Response.json({...archived,devPanelRecorded:panelReport?.ok===true,devPanelWarning:panelReport?.ok===true?null:(panelReport?.error||panelReport?.reason||"Dev Panel event history was not recorded")})}if(action==="delete")return Response.json({error:"PERMANENT_RELEASE_DELETE_DISABLED_USE_ARCHIVE"},{status:409});return Response.json({error:"Unsupported release action"},{status:400})}catch(e){return httpError(e)}}
+function normalizeMaster(r:any){
+  const m=r?.manifest&&typeof r.manifest==="object"?r.manifest:{};
+  return {
+    id:r.id,
+    releaseId:r.id,
+    version:String(r.version||""),
+    channel:r.channel||"stable",
+    status:r.status||"draft",
+    review_status:r.review_status||"pending",
+    reviewStatus:r.review_status||"pending",
+    release_type:r.release_type||r.releaseType||"update",
+    releaseType:r.release_type||r.releaseType||"update",
+    title:m.title||`OrbitFS ${(r.release_type||r.releaseType)==="base"?"Base":"Update"} ${r.version}`,
+    description:m.description||null,
+    changelog:r.changelog||r.notes||null,
+    customerNotes:m.customer_notes||m.customerNotes||"",
+    internalNotes:m.internal_notes||m.internalNotes||"",
+    severity:m.severity||"normal",
+    required:m.required===true,
+    rollout:m.rollout||"public",
+    minimumVersion:m.minimum_version||m.minimumVersion||null,
+    rollbackVersion:m.rollback_version||m.rollbackVersion||null,
+    components:Array.isArray(m.components)?m.components:[],
+    sourceCommit:r.source_sha||null,
+    sourceRepo:r.source_repo||null,
+    sourceRef:r.source_ref||null,
+    checksum:r.checksum||null,
+    artifactUrl:r.artifact_url||null,
+    artifactName:r.artifact_name||null,
+    artifactRunId:r.artifact_run_id||null,
+    publishedAt:r.published_at||null,
+    updatedAt:r.updated_at||r.created_at||null,
+    validation:m.validation||null,
+    archivedAt:r.archived_at||r.archivedAt||null
+  };
+}
 
-export async function PATCH(req:Request){try{await requireOrbitAdmin(req);const body=await req.json().catch(()=>({}));const releaseId=String(body?.releaseId||body?.release_id||"").trim();if(!releaseId)return Response.json({error:"releaseId is required"},{status:400});const allowed=["title","description","changelog","customer_notes","internal_notes","severity","required","rollout","minimum_version","rollback_version"];const patch:any={};for(const key of allowed){if(Object.prototype.hasOwnProperty.call(body,key))patch[key]=body[key];}if(!Object.keys(patch).length)return Response.json({error:"NO_EDITABLE_FIELDS"},{status:400});const current=await masterRequest("/api/v1/releases/"+encodeURIComponent(releaseId),{method:"GET"},"billing");const release=current?.release;if(!release)return Response.json({error:"RELEASE_NOT_FOUND"},{status:404});if(String(release.release_type||"")!=="update")return Response.json({error:"BILLING_UPDATE_RELEASES_ONLY"},{status:403});if(release.status==="published"||release.archived_at)return Response.json({error:"PUBLISHED_OR_ARCHIVED_RELEASE_NOT_EDITABLE"},{status:409});if(release.review_status!=="approved")return Response.json({error:"RELEASE_NOT_TECHNICALLY_APPROVED"},{status:409});return Response.json(await masterRequest("/api/v1/releases/"+encodeURIComponent(releaseId),{method:"PATCH",body:JSON.stringify(patch)},"billing"))}catch(e){return httpError(e)}}
+export async function GET(req:Request){
+  try{
+    await requireOrbitAdmin(req);
+    const [base,update,authority]=await Promise.all([
+      masterReleases("orbitfs_base","all","base","billing"),
+      masterReleases("orbitfs_base","all","update","billing"),
+      getLicenseMasterAvailability()
+    ]);
+    const releases=[...(base?.releases||[]),...(update?.releases||[])]
+      .map(normalizeMaster)
+      .sort((a:any,b:any)=>String(b.publishedAt||b.updatedAt||"").localeCompare(String(a.publishedAt||a.updatedAt||"")));
+    const latest=(releaseType:"base"|"update")=>releases.find((r:any)=>r.releaseType===releaseType&&r.status==="published"&&!r.archivedAt)||null;
 
-export async function GET(req:Request){try{await requireOrbitAdmin(req);const db=licenseDb();const [inst,profiles,settingsRow,bundles,master]=await Promise.all([bounded(db.from("orbitfs_installations").select("*").order("created_at",{ascending:false}),{data:[],error:null} as any),bounded(db.from("user_profiles").select("id,display_name,company_name,email,status"),{data:[],error:null} as any),bounded(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle(),{data:null,error:null} as any),Promise.resolve({data:[],error:null} as any),bounded(Promise.all([masterReleases("orbitfs_base","all","base","billing"),masterReleases("orbitfs_base","all","update","billing")]).then(([base,update])=>({releases:[...(base?.releases||[]),...(update?.releases||[])]})),{releases:[]},5000)]);const installations=inst.data||[],profileMap=new Map((profiles.data||[]).map((p:any)=>[p.id,p]));const remote=Array.isArray((master as any)?.releases)?(master as any).releases.map(normalizeMaster):[];const releases=remote.sort((a:any,b:any)=>String(b.publishedAt||b.updatedAt).localeCompare(String(a.publishedAt||a.updatedAt)));const latest=(releaseType:"base"|"update")=>releases.find((r:any)=>r.releaseType===releaseType&&r.status==="published"&&!r.archivedAt)||null;const s=settingsRow.data||{};return Response.json({installations:installations.map((i:any)=>({...i,customer:profileMap.get(i.auth_user_id)||null})),releases,latestBase:latest("base"),latestUpdate:latest("update"),settings:{enabled:s.enabled!==false,customer_deploy_enabled:s.customer_deploy_enabled!==false,customer_updates_enabled:s.customer_updates_enabled!==false,customer_rollbacks_enabled:s.customer_rollbacks_enabled!==false}},{headers:{"cache-control":"no-store"}})}catch(e){return httpError(e)}}
+    return Response.json({
+      releases,
+      latestBase:latest("base"),
+      latestUpdate:latest("update"),
+      authority:{
+        source:"license_manager",
+        reachable:authority.reachable,
+        restricted:authority.restricted,
+        release_enabled:authority.releaseAuthorityAvailable,
+        deployment_enabled:authority.deploymentAuthorityAvailable,
+        base_deployment_enabled:authority.baseDeploymentAvailable,
+        update_deployment_enabled:authority.updateDeploymentAvailable,
+        rollback_enabled:authority.rollbackAvailable,
+        reason:authority.reason
+      }
+    },{headers:{"cache-control":"no-store"}});
+  }catch(e){return httpError(e)}
+}
+
+export async function POST(req:Request){
+  try{
+    await requireOrbitAdmin(req);
+    return Response.json({
+      error:"This compatibility route is read-only. Use the dedicated Billing final-review APIs; technical release state remains authoritative in License Manager.",
+      code:"ORBITFS_ADMIN_MUTATION_ROUTE_RETIRED"
+    },{status:410,headers:{"cache-control":"no-store"}});
+  }catch(e){return httpError(e)}
+}
+
+export async function PATCH(req:Request){
+  try{
+    await requireOrbitAdmin(req);
+    return Response.json({
+      error:"This compatibility route is read-only. Use /api/admin/orbitfs/release-presentation for customer-facing review fields.",
+      code:"ORBITFS_ADMIN_MUTATION_ROUTE_RETIRED"
+    },{status:410,headers:{"cache-control":"no-store"}});
+  }catch(e){return httpError(e)}
+}
