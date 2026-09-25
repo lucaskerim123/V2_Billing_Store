@@ -100,7 +100,7 @@ export default function MyOrbitFS(){
       </div>
 
       <section className="panel" style={{display:panelReady?"none":undefined}}>
-        <div className="panelTitle"><div><p className="eyebrow">DEPLOYMENT FLOW</p><h2>{binding.label||"OrbitFS Base"}</h2><p className="muted">{components.length?components.join(" · "):"OrbitFS Base"}</p></div><span className={`state ${binding.desired_state}`}>{binding.desired_state}</span></div>
+        <div className="panelTitle"><div><p className="eyebrow">DEPLOYMENT FLOW</p><h2>{binding.label||"OrbitFS Base"}</h2><p className="muted">{components.length?components.join(" · "):"OrbitFS Base"}</p></div><span className={`state ${binding.authoritative_status||"unknown"}`}>{binding.authoritative_status||"unknown"}</span></div>
         <div className="portalOverviewStats" style={{marginTop:10}}>{flow.map(step=><button type="button" className="portalStatCard" key={step.n} onClick={()=>setCurrentStep(Number(step.n))} style={{opacity:currentStep===Number(step.n)?1:.68,textAlign:"left",cursor:"pointer"}}><span className="portalStatIcon">{step.n}</span><div><small>{step.ready?"COMPLETE":currentStep===Number(step.n)?"CURRENT":"STEP"}</small><strong>{step.title}</strong><span>{step.detail}</span></div></button>)}</div><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:12,flexWrap:"wrap"}}><button className="secondary" type="button" disabled={currentStep<=1} onClick={()=>setCurrentStep(s=>Math.max(1,s-1))}>Previous step</button><span className="muted">Step {currentStep} of {flow.length}</span><button type="button" disabled={currentStep>=flow.length} onClick={()=>setCurrentStep(s=>Math.min(flow.length,s+1))}>Next step</button></div>
       </section>
 
