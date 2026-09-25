@@ -147,7 +147,7 @@ export default function OrbitFSLicenseController() {
 
                 <div className="listrow">
                   <b>Status</b>
-                  <span>{b.remote_state || b.desired_state || "unknown"}</span>
+                  <span>{b.authoritative_status || b.status || "unknown"}</span>
                 </div>
                 <div className="listrow">
                   <b>Key</b>
@@ -164,7 +164,7 @@ export default function OrbitFSLicenseController() {
                 <div className="listrow">
                   <b>Expires</b>
                   <span>
-                    {b.expires_at
+                    {b.authoritative_expires_at||b.expires_at
                       ? new Date(b.expires_at).toLocaleDateString()
                       : "No expiry"}
                   </span>
