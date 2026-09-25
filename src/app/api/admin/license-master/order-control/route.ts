@@ -1,5 +1,5 @@
 import {createClient} from "@supabase/supabase-js";
-import {masterControl,masterIssue} from "@/lib/master-api";
+import {masterControl,masterIssue,masterLicenses} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
@@ -36,12 +36,16 @@ export async function POST(req:Request){
     const {data:items,error:ie}=await actor.sb.from("order_items").select("id,product_name,license_product_key").eq("order_id",orderId).order("id");
     if(ie)throw ie;
 
+    const masterSnapshot=await masterLicenses();
+    const masterRows=Array.isArray(masterSnapshot?.licenses)?masterSnapshot.licenses:[];
     const results:any[]=[];const failures:any[]=[];
     for(const binding of bindings||[]){
       const licenseId=String(binding.license_id||"").trim();
       try{
         let remote:any;
-        const shouldIssue=action==="reprovision" || (action==="activate" && (!licenseId || String(binding.remote_state||"").toLowerCase()==="revoked"));
+        const currentMaster=licenseId?masterRows.find((x:any)=>String(x.id||x.license_id||"")===licenseId):null;
+        const authoritativeState=String(currentMaster?.status||"").trim().toLowerCase();
+        const shouldIssue=action==="reprovision" || (action==="activate" && (!licenseId || authoritativeState==="revoked" || authoritativeState==="expired"));
         if(shouldIssue){
           const product=String(binding.license_product_key||"").trim().toLowerCase();
           if(!product)throw new Error("License binding has no product key");
