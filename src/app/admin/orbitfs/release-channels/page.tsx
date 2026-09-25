@@ -50,7 +50,7 @@ export default function ReleaseChannelsAdmin(){
  return <main className="orbitAdminPage">
   <header className="orbitAdminHeader">
    <div><p className="eyebrow">ORBITFS CONTROL · RELEASE CHANNELS</p><h1>Release channel access</h1><p className="muted">Manage customer access from Billing Store while License Manager remains the source of truth for the grant itself.</p></div>
-   <div className="orbitAdminActions"><button className="secondary" onClick={()=>void mutate({action:"sync"},"Channel definitions synced from License Manager.")} disabled={!!busy}>{busy==="sync"?"Syncing…":"Sync"}</button><button className="secondary" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
+   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void mutate({action:"sync"},"Channel definitions synced from License Manager.")} disabled={!!busy}>{busy==="sync"?"Syncing…":"Sync"}</button><button className="orbitAction orbitActionQuiet" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
@@ -83,7 +83,7 @@ export default function ReleaseChannelsAdmin(){
       {customers.map(u=>{const grant=accessFor(u.id);return <div className="orbitAccessRow" key={u.id}>
        <div><b>{u.display_name||u.email||u.id}</b><span>{u.company_name||u.email||u.customer_number||"Customer"}</span></div>
        <span className={grant?"state ready":"state"}>{grant?"Granted":"No access"}</span>
-       {grant?<button className="secondary" disabled={!!busy} onClick={()=>void mutate({action:"revoke",licenseId:grant.license_id,channel:channel.channel,userId:u.id},"Customer access revoked.")}>Revoke</button>:<button disabled={!!busy} onClick={()=>void mutate({action:"grant",channel:channel.channel,userId:u.id},"Customer access granted.")}>Grant access</button>}
+       {grant?<button className="orbitAction orbitActionDanger" disabled={!!busy} onClick={()=>void mutate({action:"revoke",licenseId:grant.license_id,channel:channel.channel,userId:u.id},"Customer access revoked.")}>Revoke</button>:<button className="orbitAction orbitActionPrimary" disabled={!!busy} onClick={()=>void mutate({action:"grant",channel:channel.channel,userId:u.id},"Customer access granted.")}>Grant access</button>}
       </div>})}
       {!customers.length&&<div className="orbitEmptyCompact">No customers match this search.</div>}
      </div>
@@ -98,7 +98,7 @@ export default function ReleaseChannelsAdmin(){
     {(data.requests||[]).map((r:any)=><div className="orbitRequestRow" key={r.id||r.license_id+":"+r.channel}>
      <div><b>{r.channel}</b><span>{r.external_reference||r.license_id}</span></div>
      <span>{r.requested_at?new Date(r.requested_at).toLocaleString():"Pending"}</span>
-     <div className="orbitRowActions"><button disabled={!!busy} onClick={()=>void mutate({action:"approve",licenseId:r.license_id,channel:r.channel,userId:r.external_reference},"Channel request approved.")}>Approve</button><button className="secondary" disabled={!!busy} onClick={()=>void mutate({action:"reject",licenseId:r.license_id,channel:r.channel},"Channel request rejected.")}>Reject</button></div>
+     <div className="orbitRowActions"><button className="orbitAction orbitActionPrimary" disabled={!!busy} onClick={()=>void mutate({action:"approve",licenseId:r.license_id,channel:r.channel,userId:r.external_reference},"Channel request approved.")}>Approve</button><button className="orbitAction orbitActionDanger" disabled={!!busy} onClick={()=>void mutate({action:"reject",licenseId:r.license_id,channel:r.channel},"Channel request rejected.")}>Reject</button></div>
     </div>)}
     {!(data.requests||[]).length&&<div className="orbitEmptyCompact">No release channel requests are waiting for review.</div>}
    </div>
