@@ -11,7 +11,7 @@ export async function customerReleaseChannels(userId:string,bindingId?:string|nu
   if(!licenseId)return ["stable"];
   const [channelResult,accessResult]=await Promise.all([
     masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET"},"billing"),
-    masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"list_access",license_id:licenseId})},"billing")
+    masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"list_access",license_id:licenseId})},"billing").catch(()=>({access:[]}))
   ]);
   const channels=Array.isArray(channelResult?.channels)?channelResult.channels:[];
   const access=Array.isArray(accessResult?.access)?accessResult.access:[];
