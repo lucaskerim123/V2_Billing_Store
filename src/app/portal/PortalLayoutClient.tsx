@@ -13,7 +13,7 @@ type NavItem={label:string;href:string;short:string};
 export default function PortalLayoutClient({children}:{children:React.ReactNode}){
  const sb=useMemo(()=>createClient(),[]),path=usePathname(),router=useRouter();
  const [d,setD]=useState<any>(),[enforcement,setEnforcement]=useState<any>({state:"active"}),[loggingOut,setLoggingOut]=useState(false),[mobileMenuOpen,setMobileMenuOpen]=useState(false);
- const lastEnforcementCheck=useRef(0),lastPulseRevision=useRef<number|null>(null);
+ const lastEnforcementCheck=useRef(0),lastPulseRevision=useRef<number|null>(null),billingMenuRef=useRef<HTMLDetailsElement|null>(null),orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
 
  useEffect(()=>{
   let alive=true;
@@ -64,7 +64,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   void checkPulse();return()=>{alive=false;if(timer)clearTimeout(timer)};
  },[]);
 
- useEffect(()=>{trackCustomerActivity("page_view",{source:"portal",route:path});setMobileMenuOpen(false)},[path]);
+ useEffect(()=>{trackCustomerActivity("page_view",{source:"portal",route:path});setMobileMenuOpen(false);if(billingMenuRef.current)billingMenuRef.current.open=false;if(orbitfsMenuRef.current)orbitfsMenuRef.current.open=false},[path]);
  const suspended=enforcement?.state==="suspended";
  useEffect(()=>{if(suspended&&path!=="/portal"&&!path.startsWith("/portal/support"))router.replace("/portal")},[suspended,path,router]);
 
@@ -78,6 +78,21 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    {label:"Downloads",href:"/portal/downloads",short:"DL"},
    {label:"Support",href:"/portal/support",short:"SP"}
   ];
+ function closeDropdowns(except?:HTMLDetailsElement|null){
+  if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;
+  if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
+ }
+ useEffect(()=>{
+  const onPointer=(event:PointerEvent)=>{
+   const target=event.target as Node;
+   const inBilling=billingMenuRef.current?.contains(target);
+   const inOrbitfs=orbitfsMenuRef.current?.contains(target);
+   if(!inBilling&&!inOrbitfs)closeDropdowns();
+  };
+  document.addEventListener("pointerdown",onPointer);
+  return()=>document.removeEventListener("pointerdown",onPointer);
+ },[]);
+
  const active=(h:string)=>{
   if(h==="/portal")return path==="/portal";
   if(h==="/portal/orders")return path.startsWith("/portal/orders")||path.startsWith("/portal/invoices")||path.startsWith("/portal/checkout");
@@ -106,20 +121,20 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
 
    <nav id="portal-mobile-nav" className={"portalTopNav "+(mobileMenuOpen?"mobileOpen":"")}>
     {primary.slice(0,2).map(item=><Link key={item.href} className={active(item.href)?"active":""} href={item.href}>{item.label}</Link>)}
-    {!suspended&&<details className={"portalTopNavGroup "+((path.startsWith("/portal/orders")||path.startsWith("/portal/invoices")||path.startsWith("/portal/checkout"))?"active":"")}>
+    {!suspended&&<details ref={billingMenuRef} onToggle={e=>{const el=e.currentTarget;if(el.open)closeDropdowns(el)}} className={"portalTopNavGroup "+((path.startsWith("/portal/orders")||path.startsWith("/portal/invoices")||path.startsWith("/portal/checkout"))?"active":"")}>
      <summary>Billing <span className="portalTopNavChevron">⌄</span></summary>
      <div className="portalTopNavSub">
-      <Link className={path.startsWith("/portal/orders")?"active":""} href="/portal/orders">Orders</Link>
-      <Link className={path.startsWith("/portal/invoices")?"active":""} href="/portal/invoices">Invoices</Link>
+      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orders")?"active":""} href="/portal/orders">Orders</Link>
+      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/invoices")?"active":""} href="/portal/invoices">Invoices</Link>
      </div>
     </details>}
     {primary.slice(2).map(item=><Link key={item.href} className={active(item.href)?"active":""} href={item.href}>{item.label}</Link>)}
-    {!suspended&&<details className={"portalTopNavGroup "+(path.startsWith("/portal/orbitfs")?"active":"")}>
+    {!suspended&&<details ref={orbitfsMenuRef} onToggle={e=>{const el=e.currentTarget;if(el.open)closeDropdowns(el)}} className={"portalTopNavGroup "+(path.startsWith("/portal/orbitfs")?"active":"")}>
      <summary>My OrbitFS <span className="portalTopNavChevron">⌄</span></summary>
      <div className="portalTopNavSub">
-      <Link className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Base Deployer</Link>
-      <Link className={path.startsWith("/portal/orbitfs/license")?"active":""} href="/portal/orbitfs/license">License Controller</Link>
-      <Link className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Update Releaser</Link>
+      <Link onClick={()=>closeDropdowns()} className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Base Deployer</Link>
+      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/license")?"active":""} href="/portal/orbitfs/license">License Controller</Link>
+      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Update Releaser</Link>
      </div>
     </details>}
    </nav>
