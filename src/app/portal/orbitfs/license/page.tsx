@@ -4,6 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 
+const componentLabels:Record<string,string>={orbitfs_base:"OrbitFS Base",orbitfs_apex:"OrbitFS APEX",orbitfs_mcp:"OrbitFS MCP",orbitfs_studio:"OrbitFS Studio"};
+function enabledComponents(binding:any){
+  const components=binding?.components&&typeof binding.components==="object"?binding.components:{};
+  const enabled=Object.entries(componentLabels).filter(([id])=>{
+    const value=components[id];
+    return value===true||value?.allowed===true||["active","enabled","locked"].includes(String(value?.state||""));
+  }).map(([,label])=>label);
+  if(binding?.license_product_key==="orbitfs_base"&&!enabled.includes("OrbitFS Base"))enabled.unshift("OrbitFS Base");
+  return enabled;
+}
+
 export default function OrbitFSLicenseController() {
   const sb = useMemo(() => createClient(), []);
   const [d, setD] = useState<any>();
@@ -155,6 +166,12 @@ export default function OrbitFSLicenseController() {
                   </span>
                 </div>
                 <div className="listrow">
+                  <b>Components</b>
+                  <span style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                    {enabledComponents(b).map((name)=><span key={name} className="badge">{name}</span>)}
+                  </span>
+                </div>
+                <div className="listrow">
                   <b>Installation</b>
                   <span>{install?.installation_id || "Not registered"}</span>
                 </div>
@@ -162,7 +179,7 @@ export default function OrbitFSLicenseController() {
                   <b>Expires</b>
                   <span>
                     {b.authoritative_expires_at||b.expires_at
-                      ? new Date(b.expires_at).toLocaleDateString()
+                      ? new Date(b.authoritative_expires_at||b.expires_at).toLocaleDateString()
                       : "No expiry"}
                   </span>
                 </div>
