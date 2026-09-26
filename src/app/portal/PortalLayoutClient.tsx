@@ -114,52 +114,41 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   await sb.auth.signOut();router.replace("/login");router.refresh();
  }
 
- return <div className="portalShellV3 portalCustomerSite">
+ return <div className="portalLayout portalCustomerSite">
   <ThemeRuntime surface="customer" fallback="V3C"/>
 
-  <header className="portalShellMobileHead">
-   <Link className="portalShellBrandCompact" href="/portal"><span>O</span><b>{d.id.site_name||"OrbitFS"}</b></Link>
-   <div className="portalShellMobileActions"><NotificationCenter surface="portal"/><button type="button" className="portalShellMenuButton" aria-expanded={mobileMenuOpen} onClick={()=>setMobileMenuOpen(v=>!v)}>{mobileMenuOpen?"Close":"Menu"}</button></div>
-  </header>
+  <header className="portalTopbar">
+   <Link className="portalTopBrand" href="/portal">
+    <span className="portalTopBrandMark">OPS</span>
+    <span>{d.id.site_name||"OrbitFS"}</span>
+   </Link>
 
-  <aside className={"portalShellSidebar "+(mobileMenuOpen?"open":"")}>
-   <div className="portalShellBrand">
-    <Link href="/portal"><span className="portalShellLogo">O</span><div><b>{d.id.site_name||"OrbitFS"}</b><small>Customer Portal</small></div></Link>
-   </div>
+   <button className="portalMobileMenuButton" type="button" aria-expanded={mobileMenuOpen} aria-controls="portal-mobile-nav" onClick={()=>setMobileMenuOpen(v=>!v)}>
+    {mobileMenuOpen?"Close":"Menu"}
+   </button>
 
-   <nav className="portalShellNav">
-    <div className="portalShellNavGroup">
-     <span className="portalShellNavLabel">ACCOUNT</span>
-     {primary.map(item=><Link key={item.href} href={item.href} className={active(item.href)?"active":""}><span className="portalShellNavIcon">{item.short}</span><b>{item.label}</b></Link>)}
-    </div>
-
-    {!suspended&&<div className="portalShellNavGroup">
-     <span className="portalShellNavLabel">MY ORBITFS</span>
-     {orbitfs.slice(1).map(item=><Link key={item.href} href={item.href} className={active(item.href)?"active":""}><span className="portalShellNavIcon">{item.short}</span><b>{item.label}</b></Link>)}
-    </div>}
+   <nav id="portal-mobile-nav" className={"portalTopNav "+(mobileMenuOpen?"mobileOpen":"")}>
+    {primary.map(item=><Link key={item.href} className={active(item.href)?"active":""} href={item.href}>{item.label}</Link>)}
+    {!suspended&&<details className={"portalTopNavGroup "+(path.startsWith("/portal/orbitfs")?"active":"")} open={path.startsWith("/portal/orbitfs")}>
+     <summary>My OrbitFS <span className="portalTopNavChevron">⌄</span></summary>
+     <div className="portalTopNavSub">
+      <Link className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Base Deployer</Link>
+      <Link className={path.startsWith("/portal/orbitfs/license")?"active":""} href="/portal/orbitfs/license">License Controller</Link>
+      <Link className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Update Releaser</Link>
+     </div>
+    </details>}
    </nav>
 
-   <div className="portalShellSidebarBottom">
-    {!suspended&&<Link href="/portal/settings" className={path.startsWith("/portal/settings")?"active":""}><span className="portalShellNavIcon">AC</span><div><b>Account settings</b><small>{d.user?.email||""}</small></div></Link>}
-    {staffCanAdmin(d.staff)&&<Link href="/admin"><span className="portalShellNavIcon">AD</span><div><b>Admin</b><small>Staff portal</small></div></Link>}
+   <div className="portalTopTools">
+    {d.staff?.is_staff&&<Link className="portalAdminLink" href="/admin">Admin</Link>}
+    {!suspended&&<Link className="portalAccountLink" href="/portal/settings">Account</Link>}
+    <NotificationCenter surface="portal"/>
+    <button className="portalLogoutButton" type="button" onClick={logout} disabled={loggingOut}>{loggingOut?"…":"Logout"}</button>
    </div>
-  </aside>
+  </header>
 
-  <div className="portalShellContent">
-   <header className="portalShellToolbar">
-    <div><span className="portalShellBreadcrumb">Customer Portal</span><b>{pageTitle}</b></div>
-    <div className="portalShellTools">
-     <div className="portalShellUser"><span>{String(displayName).slice(0,1).toUpperCase()}</span><div><b>{displayName}</b><small>{d.user?.email||""}</small></div></div>
-     <NotificationCenter surface="portal"/>
-     <button type="button" className="portalShellLogout" onClick={logout} disabled={loggingOut}>{loggingOut?"Signing out…":"Sign out"}</button>
-    </div>
-   </header>
-
-   <main className="portalShellMain">
-    {suspended&&path==="/portal"?<section className="portalPage"><div className="panel"><p className="eyebrow">ACCOUNT SUSPENDED</p><h1>Your OrbitFS account is suspended</h1><p>{enforcement.reason||"Your account has been suspended."}</p><div className="listrow"><b>Suspension expiry</b><span>{enforcement.expires_at?new Date(enforcement.expires_at).toLocaleString():"No automatic expiry"}</span></div><p>While suspended, your OrbitFS licences are suspended and Store, Billing, Licences, My OrbitFS and Downloads are unavailable. Support remains available.</p><p>Contact support via ticket or <a href="mailto:support@orbitfs.cc">support@orbitfs.cc</a>.</p><Link className="buttonlink" href="/portal/support">Open support</Link></div></section>:children}
-   </main>
-  </div>
-
-  {mobileMenuOpen&&<button className="portalShellBackdrop" aria-label="Close navigation" onClick={()=>setMobileMenuOpen(false)}/>}
+  <main className="portalMain">
+   {suspended&&path==="/portal"?<section className="portalPage"><div className="panel"><p className="eyebrow">ACCOUNT SUSPENDED</p><h1>Your OrbitFS account is suspended</h1><p>{enforcement.reason||"Your account has been suspended."}</p><div className="listrow"><b>Suspension expiry</b><span>{enforcement.expires_at?new Date(enforcement.expires_at).toLocaleString():"No automatic expiry"}</span></div><p>While suspended, your OrbitFS licences are suspended and Store, Billing, Licences, My OrbitFS and Downloads are unavailable. Support remains available.</p><p>Contact support via ticket or <a href="mailto:support@orbitfs.cc">support@orbitfs.cc</a>.</p><Link className="buttonlink" href="/portal/support">Open support</Link></div></section>:children}
+  </main>
  </div>;
 }
