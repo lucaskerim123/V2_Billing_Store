@@ -31,7 +31,8 @@ export async function POST(req:Request){
     const {user}=await requireOrbitUser(req),s=await requireSystem("deploy");
     if(!s.vercel_oauth_enabled)throw Object.assign(new Error("Customer Vercel connection is disabled"),{status:503});
     const body=await req.json().catch(()=>({})),action=String(body.action||"connect");
-    const {data:deployed}=await licenseDb().from("orbitfs_installations").select("id,vercel_team_id,vercel_project_id").eq("auth_user_id",user.id).not("vercel_project_id","is",null).limit(1).maybeSingle();
+    const {data:deployed,error:deploymentReadError}=await licenseDb().from("orbitfs_installations").select("id,vercel_team_id,vercel_project_id").eq("auth_user_id",user.id).not("vercel_project_id","is",null).limit(1).maybeSingle();
+    if(deploymentReadError)throw Object.assign(new Error(`Could not verify existing Vercel deployment: ${deploymentReadError.message}`),{status:500});
     if(action==="disconnect"){if(deployed?.vercel_project_id)throw Object.assign(new Error("Undeploy the OrbitFS Panel before resetting the Vercel connector."),{status:409});return Response.json({ok:Boolean(await disconnectProviderConnection(user.id,"vercel"))})}
     if(action==="select_team"){
       if(deployed?.vercel_project_id)throw Object.assign(new Error("Undeploy your OrbitFS Panel before changing the Vercel deployment account/team."),{status:409});
