@@ -30,30 +30,51 @@ function validateDeployableBaseFiles(files:Array<{file:string;data:string;sha256
     try{JSON.parse(decodedReleaseFile(byPath.get(jsonPath)!).toString("utf8"))}
     catch{fail(`Base release contains invalid JSON in ${jsonPath}`,422)}
   }
+  const pkg=JSON.parse(decodedReleaseFile(byPath.get("package.json")!).toString("utf8"));
+  if(String(pkg?.scripts?.build||"")!=="node tools/prepare-license-runtime.mjs && vite build")fail("Base release package.json has an unexpected production build script",422);
+  if(!pkg?.dependencies?.["@sveltejs/adapter-vercel"])fail("Base release is missing @sveltejs/adapter-vercel",422);
+  const lock=JSON.parse(decodedReleaseFile(byPath.get("package-lock.json")!).toString("utf8"));
+  if(!Number.isInteger(Number(lock?.lockfileVersion))||Number(lock.lockfileVersion)<2)fail("Base release package-lock.json is not a supported npm lockfile",422);
 }
 async function uploadVercelDeploymentFiles(userId:string,files:Array<{file:string;data:string;sha256:string;size:number}>){
   const {token,teamId}=await customerVercelCredentials(userId);
-  const refs:Array<{file:string;sha:string;size:number}>=[];
-  const queue=[...files];
-  const workers=Array.from({length:Math.min(8,queue.length)},async()=>{
-    while(queue.length){
-      const file=queue.shift(); if(!file)break;
-      const bytes=decodedReleaseFile(file);
-      const digest=sha1(bytes);
-      const url=new URL("https://api.vercel.com/v2/now/files");
-      if(teamId)url.searchParams.set("teamId",String(teamId));
-      const response=await fetch(url,{method:"POST",headers:{authorization:`Bearer ${token}`,"x-vercel-digest":digest,"content-type":"application/octet-stream"},body:bytes});
-      if(!response.ok){
-        const detail=await response.text();
-        fail(`Vercel file upload failed for ${file.file} (${response.status}): ${detail}`,response.status>=500?502:response.status);
-      }
-      refs.push({file:file.file,sha:digest,size:bytes.byteLength});
+  const uploaded=new Array<{file:string;sha:string;size:number}>(files.length);
+  const requestUrl=(path:string)=>{const url=new URL(path,"https://api.vercel.com");if(teamId)url.searchParams.set("teamId",String(teamId));return url.toString()};
+  const uploadOne=async(file:{file:string;data:string;sha256:string;size:number},index:number)=>{
+    const bytes=decodedReleaseFile(file);
+    const digest=sha1(bytes);
+    let response=await fetch(requestUrl("/v2/files"),{
+      method:"POST",
+      headers:{authorization:`Bearer ${token}`,"content-type":"application/octet-stream","content-length":String(bytes.length),"x-vercel-digest":digest},
+      body:new Uint8Array(bytes),
+      signal:AbortSignal.timeout(30000)
+    });
+    if(!response.ok&&response.status===404){
+      response=await fetch(requestUrl("/v2/now/files"),{
+        method:"POST",
+        headers:{authorization:`Bearer ${token}`,"content-type":"application/octet-stream","content-length":String(bytes.length),"x-now-digest":digest},
+        body:new Uint8Array(bytes),
+        signal:AbortSignal.timeout(30000)
+      });
+    }
+    if(!response.ok&&response.status!==409){
+      const detail=await response.text();
+      fail(`Vercel file upload failed for ${file.file} (${response.status}): ${detail}`,response.status>=500?502:response.status);
+    }
+    uploaded[index]={file:file.file,sha:digest,size:bytes.length};
+  };
+  let cursor=0;
+  const workers=Array.from({length:Math.min(6,files.length)},async()=>{
+    while(true){
+      const index=cursor++;
+      if(index>=files.length)return;
+      await uploadOne(files[index],index);
     }
   });
   await Promise.all(workers);
-  refs.sort((a,b)=>a.file.localeCompare(b.file));
-  return refs;
+  return uploaded;
 }
+
 const releaseType=(action:DeployAction)=>action==="update"?"update":"base";
 
 async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable",releaseId?:string):Promise<any>{const rows=await masterReleases("orbitfs_base",channel,releaseType(action),"deployer");const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved");const wanted=releaseId?releases.find((r:any)=>String(r.id)===String(releaseId)):version?releases.find((r:any)=>String(r.version)===version):releases[0];if(!wanted?.id)fail(releaseId?`Selected published ${releaseType(action)} release is no longer available in License Master`:version?`Published ${releaseType(action)} release ${version} was not found in License Master`:`No approved published ${releaseType(action)} release is available`,404);if(String(wanted.channel||channel)!==channel)fail("Selected release channel does not match the installation channel",409);return wanted}
