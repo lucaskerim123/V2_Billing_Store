@@ -25,7 +25,8 @@ export async function GET(req:Request){
   const preferredInstall=installationRows.find((x:any)=>String(x.component_key||"")==="orbitfs_base")||installationRows[0]||null;
   const allowedChannels=[...new Set((await customerReleaseChannels(user.id,preferredInstall?.license_binding_id||null).catch(()=>channelAccess||["stable"])).map((x:any)=>String(x)))];
   if(!allowedChannels.length)allowedChannels.push("stable");
-  const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>[masterReleases("orbitfs_base",channel,"base").catch(()=>({releases:[]})),masterReleases("orbitfs_base",channel,"update").catch(()=>({releases:[]}))]));
+  const releaseTypes=preferredInstall?.release_version?["base","update"]:["base"];
+  const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>releaseTypes.map((type:string)=>masterReleases("orbitfs_base",channel,type).catch(()=>({releases:[]})))));
   const masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.releases||[]);
   const customerNumber=String(customer?.customer_number||"").trim();
   const customerMasterLicenses=customerNumber?masterLicensesRows.filter((x:any)=>String(x.customer_external_id||"").trim()===customerNumber).filter((x:any)=>!["revoked","expired"].includes(String(x.status||"").toLowerCase())):[];
