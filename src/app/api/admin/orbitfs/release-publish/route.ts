@@ -1,4 +1,5 @@
 import {masterRequest} from "@/lib/master-api";
+import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
 export async function POST(req:Request){
@@ -13,7 +14,8 @@ export async function POST(req:Request){
       masterRequest("/api/v1/release-channels?include_disabled=true",{method:"GET"},"billing")
     ]);
     const release=current?.release;
-    if(String(release?.release_type||"")!=="update")throw Object.assign(new Error("Billing Store can publish Update releases only"),{status:403});
+    const releaseType=String(release?.release_type||"").toLowerCase();
+    if(!["base","update"].includes(releaseType))throw Object.assign(new Error("Unsupported OrbitFS release type"),{status:403});
     if(String(release?.review_status||"")!=="approved")throw Object.assign(new Error("License Manager technical approval is required before final publication"),{status:409});
     if(String(release?.manifest?.validation?.status||"")!=="passed")throw Object.assign(new Error("License Manager validation must pass before final publication"),{status:409});
     if(!String(release?.checksum||"").trim())throw Object.assign(new Error("Release artifact checksum is missing"),{status:409});
@@ -24,8 +26,14 @@ export async function POST(req:Request){
     if(!channel||channel.enabled===false||channel.customer_visible===false)throw Object.assign(new Error("Select an enabled customer-visible release channel before publishing"),{status:409});
 
     const manifest=release?.manifest&&typeof release.manifest==="object"?release.manifest:{};
-    const title=String(manifest.title||"").trim();
-    const changelog=String(release?.notes||release?.changelog||"").trim();
+    let presentation:any=null;
+    if(releaseType==="base"){
+      const result=await licenseDb().from("orbitfs_release_presentation_overrides").select("*").eq("release_id",id).maybeSingle();
+      if(result.error)throw result.error;
+      presentation=result.data||null;
+    }
+    const title=String(presentation?.title??manifest.title??"").trim();
+    const changelog=String(presentation?.changelog??release?.notes??release?.changelog??"").trim();
     if(!title)throw Object.assign(new Error("Add a customer-facing release title before publishing"),{status:409});
     if(!changelog)throw Object.assign(new Error("Add a customer-facing changelog before publishing"),{status:409});
     if(String(manifest.rollout||"public").toLowerCase()==="internal")throw Object.assign(new Error("Internal rollout cannot be published to the customer portal"),{status:409});
