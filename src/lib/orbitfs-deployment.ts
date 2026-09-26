@@ -79,7 +79,11 @@ export async function saveProviderConnection(userId:string,provider:"supabase"|"
   const expiry=tokens.expires_in?new Date(Date.now()+Number(tokens.expires_in)*1000).toISOString():tokens.expires_at||null;
   return serviceRpc("service_upsert_orbitfs_provider_connection",{p_user_id:userId,p_provider:provider,p_access_token:String(tokens.access_token||""),p_refresh_token:String(tokens.refresh_token||""),p_expires_at:expiry,p_metadata:metadata});
 }
-async function connection(userId:string,provider:string){const {data}=await licenseDb().from("orbitfs_provider_connections").select("*").eq("auth_user_id",userId).eq("provider",provider).maybeSingle();return data}
+async function connection(userId:string,provider:string){
+  const {data,error}=await licenseDb().from("orbitfs_provider_connections").select("*").eq("auth_user_id",userId).eq("provider",provider).maybeSingle();
+  if(error)throw Object.assign(new Error(`Could not read ${provider} connection: ${error.message}`),{status:500});
+  return data;
+}
 
 async function supabaseAccessToken(userId:string){
   const conn=await connection(userId,"supabase");if(!conn||conn.status!=="connected")throw Object.assign(new Error("Customer Supabase account is not connected"),{status:409});
