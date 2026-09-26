@@ -14,7 +14,10 @@ export async function POST(req:Request){
       masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"GET"},"billing"),
       masterRequest("/api/v1/release-channels?include_disabled=true",{method:"GET"},"billing")
     ]);
-    if(String(current?.release?.release_type||"")!=="update")throw Object.assign(new Error("Billing Store can promote Update releases only"),{status:403});
+    const releaseType=String(current?.release?.release_type||"").toLowerCase();
+    if(!["base","update"].includes(releaseType))throw Object.assign(new Error("Unsupported OrbitFS release type"),{status:403});
+    if(String(current?.release?.review_status||"")!=="approved")throw Object.assign(new Error("License Manager technical approval is required before changing release channel"),{status:409});
+    if(String(current?.release?.manifest?.validation?.status||"")!=="passed")throw Object.assign(new Error("License Manager validation must pass before changing release channel"),{status:409});
     const channels=Array.isArray(channelResult?.channels)?channelResult.channels:[];
     const channel=channels.find((c:any)=>String(c.channel||"").toLowerCase()===target);
     if(!channel||channel.enabled===false||channel.customer_visible===false)throw Object.assign(new Error("Target channel is not enabled for customer publication"),{status:409});
