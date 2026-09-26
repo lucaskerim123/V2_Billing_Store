@@ -29,9 +29,21 @@ function lifecycleOptions(action:OrbitfsLifecycleAction,input:any={}):OrbitfsLif
     releaseLicense:input.releaseLicense===true,
   };
 }
-function runtimeLicenseRegistration(install:any){
+async function runtimeLicenseRegistration(install:any){
   const registration=objectValue(objectValue(install?.metadata).licenseRegistration);
-  return registration?.valid===true&&String(registration.installationId||"")===String(install?.installation_id||"")?registration:null;
+  if(registration?.valid===true&&String(registration.installationId||"")===String(install?.installation_id||""))return registration;
+  if(!install?.supabase_project_ref||!install?.database_initialized_at)return null;
+  try{
+    const result=await customerDatabaseQuery(install,`select metadata from public.orbitfs_license where id='primary' limit 1;`);
+    const row=managementRows(result)[0]||null;
+    const metadata=objectValue(row?.metadata);
+    const masterLicenseId=String(metadata.masterLicenseId||metadata.master_license_id||"").trim();
+    const installationId=String(metadata.installationId||metadata.installation_id||"").trim();
+    if(masterLicenseId&&installationId===String(install.installation_id||"")){
+      return {valid:true,masterLicenseId,installationId,keyHint:metadata.keyHint||null,source:"customer_database"};
+    }
+  }catch{}
+  return null;
 }
 function managementRows(value:any):any[]{
   if(Array.isArray(value))return value;
@@ -191,7 +203,7 @@ async function addJobStep(job:any,step:any){
 export async function planOrbitfsLifecycle(install:any,action:OrbitfsLifecycleAction,input:any={}){
   const options=lifecycleOptions(action,input);
   const engine=await engineHostState(install);
-  const registration=runtimeLicenseRegistration(install);
+  const registration=await runtimeLicenseRegistration(install);
   const plan={
     version:1,
     action,
@@ -258,7 +270,7 @@ export async function executeOrbitfsLifecycle(install:any,action:OrbitfsLifecycl
   }
   if(job.action!==action)throw Object.assign(new Error("Lifecycle job action does not match this request"),{status:409,code:"LIFECYCLE_JOB_MISMATCH"});
 
-  const registration=runtimeLicenseRegistration(install);
+  const registration=await runtimeLicenseRegistration(install);
   const licenseId=String(registration?.masterLicenseId||"").trim();
   const engine=await engineHostState(install);
   let current=install;
