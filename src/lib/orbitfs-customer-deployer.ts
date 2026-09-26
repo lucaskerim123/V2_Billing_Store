@@ -285,12 +285,12 @@ async function deploymentDiagnostics(userId:string,id:string){
   }catch{return [] as string[]}
 }
 async function waitForReady(userId:string,id:string):Promise<any>{
-  const deadline=Date.now()+120000;let last:any=null;
+  const deadline=Date.now()+Math.max(120000,Number(process.env.ORBITFS_CUSTOMER_DEPLOY_TIMEOUT_MS||600000));let last:any=null;
   while(Date.now()<deadline){
     last=await vercelApi(userId,`/v13/deployments/${encodeURIComponent(id)}`,{method:"GET"});
     const state=String(last?.readyState||last?.state||"").toUpperCase();
     if(state==="READY")return last;
-    if(["ERROR","CANCELED"].includes(state)){
+    if(["ERROR","CANCELED","CANCELLED"].includes(state)){
       const diagnostics=await deploymentDiagnostics(userId,id);
       const native=String(last?.errorMessage||last?.error?.message||last?.errorCode||last?.error?.code||"").trim();
       const detail=[native,...diagnostics].filter(Boolean).join(" | ").slice(0,4000);
