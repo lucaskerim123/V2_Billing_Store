@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {useEffect,useMemo,useRef,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {usePathname,useRouter} from "next/navigation";
 import {createClient} from "@/lib/supabase";
 import {trackCustomerActivity} from "@/lib/customer-activity";
@@ -64,10 +64,10 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   void checkPulse();return()=>{alive=false;if(timer)clearTimeout(timer)};
  },[]);
 
- function closeDropdowns(except?:HTMLDetailsElement|null){
+ const closeDropdowns=useCallback((except?:HTMLDetailsElement|null)=>{
   if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;
   if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
- }
+ },[]);
 
  useEffect(()=>{
   const onPointer=(event:PointerEvent)=>{
@@ -78,9 +78,9 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   };
   document.addEventListener("pointerdown",onPointer);
   return()=>document.removeEventListener("pointerdown",onPointer);
- },[]);
+ },[closeDropdowns]);
 
- useEffect(()=>{trackCustomerActivity("page_view",{source:"portal",route:path});setMobileMenuOpen(false);closeDropdowns()},[path]);
+ useEffect(()=>{trackCustomerActivity("page_view",{source:"portal",route:path});setMobileMenuOpen(false);closeDropdowns()},[path,closeDropdowns]);
  const suspended=enforcement?.state==="suspended";
  useEffect(()=>{if(suspended&&path!=="/portal"&&!path.startsWith("/portal/support"))router.replace("/portal")},[suspended,path,router]);
 
