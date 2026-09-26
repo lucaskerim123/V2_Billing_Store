@@ -354,6 +354,8 @@ async function supabaseSecretKey(install:any){
   if(!value)throw new Error("Could not retrieve the required Supabase server secret key from the customer's project");
   return String(value);
 }
+export async function customerSupabaseServerKey(install:any){return supabaseSecretKey(install)}
+
 export async function ensureVercelProject(install:any){
   if(install?.vercel_project_id)return install;
   const settings=await billingOrbitfsConfig();
