@@ -73,7 +73,7 @@ export default function OrbitFSReleaseDeployer(){
   const version=String(release?.version||"");if(!version)return setMessage("Release version is missing.");
   const releaseId=String(release?.releaseId||release?.id||"");
   if(String(release?.release_type||release?.releaseType||"")!=="update")return setMessage("Only OrbitFS Update releases can be installed from this page.");
-  if(!install.release_version)return setMessage("Deploy OrbitFS Base first.");
+  if(!install.vercel_deployment_id)return setMessage("Deploy OrbitFS Base first.");
   if(!settings.customer_updates_enabled)return setMessage("Update deployment is disabled by an administrator.");
   if(!confirm("Deploy OrbitFS update "+version+"?"))return;
   setBusy("deploy:"+version);
