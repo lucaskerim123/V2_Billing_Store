@@ -27,7 +27,10 @@ export async function GET(req:Request){
     await requireOrbitAdmin(req);
     const u=new URL(req.url),action=u.searchParams.get("action")||"review",type=u.searchParams.get("type")||"update",product=u.searchParams.get("product")||"orbitfs_base",channel=u.searchParams.get("channel")||"";
     const qs=new URLSearchParams({product});if(type&&type!=="all")qs.set("type",type);if(channel)qs.set("channel",channel);
-    const result=await masterRequest("/api/v1/releases?"+qs.toString(),{method:"GET"},"billing");
+    const [result,channelResult]=await Promise.all([
+      masterRequest("/api/v1/releases?"+qs.toString(),{method:"GET"},"billing"),
+      masterRequest("/api/v1/release-channels?include_disabled=true",{method:"GET"},"billing")
+    ]);
     const rows=Array.isArray(result)?result:(Array.isArray(result?.releases)?result.releases:[]);
     let overrides:any[]=[];
     if(rows.some((r:any)=>String(r.release_type||r.releaseType)==="base")){
@@ -40,7 +43,8 @@ export async function GET(req:Request){
       (type==="all"||r.releaseType===type)&&
       (action==="published"?r.status==="published":action==="history"?true:action==="review"?r.reviewStatus==="approved"&&r.status!=="published":true)
     );
-    return Response.json({releases},{headers:{"cache-control":"no-store"}});
+    const channels=Array.isArray(channelResult?.channels)?channelResult.channels:[];
+    return Response.json({releases,channels},{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
 
