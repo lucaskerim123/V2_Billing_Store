@@ -43,10 +43,11 @@ export default function MyOrbitFS(){
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
     const connected=params.get("connected"),callbackError=params.get("error");
+    if(callbackError)setMsg(callbackError);
+    else if(connected==="supabase")setMsg("Supabase account connected. Loading your projects…");
+    else if(connected==="vercel")setMsg("Vercel account connected.");
     void load().finally(()=>{
-      if(callbackError)setMsg(callbackError);
-      else if(connected==="supabase")setMsg("Supabase account connected. Choose an existing project or create a new one.");
-      else if(connected==="vercel")setMsg("Vercel account connected.");
+      if(connected==="supabase"&&!callbackError)setMsg("Supabase account connected. Choose an existing project or create a new one.");
       if(connected||callbackError)window.history.replaceState({},document.title,window.location.pathname);
     });
   },[]);
@@ -87,7 +88,7 @@ export default function MyOrbitFS(){
   async function sync(auto=false){if(!install)return;const r=await fetch(`/api/orbitfs/installations/${install.id}/status`,{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok){if(!auto)setMsg(j.error||"Could not refresh Panel status.");return}const updated=j.installation;if(updated)setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===updated.id?updated:x)}):current);if(updated&&!workingStates.has(String(updated.state)))await load()}
   async function lifecycle(action:"undeploy"|"deregister"){if(!install)return;const question=action==="undeploy"?"Undeploy OrbitFS? This deletes the OrbitFS Vercel project but keeps your Supabase project, database and installation registration.":"Deregister this OrbitFS installation? Any Vercel Panel project will be removed first. Your Supabase project and its data will NOT be deleted.";if(!confirm(question))return;setBusy(action);const r=await fetch(`/api/orbitfs/installations/${install.id}/lifecycle`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action,removePanel:true})}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(j.error||`${action} failed.`);await trackCustomerActivity(action==="undeploy"?"orbitfs.panel.undeploy":"orbitfs.installation.deregister",{entityType:"license",entityId:binding?.id,detail:{installation_id:install.installation_id}});setMsg(action==="undeploy"?"OrbitFS Panel undeployed. Your Supabase database was kept.":"OrbitFS installation deregistered. Your Supabase project/data was kept.");await load()}
 
-  if(loading)return <main className="portalOverviewV2 orbitfsBaseV3"><section className="panel">Loading My OrbitFS…</section></main>;
+  if(loading)return <main className="portalOverviewV2 orbitfsBaseV3"><section className="panel"><b>{msg||"Loading My OrbitFS…"}</b>{msg&&<p className="muted">Loading the rest of your deployment state…</p>}</section></main>;
   if(!d)return <main className="portalOverviewV2"><section className="panel"><h2>My OrbitFS could not load</h2><p className="muted">{msg||"The OrbitFS status service did not return data."}</p><button onClick={()=>void load()}>Retry</button></section></main>;
 
   const flow=[
