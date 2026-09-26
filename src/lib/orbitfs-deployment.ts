@@ -315,7 +315,7 @@ export async function ensureVercelProject(install:any){
   const name=`${settings.panel_project_prefix}-${String(install.installation_id||install.id).slice(-8)}`.toLowerCase().replace(/[^a-z0-9-]/g,"-");
   let project:any=null;
   try{
-    project=await vercelApi(install.auth_user_id,"/v11/projects",{method:"POST",body:JSON.stringify({name})});
+    project=await vercelApi(install.auth_user_id,"/v11/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit"})});
   }catch(error:any){
     const message=String(error?.message||"");
     if(!message.includes("409"))throw error;
