@@ -1,16 +1,11 @@
-/* OrbitFS V3C — Customer Portal theme package entrypoint. */
+/* OrbitFS V3C — customer portal theme.
+   Keep one customer layout/responsive layer to avoid conflicting legacy shells. */
 @import "../../app/portal/portal.css";
 @import "../../app/portal/records.css";
-@import "../../app/portal/portal-desktop-fix.css";
 @import "../../app/portal/portal-v2.css";
 @import "../../app/portal/wallet-recharge.css";
 @import "./tokens.css";
-@import "./layout.css";
 @import "./components.css";
-@import "./pages.css";
-@import "./responsive.css";
-@import "./admin-system-match.css";
-@import "./mobile.css";
 @import "./license-controller.css";
 @import "./customer-reference-style.css";
 @import "../auth.css";
