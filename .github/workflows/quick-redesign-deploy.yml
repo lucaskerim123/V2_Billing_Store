@@ -1,4 +1,4 @@
-name: Quick Redesign Deploy
+name: Quick Deploy
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: v2-billing-quick-redesign
+  group: v2-billing-quick
   cancel-in-progress: true
 
 jobs:
