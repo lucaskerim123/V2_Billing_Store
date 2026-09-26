@@ -14,6 +14,46 @@ type UpdateBundle={format:"orbitfs-update-bundle-v3";schemaVersion:number;versio
 type ParsedArtifact={root:Package|UpdateBundle;artifactSha256:string};
 const fail=(message:string,status=400):never=>{throw Object.assign(new Error(message),{status})};
 const checksum=(buf:Buffer)=>createHash("sha256").update(buf).digest("hex");
+const sha1=(buf:Buffer)=>createHash("sha1").update(buf).digest("hex");
+function decodedReleaseFile(file:{file:string;data:string;sha256?:string;size?:number}){
+  const bytes=Buffer.from(String(file.data||""),"base64");
+  if(file.size!==undefined&&Number(file.size)!==bytes.byteLength)fail(`Release file size mismatch before Vercel upload: ${file.file}`,422);
+  if(file.sha256&&String(file.sha256).toLowerCase()!==checksum(bytes))fail(`Release file checksum mismatch before Vercel upload: ${file.file}`,422);
+  return bytes;
+}
+function validateDeployableBaseFiles(files:Array<{file:string;data:string;sha256:string;size:number}>){
+  const byPath=new Map(files.map(file=>[file.file,file]));
+  for(const required of ["package.json","package-lock.json","svelte.config.js","vite.config.ts"]){
+    if(!byPath.has(required))fail(`Base release is missing required Vercel build file: ${required}`,422);
+  }
+  for(const jsonPath of ["package.json","package-lock.json"]){
+    try{JSON.parse(decodedReleaseFile(byPath.get(jsonPath)!).toString("utf8"))}
+    catch{fail(`Base release contains invalid JSON in ${jsonPath}`,422)}
+  }
+}
+async function uploadVercelDeploymentFiles(userId:string,files:Array<{file:string;data:string;sha256:string;size:number}>){
+  const {token,teamId}=await customerVercelCredentials(userId);
+  const refs:Array<{file:string;sha:string;size:number}>=[];
+  const queue=[...files];
+  const workers=Array.from({length:Math.min(8,queue.length)},async()=>{
+    while(queue.length){
+      const file=queue.shift(); if(!file)break;
+      const bytes=decodedReleaseFile(file);
+      const digest=sha1(bytes);
+      const url=new URL("https://api.vercel.com/v2/now/files");
+      if(teamId)url.searchParams.set("teamId",String(teamId));
+      const response=await fetch(url,{method:"POST",headers:{authorization:`Bearer ${token}`,"x-vercel-digest":digest,"content-type":"application/octet-stream"},body:bytes});
+      if(!response.ok){
+        const detail=await response.text();
+        fail(`Vercel file upload failed for ${file.file} (${response.status}): ${detail}`,response.status>=500?502:response.status);
+      }
+      refs.push({file:file.file,sha:digest,size:bytes.byteLength});
+    }
+  });
+  await Promise.all(workers);
+  refs.sort((a,b)=>a.file.localeCompare(b.file));
+  return refs;
+}
 const releaseType=(action:DeployAction)=>action==="update"?"update":"base";
 
 async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable",releaseId?:string):Promise<any>{const rows=await masterReleases("orbitfs_base",channel,releaseType(action),"deployer");const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved");const wanted=releaseId?releases.find((r:any)=>String(r.id)===String(releaseId)):version?releases.find((r:any)=>String(r.version)===version):releases[0];if(!wanted?.id)fail(releaseId?`Selected published ${releaseType(action)} release is no longer available in License Master`:version?`Published ${releaseType(action)} release ${version} was not found in License Master`:`No approved published ${releaseType(action)} release is available`,404);if(String(wanted.channel||channel)!==channel)fail("Selected release channel does not match the installation channel",409);return wanted}
@@ -102,6 +142,7 @@ async function readBasePackage(release:any):Promise<{pkg:Package;files:Array<{fi
   const schemaFile=files.find(file=>file.file===expectedSchemaPath);
   if(!schemaFile||schemaFile.sha256!==expectedSchemaHash)fail("Base package customer database snapshot is missing or has the wrong checksum",422);
 
+  validateDeployableBaseFiles(files);
   return {pkg,files,artifactSha256:parsed.artifactSha256};
 }
 type DatabaseMigration={id:string;file:string;component?:string;encoding:"base64";data:string;size:number;sha256:string};
@@ -245,13 +286,14 @@ async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBun
   if(!installedBase)fail("Deploy OrbitFS Base before applying a Panel update",409);
   if(!baseline||installedBase!==baseline)fail(`Panel update ${release.version} was built on Base ${baseline||"unknown"}, but this installation is Base ${installedBase}. Use a matching update or publish a newer Base deployment.`,409);
   const files=validateFiles(panel.files,"Panel update payload");
+  const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),files);
   await configureVercelUpdateIdentity(install,{version:String(release.version),releaseId:String(release.id),sha256:artifactSha256,sourceCommit:bundle.sourceCommit||expectedSource(release),channel,components:bundle.components});
   const body:any={
     name:install.vercel_project_name||`orbitfs-${String(install.installation_id||"").slice(-8)}`.toLowerCase(),
     project:install.vercel_project_id,
     target:"production",
-    files:files.map(file=>({file:file.file,data:file.data})),
-    projectSettings:panel.projectSettings||{},
+    files:uploadedFiles,
+    projectSettings:{framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(panel.projectSettings||{})},
     meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:"update",orbitfsChannel:channel,orbitfsSourceCommit:String(bundle.sourceCommit||expectedSource(release)),orbitfsInstallationRoute:"billing_store",orbitfsUpdateTargets:bundle.components.join(",")}
   };
   const created=await vercelApi(install.auth_user_id,"/v13/deployments",{method:"POST",body:JSON.stringify(body)});
@@ -541,7 +583,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const installedDatabaseSchema=String(install.schema_version||"").trim();
   if(packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
   const projectSettings={framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(parsed.pkg.projectSettings||{})};
-  const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:parsed.files.map(f=>({file:f.file,data:f.data})),projectSettings,meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||""),orbitfsInstallationRoute:"billing_store"}};
+  await event(install,"deployment.uploading","info",`Uploading ${parsed.files.length} verified Base files to Vercel`,{action,releaseId:release.id,fileCount:parsed.files.length});
+  const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),parsed.files);
+  const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:uploadedFiles,projectSettings,meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||""),orbitfsInstallationRoute:"billing_store"}};
   await event(install,"deployment.started","info",`Deploying ${release.version}`,{action,releaseId:release.id,fileCount:parsed.files.length,checksum:parsed.artifactSha256});
   const created=await vercelApi(install.auth_user_id,"/v13/deployments",{method:"POST",body:JSON.stringify(body)});if(!created?.id&&!created?.uid)fail("Vercel did not return a deployment id",502);
   const deploymentId=String(created.id||created.uid);
