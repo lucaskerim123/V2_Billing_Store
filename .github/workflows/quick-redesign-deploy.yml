@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.ref == 'refs/heads/billing-store-redesign' }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -24,7 +24,7 @@ jobs:
       VERCEL_CLI_VERSION: 59.6.2
 
     steps:
-      - name: Checkout selected redesign commit
+      - name: Checkout selected main commit
         uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
@@ -35,7 +35,7 @@ jobs:
         run: |
           set -euo pipefail
           test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
-          test "${GITHUB_REF}" = "refs/heads/billing-store-redesign"
+          test "${GITHUB_REF}" = "refs/heads/main"
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test -n "$VERCEL_TOKEN"
           test -n "$VERCEL_ORG_ID"
@@ -46,7 +46,7 @@ jobs:
           npm install --global "vercel@$VERCEL_CLI_VERSION"
           vercel --version
 
-      - name: Quick deploy redesign branch to production
+      - name: Quick deploy main to production
         id: deploy
         shell: bash
         run: |
@@ -63,7 +63,7 @@ jobs:
 
       - name: Report quick deployment
         run: |
-          echo "Quick redesign deployment completed."
-          echo "Branch: billing-store-redesign"
+          echo "Quick deployment completed."
+          echo "Branch: main"
           echo "Commit: $GITHUB_SHA"
           echo "Deployment: ${{ steps.deploy.outputs.url }}"
