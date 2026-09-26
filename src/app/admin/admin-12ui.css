@@ -636,3 +636,187 @@ html[data-admin-theme="v3"] .adminSidebarPin.pinned{
     margin-left:0!important;
   }
 }
+
+
+/* Admin navigation authority: main menu in topbar, active section subpages in the bar below. */
+html[data-admin-theme="v3"] .adminV3Context,
+html[data-admin-theme="v3"] .adminSidebarRestore{
+  display:none!important;
+}
+html[data-admin-theme="v3"] .masterContent{
+  margin-left:0!important;
+}
+html[data-admin-theme="v3"] .adminV3Subnav{
+  min-height:42px!important;
+  display:flex!important;
+  align-items:stretch!important;
+  gap:4px!important;
+  padding:0 14px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  scrollbar-width:none!important;
+  background:rgba(4,29,52,.96)!important;
+  border-bottom:1px solid #123650!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.08)!important;
+}
+html[data-admin-theme="v3"] .adminV3Subnav::-webkit-scrollbar{display:none!important}
+html[data-admin-theme="v3"] .adminV3Subnav>a{
+  position:relative!important;
+  flex:0 0 auto!important;
+  min-height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  padding:0 11px!important;
+  color:#9fb9d3!important;
+  font-size:12px!important;
+  font-weight:600!important;
+  white-space:nowrap!important;
+  text-decoration:none!important;
+}
+html[data-admin-theme="v3"] .adminV3Subnav>a:hover{
+  color:#f4f8fd!important;
+}
+html[data-admin-theme="v3"] .adminV3Subnav>a.active{
+  color:#f5fbff!important;
+}
+html[data-admin-theme="v3"] .adminV3Subnav>a.active::after{
+  content:""!important;
+  position:absolute!important;
+  left:10px!important;
+  right:10px!important;
+  bottom:0!important;
+  height:2px!important;
+  border-radius:999px!important;
+  background:var(--page-accent,#51e5dc)!important;
+}
+
+/* Desktop-mode shell, including narrow desktop browser widths. */
+@media(min-width:641px){
+  html[data-admin-theme="v3"] .adminV3Layout{
+    --admin-topbar-height:62px;
+  }
+  html[data-admin-theme="v3"] .adminV3Topbar{
+    display:grid!important;
+    grid-template-columns:auto minmax(0,1fr) auto!important;
+    grid-template-areas:"brand nav tools"!important;
+    align-items:center!important;
+    min-height:62px!important;
+    height:62px!important;
+    padding:0 10px 0 14px!important;
+    gap:10px!important;
+    overflow:visible!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Brand{
+    grid-area:brand!important;
+    min-width:0!important;
+    gap:6px!important;
+    font-size:14px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3BrandMark{
+    width:30px!important;
+    height:30px!important;
+    font-size:16px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Brand small{
+    padding:3px 5px!important;
+    font-size:7.5px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav{
+    grid-area:nav!important;
+    display:flex!important;
+    min-width:0!important;
+    width:100%!important;
+    height:62px!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    gap:1px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scrollbar-width:none!important;
+    border:0!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav::-webkit-scrollbar{display:none!important}
+  html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav>a{
+    flex:0 0 auto!important;
+    display:flex!important;
+    align-items:center!important;
+    height:62px!important;
+    padding:0 7px!important;
+    font-size:10.5px!important;
+    font-weight:600!important;
+    white-space:nowrap!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Primary>a.active::after{
+    bottom:0!important;
+    left:7px!important;
+    right:7px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Tools{
+    grid-area:tools!important;
+    position:static!important;
+    display:flex!important;
+    align-items:center!important;
+    margin:0!important;
+    padding:0!important;
+    gap:3px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Tool,
+  html[data-admin-theme="v3"] .adminV3Create>summary{
+    min-height:28px!important;
+    height:28px!important;
+    padding:0 6px!important;
+    border-radius:6px!important;
+    font-size:9.5px!important;
+    line-height:28px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Tools [data-surface="admin"]>button{
+    width:28px!important;
+    min-width:28px!important;
+    height:28px!important;
+    min-height:28px!important;
+    border-radius:6px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileMenuButton,
+  html[data-admin-theme="v3"] .adminV3MobileMenu{
+    display:none!important;
+  }
+}
+
+/* At the very tight end of desktop mode, preserve the main menu before brand text. */
+@media(max-width:860px) and (min-width:641px){
+  html[data-admin-theme="v3"] .adminV3Brand>span:nth-child(2){
+    max-width:88px!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav>a{
+    padding:0 5px!important;
+    font-size:9.5px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Tool,
+  html[data-admin-theme="v3"] .adminV3Create>summary{
+    padding:0 5px!important;
+    font-size:9px!important;
+  }
+}
+
+/* Real phone layout only. */
+@media(max-width:640px){
+  html[data-admin-theme="v3"] .adminV3Topbar{
+    display:grid!important;
+    grid-template-columns:auto minmax(0,1fr) auto!important;
+    grid-template-areas:"brand spacer menu"!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav,
+  html[data-admin-theme="v3"] .adminV3Tools{
+    display:none!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileMenuButton{
+    grid-area:menu!important;
+    display:inline-flex!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Subnav{
+    display:none!important;
+  }
+}
