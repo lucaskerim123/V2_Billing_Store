@@ -121,6 +121,25 @@ set value=jsonb_build_object(
 where scope_type='global' and scope_id='' and key='engine_host.shared';`);
 }
 
+async function rotatePreservedDatabaseIdentity(install:any,nextInstallationId:string){
+  if(!install?.supabase_project_ref||!install?.database_initialized_at)return;
+  const id=nextInstallationId.replaceAll("'","''");
+  await customerDatabaseQuery(install,`update public.orbitfs_settings
+set value=jsonb_set(coalesce(value,'{}'::jsonb),'{installationId}',to_jsonb('${id}'::text),true),updated_at=now()
+where scope_type='global' and scope_id='' and key='installation.route';
+
+update public.orbitfs_license
+set license_key=null,
+    status='unconfigured',
+    plan=null,
+    licensed_to=null,
+    expires_at=null,
+    metadata=jsonb_build_object('installationId','${id}','releasedAt',now()),
+    updated_at=now()
+where id='primary';`);
+  await resetEngineHostState({...install,installation_id:nextInstallationId});
+}
+
 async function removeVercelProject(install:any,projectId:string|null|undefined,label:string){
   const id=String(projectId||"").trim();
   if(!id)return {removed:false,missing:true,label};
@@ -339,7 +358,10 @@ export async function executeOrbitfsLifecycle(install:any,action:OrbitfsLifecycl
     const nextMetadata={...metadata,lifecycle:{...lifecycle,lastUninstall:{at:now(),installationId:install.installation_id,options,result}}};
     if(options.releaseLicense||options.removeDatabase)delete nextMetadata.licenseRegistration;
     const nextInstallationId=options.releaseLicense?`ofs_${randomUUID().replaceAll("-","")}`:String(install.installation_id||"");
-    if(options.releaseLicense)result.nextInstallationId=nextInstallationId;
+    if(options.releaseLicense){
+      result.nextInstallationId=nextInstallationId;
+      if(!options.removeDatabase)await rotatePreservedDatabaseIdentity(install,nextInstallationId);
+    }
     const patch:any={
       state:"uninstalled",installation_id:nextInstallationId,vercel_project_id:null,vercel_project_name:null,vercel_deployment_id:null,deployment_url:null,production_url:null,
       health_status:"unknown",last_health_at:null,last_error:null,metadata:nextMetadata,updated_at:now(),
