@@ -70,15 +70,22 @@ jobs:
             exit 1
           fi
           git cat-file -e "$base_sha^{commit}"
-          if ! git merge-base --is-ancestor "$base_sha" "$GITHUB_SHA"; then
-            echo "::error::Current production commit $base_sha is not an ancestor of selected main commit $GITHUB_SHA. Refusing a deployment with an ambiguous change-set."
-            exit 1
+          relation="diverged"
+          if [ "$base_sha" = "$GITHUB_SHA" ]; then
+            relation="current"
+          elif git merge-base --is-ancestor "$base_sha" "$GITHUB_SHA"; then
+            relation="ancestor"
           fi
           echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "relation=$relation" >> "$GITHUB_OUTPUT"
           echo "RELEASE_BASE_SHA=$base_sha" >> "$GITHUB_ENV"
           echo "Production base: $base_sha"
-          echo "Selected head:   $GITHUB_SHA"
-          echo "Pending commits:"
+          echo "Selected main:   $GITHUB_SHA"
+          echo "Relationship:    $relation"
+          if [ "$relation" = "diverged" ]; then
+            echo "::notice::Production was deployed from a retired non-main branch. Comparing its exact tree against current main for this migration deploy."
+          fi
+          echo "Main commits not contained in the current production commit:"
           git log --reverse --oneline "$base_sha..$GITHUB_SHA"
 
       - name: Verify complete pending change-set
@@ -87,12 +94,13 @@ jobs:
           set -euo pipefail
           base="${{ steps.production_base.outputs.base_sha }}"
           count="$(git rev-list --count "$base..$GITHUB_SHA")"
-          echo "Pending commit count: $count"
-          if [ "$count" -eq 0 ]; then
-            echo "No unapplied commits are pending; production already matches this commit."
+          echo "Main commits not contained in production: $count"
+          if git diff --quiet "$base" "$GITHUB_SHA"; then
+            echo "No source-tree changes are pending; production content already matches selected main."
+          else
+            echo "Changed files between current production tree and selected main:"
+            git diff --name-status "$base" "$GITHUB_SHA"
           fi
-          echo "Changed files across the full pending range:"
-          git diff --name-status "$base..$GITHUB_SHA"
 
       - name: Run complete production validation
         env:
@@ -150,7 +158,9 @@ jobs:
           base="${{ steps.production_base.outputs.base_sha }}"
           count="$(git rev-list --count "$base..$GITHUB_SHA")"
           echo "Production deployment completed."
+          relation="${{ steps.production_base.outputs.relation }}"
           echo "Previous production commit: $base"
+          echo "Previous relationship:      $relation"
           echo "New production commit:      $GITHUB_SHA"
-          echo "Applied commits:             $count"
+          echo "Main commits not in prior production: $count"
           echo "Deployment: ${{ steps.deploy.outputs.url }}"
