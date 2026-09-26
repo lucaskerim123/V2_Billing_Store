@@ -36,9 +36,6 @@ export default function OrbitFSLicenseController() {
       (x: any) =>
         x.license_product_key === "orbitfs_base" || x.components?.orbitfs_base,
     ) || bindings[0];
-  const customerId = String(
-    d?.customer?.customer_number || d?.customer?.customer_id || "—",
-  );
   const install = (d?.installations || []).find(
     (x: any) => x.license_binding_id === binding?.id,
   );
@@ -113,7 +110,7 @@ export default function OrbitFSLicenseController() {
       <div className="portalOverviewGrid">
         <section className="panel">
           <p className="eyebrow">LICENCES</p>
-          <h2>{customerId}</h2>
+          <h2>Linked licences</h2>
 
           {bindings.length === 0 ? (
             <p className="muted">
