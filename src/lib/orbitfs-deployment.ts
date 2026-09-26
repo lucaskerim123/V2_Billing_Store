@@ -101,14 +101,14 @@ async function supabaseAccessToken(userId:string){
 }
 export async function supabaseApi(userId:string,path:string,init:RequestInit={}){
   const token=await supabaseAccessToken(userId);const r=await fetch(`${SUPABASE_API}${path}`,{...init,headers:{authorization:`Bearer ${token}`,"content-type":"application/json",...(init.headers||{})}});
-  if(!r.ok)throw Object.assign(new Error(`Supabase API ${r.status}: ${await r.text()}`),{status:r.status>=500?502:r.status});return r.status===204?null:r.json();
+  if(!r.ok){const detail=await r.text(),message=`Supabase API ${r.status}: ${detail}`;if(r.status===401||r.status===403)await licenseDb().from("orbitfs_provider_connections").update({status:"error",last_error:message,updated_at:new Date().toISOString()}).eq("auth_user_id",userId).eq("provider","supabase");throw Object.assign(new Error(message),{status:r.status>=500?502:r.status});}return r.status===204?null:r.json();
 }
 
 async function vercelAccessToken(userId:string){const conn=await connection(userId,"vercel");if(!conn||conn.status!=="connected")throw Object.assign(new Error("Customer Vercel account is not connected"),{status:409});const token=await providerSecret(userId,"vercel","access_token");if(!token)throw Object.assign(new Error("Vercel connection token is missing"),{status:409});return {token,teamId:conn.team_id||conn.metadata?.team_id||null}}
 export async function customerVercelCredentials(userId:string){return vercelAccessToken(userId)}
 export async function customerInstallationDbSecret(installationRecordId:string){const secret=String(await installationSecret(installationRecordId,"db_secret")||"").trim();if(!secret)throw Object.assign(new Error("OrbitFS database secret is missing"),{status:409});return secret}
 function withTeam(path:string,teamId?:string|null){if(!teamId)return path;const u=new URL(path,VERCEL_API);u.searchParams.set("teamId",teamId);return u.pathname+u.search}
-export async function vercelApi(userId:string,path:string,init:RequestInit={}){const {token,teamId}=await vercelAccessToken(userId);const r=await fetch(`${VERCEL_API}${withTeam(path,teamId)}`,{...init,headers:{authorization:`Bearer ${token}`,"content-type":"application/json",...(init.headers||{})}});if(!r.ok)throw Object.assign(new Error(`Vercel API ${r.status}: ${await r.text()}`),{status:r.status>=500?502:r.status});return r.status===204?null:r.json()}
+export async function vercelApi(userId:string,path:string,init:RequestInit={}){const {token,teamId}=await vercelAccessToken(userId);const r=await fetch(`${VERCEL_API}${withTeam(path,teamId)}`,{...init,headers:{authorization:`Bearer ${token}`,"content-type":"application/json",...(init.headers||{})}});if(!r.ok){const detail=await r.text(),message=`Vercel API ${r.status}: ${detail}`;if(r.status===401||r.status===403)await licenseDb().from("orbitfs_provider_connections").update({status:"error",last_error:message,updated_at:new Date().toISOString()}).eq("auth_user_id",userId).eq("provider","vercel");throw Object.assign(new Error(message),{status:r.status>=500?502:r.status});}return r.status===204?null:r.json()}
 
 export async function listSupabaseResources(userId:string){
   const [organizations,projects]=await Promise.all([supabaseApi(userId,"/organizations"),supabaseApi(userId,"/projects")]);
