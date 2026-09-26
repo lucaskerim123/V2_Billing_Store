@@ -230,7 +230,23 @@ insert into public.orbitfs_schema_migrations(migration_id,sha256,component,sourc
 values ('${safe(baseMigrationId)}','${safe(schemaAsset.sha256)}','base','${safe(schemaAsset.path)}','${safe(String(release.id))}','${safe(String(release.version))}',now())
 on conflict (migration_id) do nothing;
 insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-files','orbitfs-files',false,1073741824) on conflict (id) do update set name=excluded.name,public=false,file_size_limit=excluded.file_size_limit;`;
-  const installSql=`BEGIN;\n${sql}\n${runtimeSql}\nCOMMIT;`;
+  const legacyRlsCompatPrelude=`do $orbitfs$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is null then
+    execute 'create function public.rls_auto_enable() returns void language plpgsql as $ begin null; end $';
+    comment on function public.rls_auto_enable() is 'orbitfs-snapshot-compat';
+  end if;
+end
+$orbitfs$;`;
+  const legacyRlsCompatCleanup=`do $orbitfs$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null
+     and obj_description(to_regprocedure('public.rls_auto_enable()'), 'pg_proc') = 'orbitfs-snapshot-compat' then
+    execute 'drop function public.rls_auto_enable()';
+  end if;
+end
+$orbitfs$;`;
+  const installSql=`BEGIN;\n${legacyRlsCompatPrelude}\n${sql}\n${legacyRlsCompatCleanup}\n${runtimeSql}\nCOMMIT;`;
   try{
     await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:installSql})});
   }catch(e:any){
