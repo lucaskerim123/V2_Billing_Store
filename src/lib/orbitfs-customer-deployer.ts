@@ -214,7 +214,31 @@ async function registerBaseInstallation(install:any,deploymentUrl:string,deploym
   if(!response.ok)fail(String(body?.error||"Base deployment completed but Base setup registration failed"),502);
   return body;
 }
-async function waitForReady(userId:string,id:string):Promise<any>{const deadline=Date.now()+120000;let last:any=null;while(Date.now()<deadline){last=await vercelApi(userId,`/v13/deployments/${encodeURIComponent(id)}`,{method:"GET"});const state=String(last?.readyState||last?.state||"");if(state==="READY")return last;if(["ERROR","CANCELED"].includes(state))fail(`Vercel deployment failed (${state})`,502);await new Promise(r=>setTimeout(r,3000))}return last}
+async function deploymentDiagnostics(userId:string,id:string){
+  try{
+    const events=await vercelApi(userId,`/v3/deployments/${encodeURIComponent(id)}/events?direction=backward&follow=0&limit=80&builds=1`,{method:"GET"});
+    const rows=Array.isArray(events)?events:[];
+    const lines=rows.map((entry:any)=>String(entry?.payload?.text||entry?.text||entry?.payload?.info?.name||"").trim()).filter(Boolean);
+    return lines.slice(0,12);
+  }catch{return [] as string[]}
+}
+async function waitForReady(userId:string,id:string):Promise<any>{
+  const deadline=Date.now()+120000;let last:any=null;
+  while(Date.now()<deadline){
+    last=await vercelApi(userId,`/v13/deployments/${encodeURIComponent(id)}`,{method:"GET"});
+    const state=String(last?.readyState||last?.state||"").toUpperCase();
+    if(state==="READY")return last;
+    if(["ERROR","CANCELED"].includes(state)){
+      const diagnostics=await deploymentDiagnostics(userId,id);
+      const native=String(last?.errorMessage||last?.error?.message||last?.errorCode||last?.error?.code||"").trim();
+      const detail=[native,...diagnostics].filter(Boolean).join(" | ").slice(0,4000);
+      const error=Object.assign(new Error(`Vercel deployment failed (${state})${detail?`: ${detail}`:""}`),{status:502,code:String(last?.errorCode||last?.error?.code||"VERCEL_DEPLOYMENT_FAILED"),deploymentId:id,diagnostics});
+      throw error;
+    }
+    await new Promise(r=>setTimeout(r,3000));
+  }
+  return last;
+}
 async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBundle,panel:Package,artifactSha256:string,channel:string){
   const installedBase=String(install.release_version||"").trim();
   const baseline=String((panel as any).baseVersion||bundle.minimumBaseVersion||"").trim();
@@ -516,10 +540,14 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const packageDatabaseSchema=String((parsed.pkg as any).databaseSchemaVersion||(parsed.pkg as any).releaseInfo?.databaseSchemaVersion||release.manifest?.databaseSchemaVersion||"").trim();
   const installedDatabaseSchema=String(install.schema_version||"").trim();
   if(packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
-  const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:parsed.files.map(f=>({file:f.file,data:f.data})),projectSettings:parsed.pkg.projectSettings||{},meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||""),orbitfsInstallationRoute:"billing_store"}};
+  const projectSettings={framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(parsed.pkg.projectSettings||{})};
+  const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:parsed.files.map(f=>({file:f.file,data:f.data})),projectSettings,meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||""),orbitfsInstallationRoute:"billing_store"}};
   await event(install,"deployment.started","info",`Deploying ${release.version}`,{action,releaseId:release.id,fileCount:parsed.files.length,checksum:parsed.artifactSha256});
   const created=await vercelApi(install.auth_user_id,"/v13/deployments",{method:"POST",body:JSON.stringify(body)});if(!created?.id&&!created?.uid)fail("Vercel did not return a deployment id",502);
-  const deploymentId=String(created.id||created.uid),ready=await waitForReady(install.auth_user_id,deploymentId),state=String(ready?.readyState||ready?.state||"");if(state!=="READY")fail("Vercel deployment did not become ready within the deployment window",504);
+  const deploymentId=String(created.id||created.uid);
+  await licenseDb().from("orbitfs_installations").update({vercel_deployment_id:deploymentId,state:"deploying",last_error:null,updated_at:new Date().toISOString()}).eq("id",install.id);
+  await event(install,"deployment.created","info",`Vercel deployment ${deploymentId} created`,{action,releaseId:release.id,deploymentId,projectId:install.vercel_project_id});
+  const ready=await waitForReady(install.auth_user_id,deploymentId),state=String(ready?.readyState||ready?.state||"");if(state!=="READY")fail("Vercel deployment did not become ready within the deployment window",504);
   const previousVersion=install.release_version||null,deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url;
   await configureVercel(install,String(release.version),deploymentUrl||undefined,requestedChannel,String(release.id),parsed.artifactSha256,String(parsed.pkg.sourceCommit||release.sourceCommit||""));
   await registerBaseInstallation(install,deploymentUrl,deploymentId);
