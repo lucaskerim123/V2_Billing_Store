@@ -107,7 +107,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
 
    <nav id="portal-mobile-nav" className={"portalTopNav "+(mobileMenuOpen?"mobileOpen":"")}>
     {primary.map(item=><Link key={item.href} className={active(item.href)?"active":""} href={item.href}>{item.label}</Link>)}
-    {!suspended&&<details className={"portalTopNavGroup "+(path.startsWith("/portal/orbitfs")?"active":"")} open={path.startsWith("/portal/orbitfs")}>
+    {!suspended&&<details className={"portalTopNavGroup "+(path.startsWith("/portal/orbitfs")?"active":"")}>
      <summary>My OrbitFS <span className="portalTopNavChevron">⌄</span></summary>
      <div className="portalTopNavSub">
       <Link className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Base Deployer</Link>
@@ -115,6 +115,8 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
       <Link className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Update Releaser</Link>
      </div>
     </details>}
+    {d.staff?.is_staff&&<Link className="portalMobileOnly" href="/admin">Admin</Link>}
+    {!suspended&&<Link className="portalMobileOnly" href="/portal/settings">Account</Link>}
    </nav>
 
    <div className="portalTopTools">
