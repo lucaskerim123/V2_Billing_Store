@@ -6,14 +6,14 @@ import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 export const dynamic="force-dynamic";
 const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
 const key=()=>String(process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"");
-async function currentUser(req:Request){const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!token||!url()||!key())throw Object.assign(new Error("Authentication is unavailable"),{status:401});const sb=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}});const result=await sb.auth.getUser(token);if(result.error||!result.data?.user)throw Object.assign(new Error("Unauthorized"),{status:401});return result.data.user}
+async function currentUser(req:Request){const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!token||!url()||!key())throw Object.assign(new Error("Authentication is unavailable"),{status:401});const sb=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}});const result=await sb.auth.getUser(token);if(result.error||!result.data?.user)throw Object.assign(new Error("Unauthorized"),{status:401});return {user:result.data.user,token}}
 export async function GET(req:Request){
  try{
-  const user=await currentUser(req),db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}}),q=(p:any)=>Promise.resolve(p).catch(()=>({data:[],error:null}));
+  const auth=await currentUser(req),user=auth.user,db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}}),userDb=createClient(url(),String(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||""),{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:`Bearer ${auth.token}`}}}),q=(p:any)=>Promise.resolve(p).catch(()=>({data:[],error:null}));
   const [customerResult,bindings,connections,installations,settings,masterLicenseResult,channelAccess,masterAvailability]=await Promise.all([
    q(db.from("customers").select("id,customer_number,name,email").eq("auth_user_id",user.id).maybeSingle()),
    q(db.from("license_bindings").select("*").eq("auth_user_id",user.id).is("archived_at",null).order("created_at",{ascending:false})),
-   q(db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
+   q(userDb.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_installations").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle()),
    masterLicenses().catch(()=>({licenses:[]})),
