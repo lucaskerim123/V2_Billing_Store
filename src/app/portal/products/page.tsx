@@ -23,7 +23,7 @@ export default function Products() {
 
   async function loadStore() {
     const [{ data: products }, { data: options }, { data: settings }, { data: cartData, error: cartError }, {data:cfgRows}] = await Promise.all([
-      sb.from("products").select("id,slug,name,description,price_cents,currency,metadata,track_stock,stock_on_hand,stock_reserved,allow_backorders,sort_order,created_at").eq("active", true),
+      sb.from("products").select("id,slug,name,description,price_cents,currency,metadata,track_stock,stock_on_hand,stock_reserved,allow_backorders,created_at").eq("active", true),
       sb.from("product_options").select("product_id").eq("active", true),
       sb.from("app_settings").select("key,value").eq("category","store"),
       sb.rpc("cart_summary"),
@@ -33,7 +33,7 @@ export default function Products() {
     setCatalogCfg({allowCoupons:cfg["products.allow_coupons"]!==false,allowAddons:cfg["products.allow_addons"]!==false,hideOutOfStock:cfg["products.hide_out_of_stock"]===true,sortMode:String(cfg["products.sort_mode"]||"sort_order")});
     let visible=(products||[]).filter((p:any)=>!cfg["products.hide_out_of_stock"]||!p.track_stock||p.allow_backorders||(Number(p.stock_on_hand||0)-Number(p.stock_reserved||0)>0));
     const sortMode=String(cfg["products.sort_mode"]||"sort_order");
-    visible=[...visible].sort((a:any,b:any)=>sortMode==="name"?String(a.name||"").localeCompare(String(b.name||"")):sortMode==="price"?Number(a.price_cents||0)-Number(b.price_cents||0):sortMode==="newest"?new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime():Number(a.sort_order||0)-Number(b.sort_order||0)||String(a.name||"").localeCompare(String(b.name||"")));
+    visible=[...visible].sort((a:any,b:any)=>sortMode==="price"?Number(a.price_cents||0)-Number(b.price_cents||0):sortMode==="newest"?new Date(b.created_at||0).getTime()-new Date(a.created_at||0).getTime():String(a.name||"").localeCompare(String(b.name||"")));
     setItems(visible);
     setOptionProducts(new Set((options || []).map((x:any) => x.product_id)));
     setStoreText(Object.fromEntries((settings || []).map((x:any) => [x.key.split(".").pop(), typeof x.value === "string" ? x.value : String(x.value ?? "")])));
