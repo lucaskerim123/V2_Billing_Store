@@ -93,7 +93,7 @@ async function resetEngineHostState(install:any){
   const stamp=now();
   await customerDatabaseQuery(install,`update public.orbitfs_settings
 set value=jsonb_build_object(
-  'version',1,'state','not_deployed','provider','vercel','installationId',${JSON.stringify(String(install.installation_id||""))}::jsonb,
+  'version',1,'state','not_deployed','provider','vercel','installationId',to_jsonb('${String(install.installation_id||"").replaceAll("'","''")}'::text),
   'installationRoute','billing_store','panelUrl',null,'hostUrl',null,'projectId',null,'projectName',null,
   'deploymentId',null,'deploymentUrl',null,'distribution',null,'releaseVersion',null,'releaseId',null,
   'releaseChannel',null,'releaseSha256',null,'releaseSourceCommit',null,'releaseFileCount',null,
@@ -102,8 +102,8 @@ set value=jsonb_build_object(
   'pendingReleaseInventory',null,'pendingReleaseComponents','[]'::jsonb,'pendingReleaseComponentVersions','{}'::jsonb,
   'updaterConnected',false,'updaterConnectedAt',null,'updaterProvider',null,'updaterProtocol',null,
   'updaterLastVerifiedAt',null,'updaterLastError',null,'linkedAt',null,'linkedByUserId',null,
-  'lastSyncAt',null,'lastHealthAt',null,'lastError',null,'createdAt',coalesce(value->'createdAt',to_jsonb(${JSON.stringify(stamp)}::text)),
-  'updatedAt',${JSON.stringify(stamp)}::jsonb
+  'lastSyncAt',null,'lastHealthAt',null,'lastError',null,'createdAt',coalesce(value->'createdAt',to_jsonb('${stamp.replaceAll("'","''")}'::text)),
+  'updatedAt',to_jsonb('${stamp.replaceAll("'","''")}'::text)
 ),updated_at=now()
 where scope_type='global' and scope_id='' and key='engine_host.shared';`);
 }
@@ -330,7 +330,7 @@ export async function executeOrbitfsLifecycle(install:any,action:OrbitfsLifecycl
       health_status:"unknown",last_health_at:null,last_error:null,metadata:nextMetadata,updated_at:now(),
     };
     if(options.removeDatabase){
-      Object.assign(patch,{database_initialized_at:null,schema_version:null,release_version:null,release_id:null,release_sha256:null,release_source_commit:null,previous_release_version:null,latest_available_release:null,applied_update_version:null,applied_update_release_id:null,applied_update_sha256:null,applied_update_source_commit:null});
+      Object.assign(patch,{database_initialized_at:null,schema_version:null,release_version:null,release_id:null,release_sha256:null,release_source_commit:null,previous_release_version:null,latest_available_release:null,applied_update_version:null,applied_update_id:null,applied_update_sha256:null,applied_update_source_commit:null});
     }
     const updated=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
     if(updated.error)throw updated.error;
@@ -345,7 +345,7 @@ export async function executeOrbitfsLifecycle(install:any,action:OrbitfsLifecycl
     if(licenseId)await masterInstallationLifecycle({action,phase:"failed",licenseId,installationId:install.installation_id,releaseLicense:options.releaseLicense,error:message,result}).catch(()=>{});
     const steps=Array.isArray(job?.steps)?job.steps:[];
     await updateJob(job.id,{status:steps.length?"partial":"failed",completed_at:now(),error_code:code,error_message:message,result}).catch(()=>{});
-    await licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message,updated_at:now()}).eq("id",install.id).catch(()=>{});
+    try{await licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message,updated_at:now()}).eq("id",install.id)}catch{}
     await event(install,`lifecycle.${action}.failed`,"error",message,{jobId:job.id,code,options,result}).catch(()=>{});
     throw error;
   }
