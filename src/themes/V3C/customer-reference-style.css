@@ -44,7 +44,6 @@ html[data-customer-theme="V3C"] .portalTopbar{
 html[data-customer-theme="V3C"] .portalTopBrand{
   display:flex!important;
   align-items:center!important;
-  gap:10px!important;
   min-width:0!important;
   color:#f5f9fc!important;
   text-decoration:none!important;
@@ -52,19 +51,7 @@ html[data-customer-theme="V3C"] .portalTopBrand{
   font-weight:850!important;
   white-space:nowrap!important;
 }
-html[data-customer-theme="V3C"] .portalTopBrandMark{
-  display:grid!important;
-  place-items:center!important;
-  width:42px!important;
-  height:30px!important;
-  flex:0 0 auto!important;
-  border:1px solid #2c455b!important;
-  border-radius:9px!important;
-  background:#0b1725!important;
-  color:#b9d0e1!important;
-  font-size:9px!important;
-  font-weight:900!important;
-}
+html[data-customer-theme="V3C"] .portalMobileBrandMenu{display:none!important}
 html[data-customer-theme="V3C"] .portalTopNav{
   display:flex!important;
   align-items:stretch!important;
@@ -176,7 +163,6 @@ html[data-customer-theme="V3C"] .portalAdminLink{
   background:#102629!important;
   color:#bfece1!important;
 }
-html[data-customer-theme="V3C"] .portalMobileMenuButton,
 html[data-customer-theme="V3C"] .portalMobileOnly{display:none!important}
 html[data-customer-theme="V3C"] .portalMain{
   width:100%!important;
@@ -418,32 +404,39 @@ html[data-customer-theme="V3C"] .portalOverviewBottom{gap:14px!important}
 
 @media(max-width:760px){
   html[data-customer-theme="V3C"] .portalTopbar{
-    grid-template-columns:minmax(0,1fr) auto auto!important;
-    grid-template-areas:"brand menu tools"!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    grid-template-areas:"brand tools"!important;
     min-height:54px!important;
     padding:6px 8px!important;
     gap:7px!important;
   }
-  html[data-customer-theme="V3C"] .portalTopBrand{grid-area:brand!important;min-width:0!important}
-  html[data-customer-theme="V3C"] .portalTopBrand>span:last-child{
-    overflow:hidden!important;
-    text-overflow:ellipsis!important;
-    white-space:nowrap!important;
-  }
-  html[data-customer-theme="V3C"] .portalMobileMenuButton{
-    grid-area:menu!important;
-    display:inline-flex!important;
+  html[data-customer-theme="V3C"] .portalTopBrand{display:none!important}
+  html[data-customer-theme="V3C"] .portalMobileBrandMenu{
+    grid-area:brand!important;
+    display:flex!important;
     align-items:center!important;
-    justify-content:center!important;
+    justify-content:flex-start!important;
+    gap:5px!important;
+    min-width:0!important;
     min-height:36px!important;
     padding:0 10px!important;
     border:1px solid #2b4357!important;
     border-radius:8px!important;
     background:#0b1724!important;
-    color:#e6eef5!important;
+    color:#f0f6fa!important;
     font-size:9px!important;
     font-weight:800!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
   }
+  html[data-customer-theme="V3C"] .portalMobileBrandMenu .portalMobilePageName{
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  html[data-customer-theme="V3C"] .portalMobileBrandSeparator{color:#70879a!important}
+  html[data-customer-theme="V3C"] .portalMobileBrandMenu[aria-expanded="true"] .portalTopNavChevron{transform:rotate(180deg)!important}
+  html[data-customer-theme="V3C"] .portalMobileBrandMenu .portalTopNavChevron{margin-left:auto!important}
   html[data-customer-theme="V3C"] .portalTopTools{grid-area:tools!important;gap:5px!important}
   html[data-customer-theme="V3C"] .portalAdminLink,
   html[data-customer-theme="V3C"] .portalAccountLink,
@@ -518,8 +511,8 @@ html[data-customer-theme="V3C"] .portalOverviewBottom{gap:14px!important}
 }
 
 @media(max-width:440px){
-  html[data-customer-theme="V3C"] .portalTopBrandMark{width:34px!important;height:28px!important}
-  html[data-customer-theme="V3C"] .portalTopBrand>span:last-child{max-width:90px!important}
+  html[data-customer-theme="V3C"] .portalMobileBrandMenu{padding:0 8px!important;font-size:8.5px!important}
+  html[data-customer-theme="V3C"] .portalMobilePageName{max-width:112px!important}
   html[data-customer-theme="V3C"] .portalTopNav{grid-template-columns:1fr!important}
   html[data-customer-theme="V3C"] .portalTopNavGroup{grid-column:auto!important}
   html[data-customer-theme="V3C"] .portalOverviewStats{grid-template-columns:1fr!important}
