@@ -256,26 +256,6 @@ commit;`);
 }
 function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
 function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
-async function registerBaseInstallation(install:any,deploymentUrl:string,deploymentId:string){
-  const baseUrl=String(deploymentUrl||'').replace(/\/$/,'');
-  if(!baseUrl)fail("Base deployment did not return a public URL",502);
-  const secret=await customerInstallationDbSecret(String(install.id));
-  const response=await fetch(`${baseUrl}/api/setup/bootstrap`,{
-    method:"POST",
-    headers:{"content-type":"application/json","x-orbitfs-db-secret":secret,"x-orbitfs-installation-id":String(install.installation_id||"")},
-    body:JSON.stringify({
-      installationRoute:"billing_store",
-      registeredBy:String(install.auth_user_id||"billing-store"),
-      deploymentId,
-      projectId:String(install.vercel_project_id||"")
-    }),
-    signal:AbortSignal.timeout(15000),
-    cache:"no-store"
-  });
-  const body:any=await response.json().catch(()=>({}));
-  if(!response.ok)fail(String(body?.error||"Base deployment completed but Base setup registration failed"),502);
-  return body;
-}
 async function deploymentDiagnostics(userId:string,id:string){
   try{
     const events=await vercelApi(userId,`/v3/deployments/${encodeURIComponent(id)}/events?direction=backward&follow=0&limit=80&builds=1`,{method:"GET"});
@@ -615,7 +595,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const ready=await waitForReady(install.auth_user_id,deploymentId),state=String(ready?.readyState||ready?.state||"");if(state!=="READY")fail("Vercel deployment did not become ready within the deployment window",504);
   const previousVersion=install.release_version||null,deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url;
   await configureVercel(install,String(release.version),deploymentUrl||undefined,requestedChannel,String(release.id),parsed.artifactSha256,String(parsed.pkg.sourceCommit||release.sourceCommit||""));
-  await registerBaseInstallation(install,deploymentUrl,deploymentId);
+  // Billing Store owns deployment coordination only. Base owns first-time bootstrap:
+  // storage preparation, licence activation, Owner creation, workspace creation and
+  // runtime installation registration all happen inside the installed Base setup flow.
   const completedAt=new Date().toISOString();
   const patch={release_channel:requestedChannel,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,release_source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,previous_release_version:previousVersion,last_deployment_at:completedAt,last_error:null,state:"ready"};
   const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();if(error)throw error;
