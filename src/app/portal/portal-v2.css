@@ -588,3 +588,26 @@
   .orbitInstallerFooter{align-items:stretch;flex-direction:column-reverse}
   .orbitInstallerFooter button{width:100%}
 }
+
+
+/* Base Deployer staged installer refresh */
+.orbitPrimaryStages{position:relative}
+.orbitPrimaryStage{cursor:default!important}
+.orbitPrimaryStage:disabled{opacity:1}
+.orbitInstallerSubsteps{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px;padding-top:12px;border-top:1px solid #203246}
+.orbitInstallerSubstepHead{display:grid;align-content:start;gap:3px;padding:8px 2px}
+.orbitInstallerSubstepHead small{font-size:8px;font-weight:900;letter-spacing:.14em;color:#79a8ff}
+.orbitInstallerSubstepHead b{font-size:13px;color:#eff6fd}
+.orbitInstallerSubstepHead span{font-size:9px;line-height:1.45;color:var(--muted)}
+.orbitInstallerSubstepList{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px}
+.orbitInstallerSubstep{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:center;min-height:54px;padding:8px 9px;border:1px solid #21384c;border-radius:8px;background:#081522;color:#93a8bc}
+.orbitInstallerSubstep>span{display:grid;place-items:center;width:26px;height:26px;border:1px solid #334e64;border-radius:7px;background:#0b1c2a;font-size:9px;font-weight:900;color:#8da9bf}
+.orbitInstallerSubstep>div{display:grid;gap:2px;min-width:0}
+.orbitInstallerSubstep b{font-size:9px;color:#dbe7f2}
+.orbitInstallerSubstep small{font-size:8px;color:#73899d}
+.orbitInstallerSubstep.active{border-color:#a43b43;background:linear-gradient(180deg,#241319,#17131a);box-shadow:0 0 0 1px #a43b4324}
+.orbitInstallerSubstep.active>span{border-color:#bc4a53;background:#32171e;color:#ffd9dc}
+.orbitInstallerSubstep.done{border-color:#315b4e;background:#0b211d}
+.orbitInstallerSubstep.done>span{border-color:#4b8a75;background:#103129;color:#a7ead8}
+@media(max-width:900px){.orbitInstallerSubsteps{grid-template-columns:1fr}.orbitInstallerSubstepList{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.orbitInstallerSubstepList{grid-template-columns:1fr}.orbitPrimaryStages{grid-template-columns:repeat(5,minmax(74px,1fr));overflow-x:auto;padding-bottom:3px}.orbitPrimaryStage{grid-template-columns:1fr;justify-items:center;text-align:center}.orbitPrimaryStage>div{display:none}}
