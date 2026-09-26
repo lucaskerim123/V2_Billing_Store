@@ -2,7 +2,7 @@ import {createHash,randomBytes} from "node:crypto";
 import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
-import {masterDownloadReleaseArtifact,masterReleases} from "@/lib/master-api";
+import {masterDownloadReleaseArtifact,masterLicenseValidate,masterReleases} from "@/lib/master-api";
 import {requireLicenseMasterForDeployment} from "@/lib/license-master-availability";
 
 const SUPABASE_API="https://api.supabase.com/v1";
