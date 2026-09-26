@@ -16,12 +16,13 @@ let baseSource = "repository-root";
 
 if (requestedBase) {
   baseSha = git(["rev-parse", requestedBase]);
+  let isAncestor = true;
   try {
     execFileSync("git", ["merge-base", "--is-ancestor", baseSha, head], { stdio: "ignore" });
   } catch {
-    throw new Error(`Configured release base ${baseSha} is not an ancestor of HEAD ${head}; refusing to create an incomplete production change-set.`);
+    isAncestor = false;
   }
-  baseSource = "current-production-deployment";
+  baseSource = isAncestor ? "current-production-deployment" : "diverged-production-deployment";
 }
 
 let latestTag = "";
