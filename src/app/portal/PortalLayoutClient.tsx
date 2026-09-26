@@ -122,8 +122,6 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
       <Link className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Update Releaser</Link>
      </div>
     </details>}
-    {d.staff?.is_staff&&<Link className="portalMobileOnly" href="/admin">Admin</Link>}
-    {!suspended&&<Link className="portalMobileOnly" href="/portal/settings">Account</Link>}
    </nav>
 
    <div className="portalTopTools">
