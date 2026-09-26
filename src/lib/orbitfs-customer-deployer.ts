@@ -7,7 +7,7 @@ import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
 const MAX_FILES=5000,MAX_FILE_BYTES=25*1024*1024,MAX_TOTAL_BYTES=70*1024*1024;
-const SAFE_PATH=/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)(?:\.git|\.vercel|node_modules)(?:\/|$))[A-Za-z0-9._@+\-\/]+$/;
+const SAFE_PATH=/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)(?:\.git|\.vercel|node_modules)(?:\/|$))[A-Za-z0-9._@+\-\/\[\]()=]+$/;
 type ReleaseFile={file:string;data:string;encoding?:string;sha256?:string;size?:number;component?:string};
 type Package={format?:string;schemaVersion?:number;version:string;releaseId?:string;sourceCommit?:string;components?:string[];projectSettings?:Record<string,unknown>;files:ReleaseFile[];[key:string]:any};
 type UpdateBundle={format:"orbitfs-update-bundle-v3";schemaVersion:number;version:string;sourceCommit?:string;components:string[];minimumBaseVersion?:string;minimumEngineDeployerProtocol?:number;checkpointRequired?:boolean;payloads:{panel:Package|null;engine:Package|null};[key:string]:any};
