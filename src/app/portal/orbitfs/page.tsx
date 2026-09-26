@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {useEffect,useMemo,useRef,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import {trackCustomerActivity} from "@/lib/customer-activity";
@@ -53,14 +52,14 @@ export default function MyOrbitFS(){
   },[]);
 
   const bases=(d?.bindings||[]).filter(hasBase),binding=bases[0],install=(d?.installations||[]).find((x:any)=>x.license_binding_id===binding?.id),supabase=(d?.connections||[]).find((x:any)=>x.provider==="supabase"&&x.status==="connected"),vercelConnection=(d?.connections||[]).find((x:any)=>x.provider==="vercel"&&x.status==="connected"),vercelApiReady=vercelConnection?.metadata?.api_ready===true,vercelTeams=Array.isArray(vercelConnection?.metadata?.teams)?vercelConnection.metadata.teams:[],settings=d?.settings||{},history=(d?.releases||[]).filter((x:any)=>x.installation_id===install?.id),events=(d?.events||[]).filter((x:any)=>x.installation_id===install?.id);
-  const supabaseReady=!!install?.supabase_project_ref,databaseReady=!!install?.database_initialized_at,panelProjectReady=!!install?.vercel_project_id,panelReady=!!(install?.release_version&&install?.vercel_project_id&&install?.state==="ready"),working=!!install&&workingStates.has(String(install.state)),reviewReady=databaseReady&&vercelApiReady;
+  const supabaseReady=!!install?.supabase_project_ref,databaseReady=!!install?.database_initialized_at,panelReady=!!(install?.release_version&&install?.vercel_project_id&&install?.state==="ready"),working=!!install&&workingStates.has(String(install.state)),reviewReady=databaseReady&&vercelApiReady;
   const deploymentUnavailable=!settings.enabled||settings.maintenance_mode===true||settings.license_authority_available===false||settings.release_authority_available===false||settings.deployment_authority_available===false;
   const availableBaseChannels=Array.isArray(d?.settings?.release_channels)&&d.settings.release_channels.length?d.settings.release_channels:["stable"];
   const selectedChannel=String(install?.release_channel||preferredBaseChannel||availableBaseChannels[0]||"stable");
   const publishedBaseReleases=(d?.publishedReleases||[]).filter((r:any)=>String(r.release_type||r.releaseType)==="base"&&String(r.channel||"stable")===selectedChannel&&String(r.status||"").toLowerCase()==="published").sort((a:any,b:any)=>String(b.published_at||b.publishedAt||"").localeCompare(String(a.published_at||a.publishedAt||""))||String(b.version).localeCompare(String(a.version),undefined,{numeric:true}));
   const selectedRelease=publishedBaseReleases.find((r:any)=>String(r.id)===selectedReleaseId)||publishedBaseReleases[0]||null;
   const selectedReleaseMatchesInstalled=!!(selectedRelease&&install?.release_id&&String(selectedRelease.id)===String(install.release_id));
-  const latestBase=d?.latestBase?.version,latestBaseChangelog=d?.latestBase?.changelog||d?.latestBase?.notes||"",latestUpdate=d?.latestUpdate?.version,appliedUpdate=install?.metadata?.appliedUpdate||null,appliedUpdateVersion=String(appliedUpdate?.version||""),updateAvailable=!!(install?.release_version&&latestUpdate&&appliedUpdateVersion!==String(latestUpdate)),components=binding?Object.entries(binding.components||{}).filter(([,v])=>v).map(([k])=>k):[];
+  const latestBase=d?.latestBase?.version,latestUpdate=d?.latestUpdate?.version,appliedUpdate=install?.metadata?.appliedUpdate||null,appliedUpdateVersion=String(appliedUpdate?.version||""),updateAvailable=!!(install?.release_version&&latestUpdate&&appliedUpdateVersion!==String(latestUpdate)),components=binding?Object.entries(binding.components||{}).filter(([,v])=>v).map(([k])=>k):[];
 
   useEffect(()=>{if(!preferredBaseChannel&&availableBaseChannels.length)setPreferredBaseChannel(String(availableBaseChannels[0]))},[availableBaseChannels.join(","),preferredBaseChannel]);
   useEffect(()=>{if(selectedRelease?.id&&!selectedReleaseId)setSelectedReleaseId(String(selectedRelease.id))},[selectedRelease?.id,selectedReleaseId]);
