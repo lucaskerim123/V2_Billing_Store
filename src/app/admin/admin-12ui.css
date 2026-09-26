@@ -265,3 +265,139 @@ html[data-admin-theme="v3"] .supportEscalationAlert{
   html[data-admin-theme="v3"] .customerControlBar,
   html[data-admin-theme="v3"] .filterBar{flex-direction:column!important}
 }
+
+
+/* Shell interaction refinements: pinnable sidebar, cleaner topbar handoff, compact tools. */
+html[data-admin-theme="v3"] .srOnly{
+  position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;
+  overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;
+}
+html[data-admin-theme="v3"] .adminV3ContextHead{
+  display:flex!important;align-items:center!important;gap:8px!important;margin:0 6px 10px!important;min-height:34px!important;
+}
+html[data-admin-theme="v3"] .adminV3ContextHead .adminV3ContextLabel{
+  min-width:0!important;flex:1 1 auto!important;margin:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
+html[data-admin-theme="v3"] .adminSidebarPin{
+  flex:0 0 30px!important;width:30px!important;height:30px!important;min-height:30px!important;padding:0!important;
+  display:grid!important;place-items:center!important;border:1px solid #235472!important;border-radius:8px!important;
+  background:#0b2944!important;color:#8fb9d7!important;font-size:15px!important;line-height:1!important;cursor:pointer!important;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease!important;
+}
+html[data-admin-theme="v3"] .adminSidebarPin:hover{
+  background:#103957!important;border-color:#34769b!important;color:#f3fbff!important;
+}
+html[data-admin-theme="v3"] .adminSidebarPin.pinned{
+  background:#0b454c!important;border-color:#2d8c8b!important;color:#61e5dc!important;transform:rotate(-20deg)!important;
+}
+
+/* Unpinned = narrow resting rail; hover/focus expands it temporarily without stealing content width. */
+html[data-admin-theme="v3"] .adminSidebarAutoHide .adminV3Context{
+  width:18px!important;padding-left:0!important;padding-right:0!important;overflow:hidden!important;
+  transition:width .2s ease,padding .2s ease,box-shadow .2s ease!important;
+}
+html[data-admin-theme="v3"] .adminSidebarAutoHide .adminV3Context::before{
+  content:"";position:absolute;right:4px;top:16px;bottom:16px;width:2px;border-radius:999px;background:#1a5577;opacity:.75;
+}
+html[data-admin-theme="v3"] .adminSidebarAutoHide .adminV3Context>*{
+  min-width:202px!important;opacity:0!important;pointer-events:none!important;transition:opacity .12s ease!important;
+}
+html[data-admin-theme="v3"] .adminSidebarAutoHide .adminV3Context:hover,
+html[data-admin-theme="v3"] .adminSidebarAutoHide .adminV3Context:focus-within{
+  width:218px!important;padding:22px 8px 20px!important;overflow-y:auto!important;
+  box-shadow:18px 0 34px rgba(0,0,0,.2)!important;
+}
+html[data-admin-theme="v3"] .adminSidebarAutoHide .adminV3Context:hover>*,
+html[data-admin-theme="v3"] .adminSidebarAutoHide .adminV3Context:focus-within>*{
+  opacity:1!important;pointer-events:auto!important;
+}
+html[data-admin-theme="v3"] .adminSidebarAutoHide .masterContent{
+  margin-left:18px!important;transition:margin-left .2s ease!important;
+}
+html[data-admin-theme="v3"] .adminSidebarPinned .masterContent{
+  transition:margin-left .2s ease!important;
+}
+
+/* Top-right actions: intentionally smaller and denser than primary navigation. */
+html[data-admin-theme="v3"] .adminV3Tools{
+  margin-left:auto!important;gap:6px!important;padding-right:10px!important;align-items:center!important;white-space:nowrap!important;
+}
+html[data-admin-theme="v3"] .adminV3Tool,
+html[data-admin-theme="v3"] .adminV3Create>summary{
+  min-height:32px!important;height:32px!important;padding:0 10px!important;border-radius:7px!important;
+  font-size:12px!important;line-height:32px!important;
+}
+html[data-admin-theme="v3"] .adminV3CreateMenu{
+  min-width:150px!important;padding:5px!important;border-radius:9px!important;
+}
+html[data-admin-theme="v3"] .adminV3CreateMenu a{
+  min-height:32px!important;padding:6px 9px!important;font-size:12px!important;
+}
+html[data-admin-theme="v3"] .adminV3Tools [data-surface="admin"]>button{
+  width:32px!important;min-width:32px!important;height:32px!important;min-height:32px!important;border-radius:7px!important;
+}
+
+/* Topbar handoff: avoid crushed/overlapping nav by using the grouped menu earlier. */
+@media(max-width:1180px){
+  html[data-admin-theme="v3"] .adminV3Topbar{
+    display:grid!important;grid-template-columns:auto minmax(0,1fr) auto auto!important;
+    grid-template-areas:"brand spacer tools menu"!important;align-items:center!important;gap:8px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Brand{grid-area:brand!important}
+  html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav{display:none!important}
+  html[data-admin-theme="v3"] .adminV3Tools{grid-area:tools!important;margin-left:0!important}
+  html[data-admin-theme="v3"] .adminV3MobileMenuButton{
+    grid-area:menu!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+    min-width:64px!important;height:34px!important;min-height:34px!important;padding:0 11px!important;
+    border:1px solid #24506e!important;border-radius:8px!important;background:#102d49!important;color:#eef6ff!important;
+    font-size:12px!important;font-weight:700!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileMenu{
+    position:fixed!important;z-index:90!important;top:70px!important;right:12px!important;left:auto!important;width:min(420px,calc(100vw - 24px))!important;
+    max-height:calc(100dvh - 84px)!important;overflow:auto!important;padding:8px!important;border:1px solid #24506e!important;
+    border-radius:12px!important;background:#071a2c!important;box-shadow:0 22px 54px rgba(0,0,0,.38)!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileMenu.open{display:grid!important;gap:7px!important}
+  html[data-admin-theme="v3"] .adminV3MobileDashboard,
+  html[data-admin-theme="v3"] .adminV3MobileUtility>a{
+    display:flex!important;align-items:center!important;min-height:38px!important;padding:8px 10px!important;
+    border:1px solid #244a66!important;border-radius:8px!important;background:#0b2845!important;color:#e7f1fb!important;font-size:12px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileGroup{
+    border:1px solid #214662!important;border-radius:9px!important;background:#09233d!important;overflow:hidden!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileGroup>summary{
+    min-height:38px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;
+    padding:8px 10px!important;list-style:none!important;cursor:pointer!important;color:#eef5ff!important;font-size:12px!important;font-weight:700!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileGroup>summary::-webkit-details-marker{display:none!important}
+  html[data-admin-theme="v3"] .adminV3MobileGroup>div{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important;padding:0 6px 6px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileGroup a{
+    min-width:0!important;min-height:34px!important;display:flex!important;align-items:center!important;padding:6px 8px!important;
+    border:1px solid #1c405c!important;border-radius:7px!important;background:#0c2a46!important;color:#bed1e5!important;font-size:11px!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileGroup a.active{
+    border-color:#2b8e96!important;background:#0d4050!important;color:#fff!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileUtility{
+    display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;
+  }
+}
+@media(max-width:900px){
+  html[data-admin-theme="v3"] .adminSidebarAutoHide .masterContent{margin-left:0!important}
+  html[data-admin-theme="v3"] .adminV3Context{display:none!important}
+}
+@media(max-width:760px){
+  html[data-admin-theme="v3"] .adminV3Topbar{
+    grid-template-columns:auto minmax(0,1fr) auto!important;
+    grid-template-areas:"brand spacer menu"!important;
+  }
+  html[data-admin-theme="v3"] .adminV3Tools{
+    position:absolute!important;right:72px!important;top:calc(5px + env(safe-area-inset-top))!important;
+  }
+  html[data-admin-theme="v3"] .adminV3MobileMenu{
+    top:calc(52px + env(safe-area-inset-top))!important;left:7px!important;right:7px!important;width:auto!important;
+  }
+}
