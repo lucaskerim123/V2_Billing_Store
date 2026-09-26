@@ -100,6 +100,17 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   if(h==="/portal/orbitfs")return path==="/portal/orbitfs";
   return path===h||path.startsWith(h+"/");
  };
+ const pageName=
+  path.startsWith("/portal/orbitfs/license")?"License Controller":
+  path.startsWith("/portal/orbitfs/releases")?"Update Releaser":
+  path==="/portal/orbitfs"?"Base Deployer":
+  path.startsWith("/portal/invoices")?"Invoices":
+  path.startsWith("/portal/orders")||path.startsWith("/portal/checkout")?"Orders":
+  path.startsWith("/portal/products")?"Store":
+  path.startsWith("/portal/downloads")?"Downloads":
+  path.startsWith("/portal/support")?"Support":
+  path.startsWith("/portal/settings")?"Account":
+  "Home";
 
  async function logout(){
   if(loggingOut)return;setLoggingOut(true);
@@ -111,13 +122,9 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   <ThemeRuntime surface="customer" fallback="V3C"/>
 
   <header className="portalTopbar">
-   <Link className="portalTopBrand" href="/portal">
-    <span className="portalTopBrandMark">OPS</span>
-    <span>{d.id.site_name||"OrbitFS"}</span>
-   </Link>
-
-   <button className="portalMobileMenuButton" type="button" aria-expanded={mobileMenuOpen} aria-controls="portal-mobile-nav" onClick={()=>setMobileMenuOpen(v=>!v)}>
-    {mobileMenuOpen?"Close":"Menu"}
+   <Link className="portalTopBrand" href="/portal">OrbitFS</Link>
+   <button className="portalMobileBrandMenu" type="button" aria-expanded={mobileMenuOpen} aria-controls="portal-mobile-nav" onClick={()=>setMobileMenuOpen(v=>!v)}>
+    <span>OrbitFS</span><span className="portalMobileBrandSeparator">–</span><span className="portalMobilePageName">{pageName}</span><span className="portalTopNavChevron">⌄</span>
    </button>
 
    <nav id="portal-mobile-nav" className={"portalTopNav "+(mobileMenuOpen?"mobileOpen":"")}>
