@@ -259,7 +259,28 @@ insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-fil
     await event(install,"database.failed","error",message);
     throw e;
   }
-  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseSchemaSource:schemaAsset.source,databaseMigrationCount:"migrationCount" in schemaAsset?schemaAsset.migrationCount:null,databaseLatestMigration:"latestMigration" in schemaAsset?schemaAsset.latestMigration:null,baseMigrationId});return data;
+  const verification=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:`select
+  to_regclass('public.orbitfs_users') is not null as orbitfs_users,
+  to_regclass('public.orbitfs_workspaces') is not null as orbitfs_workspaces,
+  to_regclass('public.orbitfs_workspace_members') is not null as orbitfs_workspace_members,
+  to_regclass('public.orbitfs_files') is not null as orbitfs_files,
+  to_regclass('public.orbitfs_settings') is not null as orbitfs_settings,
+  to_regclass('public.orbitfs_license') is not null as orbitfs_license,
+  to_regclass('public.orbitfs_addons') is not null as orbitfs_addons,
+  to_regclass('public.orbitfs_audit_log') is not null as orbitfs_audit_log,
+  to_regclass('private.orbitfs_runtime_secret') is not null as runtime_secret,
+  to_regclass('public.orbitfs_schema_migrations') is not null as schema_migrations,
+  to_regprocedure('public.rls_auto_enable()') is null as legacy_rls_helper_removed;`})});
+  const verificationRow=Array.isArray(verification)?verification[0]:verification?.data?.[0]||verification?.result?.[0]||verification;
+  const requiredChecks=["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log","runtime_secret","schema_migrations","legacy_rls_helper_removed"];
+  const failedChecks=requiredChecks.filter((key)=>verificationRow?.[key]!==true);
+  if(failedChecks.length){
+    const message=`OrbitFS database verification failed after schema import: ${failedChecks.join(", ")}`;
+    await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id);
+    await event(install,"database.verify_failed","error",message,{failedChecks,releaseId:String(release.id),releaseVersion:String(release.version)});
+    throw Object.assign(new Error(message),{status:502});
+  }
+  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized and verified with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseSchemaSource:schemaAsset.source,databaseMigrationCount:"migrationCount" in schemaAsset?schemaAsset.migrationCount:null,databaseLatestMigration:"latestMigration" in schemaAsset?schemaAsset.latestMigration:null,baseMigrationId});return data;
 }
 
 async function supabaseProjectKeys(install:any){
