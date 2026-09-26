@@ -1,5 +1,5 @@
 import {licenseDb} from "@/lib/license-api";
-import {masterControl,masterIssue} from "@/lib/master-api";
+import {masterControl,masterIssue,masterLicenses} from "@/lib/master-api";
 import {syncPaidOrderToLicenseMaster} from "@/lib/license-master-sync";
 
 const CANONICAL=new Set(["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio"]);
@@ -12,6 +12,35 @@ function masterState(result:any,fallback:string){return String(result?.status||r
 export async function reconcileLicenseMaster(limit=MAX_BATCH){
  const db=licenseDb(),cap=Math.min(MAX_BATCH,Math.max(1,Number(limit)||MAX_BATCH));
  const results:any[]=[],failures:any[]=[];
+ try{
+  const [snapshot,customersResult]=await Promise.all([
+   masterLicenses(),
+   db.from("customers").select("id,auth_user_id,user_id,customer_number")
+  ]);
+  if(customersResult.error)throw customersResult.error;
+  const customers=customersResult.data||[],byNumber=new Map(customers.filter((x:any)=>x.customer_number).map((x:any)=>[String(x.customer_number).toLowerCase(),x]));
+  const remotes=Array.isArray(snapshot?.licenses)?snapshot.licenses:[];
+  for(const remoteLicense of remotes){
+   const id=masterId(remoteLicense),product=String(remoteLicense?.product_code||remoteLicense?.product||"").toLowerCase();
+   if(!id||product!=="orbitfs_base"||["revoked","expired"].includes(String(remoteLicense?.status||"").toLowerCase()))continue;
+   const customer:any=byNumber.get(String(remoteLicense?.customer_external_id||"").toLowerCase());
+   if(!customer)continue;
+   const userId=String(customer.auth_user_id||customer.user_id||"");if(!userId)continue;
+   const policy=remoteLicense?.metadata?.license_policy||{},raw=remoteLicense?.components||policy?.components||{};
+   const components={orbitfs_base:true,orbitfs_apex:Boolean(raw.orbitfs_apex),orbitfs_mcp:Boolean(raw.orbitfs_mcp),orbitfs_studio:Boolean(raw.orbitfs_studio)};
+   const owner=await db.from("license_bindings").select("id,auth_user_id").eq("license_id",id).is("archived_at",null).limit(1).maybeSingle();
+   if(owner.error)throw owner.error;
+   const now=new Date().toISOString(),payload:any={auth_user_id:userId,license_id:id,license_product_key:"orbitfs_base",desired_state:String(remoteLicense.status||"active"),remote_state:String(remoteLicense.status||"active"),components,license_key_last4:remoteLicense.license_key_last4||null,expires_at:remoteLicense.expires_at||null,label:remoteLicense.product_name||remoteLicense.product||"OrbitFS Base",api_source:"license_master",admin_override:true,last_synced_at:now,last_sync_error:null,updated_at:now};
+   let bindingId=owner.data?.id||null;
+   if(bindingId){
+    const write=await db.from("license_bindings").update(payload).eq("id",bindingId);if(write.error)throw write.error;
+    if(String(owner.data.auth_user_id)!==userId){const move=await db.from("orbitfs_installations").update({auth_user_id:userId,updated_at:now}).eq("license_binding_id",bindingId);if(move.error)throw move.error;}
+   }else{
+    const write=await db.from("license_bindings").insert(payload).select("id").single();if(write.error)throw write.error;bindingId=write.data?.id||null;
+   }
+   results.push({kind:"authority_link",licenseId:id,bindingId,customerId:customer.id,customerNumber:customer.customer_number,status:"synced"});
+  }
+ }catch(error:any){failures.push({kind:"authority_link",error:String(error?.message||error)})}
  const pendingResult=await db.from("license_fulfillments").select("order_id,order_item_id,state,attempt_count,last_error").in("state",["pending","failed"]).not("order_id","is",null).order("updated_at",{ascending:true}).limit(cap);
  if(pendingResult.error)throw pendingResult.error;
  const orderIds=[...new Set((pendingResult.data||[]).map((x:any)=>String(x.order_id)).filter(Boolean))];
