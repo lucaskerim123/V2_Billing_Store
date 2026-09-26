@@ -196,7 +196,14 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   await assertSupabaseProjectReady(install);
   const releaseSchema=String(release.manifest?.databaseSchemaVersion||release.manifest?.releaseInfo?.databaseSchemaVersion||"").trim();
   if(!releaseSchema)throw Object.assign(new Error(`Published Base release ${release.version} does not declare a customer database schema version. Publish a current Base release before initializing this installation.`),{status:409});
-  const schemaAsset=await releaseSchemaText(release);
+  let schemaAsset;
+  try{schemaAsset=await releaseSchemaText(release)}
+  catch(error:any){
+    const message=String(error?.message||"Base release artifact could not be loaded");
+    await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id);
+    await event(install,"database.release_artifact_failed","error",message,{releaseId:String(release.id),releaseVersion:String(release.version||""),releaseChannel:channel,code:String(error?.code||""),status:Number(error?.status)||null});
+    throw error;
+  }
   const effectiveSchema=schemaAsset.schemaVersion;
   const sql=schemaAsset.sql;
   await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:null}).eq("id",install.id);
