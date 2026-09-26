@@ -231,12 +231,30 @@ insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-fil
   const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseSchemaSource:schemaAsset.source,databaseMigrationCount:"migrationCount" in schemaAsset?schemaAsset.migrationCount:null,databaseLatestMigration:"latestMigration" in schemaAsset?schemaAsset.latestMigration:null,baseMigrationId});return data;
 }
 
-async function publishableKey(install:any){
+async function supabaseProjectKeys(install:any){
   assertCustomerSupabaseRef(install.supabase_project_ref);
   const keys=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/api-keys?reveal=true`) as any[];
-  let key=(keys||[]).find((x:any)=>x.type==="publishable")||(keys||[]).find((x:any)=>x.name==="anon"||x.type==="anon");
-  if(!key)key=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/api-keys?reveal=true`,{method:"POST",body:JSON.stringify({type:"publishable",name:"default"})});
-  const value=key?.api_key||key?.key||key?.value;if(!value)throw new Error("Could not retrieve or create a Supabase publishable key from the customer's project");return value;
+  return Array.isArray(keys)?keys:[];
+}
+async function publishableKey(install:any){
+  let keys=await supabaseProjectKeys(install);
+  let key=keys.find((x:any)=>x.type==="publishable")||keys.find((x:any)=>x.name==="anon"||x.type==="anon");
+  if(!key){
+    const created=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/api-keys?reveal=true`,{method:"POST",body:JSON.stringify({type:"publishable",name:"default"})});
+    key=created;
+  }
+  const value=key?.api_key||key?.key||key?.value;
+  if(!value)throw new Error("Could not retrieve or create a Supabase publishable key from the customer's project");
+  return String(value);
+}
+async function supabaseSecretKey(install:any){
+  const keys=await supabaseProjectKeys(install);
+  const key=keys.find((x:any)=>x.type==="secret")
+    ||keys.find((x:any)=>x.name==="service_role"||x.type==="service_role")
+    ||keys.find((x:any)=>String(x.name||"").toLowerCase().includes("secret"));
+  const value=key?.api_key||key?.key||key?.value;
+  if(!value)throw new Error("Could not retrieve the required Supabase server secret key from the customer's project");
+  return String(value);
 }
 async function ensureVercelProject(install:any){
   if(install.vercel_project_id)return install;
@@ -257,8 +275,9 @@ const ORBITFS_LICENSE_TIMEOUT_MS="8000";
 export async function configureVercel(install:any,releaseVersion?:string,panelUrl?:string,releaseChannel?:string,releaseId?:string,releaseSha256?:string,releaseSourceCommit?:string){
   if(!install?.supabase_project_ref)throw new Error("Customer Supabase project is not configured");
   if(!install?.vercel_project_id)throw new Error("Customer Vercel project is not configured");
-  const key=await publishableKey(install),secret=await installationSecret(install.id,"db_secret");
+  const key=await publishableKey(install),supabaseServerKey=await supabaseSecretKey(install),secret=await installationSecret(install.id,"db_secret"),vercelCredentials=await vercelAccessToken(install.auth_user_id);
   if(!key)throw new Error("Customer Supabase publishable key is missing");
+  if(!supabaseServerKey)throw new Error("Customer Supabase server secret key is missing");
   if(!secret)throw new Error("OrbitFS database secret is missing");
   const version=String(releaseVersion||install.release_version||"").trim();
   const release=String(releaseId||install.release_id||"").trim();
@@ -270,6 +289,7 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
   const vars:Record<string,string>={
     SUPABASE_URL:`https://${install.supabase_project_ref}.supabase.co`,
     SUPABASE_PUBLISHABLE_KEY:key,
+    SUPABASE_SECRET_KEY:supabaseServerKey,
     ORBITFS_DB_SECRET:secret,
     ORBITFS_INSTALLATION_ID:String(install.installation_id||"").trim(),
     ORBITFS_PANEL_URL:panelUrl||"https://panel.incendiarynetworks.cc",
@@ -278,6 +298,9 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     ORBITFS_ENGINE_RELEASE_PROVIDER:ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER,
     ORBITFS_ENGINE_RELEASE_TIMEOUT_MS:ORBITFS_ENGINE_RELEASE_TIMEOUT_MS,
     ORBITFS_VERCEL_TIMEOUT_MS:ORBITFS_VERCEL_TIMEOUT_MS,
+    ORBITFS_ENGINE_PROJECT_PREFIX:"orbitfs-engine",
+    ORBITFS_VERCEL_TOKEN:String(vercelCredentials.token||""),
+    ORBITFS_VERCEL_TEAM_ID:String(vercelCredentials.teamId||""),
     ORBITFS_LICENSE_REFRESH_MINUTES:ORBITFS_LICENSE_REFRESH_MINUTES,
     ORBITFS_LICENSE_TIMEOUT_MS:ORBITFS_LICENSE_TIMEOUT_MS,
     ORBITFS_SCHEMA_VERSION:schemaVersion,
