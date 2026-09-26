@@ -405,10 +405,36 @@ export async function syncDeployment(install:any){
   if(!install.vercel_deployment_id)return install;
   const result=await vercelApi(install.auth_user_id,`/v13/deployments/${encodeURIComponent(String(install.vercel_deployment_id))}`,{method:"GET"});
   const state=String(result?.readyState||result?.state||"").toUpperCase();
-  if(["ERROR","CANCELED"].includes(state)){const msg=result?.error?.message||result?.error||`Vercel deployment ${state.toLowerCase()}`;await licenseDb().from("orbitfs_installations").update({state:"failed",health_status:"failed",last_error:msg,last_health_at:new Date().toISOString()}).eq("id",install.id);await event(install,"panel.failed","error",msg);return {...install,state:"failed",health_status:"failed",last_error:msg}}
+  if(["ERROR","CANCELED","CANCELLED"].includes(state)){
+    const msg=String(result?.error?.message||result?.errorMessage||result?.error?.code||result?.error||`Vercel deployment ${state.toLowerCase()}`);
+    await licenseDb().from("orbitfs_installations").update({state:"failed",health_status:"failed",last_error:msg,last_health_at:new Date().toISOString()}).eq("id",install.id);
+    await event(install,"panel.failed","error",msg);
+    return {...install,state:"failed",health_status:"failed",last_error:msg};
+  }
   if(state!=="READY")return install;
+
+  const history=await licenseDb().from("orbitfs_installation_releases")
+    .select("id,status,deployment_url,ready_at")
+    .eq("installation_id",install.id)
+    .eq("vercel_deployment_id",String(install.vercel_deployment_id))
+    .eq("status","ready")
+    .maybeSingle();
+  if(history.error)throw history.error;
+  if(!history.data)return install;
+
   const resultUrl=result?.url?`https://${String(result.url).replace(/^https?:\/\//,"")}`:null;
-  const url=install.production_url||install.deployment_url||resultUrl||null;let healthy=false;
-  if(url){try{const s=await billingOrbitfsConfig(),r=await fetch(new URL(s.health_path||"/api/health",url),{redirect:"follow",cache:"no-store"});healthy=r.status<500}catch{healthy=false}}
-  const patch={state:"ready",health_status:healthy?"healthy":"degraded",last_health_at:new Date().toISOString(),production_url:url,last_error:healthy?null:"Panel deployed but health check did not succeed"},{data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();if(error)throw error;await event(data,"panel.ready",healthy?"ok":"warning",healthy?"OrbitFS Panel is ready in the customer Vercel account":"Panel deployed; health check is degraded",{url});return data;
+  const url=install.production_url||install.deployment_url||history.data.deployment_url||resultUrl||null;
+  let healthy=false;
+  if(url){
+    try{
+      const settings=await billingOrbitfsConfig();
+      const response=await fetch(new URL(settings.health_path||"/api/health",url),{redirect:"follow",cache:"no-store"});
+      healthy=response.status<500;
+    }catch{healthy=false}
+  }
+  const patch={state:"ready",health_status:healthy?"healthy":"degraded",last_health_at:new Date().toISOString(),production_url:url,deployment_url:url,last_error:healthy?null:"Panel deployed but health check did not succeed"};
+  const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
+  if(error)throw error;
+  await event(data,"panel.ready",healthy?"ok":"warning",healthy?"OrbitFS Panel is ready in the customer Vercel account":"Panel deployed; health check is degraded",{url});
+  return data;
 }
