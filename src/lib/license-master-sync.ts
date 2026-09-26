@@ -9,6 +9,21 @@ function canonicalComponent(value:any){const key=String(value||"").trim().toLowe
 
 export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manual?:boolean}={}){
   const authority=await getLicenseMasterAvailability();
+  if(authority.effectiveMode==="manual"){
+    const db=licenseDb();
+    const id=String(orderId||"").trim();
+    if(id){
+      const now=new Date().toISOString();
+      const {data:order}=await db.from("orders").select("metadata").eq("id",id).maybeSingle();
+      await db.from("orders").update({
+        fulfillment_status:"pending",
+        service_status:"pending",
+        metadata:{...(order?.metadata||{}),fulfillment_hold_reason:"manual_fulfillment",fulfillment_mode:"manual",license_master_restricted:false,license_master_reachable:authority.reachable},
+        updated_at:now
+      }).eq("id",id);
+    }
+    return {ok:true,skipped:true,reason:"manual_fulfillment_queue",authority};
+  }
   const allowed=options.manual?authority.manualFulfillmentAllowed:authority.automaticFulfillmentAllowed;
   if(!allowed){
     const db=licenseDb();
