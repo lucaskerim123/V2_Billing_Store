@@ -9,7 +9,7 @@ const key=()=>String(process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUB
 async function currentUser(req:Request){const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!token||!url()||!key())throw Object.assign(new Error("Authentication is unavailable"),{status:401});const sb=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}});const result=await sb.auth.getUser(token);if(result.error||!result.data?.user)throw Object.assign(new Error("Unauthorized"),{status:401});return {user:result.data.user,token}}
 export async function GET(req:Request){
  try{
-  const auth=await currentUser(req),user=auth.user,db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}}),userDb=createClient(url(),String(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||""),{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:`Bearer ${auth.token}`}}}),q=(p:any)=>Promise.resolve(p).catch(()=>({data:[],error:null}));
+  const auth=await currentUser(req),user=auth.user,db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}}),userDb=createClient(url(),String(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||""),{auth:{persistSession:false,autoRefreshToken:false},global:{headers:{Authorization:`Bearer ${auth.token}`}}}),q=(p:any)=>Promise.resolve(p).catch((error:any)=>({data:[],error:{message:error?.message||String(error)}}));
   const [customerResult,bindings,connections,installations,settings,masterLicenseResult,channelAccess,masterAvailability]=await Promise.all([
    q(db.from("customers").select("id,customer_number,name,email").eq("auth_user_id",user.id).maybeSingle()),
    q(db.from("license_bindings").select("*").eq("auth_user_id",user.id).is("archived_at",null).order("created_at",{ascending:false})),
@@ -20,6 +20,9 @@ export async function GET(req:Request){
    Promise.resolve(["stable"]),
    getLicenseMasterAvailability()
   ]);
+  for(const [label,result] of [["customer",customerResult],["license bindings",bindings],["provider connections",connections],["installations",installations],["release settings",settings]] as const){
+    if((result as any)?.error)throw Object.assign(new Error(`Could not load ${label}: ${(result as any).error.message||"database error"}`),{status:500});
+  }
   const customer=customerResult.data||null;
   const installationRows=installations.data||[],bindingRows=bindings.data||[],masterLicensesRows=masterLicenseResult?.licenses||[];
   const preferredInstall=installationRows.find((x:any)=>String(x.component_key||"")==="orbitfs_base")||installationRows[0]||null;
@@ -30,7 +33,6 @@ export async function GET(req:Request){
   const masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.releases||[]);
   const customerNumber=String(customer?.customer_number||"").trim();
   const customerMasterLicenses=customerNumber?masterLicensesRows.filter((x:any)=>String(x.customer_external_id||"").trim()===customerNumber).filter((x:any)=>!["revoked","expired"].includes(String(x.status||"").toLowerCase())):[];
-  if(connections.error)throw Object.assign(new Error(`Could not load provider connections: ${connections.error.message}`),{status:500});
   let connectionRows=(connections.data||[]).map((x:any)=>({...x,metadata:{...(x.metadata||{})}}));
   const enrichedBindings=bindingRows.flatMap((b:any)=>{
     const remote=customerMasterLicenses.find((x:any)=>String(x.id)===String(b.license_id));
