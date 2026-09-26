@@ -73,9 +73,8 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
  const primary:NavItem[]=suspended
   ?[{label:"Home",href:"/portal",short:"HM"},{label:"Support",href:"/portal/support",short:"SP"}]
   :[
-   {label:"Overview",href:"/portal",short:"OV"},
+   {label:"Home",href:"/portal",short:"HM"},
    {label:"Store",href:"/portal/products",short:"ST"},
-   {label:"Billing",href:"/portal/orders",short:"BL"},
    {label:"Downloads",href:"/portal/downloads",short:"DL"},
    {label:"Support",href:"/portal/support",short:"SP"}
   ];
@@ -106,7 +105,15 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    </button>
 
    <nav id="portal-mobile-nav" className={"portalTopNav "+(mobileMenuOpen?"mobileOpen":"")}>
-    {primary.map(item=><Link key={item.href} className={active(item.href)?"active":""} href={item.href}>{item.label}</Link>)}
+    {primary.slice(0,2).map(item=><Link key={item.href} className={active(item.href)?"active":""} href={item.href}>{item.label}</Link>)}
+    {!suspended&&<details className={"portalTopNavGroup "+((path.startsWith("/portal/orders")||path.startsWith("/portal/invoices")||path.startsWith("/portal/checkout"))?"active":"")}>
+     <summary>Billing <span className="portalTopNavChevron">⌄</span></summary>
+     <div className="portalTopNavSub">
+      <Link className={path.startsWith("/portal/orders")?"active":""} href="/portal/orders">Orders</Link>
+      <Link className={path.startsWith("/portal/invoices")?"active":""} href="/portal/invoices">Invoices</Link>
+     </div>
+    </details>}
+    {primary.slice(2).map(item=><Link key={item.href} className={active(item.href)?"active":""} href={item.href}>{item.label}</Link>)}
     {!suspended&&<details className={"portalTopNavGroup "+(path.startsWith("/portal/orbitfs")?"active":"")}>
      <summary>My OrbitFS <span className="portalTopNavChevron">⌄</span></summary>
      <div className="portalTopNavSub">
