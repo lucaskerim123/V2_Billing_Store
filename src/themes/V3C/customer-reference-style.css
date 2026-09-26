@@ -445,9 +445,9 @@ html[data-customer-theme="V3C"] .portalOverviewBottom{gap:14px!important}
     font-weight:800!important;
   }
   html[data-customer-theme="V3C"] .portalTopTools{grid-area:tools!important;gap:5px!important}
-  html[data-customer-theme="V3C"] .portalTopTools .portalAdminLink,
-  html[data-customer-theme="V3C"] .portalTopTools .portalAccountLink{display:none!important}
-  html[data-customer-theme="V3C"] .portalLogoutButton{min-height:36px!important;padding:0 8px!important}
+  html[data-customer-theme="V3C"] .portalAdminLink,
+  html[data-customer-theme="V3C"] .portalAccountLink,
+  html[data-customer-theme="V3C"] .portalLogoutButton{min-height:34px!important;padding:0 7px!important;font-size:8.5px!important}
   html[data-customer-theme="V3C"] .portalTopNav{
     position:absolute!important;
     top:calc(100% + 6px)!important;
