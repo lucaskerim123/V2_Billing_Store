@@ -8,13 +8,6 @@ import {trackCustomerActivity} from "@/lib/customer-activity";
 import NotificationCenter from "@/components/NotificationCenter";
 import ThemeRuntime from "@/components/ThemeRuntime";
 
-function staffCanAdmin(staff:any){
- const permissions=staff?.permissions;
- if(permissions?.all||permissions?.["admin.access"])return true;
- if(Array.isArray(permissions))return permissions.includes("*")||permissions.includes("admin.access");
- return false;
-}
-
 type NavItem={label:string;href:string;short:string};
 
 export default function PortalLayoutClient({children}:{children:React.ReactNode}){
@@ -78,35 +71,20 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
  if(!d)return <div className="adminGate">Loading portal…</div>;
 
  const primary:NavItem[]=suspended
-  ?[{label:"Overview",href:"/portal",short:"OV"},{label:"Support",href:"/portal/support",short:"SP"}]
+  ?[{label:"Home",href:"/portal",short:"HM"},{label:"Support",href:"/portal/support",short:"SP"}]
   :[
    {label:"Overview",href:"/portal",short:"OV"},
    {label:"Store",href:"/portal/products",short:"ST"},
-   {label:"Orders & billing",href:"/portal/orders",short:"BL"},
+   {label:"Billing",href:"/portal/orders",short:"BL"},
    {label:"Downloads",href:"/portal/downloads",short:"DL"},
    {label:"Support",href:"/portal/support",short:"SP"}
   ];
- const orbitfs:NavItem[]=[
-  {label:"Overview",href:"/portal/orbitfs",short:"OR"},
-  {label:"Base deployment",href:"/portal/orbitfs",short:"BD"},
-  {label:"License",href:"/portal/orbitfs/license",short:"LC"},
-  {label:"Releases & updates",href:"/portal/orbitfs/releases",short:"UP"}
- ];
  const active=(h:string)=>{
   if(h==="/portal")return path==="/portal";
   if(h==="/portal/orders")return path.startsWith("/portal/orders")||path.startsWith("/portal/invoices")||path.startsWith("/portal/checkout");
   if(h==="/portal/orbitfs")return path==="/portal/orbitfs";
   return path===h||path.startsWith(h+"/");
  };
- const pageTitle=path.startsWith("/portal/orbitfs/releases")?"Releases & updates":
-  path.startsWith("/portal/orbitfs/license")?"OrbitFS licence":
-  path==="/portal/orbitfs"?"My OrbitFS":
-  path.startsWith("/portal/products")?"Store":
-  path.startsWith("/portal/orders")||path.startsWith("/portal/invoices")||path.startsWith("/portal/checkout")?"Orders & billing":
-  path.startsWith("/portal/downloads")?"Downloads":
-  path.startsWith("/portal/support")?"Support":
-  path.startsWith("/portal/settings")?"Account settings":"Overview";
- const displayName=d.p?.first_name||d.p?.display_name||d.user?.email?.split("@")[0]||"Customer";
 
  async function logout(){
   if(loggingOut)return;setLoggingOut(true);
