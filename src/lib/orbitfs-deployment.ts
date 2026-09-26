@@ -2,7 +2,7 @@ import {createHash,randomBytes} from "node:crypto";
 import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
-import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
+import {masterDownloadReleaseArtifact,masterReleases} from "@/lib/master-api";
 import {requireLicenseMasterForDeployment} from "@/lib/license-master-availability";
 
 const SUPABASE_API="https://api.supabase.com/v1";
@@ -289,7 +289,7 @@ async function supabaseProjectKeys(install:any){
   return Array.isArray(keys)?keys:[];
 }
 async function publishableKey(install:any){
-  let keys=await supabaseProjectKeys(install);
+  const keys=await supabaseProjectKeys(install);
   let key=keys.find((x:any)=>x.type==="publishable")||keys.find((x:any)=>x.name==="anon"||x.type==="anon");
   if(!key){
     const created=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/api-keys?reveal=true`,{method:"POST",body:JSON.stringify({type:"publishable",name:"default"})});
@@ -307,12 +307,6 @@ async function supabaseSecretKey(install:any){
   const value=key?.api_key||key?.key||key?.value;
   if(!value)throw new Error("Could not retrieve the required Supabase server secret key from the customer's project");
   return String(value);
-}
-async function ensureVercelProject(install:any){
-  if(install.vercel_project_id)return install;
-  const s=await billingOrbitfsConfig(),{teamId}=await vercelAccessToken(install.auth_user_id),name=`${s.panel_project_prefix}-${install.installation_id.slice(-8)}`.toLowerCase().replace(/[^a-z0-9-]/g,"-");let p:any;
-  try{p=await vercelApi(install.auth_user_id,"/v11/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit"})})}catch(e:any){if(!String(e.message).includes("404"))throw e;try{p=await vercelApi(install.auth_user_id,"/v10/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit"})})}catch(e2:any){if(!String(e2.message).includes("404"))throw e2;p=await vercelApi(install.auth_user_id,"/v9/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit"})})}}
-  const {data,error}=await licenseDb().from("orbitfs_installations").update({vercel_team_id:teamId||p.accountId||p.teamId||null,vercel_project_id:p.id,vercel_project_name:p.name||name,state:"configuring",last_error:null}).eq("id",install.id).select().single();if(error)throw error;await event(data,"vercel.project_created","ok",`OrbitFS Panel project ${p.name||name} created in customer Vercel account`);return data;
 }
 async function upsertVercelEnv(install:any,key:string,value:string){
   await vercelApi(install.auth_user_id,`/v10/projects/${encodeURIComponent(install.vercel_project_id)}/env?upsert=true`,{method:"POST",body:JSON.stringify({key,value,type:"encrypted",target:["production","preview","development"]})});
