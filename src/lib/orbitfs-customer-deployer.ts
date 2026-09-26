@@ -366,10 +366,9 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
   const components:string[]=[...new Set<string>((Array.isArray(applied?.components)?applied.components:[]).map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean))];
   if(!components.length)fail("Applied Update component history is incomplete",409);
   const channel=String(applied?.channel||install.release_channel||"stable").trim().toLowerCase();
-  const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
-  if((binding as any)?.error)throw (binding as any).error;
-  const authorityLicenseId=String((binding as any)?.data?.license_id||"").trim();
-  if(!authorityLicenseId)fail("Installation is not linked to an active License Manager licence",409);
+  const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
+  const authorityLicenseId=String(registration?.masterLicenseId||"").trim();
+  if(registration?.valid!==true||!authorityLicenseId||String(registration?.installationId||"")!==String(install.installation_id||""))fail("Register an OrbitFS licence key for this installation before deployment",409);
   const wantsPanel=components.includes("base"),wantsEngine=components.some((component:string)=>component!=="base");
   const baseUrl=String(install.production_url||install.deployment_url||"").trim();
   const pseudoRelease={id:releaseId};
@@ -418,10 +417,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const allowedChannels=await customerReleaseChannels(String(install.auth_user_id),install.license_binding_id||null);
   if(!allowedChannels.includes(requestedChannel))fail(`Release channel "${requestedChannel}" is not available for this installation's licence`,403);
   await requireSystem(action==="rollback"?"rollback":action==="update"?"update":"deploy");
-  const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
-  if((binding as any)?.error)throw (binding as any).error;
-  const authorityLicenseId=String((binding as any)?.data?.license_id||"").trim();
-  if(!authorityLicenseId)fail("Installation is not linked to an active License Manager licence",409);
+  const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
+  const authorityLicenseId=String(registration?.masterLicenseId||"").trim();
+  if(registration?.valid!==true||!authorityLicenseId||String(registration?.installationId||"")!==String(install.installation_id||""))fail("Register an OrbitFS licence key for this installation before deployment",409);
 
   if(action==="rollback"){
     const rollbackReason=String(reason||"").trim();
