@@ -1,5 +1,5 @@
 import {requireLicenseMasterForDeployment} from "@/lib/license-master-availability";
-import {httpError,loadInstallation,requireOrbitUser,type DeployAction} from "@/lib/orbitfs-deployment";
+import {httpError,loadInstallation,registerInstallationLicense,requireOrbitUser,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {runCustomerDeployer} from "@/lib/orbitfs-customer-deployer";
 
@@ -12,6 +12,11 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const body=await req.json().catch(()=>({}));
     const rawAction=String(body.action||"deploy");
     const install=await loadInstallation(id,user.id);
+    if(rawAction==="register_license"){
+      const key=String(body.licenseKey||body.license_key||"").trim();
+      const installation=await registerInstallationLicense(install,key);
+      return Response.json({ok:true,installation},{headers:{"cache-control":"no-store"}});
+    }
     if(rawAction==="set_channel"){
       await requireLicenseMasterForDeployment();
       const channel=String(body.channel||"").trim().toLowerCase();
