@@ -2,7 +2,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
-import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
@@ -351,8 +351,6 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const allowedChannels=await customerReleaseChannels(String(install.auth_user_id),install.license_binding_id||null);
   if(!allowedChannels.includes(requestedChannel))fail(`Release channel "${requestedChannel}" is not available for this installation's licence`,403);
   await requireSystem(action==="rollback"?"rollback":action==="update"?"update":"deploy");
-  if(!install.vercel_project_id)fail("Connect and select a customer Vercel project before deploying",409);
-
   const binding=install.license_binding_id?await licenseDb().from("license_bindings").select("license_id").eq("id",install.license_binding_id).maybeSingle():{data:null};
   if((binding as any)?.error)throw (binding as any).error;
   const authorityLicenseId=String((binding as any)?.data?.license_id||"").trim();
@@ -511,6 +509,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       throw updateError;
     }
   }
+  if(action==="deploy"&&!install.vercel_project_id)install=await ensureVercelProject(install);
+  if(!install.vercel_project_id)fail("Customer Vercel project is unavailable for this deployment action",409);
   await configureVercel(install,String(release.version),undefined,requestedChannel,String(release.id),String(release.sha256||release.checksum||""),String(release.source_sha||release.source_commit||release.manifest?.sourceCommit||""));
   const parsed=await readBasePackage(release);
   const packageDatabaseSchema=String((parsed.pkg as any).databaseSchemaVersion||(parsed.pkg as any).releaseInfo?.databaseSchemaVersion||release.manifest?.databaseSchemaVersion||"").trim();
