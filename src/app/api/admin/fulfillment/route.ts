@@ -32,7 +32,7 @@ async function buildQueue(){
  const orderIds=[...new Set(rows.map((x:any)=>String(x.order_id)).filter(Boolean))];
  const itemIds=[...new Set(rows.map((x:any)=>String(x.order_item_id)).filter(Boolean))];
  const [ordersResult,itemsResult,customersResult,masterResult]=await Promise.all([
-  orderIds.length?db.from("orders").select("id,order_number,auth_user_id,status,payment_status,fulfillment_status,service_status,created_at").in("id",orderIds):Promise.resolve({data:[],error:null} as any),
+  orderIds.length?db.from("orders").select("id,order_number,auth_user_id,status,payment_status,fulfillment_status,service_status,metadata,created_at").in("id",orderIds):Promise.resolve({data:[],error:null} as any),
   itemIds.length?db.from("order_items").select("id,order_id,product_id,product_name,license_product_key,quantity").in("id",itemIds):Promise.resolve({data:[],error:null} as any),
   db.from("customers").select("id,auth_user_id,user_id,customer_number,name,email"),
   masterLicenses().catch(()=>({licenses:[]}))
