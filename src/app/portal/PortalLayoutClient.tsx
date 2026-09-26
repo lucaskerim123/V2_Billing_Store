@@ -64,7 +64,23 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   void checkPulse();return()=>{alive=false;if(timer)clearTimeout(timer)};
  },[]);
 
- useEffect(()=>{trackCustomerActivity("page_view",{source:"portal",route:path});setMobileMenuOpen(false);if(billingMenuRef.current)billingMenuRef.current.open=false;if(orbitfsMenuRef.current)orbitfsMenuRef.current.open=false},[path]);
+ function closeDropdowns(except?:HTMLDetailsElement|null){
+  if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;
+  if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
+ }
+
+ useEffect(()=>{
+  const onPointer=(event:PointerEvent)=>{
+   const target=event.target as Node;
+   const inBilling=billingMenuRef.current?.contains(target);
+   const inOrbitfs=orbitfsMenuRef.current?.contains(target);
+   if(!inBilling&&!inOrbitfs)closeDropdowns();
+  };
+  document.addEventListener("pointerdown",onPointer);
+  return()=>document.removeEventListener("pointerdown",onPointer);
+ },[]);
+
+ useEffect(()=>{trackCustomerActivity("page_view",{source:"portal",route:path});setMobileMenuOpen(false);closeDropdowns()},[path]);
  const suspended=enforcement?.state==="suspended";
  useEffect(()=>{if(suspended&&path!=="/portal"&&!path.startsWith("/portal/support"))router.replace("/portal")},[suspended,path,router]);
 
@@ -78,21 +94,6 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    {label:"Downloads",href:"/portal/downloads",short:"DL"},
    {label:"Support",href:"/portal/support",short:"SP"}
   ];
- function closeDropdowns(except?:HTMLDetailsElement|null){
-  if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;
-  if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
- }
- useEffect(()=>{
-  const onPointer=(event:PointerEvent)=>{
-   const target=event.target as Node;
-   const inBilling=billingMenuRef.current?.contains(target);
-   const inOrbitfs=orbitfsMenuRef.current?.contains(target);
-   if(!inBilling&&!inOrbitfs)closeDropdowns();
-  };
-  document.addEventListener("pointerdown",onPointer);
-  return()=>document.removeEventListener("pointerdown",onPointer);
- },[]);
-
  const active=(h:string)=>{
   if(h==="/portal")return path==="/portal";
   if(h==="/portal/orders")return path.startsWith("/portal/orders")||path.startsWith("/portal/invoices")||path.startsWith("/portal/checkout");
