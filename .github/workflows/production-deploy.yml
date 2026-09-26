@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/billing-store-redesign' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
@@ -34,11 +34,16 @@ jobs:
         run: |
           set -euo pipefail
           test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
-          test "${GITHUB_REF}" = "refs/heads/main"
+          case "${GITHUB_REF}" in
+            refs/heads/main|refs/heads/billing-store-redesign) ;;
+            *) echo "::error::Production deploy is only allowed from main or billing-store-redesign."; exit 1 ;;
+          esac
+          source_branch="${GITHUB_REF#refs/heads/}"
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test "$(git rev-parse --is-shallow-repository)" = "false"
-          git fetch origin main --prune
-          test "$(git rev-parse origin/main)" = "${GITHUB_SHA}"
+          git fetch origin "${source_branch}" --prune
+          test "$(git rev-parse "origin/${source_branch}")" = "${GITHUB_SHA}"
+          echo "Validated deployment source branch: ${source_branch}"
           test -f package-lock.json
           test -f vercel.json
           node - <<'NODE'
