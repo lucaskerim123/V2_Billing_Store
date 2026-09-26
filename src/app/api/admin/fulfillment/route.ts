@@ -92,7 +92,7 @@ export async function POST(req:Request){
     let bindingId=owner.data?.id||null;
     if(bindingId){
       const write=await db.from("license_bindings").update(payload).eq("id",bindingId);if(write.error)throw write.error;
-      if(String(owner.data.auth_user_id)!==userId){const moved=await db.from("orbitfs_installations").update({auth_user_id:userId,updated_at:now}).eq("license_binding_id",bindingId);if(moved.error)throw moved.error;}
+      if(String(owner.data?.auth_user_id||"")!==userId){const moved=await db.from("orbitfs_installations").update({auth_user_id:userId,updated_at:now}).eq("license_binding_id",bindingId);if(moved.error)throw moved.error;}
     }else{
       const write=await db.from("license_bindings").insert(payload).select("id").single();if(write.error)throw write.error;bindingId=write.data?.id||null;
     }
@@ -129,7 +129,7 @@ export async function POST(req:Request){
    const bindingPayload:any={auth_user_id:userId,license_id:wanted,license_product_key:"orbitfs_base",desired_state:String(remote.status||"active"),remote_state:String(remote.status||"active"),components,license_key_last4:remote.license_key_last4||null,expires_at:remote.expires_at||null,label:remote.product_name||remote.product||"OrbitFS Base",api_source:"license_master",admin_override:true,last_sync_error:null,last_synced_at:now,updated_at:now};
    if(bindingId){
     const w=await db.from("license_bindings").update(bindingPayload).eq("id",bindingId);if(w.error)throw w.error;
-    if(String(owner.data.auth_user_id)!==userId){const moved=await db.from("orbitfs_installations").update({auth_user_id:userId,updated_at:now}).eq("license_binding_id",bindingId);if(moved.error)throw moved.error;}
+    if(String(owner.data?.auth_user_id||"")!==userId){const moved=await db.from("orbitfs_installations").update({auth_user_id:userId,updated_at:now}).eq("license_binding_id",bindingId);if(moved.error)throw moved.error;}
    }else{
     const w=await db.from("license_bindings").insert(bindingPayload).select("id").single();if(w.error)throw w.error;bindingId=w.data?.id||null;
    }
