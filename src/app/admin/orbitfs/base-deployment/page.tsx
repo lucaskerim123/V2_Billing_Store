@@ -23,8 +23,10 @@ export default function BaseDeploymentAdmin(){
  const [draft,setDraft]=useState({title:"",description:"",changelog:"",customer_notes:""});
 
  async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
- async function load(){
-  setLoading(true);setMessage("");
+ async function load(options?:{silent?:boolean;preserveMessage?:boolean}){
+  const silent=options?.silent===true;
+  if(!silent)setLoading(true);
+  if(!options?.preserveMessage)setMessage("");
   try{
    const r=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:await auth(),cache:"no-store"});
    const j=await r.json().catch(()=>({}));
@@ -33,7 +35,7 @@ export default function BaseDeploymentAdmin(){
    setReleases(rows);
    setChannels(Array.isArray(j.channels)?j.channels:[]);
    setSelectedId(current=>rows.some((x:Release)=>x.id===current)?current:(rows.find((x:Release)=>x.status!=="published")?.id||rows[0]?.id||""));
-  }catch(e:any){setMessage(e?.message||"Could not load Base release state")}finally{setLoading(false)}
+  }catch(e:any){setMessage(e?.message||"Could not load Base release state")}finally{if(!silent)setLoading(false)}
  }
  useEffect(()=>{void load()},[]);
  const selected=releases.find(r=>r.id===selectedId)||releases[0]||null;
@@ -68,8 +70,16 @@ export default function BaseDeploymentAdmin(){
    const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id})});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not publish Base release");
+   const publishedRelease=j?.release||j?.result?.release||j?.result||null;
+   const publishedAt=publishedRelease?.published_at||publishedRelease?.publishedAt||new Date().toISOString();
+   setReleases(current=>current.map(item=>item.id===selected.id?{
+     ...item,
+     status:"published",
+     publishedAt,
+     updatedAt:publishedRelease?.updated_at||publishedRelease?.updatedAt||new Date().toISOString()
+   }:item));
    setMessage(`Base v${selected.version} published to the Customer Portal/deployer.`);
-   await load();
+   await load({silent:true,preserveMessage:true});
   }catch(e:any){setMessage(e?.message||"Could not publish Base release")}finally{setBusy("")}
  }
 
