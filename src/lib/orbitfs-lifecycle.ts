@@ -91,7 +91,8 @@ async function prepareRuntime(install:any,action:OrbitfsLifecycleAction){
     owner:"billing_store",
     action,
     installationId:String(install?.installation_id||""),
-    reason:"billing_store_owns_lifecycle_orchestration"
+    reason:"billing_store_owns_lifecycle_orchestration",
+    error:null as string|null
   };
 }
 
