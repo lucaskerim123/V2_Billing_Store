@@ -308,6 +308,34 @@ async function supabaseSecretKey(install:any){
   if(!value)throw new Error("Could not retrieve the required Supabase server secret key from the customer's project");
   return String(value);
 }
+export async function ensureVercelProject(install:any){
+  if(install?.vercel_project_id)return install;
+  const settings=await billingOrbitfsConfig();
+  const {teamId}=await vercelAccessToken(install.auth_user_id);
+  const name=`${settings.panel_project_prefix}-${String(install.installation_id||install.id).slice(-8)}`.toLowerCase().replace(/[^a-z0-9-]/g,"-");
+  let project:any=null;
+  try{
+    project=await vercelApi(install.auth_user_id,"/v11/projects",{method:"POST",body:JSON.stringify({name})});
+  }catch(error:any){
+    const message=String(error?.message||"");
+    if(!message.includes("409"))throw error;
+    project=await vercelApi(install.auth_user_id,`/v9/projects/${encodeURIComponent(name)}`,{method:"GET"});
+  }
+  const projectId=String(project?.id||"").trim();
+  if(!projectId)throw Object.assign(new Error("Vercel project creation did not return a project id"),{status:502});
+  const patch={
+    vercel_team_id:teamId||project?.accountId||project?.teamId||null,
+    vercel_project_id:projectId,
+    vercel_project_name:String(project?.name||name),
+    state:"configuring",
+    last_error:null,
+    updated_at:new Date().toISOString()
+  };
+  const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
+  if(error)throw error;
+  await event(data,"vercel.project_ready","ok",`OrbitFS Panel project ${patch.vercel_project_name} is ready in the customer Vercel account`,{projectId,teamId:patch.vercel_team_id});
+  return data;
+}
 async function upsertVercelEnv(install:any,key:string,value:string){
   await vercelApi(install.auth_user_id,`/v10/projects/${encodeURIComponent(install.vercel_project_id)}/env?upsert=true`,{method:"POST",body:JSON.stringify({key,value,type:"encrypted",target:["production","preview","development"]})});
 }
