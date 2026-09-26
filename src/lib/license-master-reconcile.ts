@@ -34,7 +34,7 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
    let bindingId=owner.data?.id||null;
    if(bindingId){
     const write=await db.from("license_bindings").update(payload).eq("id",bindingId);if(write.error)throw write.error;
-    if(String(owner.data.auth_user_id)!==userId){const move=await db.from("orbitfs_installations").update({auth_user_id:userId,updated_at:now}).eq("license_binding_id",bindingId);if(move.error)throw move.error;}
+    if(String(owner.data?.auth_user_id||"")!==userId){const move=await db.from("orbitfs_installations").update({auth_user_id:userId,updated_at:now}).eq("license_binding_id",bindingId);if(move.error)throw move.error;}
    }else{
     const write=await db.from("license_bindings").insert(payload).select("id").single();if(write.error)throw write.error;bindingId=write.data?.id||null;
    }
