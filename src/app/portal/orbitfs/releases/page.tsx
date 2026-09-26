@@ -58,7 +58,7 @@ export default function OrbitFSReleaseDeployer(){
   else if(!selectedChannel&&allowedChannels.length)setSelectedChannel(String(allowedChannels[0]));
  },[install?.release_channel,allowedChannels.join(",")]);
 
- const releases=(data?.publishedReleases||[]).filter((x:any)=>(x.release_type==="base"||x.release_type==="update")&&allowedChannels.includes(String(x.channel||"stable")));
+ const releases=(data?.publishedReleases||[]).filter((x:any)=>String(x.release_type||x.releaseType)==="update"&&allowedChannels.includes(String(x.channel||"stable")));
  const settings=data?.settings||{};
  const deploymentUnavailable=!settings.enabled||settings.maintenance_mode===true||settings.license_authority_available===false||settings.release_authority_available===false||settings.deployment_authority_available===false;
  const appliedUpdate=install?.metadata?.appliedUpdate||null;
@@ -72,13 +72,13 @@ export default function OrbitFSReleaseDeployer(){
   if(!selectedChannel||!allowedChannels.includes(selectedChannel))return setMessage("Select a release channel you have access to.");
   const version=String(release?.version||"");if(!version)return setMessage("Release version is missing.");
   const releaseId=String(release?.releaseId||release?.id||"");
-  const isUpdate=String(release?.release_type||release?.releaseType||"")==="update";
-  if(isUpdate&&!settings.customer_updates_enabled)return setMessage("Update deployment is disabled by an administrator.");
-  if(!isUpdate&&!settings.customer_deploy_enabled)return setMessage("Base deployment is disabled by an administrator.");
-  if(!confirm("Deploy OrbitFS "+(isUpdate?"update ":"")+version+"?"))return;
+  if(String(release?.release_type||release?.releaseType||"")!=="update")return setMessage("Only OrbitFS Update releases can be installed from this page.");
+  if(!install.release_version)return setMessage("Deploy OrbitFS Base first.");
+  if(!settings.customer_updates_enabled)return setMessage("Update deployment is disabled by an administrator.");
+  if(!confirm("Deploy OrbitFS update "+version+"?"))return;
   setBusy("deploy:"+version);
-  const requested=releaseId&&!isUpdate?"release:"+releaseId:isUpdate?"update:"+version:version;
-  const r=await fetch("/api/orbitfs/installations/"+install.id+"/deploy",{method:"POST",headers:{...(await sessionHeaders()),"content-type":"application/json"},body:JSON.stringify({action:install.release_version?(isUpdate?"update":"deploy"):"deploy",version:requested,releaseId:releaseId||undefined,channel:selectedChannel})});
+  const requested="update:"+version;
+  const r=await fetch("/api/orbitfs/installations/"+install.id+"/deploy",{method:"POST",headers:{...(await sessionHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"update",version:requested,releaseId:releaseId||undefined,channel:selectedChannel})});
   const j=await r.json().catch(()=>({}));
   setBusy("");setMessage(r.ok?(j.message||"Deployment started."):(j.error||"Deployment failed."));
   if(r.ok)await load();
@@ -89,7 +89,7 @@ export default function OrbitFSReleaseDeployer(){
 
  return <main className="portalReleasePage">
   <header className="portalReleaseHeader">
-   <div><p className="eyebrow">MY ORBITFS · RELEASES</p><h1>Releases & channels</h1><p className="muted">Manage channel access and deploy published Base or Update releases.</p></div>
+   <div><p className="eyebrow">MY ORBITFS · UPDATES</p><h1>Updates & channels</h1><p className="muted">Manage channel access and install published OrbitFS Update releases. Base deployment is managed from My OrbitFS.</p></div>
    <div className="portalHeaderActions"><Link className="buttonlink secondary" href="/portal/orbitfs">My OrbitFS</Link><Link className="buttonlink secondary" href="/portal/orbitfs/license">License</Link></div>
   </header>
 
@@ -132,17 +132,17 @@ export default function OrbitFSReleaseDeployer(){
   </section>
 
   <section className="portalCompactPanel">
-   <div className="orbitPanelHead"><div><p className="eyebrow">PUBLISHED RELEASES</p><h2>Available to your account</h2></div><span className="orbitCount">{releases.length}</span></div>
+   <div className="orbitPanelHead"><div><p className="eyebrow">PUBLISHED UPDATES</p><h2>Available to your account</h2></div><span className="orbitCount">{releases.length}</span></div>
    <div className="portalReleaseList">
     {releases.map((r:any)=>{
-     const installed=r.release_type==="base"&&install?.release_id===r.id||r.release_type==="update"&&(appliedUpdateId===String(r.id)||appliedUpdateVersion===String(r.version));
+     const installed=appliedUpdateId===String(r.id)||appliedUpdateVersion===String(r.version);
      return <article className="portalReleaseRow" key={r.id||r.version}>
-      <div className="portalReleaseIdentity"><span className="state">{r.release_type==="base"?"BASE":"UPDATE"}</span><div><b>v{r.version} · {r.title||"OrbitFS release"}</b><small>{r.channel||"stable"} · {r.published_at?new Date(r.published_at).toLocaleDateString():"Published"}</small></div></div>
+      <div className="portalReleaseIdentity"><span className="state">UPDATE</span><div><b>v{r.version} · {r.title||"OrbitFS Update"}</b><small>{r.channel||"stable"} · {r.published_at?new Date(r.published_at).toLocaleDateString():"Published"}</small></div></div>
       <p>{r.description||r.changelog||"No customer release notes supplied."}</p>
-      <div className="portalReleaseActions">{installed?<span className="state ready">Installed</span>:r.release_type==="update"&&latestUpdate&&String(r.id||r.releaseId||"")===String(latestUpdate.id||latestUpdate.releaseId||"")?<span className="state current">Recommended above</span>:<button disabled={!!busy||!install||deploymentUnavailable||(r.release_type==="update"?!settings.customer_updates_enabled:!settings.customer_deploy_enabled)} onClick={()=>void deploy(r)}>{busy==="deploy:"+r.version?"Starting…":r.release_type==="base"?"Deploy Base":"Deploy update"}</button>}</div>
+      <div className="portalReleaseActions">{installed?<span className="state ready">Installed</span>:latestUpdate&&String(r.id||r.releaseId||"")===String(latestUpdate.id||latestUpdate.releaseId||"")?<span className="state current">Recommended above</span>:<button disabled={!!busy||!install?.release_version||deploymentUnavailable||!settings.customer_updates_enabled} onClick={()=>void deploy(r)}>{busy==="deploy:"+r.version?"Starting…":"Deploy update"}</button>}</div>
      </article>
     })}
-    {!releases.length&&<div className="orbitEmptyCompact">No published releases are currently available for your channel access.</div>}
+    {!releases.length&&<div className="orbitEmptyCompact">No published Update releases are currently available for your channel access.</div>}
    </div>
   </section>
  </main>
