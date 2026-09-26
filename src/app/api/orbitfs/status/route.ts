@@ -13,7 +13,7 @@ export async function GET(req:Request){
   const [customerResult,bindings,connections,installations,settings,masterLicenseResult,channelAccess,masterAvailability]=await Promise.all([
    q(db.from("customers").select("id,customer_number,name,email").eq("auth_user_id",user.id).maybeSingle()),
    q(db.from("license_bindings").select("*").eq("auth_user_id",user.id).is("archived_at",null).order("created_at",{ascending:false})),
-   q(userDb.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
+   q(userDb.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("updated_at",{ascending:false})),
    q(db.from("orbitfs_installations").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle()),
    masterLicenses().catch(()=>({licenses:[]})),
