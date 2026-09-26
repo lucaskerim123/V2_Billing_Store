@@ -56,7 +56,6 @@ export default function BaseDeploymentAdmin(){
    const r=await fetch("/api/admin/orbitfs/release-promote",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,targetChannel})});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not change Base release channel");
-   const direction=String(targetChannel).toLowerCase()===String(selected.channel||"").toLowerCase()?"channel":"target channel";
    setMessage(`Approved Base candidate copied to ${targetChannel}. It remains unpublished until final publication.`);
    setTargetChannel("");await load();
   }catch(e:any){setMessage(e?.message||"Could not change Base release channel")}finally{setBusy("")}
