@@ -59,21 +59,12 @@ export default function OrbitFSReleaseDeployer(){
  },[install?.release_channel,allowedChannels.join(",")]);
 
  const releases=(data?.publishedReleases||[]).filter((x:any)=>(x.release_type==="base"||x.release_type==="update")&&allowedChannels.includes(String(x.channel||"stable")));
- const channelReleases=releases.filter((x:any)=>String(x.channel||"stable")===selectedChannel);
- const channelBaseReleases=channelReleases.filter((x:any)=>x.release_type==="base").sort((a:any,b:any)=>{
-  const byDate=String(b.published_at||b.publishedAt||"").localeCompare(String(a.published_at||a.publishedAt||""));
-  return byDate||String(b.version||"").localeCompare(String(a.version||""),undefined,{numeric:true});
- });
- const latestBase=channelBaseReleases[0]||null;
  const settings=data?.settings||{};
  const deploymentUnavailable=!settings.enabled||settings.maintenance_mode===true||settings.license_authority_available===false||settings.release_authority_available===false||settings.deployment_authority_available===false;
  const appliedUpdate=install?.metadata?.appliedUpdate||null;
  const appliedUpdateVersion=String(appliedUpdate?.version||"");
  const appliedUpdateId=String(appliedUpdate?.releaseId||"");
- const latestUpdate=channelReleases.filter((x:any)=>x.release_type==="update").sort((a:any,b:any)=>{
-  const byDate=String(b.published_at||b.publishedAt||"").localeCompare(String(a.published_at||a.publishedAt||""));
-  return byDate||String(b.version||"").localeCompare(String(a.version||""),undefined,{numeric:true});
- })[0]||null;
+ const latestUpdate=releases.find((x:any)=>x.release_type==="update"&&String(x.channel||"stable")===selectedChannel)||null;
 
  async function deploy(release:any){
   if(deploymentUnavailable)return setMessage(settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment maintenance is active."):(settings.license_authority_notice||"License Manager release/deployment authority is unavailable."));
@@ -134,30 +125,16 @@ export default function OrbitFSReleaseDeployer(){
 
   <section className="portalCompactPanel">
    <div className="portalInstallRow">
-    <div><p className="eyebrow">CURRENT INSTALLATION</p><h2>{install?.vercel_project_name||"OrbitFS Panel"}</h2><p className="muted">{install?.release_version?"Installed Base v"+install.release_version:"Base release not deployed yet"} · {install?.state||"waiting"}</p></div>
-    <label className="portalChannelPicker">Release source channel<select value={selectedChannel} onChange={e=>setSelectedChannel(e.target.value)}>{allowedChannels.map((channel:string)=><option key={channel} value={channel}>{channel}</option>)}</select></label>
+    <div><p className="eyebrow">CURRENT INSTALLATION</p><h2>{install?.vercel_project_name||"OrbitFS Panel"}</h2><p className="muted">{install?.release_version?"Installed v"+install.release_version:"Base release not deployed yet"} · {install?.state||"waiting"}</p></div>
+    <label className="portalChannelPicker">Active channel<select value={selectedChannel} onChange={e=>setSelectedChannel(e.target.value)}>{allowedChannels.map((channel:string)=><option key={channel} value={channel}>{channel}</option>)}</select></label>
    </div>
-   <div className="orbitFactGrid">
-    <div><span>Selected channel</span><b>{selectedChannel||"—"}</b></div>
-    <div><span>Installed Base</span><b>{install?.release_version?"v"+install.release_version:"Not installed"}</b></div>
-    <div><span>Latest Base</span><b>{latestBase?"v"+latestBase.version:"No published Base"}</b></div>
-    <div><span>Latest update</span><b>{latestUpdate?"v"+latestUpdate.version:"None"}</b></div>
-   </div>
-   {latestBase?<div className="mt-4 rounded-lg border bg-background/40 p-4">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-     <div><p className="eyebrow">LATEST BASE · {selectedChannel}</p><h3>v{latestBase.version} · {latestBase.title||"OrbitFS Base"}</h3><p className="mt-1 text-xs muted">{latestBase.description||"Latest published Base release for this channel."}</p></div>
-     {install?.release_id===latestBase.id?<span className="state ready">Installed</span>:<button disabled={!!busy||!install||deploymentUnavailable||!settings.customer_deploy_enabled} onClick={()=>void deploy(latestBase)}>{busy==="deploy:"+latestBase.version?"Starting…":install?.release_version?"Deploy this Base":"Deploy Base"}</button>}
-    </div>
-    <div className="mt-4"><p className="eyebrow">CHANGELOG</p><div className="mt-2 whitespace-pre-wrap text-xs leading-6">{latestBase.changelog||latestBase.customer_notes||"No customer changelog supplied."}</div></div>
-    {latestBase.customer_notes&&<div className="mt-4"><p className="eyebrow">CUSTOMER NOTES</p><div className="mt-2 whitespace-pre-wrap text-xs leading-6">{latestBase.customer_notes}</div></div>}
-   </div>:<div className="mt-4 orbitEmptyCompact">There is no published Base release in the <b>{selectedChannel||"selected"}</b> channel.</div>}
-   {latestUpdate&&appliedUpdateVersion!==String(latestUpdate.version)&&<div className="portalUpdateStrip"><div><b>Update available: v{latestUpdate.version}</b><span>{latestUpdate.title||"Published update"} · {selectedChannel}</span></div><button disabled={!!busy||deploymentUnavailable||!settings.customer_updates_enabled} onClick={()=>void deploy(latestUpdate)}>{busy==="deploy:"+latestUpdate.version?"Starting…":"Deploy update"}</button></div>}
+   {latestUpdate&&appliedUpdateVersion!==String(latestUpdate.version)&&<div className="portalUpdateStrip"><div><b>Update available: v{latestUpdate.version}</b><span>{latestUpdate.title||"Published update"}</span></div><button disabled={!!busy||deploymentUnavailable||!settings.customer_updates_enabled} onClick={()=>void deploy(latestUpdate)}>{busy==="deploy:"+latestUpdate.version?"Starting…":"Deploy update"}</button></div>}
   </section>
 
   <section className="portalCompactPanel">
-   <div className="orbitPanelHead"><div><p className="eyebrow">PUBLISHED RELEASES</p><h2>{selectedChannel} channel</h2><p className="muted">Only releases from the selected source channel are shown and deployable here.</p></div><span className="orbitCount">{channelReleases.length}</span></div>
+   <div className="orbitPanelHead"><div><p className="eyebrow">PUBLISHED RELEASES</p><h2>Available to your account</h2></div><span className="orbitCount">{releases.length}</span></div>
    <div className="portalReleaseList">
-    {channelReleases.map((r:any)=>{
+    {releases.map((r:any)=>{
      const installed=r.release_type==="base"&&install?.release_id===r.id||r.release_type==="update"&&(appliedUpdateId===String(r.id)||appliedUpdateVersion===String(r.version));
      return <article className="portalReleaseRow" key={r.id||r.version}>
       <div className="portalReleaseIdentity"><span className="state">{r.release_type==="base"?"BASE":"UPDATE"}</span><div><b>v{r.version} · {r.title||"OrbitFS release"}</b><small>{r.channel||"stable"} · {r.published_at?new Date(r.published_at).toLocaleDateString():"Published"}</small></div></div>
@@ -165,7 +142,7 @@ export default function OrbitFSReleaseDeployer(){
       <div className="portalReleaseActions">{installed?<span className="state ready">Installed</span>:r.release_type==="update"&&latestUpdate&&String(r.id||r.releaseId||"")===String(latestUpdate.id||latestUpdate.releaseId||"")?<span className="state current">Recommended above</span>:<button disabled={!!busy||!install||deploymentUnavailable||(r.release_type==="update"?!settings.customer_updates_enabled:!settings.customer_deploy_enabled)} onClick={()=>void deploy(r)}>{busy==="deploy:"+r.version?"Starting…":r.release_type==="base"?"Deploy Base":"Deploy update"}</button>}</div>
      </article>
     })}
-    {!channelReleases.length&&<div className="orbitEmptyCompact">No published releases are currently available in the {selectedChannel||"selected"} channel.</div>}
+    {!releases.length&&<div className="orbitEmptyCompact">No published releases are currently available for your channel access.</div>}
    </div>
   </section>
  </main>
