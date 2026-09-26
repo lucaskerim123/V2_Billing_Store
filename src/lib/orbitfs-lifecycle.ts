@@ -1,3 +1,4 @@
+import {randomUUID} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {customerInstallationDbSecret,customerSupabaseServerKey,event,supabaseApi} from "@/lib/orbitfs-deployment";
 import {masterInstallationLifecycle} from "@/lib/master-api";
@@ -324,9 +325,11 @@ export async function executeOrbitfsLifecycle(install:any,action:OrbitfsLifecycl
     const metadata=objectValue(install.metadata);
     const lifecycle=objectValue(metadata.lifecycle);
     const nextMetadata={...metadata,lifecycle:{...lifecycle,lastUninstall:{at:now(),installationId:install.installation_id,options,result}}};
-    if(options.releaseLicense)delete nextMetadata.licenseRegistration;
+    if(options.releaseLicense||options.removeDatabase)delete nextMetadata.licenseRegistration;
+    const nextInstallationId=options.releaseLicense?`ofs_${randomUUID().replaceAll("-","")}`:String(install.installation_id||"");
+    if(options.releaseLicense)result.nextInstallationId=nextInstallationId;
     const patch:any={
-      state:"uninstalled",vercel_project_id:null,vercel_project_name:null,vercel_deployment_id:null,deployment_url:null,production_url:null,
+      state:"uninstalled",installation_id:nextInstallationId,vercel_project_id:null,vercel_project_name:null,vercel_deployment_id:null,deployment_url:null,production_url:null,
       health_status:"unknown",last_health_at:null,last_error:null,metadata:nextMetadata,updated_at:now(),
     };
     if(options.removeDatabase){
