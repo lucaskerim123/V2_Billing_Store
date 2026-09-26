@@ -15,7 +15,7 @@ export async function POST(req:Request){
     if(!allowed.has(action))throw Object.assign(new Error("Unsupported deployment action"),{status:400});
     let install=await loadInstallation(installationId,"",true);
     install=await reconcileOrbitfsInstallation(install);
-    if(action==="redeploy"&&!install.release_version)throw Object.assign(new Error("The Panel is not currently deployed. Use Deploy to create a new Vercel project."),{status:409});
+    if(action==="redeploy"&&!install.vercel_deployment_id)throw Object.assign(new Error("The Panel is not currently deployed. Use Deploy to create the first Vercel deployment."),{status:409});
     let version=body.version?String(body.version).trim():undefined;
     let releaseId=body.releaseId?String(body.releaseId).trim():undefined;
     if(version?.startsWith("release:")&&!releaseId){releaseId=version.slice(8).trim()||undefined;version=undefined}
