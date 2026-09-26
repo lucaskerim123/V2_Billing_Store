@@ -8,11 +8,14 @@ type Release={
  artifactName?:string;artifactRunId?:number|null;checksum?:string;publishedAt?:string|null;updatedAt?:string|null;
  validation?:{status?:string;checks?:Array<{key?:string;ok?:boolean;message?:string}>}|null;
 };
+type ReleaseChannel={id?:string;channel:string;label?:string;enabled?:boolean;customer_visible?:boolean};
 
 export default function BaseDeploymentAdmin(){
  const sb=useMemo(()=>createClient(),[]);
  const [releases,setReleases]=useState<Release[]>([]);
+ const [channels,setChannels]=useState<ReleaseChannel[]>([]);
  const [selectedId,setSelectedId]=useState("");
+ const [targetChannel,setTargetChannel]=useState("");
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState("");
  const [message,setMessage]=useState("");
@@ -28,6 +31,7 @@ export default function BaseDeploymentAdmin(){
    if(!r.ok)throw Error(j.error||"Could not load Base releases from License Manager");
    const rows=Array.isArray(j.releases)?j.releases:[];
    setReleases(rows);
+   setChannels(Array.isArray(j.channels)?j.channels:[]);
    setSelectedId(current=>rows.some((x:Release)=>x.id===current)?current:(rows.find((x:Release)=>x.status!=="published")?.id||rows[0]?.id||""));
   }catch(e:any){setMessage(e?.message||"Could not load Base release state")}finally{setLoading(false)}
  }
@@ -39,10 +43,37 @@ export default function BaseDeploymentAdmin(){
  const validationPassed=selected?.validation?.status==="passed";
  const reviewApproved=selected?.reviewStatus==="approved";
  const artifactReady=Boolean(selected?.artifactName||selected?.checksum);
+ const presentationReady=Boolean(String(selected?.title||"").trim()&&String(selected?.changelog||"").trim());
  const portalPublished=selected?.status==="published";
- const canPublish=Boolean(selected&&validationPassed&&reviewApproved&&artifactReady);
+ const canPublish=Boolean(selected&&validationPassed&&reviewApproved&&artifactReady&&presentationReady);
+ const customerChannels=channels.filter(ch=>ch.enabled!==false&&ch.customer_visible!==false);
 
  function beginEdit(r:Release){setSelectedId(r.id);setDraft({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||""});setEditing(true)}
+ async function changeChannel(){
+  if(!selected||!targetChannel)return;
+  setBusy("channel");setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-promote",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,targetChannel})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not change Base release channel");
+   const direction=String(targetChannel).toLowerCase()===String(selected.channel||"").toLowerCase()?"channel":"target channel";
+   setMessage(`Approved Base candidate copied to ${targetChannel}. It remains unpublished until final publication.`);
+   setTargetChannel("");await load();
+  }catch(e:any){setMessage(e?.message||"Could not change Base release channel")}finally{setBusy("")}
+ }
+
+ async function publishBase(){
+  if(!selected)return;
+  setBusy("publish");setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not publish Base release");
+   setMessage(`Base v${selected.version} published to the Customer Portal/deployer.`);
+   await load();
+  }catch(e:any){setMessage(e?.message||"Could not publish Base release")}finally{setBusy("")}
+ }
+
  async function savePresentation(){
   if(!selected)return;
   setBusy("edit");setMessage("");
@@ -91,12 +122,20 @@ export default function BaseDeploymentAdmin(){
        <div className="wide"><span>Source</span><b className="mono">{selected.sourceCommit||"—"}</b></div>
        <div className="wide"><span>Checksum</span><b className="mono">{selected.checksum||"—"}</b></div>
       </div>
-      <div className="orbitCheckLine"><span className={validationPassed?"ok":""}>Validation</span><span className={reviewApproved?"ok":""}>Approval</span><span className={artifactReady?"ok":""}>Artifact</span><span className={portalPublished?"ok":canPublish?"ready":""}>Portal</span></div>
+      <div className="orbitCheckLine"><span className={validationPassed?"ok":""}>Validation</span><span className={reviewApproved?"ok":""}>Approval</span><span className={artifactReady?"ok":""}>Artifact</span><span className={presentationReady?"ok":""}>Portal copy</span><span className={portalPublished?"ok":canPublish?"ready":""}>Portal</span></div>
       <div className="orbitAdminActions">
        <button className="orbitAction orbitActionSecondary" type="button" onClick={()=>beginEdit(selected)}>Edit portal details</button>
-       {!portalPublished&&<a className={"buttonlink orbitAction "+(canPublish?"orbitActionPrimary":"orbitActionSecondary")} href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">{canPublish?"Publish in License Manager":"Complete review in License Manager"}</a>}
+       {!portalPublished&&<>
+        <select value={targetChannel} onChange={e=>setTargetChannel(e.target.value)} disabled={busy!==""}>
+         <option value="">Promote / demote channel…</option>
+         {customerChannels.filter(ch=>String(ch.channel)!==String(selected.channel||"")).map(ch=><option key={ch.channel} value={ch.channel}>{ch.label||ch.channel}</option>)}
+        </select>
+        <button className="orbitAction orbitActionSecondary" type="button" disabled={busy!==""||!targetChannel||!validationPassed||!reviewApproved} onClick={()=>void changeChannel()}>{busy==="channel"?"Changing…":"Create channel candidate"}</button>
+        <button className={"orbitAction "+(canPublish?"orbitActionPrimary":"orbitActionSecondary")} type="button" disabled={busy!==""||!canPublish} onClick={()=>void publishBase()}>{busy==="publish"?"Publishing…":"Publish to Customer Portal"}</button>
+       </>}
        {portalPublished&&<span className="state ready">Available to customers</span>}
       </div>
+      {!portalPublished&&!presentationReady&&<small className="muted">Add a customer-facing title and changelog before publication.</small>}
      </>:<div className="orbitEmptyCompact">Select a release to review.</div>}
     </div>
    </div>
