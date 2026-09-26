@@ -30,6 +30,7 @@ export async function GET(req:Request){
   const masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.releases||[]);
   const customerNumber=String(customer?.customer_number||"").trim();
   const customerMasterLicenses=customerNumber?masterLicensesRows.filter((x:any)=>String(x.customer_external_id||"").trim()===customerNumber).filter((x:any)=>!["revoked","expired"].includes(String(x.status||"").toLowerCase())):[];
+  if(connections.error)throw Object.assign(new Error(`Could not load provider connections: ${connections.error.message}`),{status:500});
   let connectionRows=(connections.data||[]).map((x:any)=>({...x,metadata:{...(x.metadata||{})}}));
   const enrichedBindings=bindingRows.flatMap((b:any)=>{
     const remote=customerMasterLicenses.find((x:any)=>String(x.id)===String(b.license_id));
