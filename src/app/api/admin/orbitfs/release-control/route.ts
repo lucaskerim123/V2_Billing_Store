@@ -12,7 +12,8 @@ export async function POST(req:Request){
     if(!id)throw Object.assign(new Error("Release ID is required"),{status:400});
     if(!allowed.has(action))throw Object.assign(new Error("Unsupported release control"),{status:400});
     const current=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"GET"},"billing");
-    if(String(current?.release?.release_type||"")!=="update")throw Object.assign(new Error("Billing Store release controls apply to Update releases only"),{status:403});
+    const releaseType=String(current?.release?.release_type||"").toLowerCase();
+    if(!["base","update"].includes(releaseType))throw Object.assign(new Error("Unsupported OrbitFS release type"),{status:403});
     if(action==="revert"||action==="archive"){
       const reason=String(body.reason||"").trim();
       if(!reason)throw Object.assign(new Error("A reason is required"),{status:400});
@@ -20,7 +21,7 @@ export async function POST(req:Request){
       if(action==="revert"&&release.status==="published")await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"withdraw"})},"billing");
       const archived=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"archive"})},"billing");
       const occurredAt=new Date().toISOString();
-      const panelReport=await reportDevPanelReleaseEvent({eventId:`update-${action}:${id}:${occurredAt}`,eventType:action==="revert"?"reverted":"archived",releaseId:id,releaseVersion:String(release.version||""),releaseType:"update",channel:String(release.channel||"stable"),reason,archived:true,status:"completed",occurredAt,sourceSystem:"billing_store"}).catch((error:any)=>({ok:false,error:error?.message||"Dev Panel event report failed"}));
+      const panelReport=await reportDevPanelReleaseEvent({eventId:`${releaseType}-${action}:${id}:${occurredAt}`,eventType:action==="revert"?"reverted":"archived",releaseId:id,releaseVersion:String(release.version||""),releaseType,channel:String(release.channel||"stable"),reason,archived:true,status:"completed",occurredAt,sourceSystem:"billing_store"}).catch((error:any)=>({ok:false,error:error?.message||"Dev Panel event report failed"}));
       return Response.json({...archived,devPanelRecorded:panelReport?.ok===true,devPanelWarning:panelReport?.ok===true?null:(panelReport?.error||panelReport?.reason||"Dev Panel event history was not recorded")},{headers:{"cache-control":"no-store"}});
     }
     const payload:any={action};
