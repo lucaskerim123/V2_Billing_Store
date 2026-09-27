@@ -90,8 +90,8 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
       if(product!=="orbitfs_base"){
         if(!baseBinding?.license_id)throw new Error("OrbitFS Base licence binding is missing");
         const now=new Date().toISOString();
-        const components={...(baseBinding.components||{}),orbitfs_base:true,[product]:true};
-        const result=await masterControl(String(baseBinding.license_id),{action:"set-components",components,actorRef:"billing_store_fulfillment"});
+        const result=await masterControl(String(baseBinding.license_id),{action:"set-component",component:product,enabled:true,actorRef:"billing_store_fulfillment"});
+        const components={...(result?.components||baseBinding.components||{}),orbitfs_base:true,[product]:true};
         const remoteState=String(result?.license?.status||baseBinding.remote_state||"active");
         const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:String(baseBinding.license_id),state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,customer_number:customerNumber,customer_id:customerId,attached_to_base:true,base_binding_id:baseBinding.id,master_response:{id:String(baseBinding.license_id),status:remoteState}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
         if(upsertError)throw upsertError;
