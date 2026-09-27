@@ -1,8 +1,8 @@
 import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
-import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
-import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest} from "@/lib/master-api";
+import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
@@ -77,7 +77,27 @@ async function uploadVercelDeploymentFiles(userId:string,files:Array<{file:strin
 
 const releaseType=(action:DeployAction)=>action==="update"?"update":"base";
 
-async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable",releaseId?:string):Promise<any>{const rows=await masterReleases("orbitfs_base",channel,releaseType(action),"deployer");const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved");const wanted=releaseId?releases.find((r:any)=>String(r.id)===String(releaseId)):version?releases.find((r:any)=>String(r.version)===version):releases[0];if(!wanted?.id)fail(releaseId?`Selected published ${releaseType(action)} release is no longer available in License Master`:version?`Published ${releaseType(action)} release ${version} was not found in License Master`:`No approved published ${releaseType(action)} release is available`,404);if(String(wanted.channel||channel)!==channel)fail("Selected release channel does not match the installation channel",409);return wanted}
+async function exactRelease(releaseId:string):Promise<any>{
+  const result=await masterRequest(`/api/v1/releases/${encodeURIComponent(releaseId)}`,{method:"GET",cache:"no-store"},"deployer");
+  const release=result?.release||result;
+  if(!release?.id)fail("Release was not found in License Manager",404);
+  return release;
+}
+async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable",releaseId?:string):Promise<any>{
+  if(action==="redeploy"&&releaseId){
+    const release=await exactRelease(releaseId);
+    if(String(release.release_type||"").toLowerCase()!=="base")fail("Redeploy requires a Base release",409);
+    if(String(release.channel||channel).toLowerCase()!==channel)fail("Selected release channel does not match the installation channel",409);
+    if(String(release.review_status||"").toLowerCase()!=="approved"||!String(release.checksum||release.sha256||"").trim())fail("Installed Base release is not verified for redeployment",409);
+    return release;
+  }
+  const rows=await masterReleases("orbitfs_base",channel,releaseType(action),"deployer");
+  const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved"&&!r.archived_at);
+  const wanted=releaseId?releases.find((r:any)=>String(r.id)===String(releaseId)):version?releases.find((r:any)=>String(r.version)===version):releases[0];
+  if(!wanted?.id)fail(releaseId?`Selected published ${releaseType(action)} release is no longer available in License Manager`:version?`Published ${releaseType(action)} release ${version} was not found in License Manager`:`No approved published ${releaseType(action)} release is available`,404);
+  if(String(wanted.channel||channel).toLowerCase()!==channel)fail("Selected release channel does not match the installation channel",409);
+  return wanted;
+}
 
 function gunzipArtifact(bytes:Buffer){try{return gunzipSync(bytes)}catch{throw Object.assign(new Error("Release artifact is not a valid OrbitFS gzip package"),{status:422})}}
 function expectedSource(release:any){return String(release?.source_sha||release?.source_commit||release?.manifest?.sourceCommit||"").trim()}
@@ -163,6 +183,14 @@ async function readBasePackage(release:any):Promise<{pkg:Package;files:Array<{fi
   const schemaFile=files.find(file=>file.file===expectedSchemaPath);
   if(!schemaFile||schemaFile.sha256!==expectedSchemaHash)fail("Base package customer database snapshot is missing or has the wrong checksum",422);
 
+  validateDeployableBaseFiles(files);
+  return {pkg,files,artifactSha256:parsed.artifactSha256};
+}
+async function readCurrentBasePackageForRedeploy(release:any):Promise<{pkg:Package;files:Array<{file:string;data:string;sha256:string;size:number}>;artifactSha256:string}>{
+  const parsed=await readArtifact(release);
+  if((parsed.root as any).format==="orbitfs-update-bundle-v3")fail("Base redeploy cannot use an Update Bundle artifact",422);
+  const pkg=parsed.root as Package;
+  const files=validateFiles(pkg.files,"Installed Base package");
   validateDeployableBaseFiles(files);
   return {pkg,files,artifactSha256:parsed.artifactSha256};
 }
@@ -253,6 +281,118 @@ commit;`);
     await event(install,"database.migration.completed","ok",`Database migration ${migration.id} applied`,{releaseId:release.id,file:migration.file,component:migration.component,sha256:migration.sha256});
   }
   return {required:migrations.length,applied,skipped,ids};
+}
+
+type BaseMigration={id:string;file:string;size:number;sha256:string;data:string};
+function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:string;sha256:string;size:number}>):BaseMigration[]{
+  const declared=Array.isArray((pkg as any).databaseMigrations)?(pkg as any).databaseMigrations:[];
+  const count=Number((pkg as any).databaseMigrationCount??(pkg as any).releaseInfo?.databaseMigrationCount??0);
+  const latest=String((pkg as any).databaseLatestMigration||(pkg as any).releaseInfo?.databaseLatestMigration||"").trim();
+  if(!Number.isInteger(count)||count<1||declared.length!==count||!/^[0-9]{14}$/.test(latest))fail("Base release database migration chain is incomplete",422);
+  const byPath=new Map(files.map(file=>[file.file,file]));
+  const seen=new Set<string>();
+  const normalized:BaseMigration[]=declared.map((migration:any,index:number)=>{
+    const id=String(migration?.id||"").trim(),file=String(migration?.file||"").replaceAll("\\","/");
+    if(!/^[0-9]{14}$/.test(id)||seen.has(id))fail("Base release contains an invalid or duplicate migration id",422);
+    seen.add(id);
+    const match=file.match(/^supabase\/migrations\/([0-9]{14})_[A-Za-z0-9._-]+\.sql$/);
+    if(!match||match[1]!==id)fail(`Base migration path does not match its id: ${file||id}`,422);
+    const packaged=byPath.get(file);
+    if(!packaged)fail(`Base migration is missing from the deployment package: ${file}`,422);
+    const packagedFile=packaged as {file:string;data:string;sha256:string;size:number};
+    const sha=String(migration?.sha256||"").trim().toLowerCase();
+    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packagedFile.sha256||Number(migration?.size)!==packagedFile.size)fail(`Base migration checksum mismatch: ${file}`,422);
+    if(index>0&&id<=String(declared[index-1]?.id||""))fail("Base migration ids must be strictly increasing",422);
+    return {id,file,size:packagedFile.size,sha256:sha,data:packagedFile.data};
+  });
+  if(normalized.at(-1)?.id!==latest)fail("Base release latest migration does not match its migration chain",422);
+  return normalized;
+}
+async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigration[]){
+  const source=currentRelease?.manifest&&typeof currentRelease.manifest==="object"?currentRelease.manifest:{};
+  let count=Number(source.databaseMigrationCount??source.releaseInfo?.databaseMigrationCount??0);
+  let latest=String(source.databaseLatestMigration||source.releaseInfo?.databaseLatestMigration||"").trim();
+  let declared=Array.isArray(source.databaseMigrations)?source.databaseMigrations:[];
+  if(!Number.isInteger(count)||count<1||!/^[0-9]{14}$/.test(latest)){
+    const parsed=await readArtifact(currentRelease);
+    if((parsed.root as any).format==="orbitfs-update-bundle-v3")fail("Installed Base release points to an Update Bundle",409);
+    const pkg=parsed.root as any;
+    count=Number(pkg.databaseMigrationCount??pkg.releaseInfo?.databaseMigrationCount??0);
+    latest=String(pkg.databaseLatestMigration||pkg.releaseInfo?.databaseLatestMigration||"").trim();
+    declared=Array.isArray(pkg.databaseMigrations)?pkg.databaseMigrations:[];
+  }
+  if(!Number.isInteger(count)||count<1||count>target.length||!/^[0-9]{14}$/.test(latest))fail("Installed Base release does not contain enough migration baseline metadata for an automatic Base update",409);
+  if(target[count-1]?.id!==latest)fail("Target Base release does not extend the installed Base migration history",409);
+  if(declared.length){
+    if(declared.length<count)fail("Installed Base migration metadata is incomplete",409);
+    for(let index=0;index<count;index++){
+      const before=declared[index],after=target[index];
+      if(String(before?.id||"")!==after.id||String(before?.file||"").replaceAll("\\","/")!==after.file||String(before?.sha256||"").toLowerCase()!==after.sha256){
+        fail(`Base migration history diverged at ${after.id}. Published migrations are immutable.`,409);
+      }
+    }
+  }
+  return {count,latest};
+}
+async function applyBaseDatabaseMigrations(install:any,currentRelease:any,targetRelease:any,pkg:Package,files:Array<{file:string;data:string;sha256:string;size:number}>){
+  if(!install.supabase_project_ref)fail("Customer Supabase project is not configured for Base migrations",409);
+  const chain=validateBaseMigrationChain(pkg,files);
+  const baseline=await currentBaseMigrationBaseline(currentRelease,chain);
+  const project=String(install.supabase_project_ref);
+  const query=async(sql:string)=>supabaseApi(String(install.auth_user_id),`/projects/${encodeURIComponent(project)}/database/query`,{method:"POST",body:JSON.stringify({query:sql})});
+  await query(`create table if not exists public.orbitfs_schema_migrations (
+    migration_id text primary key,
+    sha256 text not null,
+    component text not null default 'shared',
+    source_file text not null,
+    release_id text,
+    release_version text,
+    applied_at timestamptz not null default now()
+  );
+  alter table public.orbitfs_schema_migrations enable row level security;
+  revoke all on public.orbitfs_schema_migrations from anon, authenticated;
+  grant all on public.orbitfs_schema_migrations to service_role;`);
+  const existingRaw=await query("select migration_id,sha256,source_file from public.orbitfs_schema_migrations order by applied_at asc;");
+  const rows=managementRows(existingRaw);
+  const existing=new Map(rows.filter((row:any)=>row&&row.migration_id).map((row:any)=>[String(row.migration_id),{sha256:String(row.sha256||"").toLowerCase(),sourceFile:String(row.source_file||"")}]));
+  let seeded=0,applied=0,skipped=0;const ids:string[]=[];
+
+  for(let index=0;index<baseline.count;index++){
+    const migration=chain[index],known=existing.get(migration.id);
+    if(known){
+      if(known.sha256!==migration.sha256||known.sourceFile!==migration.file)fail(`Installed Base migration ${migration.id} conflicts with the published immutable migration history.`,409);
+      skipped++;ids.push(migration.id);continue;
+    }
+    await query(`insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
+values (${sqlLiteral(migration.id)},${sqlLiteral(migration.sha256)},'base',${sqlLiteral(migration.file)},${sqlLiteral(currentRelease.id)},${sqlLiteral(currentRelease.version)},coalesce(${sqlLiteral(install.database_initialized_at||new Date().toISOString())}::timestamptz,now()))
+on conflict (migration_id) do nothing;`);
+    existing.set(migration.id,{sha256:migration.sha256,sourceFile:migration.file});seeded++;ids.push(migration.id);
+  }
+
+  for(let index=baseline.count;index<chain.length;index++){
+    const migration=chain[index],known=existing.get(migration.id);
+    if(known){
+      if(known.sha256!==migration.sha256||known.sourceFile!==migration.file)fail(`Customer database migration ${migration.id} was previously applied with different immutable metadata.`,409);
+      skipped++;ids.push(migration.id);continue;
+    }
+    const sql=Buffer.from(migration.data,"base64").toString("utf8");
+    if(/\b(?:begin|commit|rollback)\s*;/i.test(sql))fail(`Base migration contains unsupported explicit transaction control: ${migration.file}`,422);
+    if(/\b(?:drop\s+table|drop\s+schema|truncate\s+(?:table\s+)?|alter\s+table[\s\S]{0,300}?drop\s+column)\b/i.test(sql))fail(`Destructive Base migration requires a deliberately designed migration path and cannot be auto-applied: ${migration.file}`,422);
+    await event(install,"base.database.migration.started","info",`Applying Base migration ${migration.id}`,{releaseId:targetRelease.id,releaseVersion:targetRelease.version,file:migration.file,sha256:migration.sha256});
+    try{
+      await query(`begin;
+${sql}
+insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
+values (${sqlLiteral(migration.id)},${sqlLiteral(migration.sha256)},'base',${sqlLiteral(migration.file)},${sqlLiteral(targetRelease.id)},${sqlLiteral(targetRelease.version)},now());
+commit;`);
+    }catch(error){
+      await event(install,"base.database.migration.failed","error",`Base migration ${migration.id} failed`,{releaseId:targetRelease.id,file:migration.file,error:error instanceof Error?error.message:String(error)});
+      throw error;
+    }
+    applied++;ids.push(migration.id);existing.set(migration.id,{sha256:migration.sha256,sourceFile:migration.file});
+    await event(install,"base.database.migration.completed","ok",`Base migration ${migration.id} applied`,{releaseId:targetRelease.id,file:migration.file,sha256:migration.sha256});
+  }
+  return {baseline:baseline.count,target:chain.length,required:Math.max(0,chain.length-baseline.count),seeded,applied,skipped,ids};
 }
 function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
 function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
@@ -347,12 +487,132 @@ async function rollbackEngineUpdatePayload(install:any,release:any,channel:strin
 }
 async function previousDeployment(install:any):Promise<{vercel_deployment_id:string;deployment_url:string|null;release_version:string;release_id:string;created_at:string}>{const {data,error}=await licenseDb().from("orbitfs_installation_releases").select("vercel_deployment_id,deployment_url,release_version,release_id,created_at,action").eq("installation_id",install.id).eq("status","ready").neq("action","update").not("vercel_deployment_id","is",null).order("created_at",{ascending:false}).limit(5);if(error)throw error;const previous=(data||[]).find((r:any)=>r.vercel_deployment_id!==install.vercel_deployment_id);if(!previous)throw Object.assign(new Error("No previous successful Base deployment is available for rollback"),{status:409});if(!previous.vercel_deployment_id||!previous.release_id||!previous.release_version)throw Object.assign(new Error("Previous Base deployment record is incomplete and cannot be rolled back"),{status:409});return {vercel_deployment_id:String(previous.vercel_deployment_id),deployment_url:previous.deployment_url?String(previous.deployment_url):null,release_version:String(previous.release_version),release_id:String(previous.release_id),created_at:String(previous.created_at||"")}}
 
+async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:string,authorityLicenseId:string){
+  const currentReleaseId=String(install.release_id||"").trim(),currentVersion=String(install.release_version||"").trim();
+  const projectId=String(install.vercel_project_id||"").trim(),previousDeploymentId=String(install.vercel_deployment_id||"").trim();
+  if(!currentReleaseId||!currentVersion)fail("Install OrbitFS Base before running a Base update",409);
+  if(!projectId||!previousDeploymentId)fail("The existing Base Vercel project/deployment identity is missing. Base update will not create a replacement project.",409);
+  const comparison=compareVersions(String(release.version||""),currentVersion);
+  if(comparison===null)fail("Base versions could not be compared safely",409);
+  const versionComparison=comparison as number;
+  if(versionComparison===0)fail("This Base version is already installed. Use Redeploy current Base instead.",409);
+  if(versionComparison<0)fail("Base update cannot downgrade an installation. Use the explicit Base rollback route.",409);
+
+  const currentRelease=await exactRelease(currentReleaseId);
+  if(String(currentRelease.release_type||"").toLowerCase()!=="base")fail("Installed release identity is not a Base release",409);
+  const target=await readBasePackage(release);
+  const targetSchemaVersion=String((target.pkg as any).databaseSchemaVersion||(target.pkg as any).releaseInfo?.databaseSchemaVersion||"").trim();
+  if(!targetSchemaVersion)fail("Target Base release does not declare a customer database schema version",422);
+
+  let createdDeploymentId="";
+  let migrations:any=null;
+  await licenseDb().from("orbitfs_installations").update({state:"updating",last_error:null,updated_at:new Date().toISOString()}).eq("id",install.id);
+  await event(install,"base.update.started","info",`Updating OrbitFS Base ${currentVersion} → ${release.version}`,{fromReleaseId:currentReleaseId,toReleaseId:String(release.id),projectId});
+
+  try{
+    migrations=await applyBaseDatabaseMigrations(install,currentRelease,release,target.pkg,target.files);
+    const deploymentInstall={...install,schema_version:targetSchemaVersion};
+    await configureVercel(deploymentInstall,String(release.version),undefined,requestedChannel,String(release.id),target.artifactSha256,String(target.pkg.sourceCommit||expectedSource(release)));
+
+    const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),target.files);
+    const body:any={
+      name:install.vercel_project_name||`orbitfs-${String(install.installation_id||"").slice(-8)}`.toLowerCase(),
+      project:projectId,
+      target:"production",
+      files:uploadedFiles,
+      projectSettings:{framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(target.pkg.projectSettings||{})},
+      meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:"base_update",orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(target.pkg.sourceCommit||expectedSource(release)),orbitfsInstallationRoute:"billing_store"}
+    };
+    await event(install,"base.update.deploying","info",`Deploying Base ${release.version} to the existing Vercel project`,{projectId,fileCount:target.files.length,databaseMigrations:migrations});
+    const created=await vercelApi(String(install.auth_user_id),"/v13/deployments",{method:"POST",body:JSON.stringify(body)});
+    if(!created?.id&&!created?.uid)fail("Vercel did not return a Base update deployment id",502);
+    createdDeploymentId=String(created.id||created.uid);
+    await licenseDb().from("orbitfs_installations").update({vercel_deployment_id:createdDeploymentId,state:"updating",last_error:null,updated_at:new Date().toISOString()}).eq("id",install.id);
+
+    const ready=await waitForReady(String(install.auth_user_id),createdDeploymentId);
+    if(String(ready?.readyState||ready?.state||"").toUpperCase()!=="READY")fail("Base update deployment did not become ready within the deployment window",504);
+    const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:String(install.deployment_url||"");
+    if(!deploymentUrl)fail("Vercel Base update did not return a deployment URL",502);
+
+    const settings=await billingOrbitfsConfig();
+    try{
+      const health=await fetch(new URL(settings.health_path||"/api/health",deploymentUrl),{redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(15000)});
+      if(health.status>=500)fail(`Updated Base health check failed with HTTP ${health.status}`,502);
+    }catch(error:any){
+      if(Number(error?.status))throw error;
+      fail(`Updated Base health check could not be reached: ${error?.message||String(error)}`,502);
+    }
+
+    await configureVercel(deploymentInstall,String(release.version),deploymentUrl,requestedChannel,String(release.id),target.artifactSha256,String(target.pkg.sourceCommit||expectedSource(release)));
+    const completedAt=new Date().toISOString();
+    const metadata={...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),lastBaseUpdate:{fromVersion:currentVersion,toVersion:String(release.version),fromReleaseId:currentReleaseId,toReleaseId:String(release.id),databaseMigrations:migrations,completedAt}};
+    const patch:any={
+      metadata,
+      schema_version:targetSchemaVersion,
+      release_channel:requestedChannel,
+      vercel_deployment_id:createdDeploymentId,
+      deployment_url:deploymentUrl,
+      release_version:String(release.version),
+      release_id:String(release.id),
+      release_sha256:target.artifactSha256,
+      release_source_commit:String(target.pkg.sourceCommit||expectedSource(release)||"")||null,
+      previous_release_version:currentVersion,
+      last_deployment_at:completedAt,
+      last_error:null,
+      state:"ready"
+    };
+    const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
+    if(error)throw error;
+    const history=await licenseDb().from("orbitfs_installation_releases").insert({
+      installation_id:install.id,
+      auth_user_id:install.auth_user_id,
+      release_version:String(release.version),
+      release_id:String(release.id),
+      release_sha256:target.artifactSha256,
+      source_commit:String(target.pkg.sourceCommit||expectedSource(release)||"")||null,
+      vercel_deployment_id:createdDeploymentId,
+      panel_deployment_id:createdDeploymentId,
+      deployment_url:deploymentUrl,
+      action:"base_update",
+      release_type:"base",
+      components:["base"],
+      status:"ready",
+      ready_at:completedAt
+    });
+    if(history.error)throw history.error;
+    const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
+    const customer=customerResult.data||null;
+    await masterExecuteDeployment({action:"base_update",phase:"completed",releaseId:String(release.id),installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:currentVersion,deploymentId:createdDeploymentId,deploymentUrl,projectId,projectName:install.vercel_project_name,componentState:{base:{version:String(release.version),status:"installed"}},components:{base:{version:String(release.version),status:"installed"}},customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
+    await event(data,"base.update.completed","ok",`OrbitFS Base updated from ${currentVersion} to ${release.version}`,{releaseId:String(release.id),deploymentId:createdDeploymentId,projectId,databaseMigrations:migrations});
+    return data;
+  }catch(error:any){
+    const message=String(error?.message||"Base update failed");
+    const recovery:any={databaseMigrations:migrations?"forward migrations retained":"not started",deploymentRollback:false,environmentRestored:false};
+    if(createdDeploymentId&&previousDeploymentId){
+      try{
+        await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(projectId)}/rollback/${encodeURIComponent(previousDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
+        recovery.deploymentRollback=true;
+      }catch(rollbackError:any){recovery.deploymentRollbackError=String(rollbackError?.message||rollbackError)}
+    }
+    try{
+      await configureVercel(install,currentVersion,String(install.production_url||install.deployment_url||""),requestedChannel,currentReleaseId,String(install.release_sha256||""),String(install.release_source_commit||""));
+      recovery.environmentRestored=true;
+    }catch(envError:any){recovery.environmentRestoreError=String(envError?.message||envError)}
+    await Promise.allSettled([
+      licenseDb().from("orbitfs_installations").update({vercel_deployment_id:previousDeploymentId,state:"ready",last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id),
+      masterExecuteDeployment({action:"base_update",phase:"failed",releaseId:String(release.id),installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:currentVersion,projectId,projectName:install.vercel_project_name,error:message}),
+      event(install,"base.update.failed","error",message,{fromVersion:currentVersion,toVersion:String(release.version),projectId,recovery})
+    ]);
+    throw Object.assign(error instanceof Error?error:new Error(message),{orbitfsFailureReported:true,recovery});
+  }
+}
+
 async function reportDeploymentFailure(install:any,input:{action:DeployAction;releaseId:string;licenseId:string;channel:string;productVersion?:string},error:unknown){
   const message=error instanceof Error?error.message:String(error||"Deployment failed");
   await Promise.allSettled([
-    masterExecuteDeployment({action:input.action,phase:"failed",releaseId:input.releaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:input.licenseId,channel:input.channel,productVersion:input.productVersion,previousVersion:install.release_version||null,error:message}),
+    masterExecuteDeployment({action:input.action,phase:"failed",releaseId:input.releaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:input.licenseId,channel:input.channel,productVersion:input.productVersion,previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null,error:message}),
     licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message}).eq("id",install.id),
-    event(install,input.action==="update"?"update.failed":input.action==="rollback"?"deployment.rollback.failed":"deployment.failed","error",message,{action:input.action,releaseId:input.releaseId})
+    event(install,input.action==="base_update"?"base.update.failed":input.action==="update"?"update.failed":input.action==="rollback"?"deployment.rollback.failed":"deployment.failed","error",message,{action:input.action,releaseId:input.releaseId})
   ]);
 }
 
@@ -416,7 +676,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(requestedChannel))fail("Invalid release channel",400);
   const allowedChannels=await customerReleaseChannels(String(install.auth_user_id),install.license_binding_id||null);
   if(!allowedChannels.includes(requestedChannel))fail(`Release channel "${requestedChannel}" is not available for this installation's licence`,403);
-  await requireSystem(action==="rollback"?"rollback":action==="update"?"update":"deploy");
+  await requireSystem(action==="rollback"?"rollback":action==="base_update"?"base_update":action==="update"?"update":"deploy");
   const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
   const authorityLicenseId=String(registration?.masterLicenseId||"").trim();
   if(registration?.valid!==true||!authorityLicenseId||String(registration?.installationId||"")!==String(install.installation_id||""))fail("Register an OrbitFS licence key for this installation before deployment",409);
@@ -490,8 +750,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const effectiveVersion=pinInstalledBase&&!effectiveReleaseId?String(install.release_version||"").trim()||undefined:version;
   if(action==="redeploy"&&!effectiveReleaseId&&!effectiveVersion)fail("The installation does not have a Base release to redeploy",409);
   const release=await publishedRelease(effectiveVersion,action,requestedChannel,effectiveReleaseId);
-  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null});
+  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null});
   try{
+  if(action==="base_update")return await runBaseUpdateDeployment(install,release,requestedChannel,authorityLicenseId);
   if(action==="update"){
     const parsed=await readArtifact(release);
     if((parsed.root as any).format!=="orbitfs-update-bundle-v3")fail("Published Update release is not an OrbitFS Update Bundle v3",422);
@@ -577,7 +838,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(action==="deploy"&&!install.vercel_project_id)install=await ensureVercelProject(install);
   if(!install.vercel_project_id)fail("Customer Vercel project is unavailable for this deployment action",409);
   await configureVercel(install,String(release.version),undefined,requestedChannel,String(release.id),String(release.sha256||release.checksum||""),String(release.source_sha||release.source_commit||release.manifest?.sourceCommit||""));
-  const parsed=await readBasePackage(release);
+  const parsed=action==="redeploy"?await readCurrentBasePackageForRedeploy(release):await readBasePackage(release);
   const packageDatabaseSchema=String((parsed.pkg as any).databaseSchemaVersion||(parsed.pkg as any).releaseInfo?.databaseSchemaVersion||release.manifest?.databaseSchemaVersion||"").trim();
   const installedDatabaseSchema=String(install.schema_version||"").trim();
   if(packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
@@ -605,7 +866,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const customer=customerResult.data||null;
   await masterExecuteDeployment({action,phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:previousVersion,deploymentId,deploymentUrl,projectId:install.vercel_project_id,projectName:install.vercel_project_name,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
   await event(data,"deployment.completed","ok",`Vercel deployment ${deploymentId} is ready`,{action,releaseId:release.id,version:release.version,deploymentId});return data;
-  }catch(error){
+  }catch(error:any){
+    if(error?.orbitfsFailureReported===true)throw error;
     await reportDeploymentFailure(install,{action,releaseId:String(release.id),licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version)},error);
     throw error;
   }

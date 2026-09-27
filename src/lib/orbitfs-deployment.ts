@@ -9,7 +9,7 @@ const SUPABASE_API="https://api.supabase.com/v1";
 const VERCEL_API="https://api.vercel.com";
 const SCHEMA_MAX_BYTES=8*1024*1024;
 
-export type DeployAction="deploy"|"update"|"rollback"|"redeploy";
+export type DeployAction="deploy"|"base_update"|"update"|"rollback"|"redeploy";
 
 export function bearer(req:Request){return String(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim()}
 export async function requireOrbitUser(req:Request){const token=bearer(req);if(!token)throw Object.assign(new Error("Authentication required"),{status:401});const user=await userFromToken(token);return {token,user}}
@@ -38,13 +38,19 @@ export async function billingOrbitfsConfig(){
   if(error)throw error;
   return data;
 }
-export async function requireSystem(capability:"deploy"|"update"|"rollback"="deploy"){
+export async function requireSystem(capability:"deploy"|"base_update"|"update"|"rollback"="deploy"){
   const config=await billingOrbitfsConfig();
   if(config.enabled===false)throw Object.assign(new Error("Billing Store customer deployment control is disabled"),{status:503});
   if(config.maintenance_mode===true)throw Object.assign(new Error(config.maintenance_message||"OrbitFS deployment maintenance is active"),{status:503});
-  const allowed=capability==="update"?config.customer_updates_enabled!==false:capability==="rollback"?config.customer_rollbacks_enabled!==false:config.customer_deploy_enabled!==false;
-  if(!allowed)throw Object.assign(new Error(`Billing Store has disabled customer ${capability} operations`),{status:503});
-  await requireLicenseMasterForDeployment(capability);
+  const allowed=capability==="base_update"
+    ?config.customer_deploy_enabled!==false&&config.customer_updates_enabled!==false
+    :capability==="update"
+      ?config.customer_updates_enabled!==false
+      :capability==="rollback"
+        ?config.customer_rollbacks_enabled!==false
+        :config.customer_deploy_enabled!==false;
+  if(!allowed)throw Object.assign(new Error(`Billing Store has disabled customer ${capability.replace("_"," ")} operations`),{status:503});
+  await requireLicenseMasterForDeployment(capability==="base_update"?"deploy":capability);
   return config;
 }
 export async function requireSetupSystem(){

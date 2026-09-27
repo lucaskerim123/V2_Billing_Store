@@ -3,7 +3,7 @@ import {httpError,loadInstallation,registerInstallationLicense,requireOrbitUser,
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {runCustomerDeployer} from "@/lib/orbitfs-customer-deployer";
 
-const allowed=new Set<DeployAction>(["deploy","update","rollback","redeploy"]);
+const allowed=new Set<DeployAction>(["deploy","base_update","update","rollback","redeploy"]);
 
 export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
   try{
