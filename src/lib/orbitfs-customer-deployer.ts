@@ -1,7 +1,7 @@
 import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
-import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases} from "@/lib/master-api";
+import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest} from "@/lib/master-api";
 import {configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
@@ -77,7 +77,27 @@ async function uploadVercelDeploymentFiles(userId:string,files:Array<{file:strin
 
 const releaseType=(action:DeployAction)=>action==="update"?"update":"base";
 
-async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable",releaseId?:string):Promise<any>{const rows=await masterReleases("orbitfs_base",channel,releaseType(action),"deployer");const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved");const wanted=releaseId?releases.find((r:any)=>String(r.id)===String(releaseId)):version?releases.find((r:any)=>String(r.version)===version):releases[0];if(!wanted?.id)fail(releaseId?`Selected published ${releaseType(action)} release is no longer available in License Master`:version?`Published ${releaseType(action)} release ${version} was not found in License Master`:`No approved published ${releaseType(action)} release is available`,404);if(String(wanted.channel||channel)!==channel)fail("Selected release channel does not match the installation channel",409);return wanted}
+async function exactRelease(releaseId:string):Promise<any>{
+  const result=await masterRequest(`/api/v1/releases/${encodeURIComponent(releaseId)}`,{method:"GET",cache:"no-store"},"deployer");
+  const release=result?.release||result;
+  if(!release?.id)fail("Release was not found in License Manager",404);
+  return release;
+}
+async function publishedRelease(version:string|undefined,action:DeployAction,channel="stable",releaseId?:string):Promise<any>{
+  if(action==="redeploy"&&releaseId){
+    const release=await exactRelease(releaseId);
+    if(String(release.release_type||"").toLowerCase()!=="base")fail("Redeploy requires a Base release",409);
+    if(String(release.channel||channel).toLowerCase()!==channel)fail("Selected release channel does not match the installation channel",409);
+    if(String(release.review_status||"").toLowerCase()!=="approved"||!String(release.checksum||release.sha256||"").trim())fail("Installed Base release is not verified for redeployment",409);
+    return release;
+  }
+  const rows=await masterReleases("orbitfs_base",channel,releaseType(action),"deployer");
+  const releases=(Array.isArray(rows?.releases)?rows.releases:Array.isArray(rows)?rows:[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved"&&!r.archived_at);
+  const wanted=releaseId?releases.find((r:any)=>String(r.id)===String(releaseId)):version?releases.find((r:any)=>String(r.version)===version):releases[0];
+  if(!wanted?.id)fail(releaseId?`Selected published ${releaseType(action)} release is no longer available in License Manager`:version?`Published ${releaseType(action)} release ${version} was not found in License Manager`:`No approved published ${releaseType(action)} release is available`,404);
+  if(String(wanted.channel||channel).toLowerCase()!==channel)fail("Selected release channel does not match the installation channel",409);
+  return wanted;
+}
 
 function gunzipArtifact(bytes:Buffer){try{return gunzipSync(bytes)}catch{throw Object.assign(new Error("Release artifact is not a valid OrbitFS gzip package"),{status:422})}}
 function expectedSource(release:any){return String(release?.source_sha||release?.source_commit||release?.manifest?.sourceCommit||"").trim()}
