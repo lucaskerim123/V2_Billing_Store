@@ -299,16 +299,17 @@ function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:st
     if(!match||match[1]!==id)fail(`Base migration path does not match its id: ${file||id}`,422);
     const packaged=byPath.get(file);
     if(!packaged)fail(`Base migration is missing from the deployment package: ${file}`,422);
+    const packagedFile=packaged as {file:string;data:string;sha256:string;size:number};
     const sha=String(migration?.sha256||"").trim().toLowerCase();
-    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packaged.sha256||Number(migration?.size)!==packaged.size)fail(`Base migration checksum mismatch: ${file}`,422);
+    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packagedFile.sha256||Number(migration?.size)!==packagedFile.size)fail(`Base migration checksum mismatch: ${file}`,422);
     if(index>0&&id<=String(declared[index-1]?.id||""))fail("Base migration ids must be strictly increasing",422);
-    return {id,file,size:packaged.size,sha256:sha,data:packaged.data};
+    return {id,file,size:packagedFile.size,sha256:sha,data:packagedFile.data};
   });
   if(normalized.at(-1)?.id!==latest)fail("Base release latest migration does not match its migration chain",422);
   return normalized;
 }
 async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigration[]){
-  let source=currentRelease?.manifest&&typeof currentRelease.manifest==="object"?currentRelease.manifest:{};
+  const source=currentRelease?.manifest&&typeof currentRelease.manifest==="object"?currentRelease.manifest:{};
   let count=Number(source.databaseMigrationCount??source.releaseInfo?.databaseMigrationCount??0);
   let latest=String(source.databaseLatestMigration||source.releaseInfo?.databaseLatestMigration||"").trim();
   let declared=Array.isArray(source.databaseMigrations)?source.databaseMigrations:[];
@@ -493,8 +494,9 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
   if(!projectId||!previousDeploymentId)fail("The existing Base Vercel project/deployment identity is missing. Base update will not create a replacement project.",409);
   const comparison=compareVersions(String(release.version||""),currentVersion);
   if(comparison===null)fail("Base versions could not be compared safely",409);
-  if(comparison===0)fail("This Base version is already installed. Use Redeploy current Base instead.",409);
-  if(comparison<0)fail("Base update cannot downgrade an installation. Use the explicit Base rollback route.",409);
+  const versionComparison=comparison as number;
+  if(versionComparison===0)fail("This Base version is already installed. Use Redeploy current Base instead.",409);
+  if(versionComparison<0)fail("Base update cannot downgrade an installation. Use the explicit Base rollback route.",409);
 
   const currentRelease=await exactRelease(currentReleaseId);
   if(String(currentRelease.release_type||"").toLowerCase()!=="base")fail("Installed release identity is not a Base release",409);
