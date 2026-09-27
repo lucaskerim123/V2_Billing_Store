@@ -1,7 +1,9 @@
+import {randomUUID} from "node:crypto";
 import {requireLicenseMasterForDeployment} from "@/lib/license-master-availability";
 import {httpError,loadInstallation,registerInstallationLicense,requireOrbitUser,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {runCustomerDeployer} from "@/lib/orbitfs-customer-deployer";
+import {baseIdempotencyKey,runBaseLifecycleOperation} from "@/lib/orbitfs-base-operations";
 
 const allowed=new Set<DeployAction>(["deploy","base_update","update","rollback","redeploy"]);
 
@@ -36,6 +38,11 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const channel=String(body.channel||install.release_channel||"stable").trim().toLowerCase();
     if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw Object.assign(new Error("Invalid release channel"),{status:400});
     const reason=body.reason?String(body.reason).trim():undefined;
+    if(action!=="update"){
+      const idempotencyKey=baseIdempotencyKey(req,body,false)||`legacy-${randomUUID()}`;
+      const result=await runBaseLifecycleOperation({install,action,version,channel,releaseId,reason,idempotencyKey});
+      return Response.json({ok:true,...result},{headers:{"cache-control":"no-store"}});
+    }
     const installation=await runCustomerDeployer(install,action,version,channel,releaseId,reason);
     return Response.json({ok:true,installation},{headers:{"cache-control":"no-store"}});
   }catch(error){return httpError(error)}
