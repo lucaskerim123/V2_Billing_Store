@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   actions: read
 
 concurrency:
@@ -114,6 +113,16 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:javascript-typescript-full-deploy"
+          upload: never
+          output: codeql-results
+
+      - name: Archive CodeQL full-scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-full-scan-${{ github.sha }}
+          path: codeql-results
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Run complete production validation
         env:
