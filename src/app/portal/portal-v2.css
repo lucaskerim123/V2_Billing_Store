@@ -925,7 +925,7 @@
   .orbitZipDeployer>.orbitZipWorkspace{grid-template-columns:minmax(0,1fr) 230px!important}
   .orbitZipCanvasColumn{padding:22px}
 }
-@media(max-width:980px){
+@media(max-width:760px){
   .orbitZipDeployer:has(.orbitZipWorkspace){grid-template-columns:1fr}
   .orbitZipDeployer>.orbitZipSidebar{grid-column:1;grid-row:auto;border-right:0!important;border-bottom:1px solid var(--zip-line)!important}
   .orbitZipDeployer>.orbitZipSidebar .orbitInstallerSteps{grid-template-columns:repeat(5,minmax(120px,1fr))!important;overflow-x:auto}
@@ -1154,4 +1154,35 @@
   border-color:#137655!important;
   background:#062a20!important;
   color:#9ef0d1!important;
+}
+
+@media(min-width:761px) and (max-width:1040px){
+  .orbitZipDeployer:has(.orbitZipWorkspace){
+    grid-template-columns:190px minmax(0,1fr)!important;
+  }
+  .orbitZipDeployer>.orbitZipWorkspace{
+    grid-template-columns:minmax(0,1fr) 210px!important;
+  }
+  .orbitZipDeployer>.orbitZipSidebar{
+    padding:14px 10px!important;
+  }
+  .orbitZipCanvasColumn{
+    padding:18px!important;
+  }
+  .orbitZipSummary{
+    padding:14px 10px!important;
+  }
+  .orbitZipDeployer>.orbitZipSidebar .orbitInstallerStep{
+    grid-template-columns:24px minmax(0,1fr)!important;
+    padding:6px!important;
+  }
+  .orbitZipDeployer>.orbitZipSidebar .orbitInstallerStep small{
+    white-space:normal!important;
+  }
+  .orbitZipDeployer>.orbitZipSidebar .orbitInstallerSubsteps{
+    grid-template-columns:1fr!important;
+  }
+  .orbitZipControlPanel .portalOverviewStats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
 }
