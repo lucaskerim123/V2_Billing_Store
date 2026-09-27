@@ -82,7 +82,7 @@ export default function MyOrbitFS(){
     if(!vercelApiReady)return setCurrentStep(3);
     if(!licenseRegistered)return setCurrentStep(4);
     if(reviewReady)return setCurrentStep(6);
-  },[install?.id,supabaseReady,databaseReady,vercelApiReady,panelReady,reviewReady]);
+  },[install?.id,supabaseConnectionReady,supabaseReady,databaseReady,vercelApiReady,panelReady,reviewReady]);
 
   async function start(){if(!binding)return;if(deploymentUnavailable||!settings.customer_deploy_enabled)return setMsg(settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment maintenance is active."):(settings.license_authority_notice||"OrbitFS deployment authority is unavailable."));setBusy("start");try{const r=await fetch("/api/orbitfs/installations/start",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({bindingId:binding.id})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Could not start OrbitFS setup.");const data=j.installation;setMsg("OrbitFS setup started.");await trackCustomerActivity("orbitfs.installation.create",{entityType:"license",entityId:binding.id,detail:{installation_id:data?.installation_id}});await load()}catch(e:any){setMsg(e?.message||"Could not start OrbitFS setup.")}finally{setBusy("")}}
   async function connectSupabase(){if(!install)return;setBusy("supabase");const r=await fetch("/api/orbitfs/oauth/supabase/start",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({installationId:install.id})}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(j.error||"Could not connect Supabase.");location.href=j.url}
@@ -201,7 +201,7 @@ export default function MyOrbitFS(){
 
   function navigatePrimaryStage(stage:number){
     setViewedPrimaryStage(stage);
-    if(stage===1){setCurrentStep(!supabaseReady?1:2);return}
+    if(stage===1){setCurrentStep(!supabaseConnectionReady||!supabaseReady?1:2);return}
     if(stage===2){setCurrentStep(3);return}
     if(stage===3){setCurrentStep(4);return}
     setCurrentStep(6);
