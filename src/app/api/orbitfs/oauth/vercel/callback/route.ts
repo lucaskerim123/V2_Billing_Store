@@ -25,8 +25,13 @@ export async function GET(req:Request){
     try{const t=await fetch("https://api.vercel.com/v2/teams?limit=100",{headers:{authorization:`Bearer ${tokens.access_token}`,accept:"application/json"}});if(t.ok){const j=await t.json();teams=Array.isArray(j)?j:Array.isArray(j?.teams)?j.teams:[]}}catch{}
     const teamId=String(tokens.team_id||profile.team_id||"").trim()||null;
     const scopes=String(tokens.scope||"").split(/[ ,]+/).filter(Boolean);
+    const projectsUrl=new URL("https://api.vercel.com/v9/projects");
+    projectsUrl.searchParams.set("limit","1");
+    if(teamId)projectsUrl.searchParams.set("teamId",teamId);
+    const projectAccess=await fetch(projectsUrl,{headers:{authorization:`Bearer ${tokens.access_token}`,accept:"application/json"},cache:"no-store"});
+    if(!projectAccess.ok)throw new Error(`Vercel authorization succeeded but project API access failed (${projectAccess.status}). Reconnect Vercel with project-management access or use a Full Account Access token.`);
     const accountName=String(profile.name||profile.preferred_username||profile.email||"").trim()||(teamId?"Customer Vercel team":"Customer Vercel account");
-    await saveProviderConnection(state.auth_user_id,"vercel",tokens,{provider_account_id:teamId||profile.sub||tokens.user_id||null,provider_account_name:accountName,team_id:teamId,scopes,teams:teams.map((x:any)=>({id:x.id,name:x.name,slug:x.slug}))});
+    await saveProviderConnection(state.auth_user_id,"vercel",tokens,{auth_mode:"oauth",api_ready:true,validated_at:new Date().toISOString(),provider_account_id:teamId||profile.sub||tokens.user_id||null,provider_account_name:accountName,team_id:teamId,scopes,teams:teams.map((x:any)=>({id:x.id,name:x.name,slug:x.slug}))});
     if(state.installation_id)await licenseDb().from("orbitfs_installations").update({updated_at:new Date().toISOString()}).eq("id",state.installation_id).eq("auth_user_id",state.auth_user_id);
     return Response.redirect(new URL(`${returnPath}?connected=vercel`,STORE_ORIGIN));
   }catch(e:any){const target=new URL(returnPath,STORE_ORIGIN);target.searchParams.set("error",e?.message||"Vercel connection failed");return Response.redirect(target)}
