@@ -47,7 +47,7 @@ html[data-customer-theme="V1_Changing"] .portalTopBrand{
   min-width:0!important;
   color:#f5f9fc!important;
   text-decoration:none!important;
-  font-size:13px!important;
+  font-size:14px!important;
   font-weight:850!important;
   white-space:nowrap!important;
 }
@@ -72,7 +72,7 @@ html[data-customer-theme="V1_Changing"] .portalTopNavGroup>summary{
   background:transparent!important;
   color:#a9b5c3!important;
   text-decoration:none!important;
-  font-size:11px!important;
+  font-size:12px!important;
   font-weight:700!important;
   white-space:nowrap!important;
 }
@@ -155,7 +155,7 @@ html[data-customer-theme="V1_Changing"] .portalAdminLink{
   background:#0b1724!important;
   color:#dce8f0!important;
   text-decoration:none!important;
-  font-size:10px!important;
+  font-size:11px!important;
   font-weight:800!important;
 }
 html[data-customer-theme="V1_Changing"] .portalAdminLink{
@@ -396,7 +396,7 @@ html[data-customer-theme="V1_Changing"] .portalOverviewBottom{gap:14px!important
     padding:0 16px!important;
   }
   html[data-customer-theme="V1_Changing"] .portalTopNav>a,
-  html[data-customer-theme="V1_Changing"] .portalTopNavGroup>summary{padding:0 9px!important;font-size:10px!important}
+  html[data-customer-theme="V1_Changing"] .portalTopNavGroup>summary{padding:0 10px!important;font-size:11.5px!important}
   html[data-customer-theme="V1_Changing"] .portalMain{padding:20px 18px 30px!important}
   html[data-customer-theme="V1_Changing"] .portalOverviewGrid,
   html[data-customer-theme="V1_Changing"] .portalOverviewBottom{grid-template-columns:1fr!important}
