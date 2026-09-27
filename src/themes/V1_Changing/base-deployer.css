@@ -310,3 +310,35 @@ html[data-customer-theme="V1_Changing"] .orbitZipDangerButton{
   html[data-customer-theme="V1_Changing"] .orbitZipControlRows>div{grid-template-columns:1fr!important;gap:3px!important}
   html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .portalOverviewStats{grid-template-columns:1fr!important}
 }
+
+/* Interactive stage navigation */
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerStep,
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerSubstep{
+  width:100%!important;
+  appearance:none!important;
+  font:inherit!important;
+  color:inherit!important;
+  cursor:pointer!important;
+  box-shadow:none!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerStep:hover{
+  border-color:#29465a!important;
+  background:#0b1823!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerSubstep:hover{
+  border-color:#29465a!important;
+  background:#0c1924!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerStep.active:hover{
+  border-color:#7a3841!important;
+  background:linear-gradient(90deg,#2b151a,#111922)!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerSubstep.active:hover{
+  border-color:#7a3841!important;
+  background:#291419!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerStep:focus-visible,
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerSubstep:focus-visible{
+  outline:2px solid var(--bd-brand-strong)!important;
+  outline-offset:2px!important;
+}
