@@ -10,6 +10,9 @@ type Release={
 };
 type ReleaseChannel={id?:string;channel:string;label?:string;enabled?:boolean;customer_visible?:boolean};
 
+const workingStatus=(value?:string)=>["queued","running","in_progress","processing","validating","reviewing"].includes(String(value||"").toLowerCase());
+const failedStatus=(value?:string)=>["failed","failure","error","rejected"].includes(String(value||"").toLowerCase());
+
 export default function BaseDeploymentAdmin(){
  const sb=useMemo(()=>createClient(),[]);
  const [releases,setReleases]=useState<Release[]>([]);
@@ -19,6 +22,7 @@ export default function BaseDeploymentAdmin(){
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState("");
  const [message,setMessage]=useState("");
+ const [pipelineError,setPipelineError]=useState<number|null>(null);
  const [editing,setEditing]=useState(false);
  const [draft,setDraft]=useState({title:"",description:"",changelog:"",customer_notes:""});
 
@@ -42,30 +46,42 @@ export default function BaseDeploymentAdmin(){
  const queue=useMemo(()=>releases.filter(r=>r.status!=="published"),[releases]);
  const published=useMemo(()=>releases.filter(r=>r.status==="published"),[releases]);
 
- const validationPassed=selected?.validation?.status==="passed";
- const reviewApproved=selected?.reviewStatus==="approved";
+ const validationStatus=String(selected?.validation?.status||"");
+ const reviewStatus=String(selected?.reviewStatus||"");
+ const validationPassed=validationStatus==="passed";
+ const reviewApproved=reviewStatus==="approved";
+ const validationFailed=failedStatus(validationStatus);
+ const reviewFailed=failedStatus(reviewStatus);
+ const validationWorking=workingStatus(validationStatus);
+ const reviewWorking=workingStatus(reviewStatus);
  const artifactReady=Boolean(selected?.artifactName||selected?.checksum);
  const presentationReady=Boolean(String(selected?.title||"").trim()&&String(selected?.changelog||"").trim());
  const portalPublished=selected?.status==="published";
+ const publicationWorking=busy==="channel"||busy==="publish"||busy==="edit"||workingStatus(selected?.status);
  const canPublish=Boolean(selected&&validationPassed&&reviewApproved&&artifactReady&&presentationReady);
  const customerChannels=channels.filter(ch=>ch.enabled!==false&&ch.customer_visible!==false);
+ const stageClass=(state:"done"|"active"|"working"|"error"|"idle")=>"orbitStage "+(state==="idle"?"":state);
+ const intakeStage=selected?"done":"active";
+ const validationStage=pipelineError===2||validationFailed?"error":validationWorking?"working":validationPassed?"done":selected?"active":"idle";
+ const reviewStage=pipelineError===3||reviewFailed?"error":reviewWorking?"working":reviewApproved?"done":validationPassed?"active":"idle";
+ const publicationStage=pipelineError===4?"error":portalPublished?"done":publicationWorking?"working":canPublish?"active":"idle";
 
  function beginEdit(r:Release){setSelectedId(r.id);setDraft({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||""});setEditing(true)}
  async function changeChannel(){
   if(!selected||!targetChannel)return;
-  setBusy("channel");setMessage("");
+  setBusy("channel");setMessage("");setPipelineError(null);
   try{
    const r=await fetch("/api/admin/orbitfs/release-promote",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,targetChannel})});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not change Base release channel");
    setMessage(`Approved Base candidate copied to ${targetChannel}. It remains unpublished until final publication.`);
    setTargetChannel("");await load();
-  }catch(e:any){setMessage(e?.message||"Could not change Base release channel")}finally{setBusy("")}
+  }catch(e:any){setPipelineError(4);setMessage(e?.message||"Could not change Base release channel")}finally{setBusy("")}
  }
 
  async function publishBase(){
   if(!selected)return;
-  setBusy("publish");setMessage("");
+  setBusy("publish");setMessage("");setPipelineError(null);
   try{
    const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id})});
    const j=await r.json().catch(()=>({}));
@@ -80,7 +96,7 @@ export default function BaseDeploymentAdmin(){
    }:item));
    setMessage(`Base v${selected.version} published to the Customer Portal/deployer.`);
    await load({silent:true,preserveMessage:true});
-  }catch(e:any){setMessage(e?.message||"Could not publish Base release")}finally{setBusy("")}
+  }catch(e:any){setPipelineError(4);setMessage(e?.message||"Could not publish Base release")}finally{setBusy("")}
  }
 
  async function unpublishBase(r:Release){
@@ -97,17 +113,15 @@ export default function BaseDeploymentAdmin(){
 
  async function savePresentation(){
   if(!selected)return;
-  setBusy("edit");setMessage("");
+  setBusy("edit");setMessage("");setPipelineError(null);
   try{
    const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,...draft})});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not update customer-facing release details");
    setMessage("Customer-facing Base release details updated.");
    setEditing(false);await load();
-  }catch(e:any){setMessage(e?.message||"Could not update release details")}finally{setBusy("")}
+  }catch(e:any){setPipelineError(4);setMessage(e?.message||"Could not update release details")}finally{setBusy("")}
  }
-
- const stage=(done:boolean,current:boolean)=>"orbitStage "+(done?"done":current?"active":"");
 
  return <main className="orbitAdminPage">
   <header className="orbitAdminHeader">
@@ -118,11 +132,11 @@ export default function BaseDeploymentAdmin(){
   {message&&<div className="orbitInlineNotice">{message}</div>}
   <section className="orbitCompactPanel">
    <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE INTAKE</p><h2>Base release flow</h2></div><span className="orbitCount">{queue.length} pending</span></div>
-   <div className="orbitPipeline">
-    <div className={stage(Boolean(selected),true)}><span>1</span><div><b>Intake</b><small>{selected?"v"+selected.version:"Waiting for release"}</small></div></div>
-    <div className={stage(validationPassed,Boolean(selected)&&!validationPassed)}><span>2</span><div><b>Validation</b><small>{selected?.validation?.status||"not run"}</small></div></div>
-    <div className={stage(reviewApproved,validationPassed&&!reviewApproved)}><span>3</span><div><b>Technical review</b><small>{selected?.reviewStatus||"pending"}</small></div></div>
-    <div className={stage(portalPublished,canPublish&&!portalPublished)}><span>4</span><div><b>Customer publication</b><small>{portalPublished?"live in portal":canPublish?"ready to publish":"blocked"}</small></div></div>
+   <div className="orbitPipeline" role="status" aria-live="polite">
+    <div className={stageClass(intakeStage)}><span>1</span><div><b>Intake</b><small>{selected?"v"+selected.version:"Waiting for release"}</small></div></div>
+    <div className={stageClass(validationStage)}><span>2</span><div><b>Validation</b><small>{validationStage==="working"?"running…":validationStage==="error"?"failed":validationStatus||"not run"}</small></div></div>
+    <div className={stageClass(reviewStage)}><span>3</span><div><b>Technical review</b><small>{reviewStage==="working"?"reviewing…":reviewStage==="error"?"rejected / error":reviewStatus||"pending"}</small></div></div>
+    <div className={stageClass(publicationStage)}><span>4</span><div><b>Customer publication</b><small>{publicationStage==="working"?"working…":publicationStage==="error"?"error":portalPublished?"live in portal":canPublish?"ready to publish":"blocked"}</small></div></div>
    </div>
 
    <div className="orbitSplit">
