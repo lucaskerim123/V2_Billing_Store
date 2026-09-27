@@ -11,12 +11,16 @@ type UpdateRelease={
  publishedAt?:string|null;updatedAt?:string|null;
 };
 
+const workingStatus=(value?:string)=>["queued","running","in_progress","processing","validating","reviewing"].includes(String(value||"").toLowerCase());
+const failedStatus=(value?:string)=>["failed","failure","error","rejected"].includes(String(value||"").toLowerCase());
+
 export default function OrbitFSUpdateReleaseDeployer(){
  const sb=useMemo(()=>createClient(),[]);
  const [releases,setReleases]=useState<UpdateRelease[]>([]);
  const [selectedId,setSelectedId]=useState("");
  const [busy,setBusy]=useState("");
  const [message,setMessage]=useState("");
+ const [pipelineError,setPipelineError]=useState<number|null>(null);
  const [editing,setEditing]=useState(false);
  const [channels,setChannels]=useState<any[]>([]);
  const [targetChannel,setTargetChannel]=useState("");
@@ -24,8 +28,9 @@ export default function OrbitFSUpdateReleaseDeployer(){
  const [draft,setDraft]=useState({title:"",description:"",changelog:"",customer_notes:"",internal_notes:"",severity:"normal",required:false,rollout:"public",minimum_version:"",rollback_version:""});
 
  async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
- async function load(options?:{preserveMessage?:boolean}){
-  setBusy("load");if(!options?.preserveMessage)setMessage("");
+ async function load(options?:{silent?:boolean;preserveMessage?:boolean}){
+  const silent=options?.silent===true;
+  if(!silent)setBusy("load");if(!options?.preserveMessage)setMessage("");
   try{
    const h=await auth();
    const [r,cr,dr]=await Promise.all([
@@ -42,7 +47,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    setChannels((Array.isArray(cj.channels)?cj.channels:[]).filter((x:any)=>x.enabled!==false&&x.customer_visible!==false));
    if(dr.ok&&dj.settings)setControls(dj.settings);
    setSelectedId(current=>rows.some((x:UpdateRelease)=>x.id===current)?current:(rows.find((x:UpdateRelease)=>x.status!=="published")?.id||rows[0]?.id||""));
-  }catch(e:any){setMessage(e?.message||"Could not load Update release state")}finally{setBusy("")}
+  }catch(e:any){setMessage(e?.message||"Could not load Update release state")}finally{if(!silent)setBusy("")}
  }
  useEffect(()=>{void load()},[]);
 
@@ -50,12 +55,28 @@ export default function OrbitFSUpdateReleaseDeployer(){
  useEffect(()=>{setTargetChannel(selected?.channel||"stable")},[selected?.id,selected?.channel]);
  const pending=useMemo(()=>releases.filter(r=>r.status!=="published"),[releases]);
  const published=useMemo(()=>releases.filter(r=>r.status==="published"),[releases]);
- const validationPassed=selected?.validation?.status==="passed";
- const reviewApproved=selected?.reviewStatus==="approved";
+ const validationStatus=String(selected?.validation?.status||"");
+ const reviewStatus=String(selected?.reviewStatus||"");
+ const validationPassed=validationStatus==="passed";
+ const reviewApproved=reviewStatus==="approved";
+ const validationFailed=failedStatus(validationStatus);
+ const reviewFailed=failedStatus(reviewStatus);
+ const validationWorking=busy==="validate"||workingStatus(validationStatus);
+ const reviewWorking=busy==="approve"||busy==="reject"||workingStatus(reviewStatus);
  const presentationReady=Boolean(selected?.title&&selected?.changelog);
  const rolloutPublishable=String(selected?.rollout||"public").toLowerCase()!=="internal";
- const canPublish=Boolean(selected&&selected.status!=="published"&&validationPassed&&reviewApproved&&selected.checksum&&selected.channel&&presentationReady&&rolloutPublishable);
+ const finalReviewReady=Boolean(selected?.checksum&&selected?.channel&&presentationReady&&rolloutPublishable);
+ const finalReviewWorking=busy==="channel"||busy==="edit";
+ const portalPublished=selected?.status==="published";
+ const publicationWorking=busy==="publish"||workingStatus(selected?.status);
+ const canPublish=Boolean(selected&&!portalPublished&&validationPassed&&reviewApproved&&finalReviewReady);
  const blockers=[!reviewApproved&&"Technical approval",!validationPassed&&"Validation",!selected?.checksum&&"Artifact checksum",!selected?.channel&&"Customer channel",!presentationReady&&"Customer title + changelog",!rolloutPublishable&&"Internal rollout cannot publish"].filter(Boolean) as string[];
+ const stageClass=(state:"done"|"active"|"working"|"error"|"idle")=>"orbitStage "+(state==="idle"?"":state);
+ const intakeStage=selected?"done":"active";
+ const validationStage=pipelineError===2||validationFailed?"error":validationWorking?"working":validationPassed?"done":selected?"active":"idle";
+ const reviewStage=pipelineError===3||reviewFailed?"error":reviewWorking?"working":reviewApproved?"done":validationPassed?"active":"idle";
+ const finalReviewStage=pipelineError===4?"error":finalReviewWorking?"working":finalReviewReady&&reviewApproved?"done":reviewApproved?"active":"idle";
+ const publicationStage=pipelineError===5?"error":portalPublished?"done":publicationWorking?"working":canPublish?"active":"idle";
 
  function beginEdit(r:UpdateRelease){
   setSelectedId(r.id);
@@ -64,13 +85,13 @@ export default function OrbitFSUpdateReleaseDeployer(){
  }
  async function savePresentation(){
   if(!selected)return;
-  setBusy("edit");setMessage("");
+  setBusy("edit");setMessage("");setPipelineError(null);
   try{
    const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,...draft})});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not update release");
    setEditing(false);setMessage("Update release details saved.");await load({preserveMessage:true});
-  }catch(e:any){setMessage(e?.message||"Could not update release")}finally{setBusy("")}
+  }catch(e:any){setPipelineError(4);setMessage(e?.message||"Could not update release")}finally{setBusy("")}
  }
  async function setDeploymentControl(patch:any){
   setBusy("control");setMessage("");
@@ -89,7 +110,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    reason=prompt("Reason for rejecting this Update release:","")||"";
    if(!reason.trim())return;
   }
-  setBusy(action);setMessage("");
+  setBusy(action);setMessage("");setPipelineError(null);
   try{
    const r=await fetch("/api/admin/orbitfs/release-handoff",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,action,reason:reason||undefined})});
    const j=await r.json().catch(()=>({}));
@@ -97,14 +118,15 @@ export default function OrbitFSUpdateReleaseDeployer(){
    setMessage(action==="validate"?"Technical validation passed in License Manager.":action==="approve"?"Update technically approved in License Manager.":"Update rejected in License Manager.");
    await load({preserveMessage:true});
   }catch(e:any){
+   setPipelineError(action==="validate"?2:3);
    setMessage(e?.message||("Could not "+action+" update release"));
-   await load();
+   await load({preserveMessage:true});
   }finally{setBusy("")}
  }
  async function setChannel(){
   if(!selected||!targetChannel||targetChannel===selected.channel)return;
   if(!reviewApproved||!validationPassed){setMessage("Channel can only be changed after License Manager technical approval and validation.");return}
-  setBusy("channel");setMessage("");
+  setBusy("channel");setMessage("");setPipelineError(null);
   try{
    const r=await fetch("/api/admin/orbitfs/release-promote",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,targetChannel})});
    const j=await r.json().catch(()=>({}));
@@ -113,18 +135,18 @@ export default function OrbitFSUpdateReleaseDeployer(){
    setMessage("Release channel set to "+targetChannel+".");
    await load({preserveMessage:true});
    if(nextId)setSelectedId(nextId);
-  }catch(e:any){setMessage(e?.message||"Could not set release channel")}finally{setBusy("")}
+  }catch(e:any){setPipelineError(4);setMessage(e?.message||"Could not set release channel")}finally{setBusy("")}
  }
  async function publish(){
   if(!selected||!canPublish)return;
   if(!confirm("Publish v"+selected.version+" to the "+(selected.channel||"stable")+" customer channel?"))return;
-  setBusy("publish");setMessage("");
+  setBusy("publish");setMessage("");setPipelineError(null);
   try{
    const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id})});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not publish update");
    setMessage("Update published to the customer portal.");await load({preserveMessage:true});
-  }catch(e:any){setMessage(e?.message||"Could not publish update")}finally{setBusy("")}
+  }catch(e:any){setPipelineError(5);setMessage(e?.message||"Could not publish update")}finally{setBusy("")}
  }
  async function unpublish(r:UpdateRelease){
   if(!confirm("Unpublish v"+r.version+" from the customer portal?"))return;
@@ -140,23 +162,23 @@ export default function OrbitFSUpdateReleaseDeployer(){
  return <main className="orbitAdminPage">
   <header className="orbitAdminHeader">
    <div><p className="eyebrow">ORBITFS CONTROL · UPDATES</p><h1>Update releases</h1><p className="muted">Billing Store is the release-control workspace. Validate, approve, configure, publish and unpublish Updates here; License Manager records and enforces the authoritative technical state.</p></div>
-   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
+   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button><a className="buttonlink orbitAction orbitActionSecondary" href="https://panel.incendiarynetworks.cc/releases/update" target="_blank" rel="noreferrer">Open License Manager</a></div>
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
-  <section className="orbitCompactPanel orbitDeploymentControlStrip">
-   <div className="orbitPanelHead"><div><p className="eyebrow">BILLING DEPLOYMENT CONTROL</p><h2>Customer update availability</h2><p className="muted">These Billing Store gates can pause customer Update or rollback execution even when License Manager technical authority remains enabled.</p></div><span className={controls.maintenance_mode?"state":"state ready"}>{controls.maintenance_mode?"Maintenance":"Available"}</span></div>
-   <div className="orbitDeploymentToggles">
-    <label><input type="checkbox" checked={controls.customer_updates_enabled!==false} disabled={busy==="control"} onChange={e=>void setDeploymentControl({customer_updates_enabled:e.target.checked})}/><span><b>Customer updates</b><small>Allow published Update releases to execute from the customer portal.</small></span></label>
-    <label><input type="checkbox" checked={controls.customer_rollbacks_enabled!==false} disabled={busy==="control"} onChange={e=>void setDeploymentControl({customer_rollbacks_enabled:e.target.checked})}/><span><b>Customer rollbacks</b><small>Allow rollback execution when an Update recovery path requires it.</small></span></label>
-    <label><input type="checkbox" checked={controls.maintenance_mode===true} disabled={busy==="control"} onChange={e=>void setDeploymentControl({maintenance_mode:e.target.checked})}/><span><b>Deployment maintenance</b><small>Pause customer deployment execution from Billing Store.</small></span></label>
-   </div>
-  </section>
+
   <section className="orbitCompactPanel">
-   <div className="orbitPanelHead"><div><p className="eyebrow">FINAL REVIEW</p><h2>Publication queue</h2></div><span className="orbitCount">{pending.length} pending</span></div>
+   <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE INTAKE</p><h2>Update release flow</h2></div><span className="orbitCount">{pending.length} pending</span></div>
+   <div className="orbitPipeline orbitPipelineFive" role="status" aria-live="polite">
+    <div className={stageClass(intakeStage)}><span>1</span><div><b>Intake</b><small>{selected?"v"+selected.version:"Waiting for release"}</small></div></div>
+    <div className={stageClass(validationStage)}><span>2</span><div><b>Validation</b><small>{validationStage==="working"?"running…":validationStage==="error"?"failed":validationStatus||"not run"}</small></div></div>
+    <div className={stageClass(reviewStage)}><span>3</span><div><b>Technical review</b><small>{reviewStage==="working"?"reviewing…":reviewStage==="error"?"rejected / error":reviewStatus||"pending"}</small></div></div>
+    <div className={stageClass(finalReviewStage)}><span>4</span><div><b>Final customer review</b><small>{finalReviewStage==="working"?"working…":finalReviewStage==="error"?"error":finalReviewReady?"ready":"configuration required"}</small></div></div>
+    <div className={stageClass(publicationStage)}><span>5</span><div><b>Publication</b><small>{publicationStage==="working"?"publishing…":publicationStage==="error"?"error":portalPublished?"live in portal":canPublish?"ready to publish":"blocked"}</small></div></div>
+   </div>
    <div className="orbitSplit">
     <div className="orbitReleaseQueue">
-     {pending.map(r=><button key={r.id} type="button" className={"orbitReleaseRow "+(selected?.id===r.id?"selected":"")} onClick={()=>setSelectedId(r.id)}>
+     {pending.map(r=><button key={r.id} type="button" className={"orbitReleaseRow "+(selected?.id===r.id?"selected":"")} onClick={()=>{setSelectedId(r.id);setPipelineError(null)}}>
       <div><b>v{r.version}</b><span>{r.title||"OrbitFS update"} · {r.channel||"stable"}</span></div>
       <div className="orbitRowMeta"><span className={r.validation?.status==="passed"?"state ready":"state"}>{r.validation?.status||"validation pending"}</span><span className={r.reviewStatus==="approved"?"state ready":"state"}>{r.reviewStatus||"review pending"}</span></div>
      </button>)}
@@ -165,7 +187,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
 
     <div className="orbitReviewPane">
      {selected?<>
-      <div className="orbitReviewTop"><div><small>SELECTED UPDATE</small><h3>v{selected.version}</h3></div><span className={selected.status==="published"?"state ready":"state"}>{selected.status||"pending"}</span></div>
+      <div className="orbitReviewTop"><div><small>SELECTED RELEASE</small><h3>v{selected.version}</h3></div><span className={portalPublished?"state ready":"state"}>{portalPublished?"Published":selected.status||"pending"}</span></div>
       <div className="orbitFactGrid">
        <div><span>Technical review</span><b>{selected.reviewStatus||"Pending"}</b></div>
        <div><span>Validation</span><b>{selected.validation?.status||"Not run"}</b></div>
@@ -178,7 +200,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
        <div className="wide"><span>Components</span><b>{selected.components?.length?selected.components.join(", "):"—"}</b></div>
        <div className="wide"><span>Checksum</span><b className="mono">{selected.checksum||"—"}</b></div>
       </div>
-      <div className="orbitCheckLine"><span className={reviewApproved?"ok":""}>Technical approval</span><span className={validationPassed?"ok":""}>Validation</span><span className={selected.checksum?"ok":""}>Artifact</span><span className={selected.channel?"ok":""}>Channel</span><span className={presentationReady?"ok":""}>Customer presentation</span><span className={selected.status==="published"?"ok":canPublish?"ready":""}>Publish gate</span></div>{blockers.length>0&&selected.status!=="published"&&<div className="orbitReviewBlockers"><b>Final review blocked by</b><div>{blockers.map(item=><span key={item}>{item}</span>)}</div></div>}
+      <div className="orbitCheckLine"><span className={validationPassed?"ok":validationFailed?"error":""}>Validation</span><span className={reviewApproved?"ok":reviewFailed?"error":""}>Technical approval</span><span className={selected.checksum?"ok":""}>Artifact</span><span className={selected.channel?"ok":""}>Channel</span><span className={presentationReady?"ok":""}>Customer presentation</span><span className={portalPublished?"ok":canPublish?"ready":""}>Portal</span></div>{blockers.length>0&&!portalPublished&&<div className="orbitReviewBlockers"><b>Final review blocked by</b><div>{blockers.map(item=><span key={item}>{item}</span>)}</div></div>}
       <div className="orbitFinalReview">
        <div>
         <label>Customer channel</label>
@@ -200,9 +222,9 @@ export default function OrbitFSUpdateReleaseDeployer(){
       </div>
       {selected.validation?.status==="failed"&&<div className="orbitValidationList">{(selected.validation.checks||[]).filter(c=>!c.ok).map((c,i)=><div key={c.key||i}><b>{c.key||"Validation check"}</b><span>{c.message||"Validation failed."}</span>{c.fix&&<small>Fix: {c.fix}</small>}</div>)}</div>}
       <div className="orbitAdminActions">
-       {selected.status!=="published"&&validationPassed!==true&&<button className="orbitAction orbitActionPrimary" onClick={()=>void reviewAction("validate")} disabled={!!busy}>{busy==="validate"?"Validating…":"Run technical validation"}</button>}
-       {selected.status!=="published"&&validationPassed===true&&selected.reviewStatus!=="approved"&&<button className="orbitAction orbitActionPrimary" onClick={()=>void reviewAction("approve")} disabled={!!busy}>{busy==="approve"?"Approving…":"Approve technical review"}</button>}
-       {selected.status!=="published"&&selected.reviewStatus!=="rejected"&&<button className="orbitAction orbitActionDanger" onClick={()=>void reviewAction("reject")} disabled={!!busy}>{busy==="reject"?"Rejecting…":"Reject release"}</button>}
+       {!portalPublished&&validationPassed!==true&&<button className="orbitAction orbitActionPrimary" onClick={()=>void reviewAction("validate")} disabled={!!busy}>{busy==="validate"?"Validating…":"Run technical validation"}</button>}
+       {!portalPublished&&validationPassed===true&&selected.reviewStatus!=="approved"&&<button className="orbitAction orbitActionPrimary" onClick={()=>void reviewAction("approve")} disabled={!!busy}>{busy==="approve"?"Approving…":"Approve technical review"}</button>}
+       {!portalPublished&&selected.reviewStatus!=="rejected"&&<button className="orbitAction orbitActionDanger" onClick={()=>void reviewAction("reject")} disabled={!!busy}>{busy==="reject"?"Rejecting…":"Reject release"}</button>}
        <button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(selected)} disabled={!!busy}>Review customer presentation</button>
        {selected.status!=="published"&&<button className="orbitAction orbitActionPublish" onClick={()=>void publish()} disabled={!canPublish||busy==="publish"}>{busy==="publish"?"Publishing…":"Publish to customers"}</button>}
        {selected.status==="published"&&<button className="orbitAction orbitActionDanger" onClick={()=>void unpublish(selected)} disabled={busy.startsWith("unpublish")}>Unpublish</button>}
@@ -212,6 +234,16 @@ export default function OrbitFSUpdateReleaseDeployer(){
    </div>
   </section>
 
+
+
+  <section className="orbitCompactPanel orbitDeploymentControlStrip">
+   <div className="orbitPanelHead"><div><p className="eyebrow">BILLING DEPLOYMENT CONTROL</p><h2>Customer update availability</h2><p className="muted">These Billing Store gates can pause customer Update or rollback execution even when License Manager technical authority remains enabled.</p></div><span className={controls.maintenance_mode?"state":"state ready"}>{controls.maintenance_mode?"Maintenance":"Available"}</span></div>
+   <div className="orbitDeploymentToggles">
+    <label><input type="checkbox" checked={controls.customer_updates_enabled!==false} disabled={busy==="control"} onChange={e=>void setDeploymentControl({customer_updates_enabled:e.target.checked})}/><span><b>Customer updates</b><small>Allow published Update releases to execute from the customer portal.</small></span></label>
+    <label><input type="checkbox" checked={controls.customer_rollbacks_enabled!==false} disabled={busy==="control"} onChange={e=>void setDeploymentControl({customer_rollbacks_enabled:e.target.checked})}/><span><b>Customer rollbacks</b><small>Allow rollback execution when an Update recovery path requires it.</small></span></label>
+    <label><input type="checkbox" checked={controls.maintenance_mode===true} disabled={busy==="control"} onChange={e=>void setDeploymentControl({maintenance_mode:e.target.checked})}/><span><b>Deployment maintenance</b><small>Pause customer deployment execution from Billing Store.</small></span></label>
+   </div>
+  </section>
   <section className="orbitCompactPanel">
    <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE HISTORY</p><h2>Update history</h2></div><span className="orbitCount">{releases.length}</span></div>
    <div className="orbitHistoryTable">
