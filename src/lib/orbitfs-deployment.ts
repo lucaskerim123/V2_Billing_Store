@@ -3,7 +3,7 @@ import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
 import {masterDownloadReleaseArtifact,masterLicenseValidate,masterReleases} from "@/lib/master-api";
-import {requireLicenseMasterForDeployment} from "@/lib/license-master-availability";
+import {requireLicenseMasterForDeployment,requireLicenseMasterForMutation} from "@/lib/license-master-availability";
 
 const SUPABASE_API="https://api.supabase.com/v1";
 const VERCEL_API="https://api.vercel.com";
@@ -41,6 +41,11 @@ export async function billingOrbitfsConfig(){
 export async function requireSystem(capability:"deploy"|"update"|"rollback"="deploy"){
   const config=await billingOrbitfsConfig();
   await requireLicenseMasterForDeployment(capability);
+  return config;
+}
+export async function requireSetupSystem(){
+  const config=await billingOrbitfsConfig();
+  await requireLicenseMasterForMutation();
   return config;
 }
 
