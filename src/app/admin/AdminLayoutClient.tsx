@@ -19,7 +19,7 @@ const orbitfsGroup:NavGroup={label:"OrbitFS Control",shortLabel:"OrbitFS Control
   {label:"Base Release",href:"/admin/orbitfs/base-deployment",permission:"licenses.manage"},
   {label:"Update Release System",href:"/admin/orbitfs/update-release-deployer",permission:"licenses.manage"},
   {label:"Release Channels",href:"/admin/orbitfs/release-channels",permission:"licenses.manage"},
-  {label:"License Controller",href:"/admin/license-controller",permission:"licenses.manage"},
+  {label:"Customer Licences",href:"/admin/license-controller",permission:"licenses.manage"},
   {label:"License System",href:"/admin/licensing",permission:"licenses.view"},
   {label:"Product Connections",href:"/admin/settings/license-master",permission:"licenses.manage"}
 ]};
