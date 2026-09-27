@@ -11,7 +11,7 @@ const STALE_AFTER_MS=30*60*1000;
 function operationError(code:string,message:string,status:number,retryable=false,operationId?:string|null){
   return Object.assign(new Error(message),{code,status,retryable,operationId:operationId||null});
 }
-function canonical(value:unknown){
+function canonical(value:unknown):unknown{
   if(Array.isArray(value))return value.map(canonical);
   if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value as Record<string,unknown>).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,canonical(item)]));
   return value??null;
