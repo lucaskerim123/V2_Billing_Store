@@ -6,10 +6,9 @@ export async function GET(req:Request){
   try{
     const {user}=await requireOrbitUser(req);
     const db=licenseDb();
-    const [channelResult,bindings,requests]=await Promise.all([
+    const [channelResult,bindings]=await Promise.all([
       masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET"},"billing"),
       db.from("license_bindings").select("license_id,license_product_key").eq("auth_user_id",user.id).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle(),
-      Promise.resolve(null),
     ]);
     if(bindings.error)throw bindings.error;
     const licenseId=String(bindings.data?.license_id||"");
