@@ -92,7 +92,14 @@
     "database/migrations/20260924_tax_settings_checkout.sql": "8ffb5410a50f9d5250039deaeb4d3adbcb2bfae3",
     "database/migrations/20260925_orbitfs_release_presentation_overrides.sql": "4ad9afadd4db6abcef4ea8347f08e627a40c8f94",
     "database/migrations/20260925_restore_orbitfs_release_system_snapshot.sql": "9e4a566308e18a9a83e357771700f8fe0c6cbf5d",
-    "database/migrations/20260925_verify_supabase_migration_automation.sql": "374dafd8ebc09967a6abded25a490663527c0f53"
+    "database/migrations/20260925_verify_supabase_migration_automation.sql": "374dafd8ebc09967a6abded25a490663527c0f53",
+    "database/migrations/20260926170814_restore_orbitfs_private_secret_refs.sql": "a4b0b5761e27190bf4913754b26981ecda0a9336",
+    "database/migrations/20260927000100_harden_orbitfs_deployer_service_rpcs.sql": "9bcac2c287802dbcd3c62d4001abeb36f293ac4c",
+    "database/migrations/20260927_orbitfs_lifecycle_jobs.sql": "9c2627c027c6bcca3477c1f5e91b9b9c020f5e42",
+    "database/migrations/20260927_lock_orbitfs_installation_rpc.sql": "9ae74bb860374d34b3aba9af89b885e83f22f05c",
+    "database/migrations/20260927011500_register_v1_changing_theme.sql": "f92cc877593dce985a412bf6141a3a8138100809",
+    "database/migrations/20260927124000_repair_provider_disconnect_vault_cleanup.sql": "25a0ae5d63ca0a5af5bd03c9d553ecf9dc9e2398",
+    "database/migrations/20260927_orbitfs_reinstall_identity_policy.sql": "5392d94f223152245676e52e034e6ebece9ef2ef"
   },
   "remote_migrations": [
     {
@@ -314,6 +321,40 @@
     {
       "version": "20260925000951",
       "name": "orbitfs_release_presentation_overrides_20260925"
+    },
+    {
+      "version": "20260926170814",
+      "name": "restore_orbitfs_private_secret_refs"
+    },
+    {
+      "version": "20260927031642",
+      "name": "restore_orbitfs_private_secret_refs"
+    },
+    {
+      "version": "20260927031647",
+      "name": "harden_orbitfs_deployer_service_rpcs"
+    },
+    {
+      "version": "20260927031653",
+      "name": "orbitfs_lifecycle_jobs"
+    },
+    {
+      "version": "20260927031659",
+      "name": "lock_orbitfs_installation_rpc"
+    },
+    {
+      "version": "20260927031704",
+      "name": "register_v1_changing_theme"
+    },
+    {
+      "version": "20260927031710",
+      "name": "repair_provider_disconnect_vault_cleanup"
+    },
+    {
+      "version": "20260927031716",
+      "name": "orbitfs_reinstall_identity_policy"
     }
-  ]
+  ],
+  "updated_at": "2026-09-27",
+  "note": "Synchronized to production migration history after moving CI migration execution away from direct Postgres/pooler authentication."
 }
