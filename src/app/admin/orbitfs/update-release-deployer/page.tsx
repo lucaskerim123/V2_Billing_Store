@@ -24,8 +24,8 @@ export default function OrbitFSUpdateReleaseDeployer(){
  const [draft,setDraft]=useState({title:"",description:"",changelog:"",customer_notes:"",internal_notes:"",severity:"normal",required:false,rollout:"public",minimum_version:"",rollback_version:""});
 
  async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
- async function load(){
-  setBusy("load");setMessage("");
+ async function load(options?:{preserveMessage?:boolean}){
+  setBusy("load");if(!options?.preserveMessage)setMessage("");
   try{
    const h=await auth();
    const [r,cr,dr]=await Promise.all([
@@ -69,7 +69,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    const r=await fetch("/api/admin/orbitfs/release-presentation",{method:"PATCH",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,...draft})});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not update release");
-   setEditing(false);setMessage("Update release details saved.");await load();
+   setEditing(false);setMessage("Update release details saved.");await load({preserveMessage:true});
   }catch(e:any){setMessage(e?.message||"Could not update release")}finally{setBusy("")}
  }
  async function setDeploymentControl(patch:any){
@@ -95,7 +95,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||("Could not "+action+" update release"));
    setMessage(action==="validate"?"Technical validation passed in License Manager.":action==="approve"?"Update technically approved in License Manager.":"Update rejected in License Manager.");
-   await load();
+   await load({preserveMessage:true});
   }catch(e:any){
    setMessage(e?.message||("Could not "+action+" update release"));
    await load();
@@ -111,7 +111,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    if(!r.ok)throw Error(j.error||"Could not set release channel");
    const nextId=String(j.release?.id||j.id||"");
    setMessage("Release channel set to "+targetChannel+".");
-   await load();
+   await load({preserveMessage:true});
    if(nextId)setSelectedId(nextId);
   }catch(e:any){setMessage(e?.message||"Could not set release channel")}finally{setBusy("")}
  }
@@ -123,7 +123,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    const r=await fetch("/api/admin/orbitfs/release-publish",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id})});
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not publish update");
-   setMessage("Update published to the customer portal.");await load();
+   setMessage("Update published to the customer portal.");await load({preserveMessage:true});
   }catch(e:any){setMessage(e?.message||"Could not publish update")}finally{setBusy("")}
  }
  async function unpublish(r:UpdateRelease){
@@ -133,7 +133,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:r.id})});
    const j=await res.json().catch(()=>({}));
    if(!res.ok)throw Error(j.error||"Could not unpublish update");
-   setMessage("Update removed from customer publication.");await load();
+   setMessage("Update removed from customer publication.");await load({preserveMessage:true});
   }catch(e:any){setMessage(e?.message||"Could not unpublish update")}finally{setBusy("")}
  }
 
