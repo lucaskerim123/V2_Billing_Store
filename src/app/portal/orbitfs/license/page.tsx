@@ -51,6 +51,7 @@ export default function OrbitFSLicenseController() {
     (x: any) => x.license_binding_id === binding?.id,
   );
   const customerUnlockEnabled = d?.settings?.customer_self_unlock_enabled !== false;
+  const licenseActive = String(binding?.authoritative_status || binding?.status || '').toLowerCase() === 'active';
 
   async function control(action: string) {
     if (!binding?.license_id)
@@ -209,14 +210,14 @@ export default function OrbitFSLicenseController() {
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
-              disabled={!!busy || !binding?.license_id}
+              disabled={!!busy || !binding?.license_id || !licenseActive}
               onClick={() => void control("rotate")}
             >
               {busy === "rotate" ? "Rotating…" : "Rotate key"}
             </button>
             <button
               className="secondary"
-              disabled={!!busy || !binding?.license_id || !install?.installation_id || !customerUnlockEnabled}
+              disabled={!!busy || !binding?.license_id || !install?.installation_id || !customerUnlockEnabled || !licenseActive}
               onClick={() => void control("unlock")}
             >
               {busy === "unlock" ? "Unlocking…" : customerUnlockEnabled ? "Unlock installation" : "Customer unlock disabled"}
