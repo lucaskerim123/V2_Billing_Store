@@ -10,10 +10,7 @@ on:
         type: choice
         options:
           - main
-          - ownership-cleanup/base-deployer
-          - billing-store-redesign
-          - customer-portal-redesign
-          - verify/license-stack-ci-20260923
+          - CustomDesign/Run
       custom_branch:
         description: Optional custom branch name (overrides selector)
         required: false
