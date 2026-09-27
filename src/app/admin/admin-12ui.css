@@ -1420,3 +1420,49 @@ html[data-admin-theme="v3"] .orbitReferenceTableRow .orbitRequestNote{
   line-height:1.4!important;
   font-style:italic!important;
 }
+
+
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin-bottom:10px!important;
+}
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid label{
+  display:grid!important;
+  gap:5px!important;
+  min-width:0!important;
+  color:#8fa8b7!important;
+  font-size:8px!important;
+  font-weight:700!important;
+}
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid label.wide{grid-column:1/-1!important}
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid input:not([type="checkbox"]),
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid select,
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid textarea{
+  width:100%!important;
+  min-height:34px!important;
+  padding:7px 9px!important;
+  border:1px solid #285269!important;
+  border-radius:6px!important;
+  background:#071b2a!important;
+  color:#dce9ef!important;
+  font-size:9px!important;
+}
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid textarea{resize:vertical!important}
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid .orbitChannelToggle{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-height:34px!important;
+  padding:7px 9px!important;
+  border:1px solid #1f4357!important;
+  border-radius:6px!important;
+  background:#082031!important;
+}
+html[data-admin-theme="v3"] .orbitChannelPolicyGrid .orbitChannelToggle input{width:auto!important;margin:0!important}
+@media(max-width:640px){
+  html[data-admin-theme="v3"] .orbitChannelPolicyGrid{grid-template-columns:1fr!important}
+  html[data-admin-theme="v3"] .orbitChannelPolicyGrid label.wide{grid-column:auto!important}
+}
