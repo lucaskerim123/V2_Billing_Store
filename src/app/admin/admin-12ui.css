@@ -1466,3 +1466,27 @@ html[data-admin-theme="v3"] .orbitChannelPolicyGrid .orbitChannelToggle input{wi
   html[data-admin-theme="v3"] .orbitChannelPolicyGrid{grid-template-columns:1fr!important}
   html[data-admin-theme="v3"] .orbitChannelPolicyGrid label.wide{grid-column:auto!important}
 }
+
+
+html[data-admin-theme="v3"] .orbitDeploymentToggles{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+html[data-admin-theme="v3"] .orbitDeploymentToggles label{
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:9px!important;
+  min-height:62px!important;
+  padding:10px!important;
+  border:1px solid #1f4357!important;
+  border-radius:7px!important;
+  background:#082031!important;
+}
+html[data-admin-theme="v3"] .orbitDeploymentToggles input{margin-top:2px!important}
+html[data-admin-theme="v3"] .orbitDeploymentToggles span{display:grid!important;gap:3px!important}
+html[data-admin-theme="v3"] .orbitDeploymentToggles b{color:#dce9ef!important;font-size:9.5px!important}
+html[data-admin-theme="v3"] .orbitDeploymentToggles small{color:#7892a3!important;font-size:8px!important;line-height:1.4!important}
+@media(max-width:800px){
+  html[data-admin-theme="v3"] .orbitDeploymentToggles{grid-template-columns:1fr!important}
+}
