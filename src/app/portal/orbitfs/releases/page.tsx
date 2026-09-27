@@ -60,7 +60,7 @@ export default function OrbitFSReleaseDeployer(){
 
  const releases=(data?.publishedReleases||[]).filter((x:any)=>String(x.release_type||x.releaseType)==="update"&&allowedChannels.includes(String(x.channel||"stable")));
  const settings=data?.settings||{};
- const deploymentUnavailable=!settings.enabled||settings.maintenance_mode===true||settings.license_authority_available===false||settings.release_authority_available===false||settings.deployment_authority_available===false;
+ const deploymentUnavailable=!settings.enabled||settings.maintenance_mode===true||settings.license_authority_available===false||settings.release_authority_available===false||settings.deployment_authority_available===false||settings.customer_updates_enabled===false;
  const appliedUpdate=install?.metadata?.appliedUpdate||null;
  const appliedUpdateVersion=String(appliedUpdate?.version||"");
  const appliedUpdateId=String(appliedUpdate?.releaseId||"");
@@ -90,14 +90,14 @@ export default function OrbitFSReleaseDeployer(){
  return <main className="portalReleasePage">
   <header className="portalReleaseHeader">
    <div><p className="eyebrow">MY ORBITFS · UPDATES</p><h1>Updates & channels</h1><p className="muted">Manage channel access and install published OrbitFS Update releases. Base deployment is managed from My OrbitFS.</p></div>
-   <div className="portalHeaderActions"><Link className="buttonlink secondary" href="/portal/orbitfs">My OrbitFS</Link><Link className="buttonlink secondary" href="/portal/orbitfs/license">License</Link></div>
+   <div className="portalHeaderActions"><Link className="buttonlink secondary" href="/portal/orbitfs">My OrbitFS</Link><Link className="buttonlink secondary" href="/portal/orbitfs/license">Licence</Link></div>
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
 
   {deploymentUnavailable&&<section className="portalCompactPanel portalWarning">
    <div><p className="eyebrow">{settings.maintenance_mode?"MAINTENANCE":"DEPLOYMENT UNAVAILABLE"}</p><h2>{settings.maintenance_mode?"Release deployment maintenance is active":"Customer deployment is currently unavailable"}</h2></div>
-   <p className="muted">{settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment services are temporarily unavailable."):(settings.license_authority_notice||"Published release information remains visible while deployment is unavailable.")}</p>
+   <p className="muted">{settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment services are temporarily unavailable."):(settings.customer_updates_enabled===false?"License Manager Update deployment authorization is disabled. Published updates remain visible, but installation is blocked.":(settings.license_authority_notice||"Published release information remains visible while deployment is unavailable."))}</p>
   </section>}
 
   <section className="portalCompactPanel">
