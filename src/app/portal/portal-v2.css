@@ -980,3 +980,15 @@
   .orbitZipLifecycleRows>div,.orbitZipLifecycleRows summary{grid-template-columns:1fr}
   .orbitZipLifecycleRows button{width:100%}
 }
+
+
+/* ZIP first-run start state */
+.orbitZipWorkspaceStart{min-height:620px!important}
+.orbitZipStartCard{padding:22px!important}
+.orbitZipStartGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:16px 0 18px}
+.orbitZipStartGrid>div{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:start;padding:12px;border:1px solid #26313d;border-radius:8px;background:#0a1016}
+.orbitZipStartGrid>div>span{display:grid;place-items:center;width:30px;height:30px;border:1px solid #6b3038;border-radius:999px;background:#251116;color:#e3a9ae;font-size:9px;font-weight:900}
+.orbitZipStartGrid>div>div{display:grid;gap:4px}
+.orbitZipStartGrid b{font-size:10px;color:#edf2f6}
+.orbitZipStartGrid small{font-size:8px;line-height:1.45;color:#77838f}
+@media(max-width:760px){.orbitZipStartGrid{grid-template-columns:1fr}}
