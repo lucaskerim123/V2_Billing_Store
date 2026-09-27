@@ -43,6 +43,11 @@ export default function BaseDeploymentAdmin(){
  }
  useEffect(()=>{void load()},[]);
  const selected=releases.find(r=>r.id===selectedId)||releases[0]||null;
+ useEffect(()=>{
+  if(!selected||selected.status==="published"||busy)return;
+  const timer=setInterval(()=>void load({silent:true,preserveMessage:true}),8000);
+  return()=>clearInterval(timer);
+ },[selected?.id,selected?.status,busy]);
  const queue=useMemo(()=>releases.filter(r=>r.status!=="published"),[releases]);
  const published=useMemo(()=>releases.filter(r=>r.status==="published"),[releases]);
 
@@ -66,7 +71,7 @@ export default function BaseDeploymentAdmin(){
  const reviewStage=pipelineError===3||reviewFailed?"error":reviewWorking?"working":reviewApproved?"done":validationPassed?"active":"idle";
  const publicationStage=pipelineError===4?"error":portalPublished?"done":publicationWorking?"working":canPublish?"active":"idle";
 
- function beginEdit(r:Release){setSelectedId(r.id);setDraft({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||""});setEditing(true)}
+ function beginEdit(r:Release){setSelectedId(r.id);setPipelineError(null);setDraft({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||""});setEditing(true)}
  async function changeChannel(){
   if(!selected||!targetChannel)return;
   setBusy("channel");setMessage("");setPipelineError(null);
@@ -141,7 +146,7 @@ export default function BaseDeploymentAdmin(){
 
    <div className="orbitSplit">
     <div className="orbitReleaseQueue">
-     {queue.length?queue.map(r=><button key={r.id} type="button" className={"orbitReleaseRow "+(selected?.id===r.id?"selected":"")} onClick={()=>setSelectedId(r.id)}>
+     {queue.length?queue.map(r=><button key={r.id} type="button" className={"orbitReleaseRow "+(selected?.id===r.id?"selected":"")} onClick={()=>{setSelectedId(r.id);setPipelineError(null)}}>
       <div><b>v{r.version}</b><span>{r.title||"Base release"} · {r.channel||"stable"}</span></div>
       <div className="orbitRowMeta"><span className={r.validation?.status==="passed"?"state ready":"state"}>{r.validation?.status||"validation pending"}</span><span className={r.reviewStatus==="approved"?"state ready":"state"}>{r.reviewStatus||"review pending"}</span></div>
      </button>):<div className="orbitEmptyCompact">No Base releases are waiting for review.</div>}
@@ -183,7 +188,7 @@ export default function BaseDeploymentAdmin(){
      <div><b>v{r.version}</b><span>{r.title||"Base release"}</span></div>
      <span>{r.channel||"stable"}</span>
      <span>{r.publishedAt?new Date(r.publishedAt).toLocaleString():"Published"}</span>
-     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>setSelectedId(r.id)}>View</button><button className="orbitAction orbitActionDanger" disabled={busy==="unpublish:"+r.id} onClick={()=>void unpublishBase(r)}>{busy==="unpublish:"+r.id?"Unpublishing…":"Unpublish"}</button></div>
+     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>{setSelectedId(r.id);setPipelineError(null)}}>View</button><button className="orbitAction orbitActionDanger" disabled={busy==="unpublish:"+r.id} onClick={()=>void unpublishBase(r)}>{busy==="unpublish:"+r.id?"Unpublishing…":"Unpublish"}</button></div>
     </div>)}
     {!published.length&&<div className="orbitEmptyCompact">No published Base release history yet.</div>}
    </div>
