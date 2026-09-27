@@ -1188,13 +1188,18 @@
 }
 
 
-/* Force Base Deployer to render as a normal PC desktop workspace */
+/* Base Deployer desktop-first responsive layout */
 .orbitZipInstalling{
-  min-width:1180px!important;
-  overflow-x:auto!important;
+  width:100%;
+  min-width:0!important;
+  overflow-x:hidden!important;
 }
 .orbitZipInstalling:has(.orbitZipWorkspace){
-  grid-template-columns:230px minmax(690px,1fr)!important;
+  grid-template-columns:230px minmax(0,1fr)!important;
+}
+.orbitZipInstalling>.orbitZipWorkspace{
+  grid-template-columns:minmax(0,1fr) 260px!important;
+  min-width:0!important;
 }
 .orbitZipInstalling>.orbitZipSidebar{
   grid-column:1!important;
@@ -1203,42 +1208,23 @@
   border-bottom:0!important;
   padding:18px 14px!important;
 }
-.orbitZipInstalling>.orbitZipSidebar .orbitInstallerSteps{
+.orbitZipInstalling>.orbitZipSidebar .orbitInstallerSteps,
+.orbitZipInstalling>.orbitZipSidebar .orbitInstallerSubstepList{
   grid-template-columns:1fr!important;
-  overflow:visible!important;
 }
 .orbitZipInstalling>.orbitZipSidebar .orbitInstallerSubsteps{
   grid-template-columns:1fr!important;
 }
-.orbitZipInstalling>.orbitZipSidebar .orbitInstallerSubstepList{
-  grid-template-columns:1fr!important;
-}
-.orbitZipInstalling>.orbitZipWorkspace{
-  grid-column:2!important;
-  grid-row:2!important;
-  grid-template-columns:minmax(690px,1fr) 260px!important;
-  min-width:950px!important;
-}
 .orbitZipInstalling .orbitZipCanvasColumn{
+  min-width:0;
   padding:28px 30px!important;
 }
 .orbitZipInstalling .orbitZipSummary{
-  display:grid!important;
+  min-width:0;
   grid-template-columns:1fr!important;
   padding:18px 14px!important;
   border-left:1px solid var(--zip-line)!important;
   border-top:0!important;
-}
-.orbitZipInstalling .orbitInstallerStep{
-  grid-template-columns:30px minmax(0,1fr)!important;
-  text-align:left!important;
-  justify-items:stretch!important;
-}
-.orbitZipInstalling .orbitInstallerStep>div{
-  display:grid!important;
-}
-.orbitZipInstalling .orbitInstallerStep small{
-  white-space:normal!important;
 }
 .orbitZipInstalling .orbitReviewGrid{
   grid-template-columns:repeat(2,minmax(0,1fr))!important;
@@ -1246,30 +1232,104 @@
 .orbitZipInstalling .orbitEnvGrid{
   grid-template-columns:1fr 1fr!important;
 }
-.orbitZipInstalling .orbitInstallerHeading{
-  flex-direction:column!important;
-}
-.orbitZipInstalling .orbitInstallerMeta{
-  justify-items:start!important;
-  text-align:left!important;
-}
-.orbitZipInstalling .orbitInstallerFooter{
-  flex-direction:row!important;
-  align-items:center!important;
-}
-.orbitZipInstalling .orbitInstallerFooter button{
-  width:auto!important;
-}
 
-@media(max-width:1179px){
-  .orbitZipInstalling{
-    width:1180px!important;
-    max-width:none!important;
-  }
+/* compact desktop / laptop */
+@media(max-width:1180px) and (min-width:901px){
   .orbitZipInstalling:has(.orbitZipWorkspace){
-    grid-template-columns:230px 950px!important;
+    grid-template-columns:200px minmax(0,1fr)!important;
   }
   .orbitZipInstalling>.orbitZipWorkspace{
-    grid-template-columns:690px 260px!important;
+    grid-template-columns:minmax(0,1fr) 220px!important;
+  }
+  .orbitZipInstalling>.orbitZipSidebar{
+    padding:14px 10px!important;
+  }
+  .orbitZipInstalling .orbitZipCanvasColumn{
+    padding:20px!important;
+  }
+  .orbitZipInstalling .orbitZipSummary{
+    padding:14px 10px!important;
+  }
+  .orbitZipInstalling>.orbitZipSidebar .orbitInstallerStep{
+    grid-template-columns:24px minmax(0,1fr)!important;
+    padding:6px!important;
+  }
+  .orbitZipInstalling>.orbitZipSidebar .orbitInstallerStep small{
+    white-space:normal!important;
+  }
+}
+
+/* tablet: keep the left rail, move the summary below the main task */
+@media(max-width:900px) and (min-width:701px){
+  .orbitZipInstalling:has(.orbitZipWorkspace){
+    grid-template-columns:190px minmax(0,1fr)!important;
+  }
+  .orbitZipInstalling>.orbitZipWorkspace{
+    grid-template-columns:1fr!important;
+  }
+  .orbitZipInstalling .orbitZipSummary{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    border-left:0!important;
+    border-top:1px solid var(--zip-line)!important;
+  }
+  .orbitZipInstalling .orbitZipCanvasColumn{
+    padding:18px!important;
+  }
+}
+
+/* mobile: intentionally stack, don't just collapse the old portal layout */
+@media(max-width:700px){
+  .orbitZipInstalling:has(.orbitZipWorkspace){
+    grid-template-columns:1fr!important;
+  }
+  .orbitZipInstalling>.orbitZipSidebar{
+    grid-column:1!important;
+    grid-row:auto!important;
+    border-right:0!important;
+    border-bottom:1px solid var(--zip-line)!important;
+    padding:14px!important;
+  }
+  .orbitZipInstalling>.orbitZipSidebar .orbitInstallerSteps{
+    grid-template-columns:repeat(5,minmax(96px,1fr))!important;
+    overflow-x:auto!important;
+    padding-bottom:4px;
+  }
+  .orbitZipInstalling>.orbitZipSidebar .orbitInstallerStep{
+    grid-template-columns:1fr!important;
+    justify-items:center!important;
+    text-align:center!important;
+  }
+  .orbitZipInstalling>.orbitZipSidebar .orbitInstallerStep>div{
+    display:none!important;
+  }
+  .orbitZipInstalling>.orbitZipSidebar .orbitInstallerSubsteps{
+    grid-template-columns:1fr!important;
+  }
+  .orbitZipInstalling>.orbitZipSidebar .orbitInstallerSubstepList{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .orbitZipInstalling>.orbitZipWorkspace{
+    grid-column:1!important;
+    grid-row:auto!important;
+    grid-template-columns:1fr!important;
+  }
+  .orbitZipInstalling .orbitZipCanvasColumn{
+    padding:14px!important;
+  }
+  .orbitZipInstalling .orbitZipSummary{
+    grid-template-columns:1fr!important;
+    border-left:0!important;
+    border-top:1px solid var(--zip-line)!important;
+  }
+  .orbitZipInstalling .orbitReviewGrid,
+  .orbitZipInstalling .orbitEnvGrid{
+    grid-template-columns:1fr!important;
+  }
+  .orbitZipInstalling .orbitInstallerFooter{
+    flex-direction:column-reverse!important;
+    align-items:stretch!important;
+  }
+  .orbitZipInstalling .orbitInstallerFooter button{
+    width:100%!important;
   }
 }
