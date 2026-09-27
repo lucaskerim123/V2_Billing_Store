@@ -1,11 +1,11 @@
-import {createOAuthState,httpError,requireOrbitUser,requireSystem} from "@/lib/orbitfs-deployment";
+import {createOAuthState,httpError,requireOrbitUser,requireSetupSystem} from "@/lib/orbitfs-deployment";
 
 const STORE_ORIGIN=(process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.SITE_URL||"https://orbitfsstore.vercel.app").replace(/\/+$/,"");
 
 export async function POST(req:Request){
   try{
     const {user}=await requireOrbitUser(req);
-    const s=await requireSystem("deploy");
+    const s=await requireSetupSystem();
     if(!s.supabase_oauth_enabled)throw Object.assign(new Error("Supabase customer connection is disabled"),{status:503});
     if(!s.supabase_client_id)throw Object.assign(new Error("OrbitFS Supabase OAuth App is not configured"),{status:503});
     const body=await req.json().catch(()=>({}));
