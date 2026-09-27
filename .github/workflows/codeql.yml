@@ -16,7 +16,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      security-events: write
       actions: read
     steps:
       - name: Checkout complete repository history
@@ -32,3 +31,12 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:javascript-typescript"
+          upload: never
+          output: codeql-results
+      - name: Archive CodeQL results
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-manual-${{ github.sha }}
+          path: codeql-results
+          if-no-files-found: error
+          retention-days: 30
