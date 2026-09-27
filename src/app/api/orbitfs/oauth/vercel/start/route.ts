@@ -1,5 +1,5 @@
 import {createHash,createHmac} from "node:crypto";
-import {createOAuthState,httpError,requireOrbitUser,requireSystem} from "@/lib/orbitfs-deployment";
+import {createOAuthState,httpError,requireOrbitUser,requireSetupSystem} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
 
 const STORE_ORIGIN=(process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.SITE_URL||"https://orbitfsstore.vercel.app").replace(/\/+$/,"");
@@ -8,7 +8,7 @@ function pkceVerifier(state:string,secret:string){return createHmac("sha256",sec
 export async function POST(req:Request){
   try{
     const {user}=await requireOrbitUser(req);
-    const s=await requireSystem("deploy");
+    const s=await requireSetupSystem();
     if(!s.vercel_oauth_enabled)throw Object.assign(new Error("Vercel customer connection is disabled"),{status:503});
     if(!s.vercel_client_id)throw Object.assign(new Error("OrbitFS Vercel App client ID is not configured"),{status:503});
     const secret=String(await serviceRpc("service_orbitfs_release_secret",{p_key:"vercel_client_secret"})||"");
