@@ -1,4 +1,4 @@
-name: Full Scan + Deploy
+name: Production Deploy
 
 on:
   workflow_dispatch:
@@ -49,6 +49,29 @@ jobs:
             throw new Error('Production policy violation: automatic Vercel Git deployments must remain disabled');
           }
           NODE
+
+      - name: Verify exact commit passed Full Scan
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          runs="$(gh api -H "Accept: application/vnd.github+json" "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&event=workflow_dispatch&per_page=50")"
+          scan="$(printf '%s' "$runs" | jq -c --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | reverse | .[0] // empty')"
+          if [ -z "$scan" ]; then
+            echo "::error::Deploy blocked: no Full Scan workflow_dispatch run exists for exact commit $GITHUB_SHA."
+            exit 1
+          fi
+          status="$(printf '%s' "$scan" | jq -r '.status // empty')"
+          conclusion="$(printf '%s' "$scan" | jq -r '.conclusion // empty')"
+          url="$(printf '%s' "$scan" | jq -r '.html_url // empty')"
+          if [ "$status" != "completed" ] || [ "$conclusion" != "success" ]; then
+            echo "::error::Deploy blocked: Full Scan for exact commit $GITHUB_SHA is $status/$conclusion."
+            [ -n "$url" ] && echo "Full Scan: $url"
+            exit 1
+          fi
+          echo "Reusing successful Full Scan for exact commit $GITHUB_SHA."
+          [ -n "$url" ] && echo "Full Scan: $url"
 
       - name: Use Node 22
         uses: actions/setup-node@v7
@@ -102,33 +125,6 @@ jobs:
             echo "Changed files between current production tree and selected main:"
             git diff --name-status "$base" "$GITHUB_SHA"
           fi
-
-      - name: Initialize CodeQL full security scan
-        uses: github/codeql-action/init@v4
-        with:
-          languages: javascript-typescript
-          queries: security-extended
-
-      - name: Run CodeQL full security scan
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:javascript-typescript-full-deploy"
-          upload: never
-          output: codeql-results
-
-      - name: Archive CodeQL full-scan results
-        uses: actions/upload-artifact@v4
-        with:
-          name: codeql-full-scan-${{ github.sha }}
-          path: codeql-results
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Run complete production validation
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
-        run: npm run preflight
 
       - name: Generate cumulative production change-set manifest
         env:
