@@ -165,8 +165,8 @@ export default function MyOrbitFS(){
   const activePrimarySubstep=activePrimary.substeps.find(step=>!step.ready)?.id||activePrimary.substeps[activePrimary.substeps.length-1]?.id;
 
 
-  return <main className="portalOverviewV2">
-    <header className="portalOverviewHero"><div><p className="eyebrow">MY ORBITFS</p><h1>Install OrbitFS</h1><p className="muted">Connect your infrastructure once. OrbitFS handles the database implant, runtime configuration and Base deployment.</p></div></header>
+  return <main className={"portalOverviewV2 orbitfsBaseV3 orbitZipDeployer "+(panelReady?"orbitZipDeployed":"orbitZipInstalling")}>
+    {panelReady&&<header className="portalOverviewHero"><div><p className="eyebrow">MY ORBITFS</p><h1>OrbitFS Base</h1><p className="muted">Deployment control, infrastructure status and approved update management.</p></div></header>}
     {deploymentUnavailable&&<section className="panel" style={{marginBottom:14,borderColor:"rgba(245,158,11,.55)"}}><div className="panelTitle"><div><p className="eyebrow">{settings.maintenance_mode?"MAINTENANCE":"DEPLOYMENT ACCESS DISABLED"}</p><h2>{settings.maintenance_mode?"OrbitFS deployment maintenance is active":"Customer deployment is currently unavailable"}</h2><p className="muted">{settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment services are temporarily unavailable while maintenance is in progress."):"An administrator has disabled the customer deployment system. Your existing installation and data are not removed."}</p></div><span className="state waiting">{settings.maintenance_mode?"MAINTENANCE":"OFFLINE"}</span></div></section>}
 
 
