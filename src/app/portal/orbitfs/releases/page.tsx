@@ -7,7 +7,6 @@ import {createClient} from "@/lib/supabase";
 export default function OrbitFSReleaseDeployer(){
  const sb=useMemo(()=>createClient(),[]);
  const [data,setData]=useState<any>(null);
- const [channelAccess,setChannelAccess]=useState<any>({channels:[],requests:[]});
  const [message,setMessage]=useState("");
  const [busy,setBusy]=useState("");
  const [loading,setLoading]=useState(true);
@@ -28,26 +27,7 @@ export default function OrbitFSReleaseDeployer(){
   }catch(e:any){setData(null);setMessage(e?.name==="AbortError"?"License Manager status request timed out. Please retry.":e?.message||"Could not load releases.")}finally{setLoading(false)}
  }
 
- async function loadChannelAccess(){
-  try{
-   const r=await fetch("/api/orbitfs/release-channels",{headers:await sessionHeaders(),cache:"no-store"});
-   const j=await r.json().catch(()=>({}));
-   if(r.ok)setChannelAccess(j);
-  }catch{}
- }
-
- useEffect(()=>{void load();void loadChannelAccess()},[]);
-
- async function channelAction(action:string,channel:string){
-  setBusy("channel:"+channel);setMessage("");
-  try{
-   const r=await fetch("/api/orbitfs/release-channels",{method:"POST",headers:{...(await sessionHeaders()),"content-type":"application/json"},body:JSON.stringify({action,channel})});
-   const j=await r.json().catch(()=>({}));
-   if(!r.ok)throw Error(j.error||"Channel access request failed.");
-   setMessage(action==="request"?"Access request submitted.":action==="join"?"Joined "+channel+".":"Left "+channel+".");
-   await Promise.all([loadChannelAccess(),load()]);
-  }catch(e:any){setMessage(e?.message||"Channel access action failed.")}finally{setBusy("")}
- }
+ useEffect(()=>{void load()},[]);
 
  const binding=(data?.bindings||[]).find((x:any)=>x.license_product_key==="orbitfs_base"||x.components?.orbitfs_base)||data?.bindings?.[0];
  const install=(data?.installations||[]).find((x:any)=>x.license_binding_id===binding?.id);
@@ -89,8 +69,8 @@ export default function OrbitFSReleaseDeployer(){
 
  return <main className="portalReleasePage">
   <header className="portalReleaseHeader">
-   <div><p className="eyebrow">MY ORBITFS · UPDATES</p><h1>Updates & channels</h1><p className="muted">Manage channel access and install published OrbitFS Update releases. Base deployment is managed from My OrbitFS.</p></div>
-   <div className="portalHeaderActions"><Link className="buttonlink secondary" href="/portal/orbitfs">My OrbitFS</Link><Link className="buttonlink secondary" href="/portal/orbitfs/license">Licence</Link></div>
+   <div><p className="eyebrow">MY ORBITFS · UPDATES</p><h1>Updates</h1><p className="muted">Install published OrbitFS Update releases available through your current release-channel access.</p></div>
+   <div className="portalHeaderActions"><Link className="buttonlink secondary" href="/portal/orbitfs">My OrbitFS</Link><Link className="buttonlink secondary" href="/portal/orbitfs/channels">Release Channels</Link><Link className="buttonlink secondary" href="/portal/orbitfs/license">Licence</Link></div>
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
@@ -99,29 +79,6 @@ export default function OrbitFSReleaseDeployer(){
    <div><p className="eyebrow">{settings.maintenance_mode?"MAINTENANCE":"DEPLOYMENT UNAVAILABLE"}</p><h2>{settings.maintenance_mode?"Release deployment maintenance is active":"Customer deployment is currently unavailable"}</h2></div>
    <p className="muted">{settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment services are temporarily unavailable."):(settings.customer_updates_enabled===false?"License Manager Update deployment authorization is disabled. Published updates remain visible, but installation is blocked.":(settings.license_authority_notice||"Published release information remains visible while deployment is unavailable."))}</p>
   </section>}
-
-  <section className="portalCompactPanel">
-   <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE CHANNELS</p><h2>Channel access</h2><p className="muted">Stable is included automatically. Other channels may be open, self-join, request-only or admin assigned.</p></div></div>
-   <div className="portalChannelGrid">
-    {(channelAccess.channels||[]).map((c:any)=>{
-     const has=allowedChannels.includes(String(c.channel));
-     const request=(channelAccess.requests||[]).find((x:any)=>x.channel===c.channel&&x.status==="pending");
-     const canJoin=c.access_mode==="open"||c.self_join_enabled;
-     return <article className={"portalChannelCard "+(has?"active":"")} key={c.channel}>
-      <div className="portalChannelTop"><div><b>{c.label||c.channel}</b><span>{c.channel}</span></div><span className={has?"state ready":"state"}>{has?"Access":"No access"}</span></div>
-      <p>{c.description||"Release channel"}</p>
-      <small>{c.channel==="stable"?"Included with every active OrbitFS licence.":canJoin?"You can join this channel immediately.":c.access_request_enabled?"Request approval from OrbitFS staff.":"Access is assigned by an administrator."}</small>
-      <div className="portalChannelActions">
-       {c.channel==="stable"&&<span className="state ready">Included</span>}
-       {c.channel!=="stable"&&has&&<button className="secondary" disabled={!!busy} onClick={()=>void channelAction("leave",c.channel)}>Leave</button>}
-       {c.channel!=="stable"&&!has&&canJoin&&<button disabled={!!busy} onClick={()=>void channelAction("join",c.channel)}>{busy==="channel:"+c.channel?"Joining…":"Join channel"}</button>}
-       {c.channel!=="stable"&&!has&&!canJoin&&c.access_request_enabled&&<button disabled={!!busy||!!request} onClick={()=>void channelAction("request",c.channel)}>{request?"Request pending":"Request access"}</button>}
-       {c.channel!=="stable"&&!has&&!canJoin&&!c.access_request_enabled&&<span className="state">Admin assigned</span>}
-      </div>
-     </article>
-    })}
-   </div>
-  </section>
 
   <section className="portalCompactPanel">
    <div className="portalInstallRow">
