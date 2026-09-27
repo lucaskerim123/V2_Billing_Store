@@ -48,7 +48,7 @@ export default function AdminCustomerLicenseActions() {
 
     const current = (Array.isArray(master?.licenses) ? master.licenses : [])
       .filter((x: any) => String(x.customer_external_id || "").trim() === number)
-      .filter((x: any) => !["revoked", "expired"].includes(String(x.status || "").toLowerCase()));
+      .filter((x: any) => String(x.status || "").toLowerCase() !== "expired");
 
     setBindings(current.map((x: any) => ({
       ...x,
@@ -70,7 +70,7 @@ export default function AdminCustomerLicenseActions() {
     if (!confirm(`Apply ${action} to this licence?`)) return;
     setBusy(licenseId + ":" + action);
     setMsg("");
-    if (action === "rotate") setNewKey("");
+    if (action === "rotate" || action === "activate") setNewKey("");
 
     const { data: { session } } = await sb.auth.getSession();
     const response = await fetch(
@@ -95,14 +95,13 @@ export default function AdminCustomerLicenseActions() {
     }
 
     const key = result?.key || result?.license?.key || result?.license_key || result?.licenseKey || "";
-    if (action === "rotate") {
-      if (!key) {
-        setMsg("Rotation completed but no replacement key was returned.");
-        setBusy("");
-        return;
-      }
+    if (key) {
       setNewKey(String(key));
       requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    } else if (action === "rotate") {
+      setMsg("Rotation completed but no replacement key was returned.");
+      setBusy("");
+      return;
     }
 
     setBusy("");
@@ -150,12 +149,13 @@ export default function AdminCustomerLicenseActions() {
               </span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
-              <button disabled={!!busy} onClick={() => void control(binding.license_id, "activate")}>Reactivate</button>
-              <button disabled={!!busy} onClick={() => void control(binding.license_id, "suspend")}>Suspend</button>
-              <button disabled={!!busy} onClick={() => void control(binding.license_id, "rotate")}>Rotate key</button>
-              <button className="danger" disabled={!!busy} onClick={() => void control(binding.license_id, "terminate")}>Block / terminate</button>
+              {String(binding.status||"").toLowerCase()==="suspended"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "activate")}>Unsuspend</button>}
+              {String(binding.status||"").toLowerCase()==="revoked"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "activate")}>Reactivate with new key</button>}
+              {String(binding.status||"").toLowerCase()==="active"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "suspend")}>Suspend</button>}
+              {String(binding.status||"").toLowerCase()==="active"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "rotate")}>Rotate key</button>}
+              {String(binding.status||"").toLowerCase()!=="revoked"&&<button className="danger" disabled={!!busy} onClick={() => void control(binding.license_id, "terminate")}>Terminate</button>}
 
-              {binding.activations.length > 0 && (
+              {String(binding.status||"").toLowerCase()==="active" && binding.activations.length > 0 && (
                 <div style={{ display: "grid", gap: 6, paddingTop: 6 }}>
                   <b>Installations</b>
                   {binding.activations.map((activation: any) => (
