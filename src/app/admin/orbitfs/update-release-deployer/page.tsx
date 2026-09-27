@@ -68,6 +68,25 @@ export default function OrbitFSUpdateReleaseDeployer(){
    setEditing(false);setMessage("Update release details saved.");await load();
   }catch(e:any){setMessage(e?.message||"Could not update release")}finally{setBusy("")}
  }
+ async function reviewAction(action:"validate"|"approve"|"reject"){
+  if(!selected)return;
+  let reason="";
+  if(action==="reject"){
+   reason=prompt("Reason for rejecting this Update release:","")||"";
+   if(!reason.trim())return;
+  }
+  setBusy(action);setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/release-handoff",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({releaseId:selected.id,action,reason:reason||undefined})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||("Could not "+action+" update release"));
+   setMessage(action==="validate"?"Technical validation passed in License Manager.":action==="approve"?"Update technically approved in License Manager.":"Update rejected in License Manager.");
+   await load();
+  }catch(e:any){
+   setMessage(e?.message||("Could not "+action+" update release"));
+   await load();
+  }finally{setBusy("")}
+ }
  async function setChannel(){
   if(!selected||!targetChannel||targetChannel===selected.channel)return;
   if(!reviewApproved||!validationPassed){setMessage("Channel can only be changed after License Manager technical approval and validation.");return}
@@ -106,7 +125,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
 
  return <main className="orbitAdminPage">
   <header className="orbitAdminHeader">
-   <div><p className="eyebrow">ORBITFS CONTROL · UPDATES</p><h1>Update releases</h1><p className="muted">Final customer publication workspace for technically approved, validated manifest-driven updates.</p></div>
+   <div><p className="eyebrow">ORBITFS CONTROL · UPDATES</p><h1>Update releases</h1><p className="muted">Billing Store is the release-control workspace. Validate, approve, configure, publish and unpublish Updates here; License Manager records and enforces the authoritative technical state.</p></div>
    <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void load()} disabled={busy==="load"}>{busy==="load"?"Refreshing…":"Refresh"}</button></div>
   </header>
 
@@ -159,8 +178,11 @@ export default function OrbitFSUpdateReleaseDeployer(){
       </div>
       {selected.validation?.status==="failed"&&<div className="orbitValidationList">{(selected.validation.checks||[]).filter(c=>!c.ok).map((c,i)=><div key={c.key||i}><b>{c.key||"Validation check"}</b><span>{c.message||"Validation failed."}</span>{c.fix&&<small>Fix: {c.fix}</small>}</div>)}</div>}
       <div className="orbitAdminActions">
-       <button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(selected)}>Review customer presentation</button>
-       {selected.status!=="published"&&<button className="orbitAction orbitActionPublish" onClick={()=>void publish()} disabled={!canPublish||busy==="publish"}>{busy==="publish"?"Publishing…":"Approve final review & publish"}</button>}
+       {selected.status!=="published"&&validationPassed!==true&&<button className="orbitAction orbitActionPrimary" onClick={()=>void reviewAction("validate")} disabled={!!busy}>{busy==="validate"?"Validating…":"Run technical validation"}</button>}
+       {selected.status!=="published"&&validationPassed===true&&selected.reviewStatus!=="approved"&&<button className="orbitAction orbitActionPrimary" onClick={()=>void reviewAction("approve")} disabled={!!busy}>{busy==="approve"?"Approving…":"Approve technical review"}</button>}
+       {selected.status!=="published"&&selected.reviewStatus!=="rejected"&&<button className="orbitAction orbitActionDanger" onClick={()=>void reviewAction("reject")} disabled={!!busy}>{busy==="reject"?"Rejecting…":"Reject release"}</button>}
+       <button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(selected)} disabled={!!busy}>Review customer presentation</button>
+       {selected.status!=="published"&&<button className="orbitAction orbitActionPublish" onClick={()=>void publish()} disabled={!canPublish||busy==="publish"}>{busy==="publish"?"Publishing…":"Publish to customers"}</button>}
        {selected.status==="published"&&<button className="orbitAction orbitActionDanger" onClick={()=>void unpublish(selected)} disabled={busy.startsWith("unpublish")}>Unpublish</button>}
       </div>
      </>:<div className="orbitEmptyCompact">Select an Update release to review.</div>}
@@ -189,7 +211,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
      <label>Severity<select value={draft.severity} onChange={e=>setDraft({...draft,severity:e.target.value})}><option value="normal">Normal</option><option value="important">Important</option><option value="critical">Critical</option></select></label>
      <label>Rollout<select value={draft.rollout} onChange={e=>setDraft({...draft,rollout:e.target.value})}><option value="public">Public</option><option value="staged">Staged</option><option value="limited">Limited</option><option value="internal">Internal</option></select></label>
      <label className="wide">Description<textarea rows={3} value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})}/></label>
-     <label className="wide">Changelog<textarea rows={6} value={draft.changelog} onChange={e=>setDraft({...draft,changelog:e.target.value})}/></label>
+     <label className="wide">Customer changelog<textarea rows={6} value={draft.changelog} onChange={e=>setDraft({...draft,changelog:e.target.value})}/><small className="muted">Customer-facing only. Editing this does not alter the validated artifact or technical changelog.</small></label>
      <label className="wide">Customer notes<textarea rows={4} value={draft.customer_notes} onChange={e=>setDraft({...draft,customer_notes:e.target.value})}/></label>
      <label className="wide">Internal final-review notes<textarea rows={3} value={draft.internal_notes} onChange={e=>setDraft({...draft,internal_notes:e.target.value})}/></label>
      <label>Minimum Base<input value={draft.minimum_version} onChange={e=>setDraft({...draft,minimum_version:e.target.value})}/></label>
