@@ -33,18 +33,24 @@ function smartRegionCode(value:string){
 
 export async function billingOrbitfsConfig(){
   const {data,error}=await licenseDb().from("orbitfs_release_system_settings")
-    .select("allow_existing_supabase_project,allow_create_supabase_project,supabase_oauth_enabled,vercel_oauth_enabled,supabase_client_id,vercel_client_id,default_supabase_region,panel_project_prefix,health_path,schema_version")
+    .select("enabled,maintenance_mode,maintenance_message,customer_deploy_enabled,customer_updates_enabled,customer_rollbacks_enabled,allow_existing_supabase_project,allow_create_supabase_project,supabase_oauth_enabled,vercel_oauth_enabled,supabase_client_id,vercel_client_id,default_supabase_region,panel_project_prefix,health_path,schema_version")
     .eq("id","primary").single();
   if(error)throw error;
   return data;
 }
 export async function requireSystem(capability:"deploy"|"update"|"rollback"="deploy"){
   const config=await billingOrbitfsConfig();
+  if(config.enabled===false)throw Object.assign(new Error("Billing Store customer deployment control is disabled"),{status:503});
+  if(config.maintenance_mode===true)throw Object.assign(new Error(config.maintenance_message||"OrbitFS deployment maintenance is active"),{status:503});
+  const allowed=capability==="update"?config.customer_updates_enabled!==false:capability==="rollback"?config.customer_rollbacks_enabled!==false:config.customer_deploy_enabled!==false;
+  if(!allowed)throw Object.assign(new Error(`Billing Store has disabled customer ${capability} operations`),{status:503});
   await requireLicenseMasterForDeployment(capability);
   return config;
 }
 export async function requireSetupSystem(){
   const config=await billingOrbitfsConfig();
+  if(config.enabled===false)throw Object.assign(new Error("Billing Store OrbitFS system is disabled"),{status:503});
+  if(config.maintenance_mode===true)throw Object.assign(new Error(config.maintenance_message||"OrbitFS deployment maintenance is active"),{status:503});
   await requireLicenseMasterForMutation();
   return config;
 }
