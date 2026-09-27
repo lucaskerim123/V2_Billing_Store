@@ -8,7 +8,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const {user}=await requireOrbitUser(req),{id}=await params;
     const install=await loadInstallation(id,user.id);
 
-    if(install.vercel_project_id||install.vercel_deployment_id||install.production_url){
+    if(install.vercel_deployment_id||install.production_url){
       throw Object.assign(new Error("Undeploy OrbitFS before resetting setup to Stage 1. Reset never deletes a live Vercel deployment implicitly."),{status:409,code:"UNDEPLOY_REQUIRED"});
     }
 
@@ -24,6 +24,8 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     if(sharedConnectionUsers.length){
       throw Object.assign(new Error("This account has another active OrbitFS installation using the shared Supabase/Vercel connectors. Reset that installation separately or remove its dependency before disconnecting the account-wide provider connections."),{status:409,code:"SHARED_PROVIDER_CONNECTION_IN_USE"});
     }
+
+    await licenseDb().from("orbitfs_oauth_states").delete().eq("auth_user_id",user.id).is("consumed_at",null);
 
     const disconnectResults=await Promise.allSettled([
       disconnectProviderConnection(user.id,"supabase"),
