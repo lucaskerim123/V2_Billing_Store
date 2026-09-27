@@ -1,10 +1,10 @@
-import {httpError,requireOrbitUser,requireSystem} from "@/lib/orbitfs-deployment";
+import {httpError,requireOrbitUser,requireSetupSystem} from "@/lib/orbitfs-deployment";
 import {userRpc} from "@/lib/paymentServer";
 
 export async function POST(req:Request){
   try{
     const {token}=await requireOrbitUser(req);
-    await requireSystem("deploy");
+    await requireSetupSystem();
     const body=await req.json().catch(()=>({}));
     const bindingId=String(body?.bindingId||body?.binding_id||"").trim();
     if(!bindingId)throw Object.assign(new Error("OrbitFS license binding is required"),{status:400});
