@@ -1,10 +1,12 @@
-name: Production Deploy
+name: Full Scan + Deploy
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
+  actions: read
 
 concurrency:
   group: v2-billing-production
@@ -101,6 +103,17 @@ jobs:
             echo "Changed files between current production tree and selected main:"
             git diff --name-status "$base" "$GITHUB_SHA"
           fi
+
+      - name: Initialize CodeQL full security scan
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Run CodeQL full security scan
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript-full-deploy"
 
       - name: Run complete production validation
         env:
