@@ -1,6 +1,7 @@
 import {licenseDb} from "@/lib/license-api";
 import {masterControl,masterIssue} from "@/lib/master-api";
 import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
+import {deliverInitialLicenseKey} from "@/lib/license-key-delivery";
 
 const CANONICAL=new Set(["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio"]);
 const ALIASES:Record<string,string>={orbitfs_panel:"orbitfs_base",orbitfs_sorter:"orbitfs_apex"};
@@ -47,7 +48,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   const status=String(order.status||"").toLowerCase(),paid=String(order.payment_status||"").toLowerCase().startsWith("paid");
   if(!paid||status!=="active")return {ok:false,skipped:true,reason:status==="pending_approval"?"order_pending_approval":"order_not_accepted"};
   if(!order.auth_user_id)throw new Error("Paid order has no customer user id");
-  const {data:customer,error:customerError}=await db.from("customers").select("id,user_id,auth_user_id,customer_number").or(`user_id.eq.${order.auth_user_id},auth_user_id.eq.${order.auth_user_id}`).maybeSingle();
+  const {data:customer,error:customerError}=await db.from("customers").select("id,user_id,auth_user_id,customer_number,email,name").or(`user_id.eq.${order.auth_user_id},auth_user_id.eq.${order.auth_user_id}`).maybeSingle();
   if(customerError)throw customerError;
   const customerId=String(customer?.id||"").trim(),customerNumber=String(customer?.customer_number||"").trim();
   if(!customerNumber)throw new Error("Billing Store customer number is missing for this paid order");
@@ -139,7 +140,26 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
       const {data:newBaseBinding}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("order_item_id",item.id).maybeSingle();
       if(newBaseBinding)baseBinding={...newBaseBinding,components};
       const {error:entitlementError}=await db.from("download_entitlements").upsert({auth_user_id:order.auth_user_id,order_id:id,order_item_id:item.id,product_id:item.product_id,status:"active",granted_at:now,revoked_at:null,reason:"License Master provisioning",metadata:{license_id:licenseId,license_product_key:product,customer_id:customerId,source:"license_master"},source_order_status:String(order.status||order.payment_status||"")},{onConflict:"auth_user_id,order_item_id"});if(entitlementError)throw entitlementError;
-      results.push({product,orderItemId:item.id,licenseId,licenseKey:licenseKey||null,state:upserted.state,reused:Boolean(result?.idempotent)});fulfilled++;
+
+      let keyDelivery:any=null;
+      const alreadyIssued=Boolean(result?.already_issued||result?.license?.already_issued);
+      if(licenseKey&&!alreadyIssued){
+        try{
+          if(!customer?.email)throw new Error("Customer email is missing; one-time licence-key email was not sent");
+          keyDelivery=await deliverInitialLicenseKey({
+            authUserId:String(order.auth_user_id),
+            orderId:id,
+            licenseId,
+            licenseKey,
+            recipient:String(customer.email),
+            customerName:customer.name||null,
+          });
+        }catch(deliveryError:any){
+          keyDelivery={ok:false,error:String(deliveryError?.message||"Licence-key delivery failed")};
+        }
+      }
+
+      results.push({product,orderItemId:item.id,licenseId,state:upserted.state,reused:alreadyIssued,keyDelivery});fulfilled++;
     }catch(error:any){failed++;await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,state:"failed",attempt_count:Number(existing?.attempt_count||0)+1,last_error:String(error?.message||"License fulfilment failed").slice(0,1000),metadata:{...(existing?.metadata||{}),license_product_key:product,customer_number:customerNumber,customer_id:customerId}},{onConflict:"order_item_id"});results.push({product,orderItemId:item.id,state:"failed",error:String(error?.message||"License fulfilment failed")})}
   }
   const nextFulfillment=failed?"partial":fulfilled?"fulfilled":"pending";
