@@ -64,7 +64,7 @@ assert(
 );
 assert(
   portal.includes('const isBase=action!=="update"') &&
-  portal.includes(':/api/orbitfs/installations/${install.id}/deploy'),
+  portal.includes('/api/orbitfs/installations/${install.id}/deploy'),
   "Base lifecycle invariant failed: normal Engine/add-on updates must remain separate from Base lifecycle operations."
 );
 
