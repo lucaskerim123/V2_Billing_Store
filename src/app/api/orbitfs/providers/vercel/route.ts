@@ -1,5 +1,5 @@
 import {licenseDb} from "@/lib/license-api";
-import {httpError,requireOrbitUser,requireSystem,saveProviderConnection} from "@/lib/orbitfs-deployment";
+import {httpError,requireOrbitUser,requireSetupSystem,saveProviderConnection} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
 import {disconnectProviderConnection} from "@/lib/orbitfs-deployment";
 
@@ -28,7 +28,7 @@ async function validateAndSave(userId:string,token:string,requestedTeamId:string
 
 export async function POST(req:Request){
   try{
-    const {user}=await requireOrbitUser(req),s=await requireSystem("deploy");
+    const {user}=await requireOrbitUser(req),s=await requireSetupSystem();
     if(!s.vercel_oauth_enabled)throw Object.assign(new Error("Customer Vercel connection is disabled"),{status:503});
     const body=await req.json().catch(()=>({})),action=String(body.action||"connect");
     const {data:deployed,error:deploymentReadError}=await licenseDb().from("orbitfs_installations").select("id,vercel_team_id,vercel_project_id").eq("auth_user_id",user.id).not("vercel_project_id","is",null).limit(1).maybeSingle();
