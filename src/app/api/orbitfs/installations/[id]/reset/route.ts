@@ -24,9 +24,19 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     }
 
     const metadata=install.metadata&&typeof install.metadata==="object"?install.metadata:{};
-    const preservedMetadata=metadata.licenseRegistration
-      ? {licenseRegistration:metadata.licenseRegistration,setupResetAt:now()}
-      : {setupResetAt:now()};
+
+    const {data:otherInstallations,error:otherInstallationsError}=await licenseDb()
+      .from("orbitfs_installations")
+      .select("id,installation_id,supabase_project_ref,vercel_project_id,state")
+      .eq("auth_user_id",user.id)
+      .neq("id",install.id);
+    if(otherInstallationsError)throw otherInstallationsError;
+    const sharedConnectionUsers=(otherInstallations||[]).filter((row:any)=>row.supabase_project_ref||row.vercel_project_id);
+    if(sharedConnectionUsers.length){
+      throw Object.assign(new Error("This account has another OrbitFS installation using the shared Supabase/Vercel connectors. Reset that installation separately or remove its dependency before disconnecting the account-wide provider connections."),{status:409,code:"SHARED_PROVIDER_CONNECTION_IN_USE"});
+    }
+
+    const preservedMetadata={...metadata,appliedUpdate:null,setupResetAt:now()};
 
     const patch={
       state:"awaiting_supabase",
