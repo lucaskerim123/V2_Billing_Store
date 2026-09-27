@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return <html lang="en" data-admin-theme="v3" data-customer-theme="V3C" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+  return <html lang="en" data-admin-theme="v3" data-customer-theme="V1_Changing" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
     <body className="min-h-full flex flex-col">
       <PublicSiteConfig />
       <SiteTitle />

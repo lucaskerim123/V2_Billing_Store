@@ -119,7 +119,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
  }
 
  return <div className="portalLayout portalCustomerSite">
-  <ThemeRuntime surface="customer" fallback="V3C"/>
+  <ThemeRuntime surface="customer" fallback="V1_Changing"/>
 
   <header className="portalTopbar">
    <Link className="portalTopBrand" href="/portal">OrbitFS</Link>

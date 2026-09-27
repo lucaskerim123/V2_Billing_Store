@@ -1,0 +1,8 @@
+{
+  "id": "V1_Changing",
+  "name": "OrbitFS V1 Changing",
+  "version": "1.0.0",
+  "surface": "customer",
+  "entry": "theme.css",
+  "description": "Transitional OrbitFS customer theme. Starts from the current customer theme while surfaces are rebuilt individually, beginning with the ZIP-derived Base Deployer."
+}

@@ -5,7 +5,8 @@ Theme files live under `src/themes/<ThemeId>/` and each completed theme is a sel
 ## Active themes
 
 - Admin: `V3A`
-- Customer Portal: `V3C`
+- Customer Portal (legacy/current baseline): `V3C`
+- Customer Portal (transitional redesign): `V1_Changing`
 
 Runtime layouts import only these wrappers:
 
@@ -55,3 +56,10 @@ OrbitFS theme IDs use a version plus surface suffix:
 - `C` = Customer Portal
 
 Examples: `V3A`, `V3C`.
+
+
+## V1_Changing
+
+`V1_Changing` is the transitional customer theme used while the customer portal is rebuilt surface-by-surface. It starts from the current customer theme behavior but owns new surface design in its own files. The first rebuilt surface is Base Deployer via `V1_Changing/base-deployer.css`.
+
+Do not add Base Deployer styling back to shared portal CSS; keep it owned by the theme.

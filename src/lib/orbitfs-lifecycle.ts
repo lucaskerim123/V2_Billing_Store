@@ -82,23 +82,18 @@ async function engineHostState(install:any){
 }
 
 async function prepareRuntime(install:any,action:OrbitfsLifecycleAction){
-  const base=String(install.production_url||install.deployment_url||"").trim().replace(/\/+$/,"");
-  if(!base||!base.startsWith("https://"))return {supported:false,reason:"panel_not_reachable"};
-  try{
-    const secret=await customerInstallationDbSecret(install.id);
-    const response=await fetch(`${base}/api/system/lifecycle`,{
-      method:"POST",
-      headers:{"content-type":"application/json","x-orbitfs-installation-id":String(install.installation_id||""),"x-orbitfs-db-secret":secret},
-      body:JSON.stringify({action:"prepare",mode:action}),
-      signal:AbortSignal.timeout(10000),
-    });
-    if(response.status===404)return {supported:false,reason:"runtime_hook_not_available"};
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)return {supported:true,prepared:false,status:response.status,error:String(data?.error||"Runtime lifecycle preparation failed")};
-    return {supported:true,prepared:true,...data};
-  }catch(error:any){
-    return {supported:false,reason:"runtime_prepare_failed",error:String(error?.message||error)};
-  }
+  // Lifecycle orchestration belongs to Billing Store. Base/Engine are the products being
+  // managed and do not need a deployer-control endpoint merely to be removed from Vercel.
+  // Customer database/storage cleanup is handled explicitly below according to the plan.
+  return {
+    supported:true,
+    prepared:true,
+    owner:"billing_store",
+    action,
+    installationId:String(install?.installation_id||""),
+    reason:"billing_store_owns_lifecycle_orchestration",
+    error:null as string|null
+  };
 }
 
 async function resetEngineHostState(install:any){

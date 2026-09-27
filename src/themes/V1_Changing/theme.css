@@ -1,0 +1,14 @@
+/* OrbitFS V1_Changing — transitional customer theme.
+   Temporary baseline: current V3C portal language.
+   New work is introduced surface-by-surface, starting with Base Deployer. */
+@import "../../app/portal/portal.css";
+@import "../../app/portal/records.css";
+@import "../../app/portal/portal-v2.css";
+@import "../../app/portal/wallet-recharge.css";
+@import "./tokens.css";
+@import "./components.css";
+@import "./license-controller.css";
+@import "./customer-reference-style.css";
+@import "./base-deployer.css";
+@import "../auth.css";
+@import "../auth-fixes.css";
