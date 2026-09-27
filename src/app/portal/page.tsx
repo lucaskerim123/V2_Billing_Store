@@ -34,8 +34,8 @@ export default function Portal(){
    <div className="portalOrbitfsHead"><div><p className="eyebrow">MY ORBITFS</p><h2>Your OrbitFS</h2><p className="muted">Deploy, license and update your OrbitFS installation from your customer account.</p></div><Link href="/portal/orbitfs">Open My OrbitFS →</Link></div>
    <div className="portalOrbitfsGrid">
     <Link href="/portal/orbitfs"><span className="portalOrbitfsStep">01</span><div><b>Base Deployment</b><span>Connect your infrastructure and manage your OrbitFS Base installation.</span></div><i>→</i></Link>
-    <Link href="/portal/orbitfs/license"><span className="portalOrbitfsStep">02</span><div><b>License Controller</b><span>View and manage the licence attached to your OrbitFS installation.</span></div><i>→</i></Link>
-    <Link href="/portal/orbitfs/releases"><span className="portalOrbitfsStep">03</span><div><b>Update Release System</b><span>See approved updates, release history and available customer releases.</span></div><i>→</i></Link>
+    <Link href="/portal/orbitfs/license"><span className="portalOrbitfsStep">02</span><div><b>Licence</b><span>View and manage the licence attached to your OrbitFS installation.</span></div><i>→</i></Link>
+    <Link href="/portal/orbitfs/releases"><span className="portalOrbitfsStep">03</span><div><b>Updates</b><span>See approved updates, release history and available customer releases.</span></div><i>→</i></Link>
    </div>
   </section>
 
