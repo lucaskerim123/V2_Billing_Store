@@ -1405,3 +1405,18 @@ html[data-admin-theme="v3"] .orbitReferenceInventoryBody>p{
  html[data-admin-theme="v3"] .orbitReferenceLicenceFacts{grid-template-columns:1fr!important;gap:8px!important}
  html[data-admin-theme="v3"] .orbitReferenceLicenceFacts>div{padding-right:0!important}
 }
+
+
+html[data-admin-theme="v3"] .orbitReferenceTableRow .orbitRequestDetail{
+  margin-top:5px!important;
+  color:#b7cbd5!important;
+  font-size:8.5px!important;
+  line-height:1.4!important;
+}
+html[data-admin-theme="v3"] .orbitReferenceTableRow .orbitRequestNote{
+  margin-top:3px!important;
+  color:#7694a5!important;
+  font-size:8px!important;
+  line-height:1.4!important;
+  font-style:italic!important;
+}
