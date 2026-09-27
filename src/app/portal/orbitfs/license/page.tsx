@@ -99,7 +99,7 @@ export default function OrbitFSLicenseController() {
   if (!d)
     return (
       <main className="portalOverviewV2">
-        <section className="panel">Loading License Controller…</section>
+        <section className="panel">Loading licence…</section>
       </main>
     );
 
@@ -107,7 +107,7 @@ export default function OrbitFSLicenseController() {
     <main className="portalOverviewV2 orbitfsLicenseController">
       <header className="portalOverviewHero">
         <div>
-          <p className="eyebrow">LICENSE CONTROLLER</p>
+          <p className="eyebrow">MY ORBITFS · LICENCE</p>
           <h1>Your OrbitFS licence</h1>
           <p className="muted">
             Licence state is read from the independent License Master
