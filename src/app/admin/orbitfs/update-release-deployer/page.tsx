@@ -20,6 +20,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
  const [editing,setEditing]=useState(false);
  const [channels,setChannels]=useState<any[]>([]);
  const [targetChannel,setTargetChannel]=useState("");
+ const [controls,setControls]=useState<any>({enabled:true,maintenance_mode:false,customer_updates_enabled:true,customer_rollbacks_enabled:true});
  const [draft,setDraft]=useState({title:"",description:"",changelog:"",customer_notes:"",internal_notes:"",severity:"normal",required:false,rollout:"public",minimum_version:"",rollback_version:""});
 
  async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
@@ -27,16 +28,19 @@ export default function OrbitFSUpdateReleaseDeployer(){
   setBusy("load");setMessage("");
   try{
    const h=await auth();
-   const [r,cr]=await Promise.all([
+   const [r,cr,dr]=await Promise.all([
     fetch("/api/admin/orbitfs/release-handoff?action=history&type=update",{headers:{...h,Accept:"application/json"},cache:"no-store"}),
-    fetch("/api/admin/orbitfs/release-channels",{headers:h,cache:"no-store"})
+    fetch("/api/admin/orbitfs/release-channels",{headers:h,cache:"no-store"}),
+    fetch("/api/admin/orbitfs/deployment-controls",{headers:h,cache:"no-store"})
    ]);
    const j=await r.json().catch(()=>({}));
    const cj=await cr.json().catch(()=>({}));
+   const dj=await dr.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not load Update releases");
    const rows=(Array.isArray(j.releases)?j.releases:[]).filter((x:any)=>String(x.releaseType||x.release_type||"").toLowerCase()==="update");
    setReleases(rows);
    setChannels((Array.isArray(cj.channels)?cj.channels:[]).filter((x:any)=>x.enabled!==false&&x.customer_visible!==false));
+   if(dr.ok&&dj.settings)setControls(dj.settings);
    setSelectedId(current=>rows.some((x:UpdateRelease)=>x.id===current)?current:(rows.find((x:UpdateRelease)=>x.status!=="published")?.id||rows[0]?.id||""));
   }catch(e:any){setMessage(e?.message||"Could not load Update release state")}finally{setBusy("")}
  }
@@ -67,6 +71,16 @@ export default function OrbitFSUpdateReleaseDeployer(){
    if(!r.ok)throw Error(j.error||"Could not update release");
    setEditing(false);setMessage("Update release details saved.");await load();
   }catch(e:any){setMessage(e?.message||"Could not update release")}finally{setBusy("")}
+ }
+ async function setDeploymentControl(patch:any){
+  setBusy("control");setMessage("");
+  try{
+   const r=await fetch("/api/admin/orbitfs/deployment-controls",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify(patch)});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not update deployment control");
+   setControls(j.settings||controls);
+   setMessage("Billing Store deployment control updated.");
+  }catch(e:any){setMessage(e?.message||"Could not update deployment control")}finally{setBusy("")}
  }
  async function reviewAction(action:"validate"|"approve"|"reject"){
   if(!selected)return;
@@ -130,6 +144,14 @@ export default function OrbitFSUpdateReleaseDeployer(){
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
+  <section className="orbitCompactPanel orbitDeploymentControlStrip">
+   <div className="orbitPanelHead"><div><p className="eyebrow">BILLING DEPLOYMENT CONTROL</p><h2>Customer update availability</h2><p className="muted">These Billing Store gates can pause customer Update or rollback execution even when License Manager technical authority remains enabled.</p></div><span className={controls.maintenance_mode?"state":"state ready"}>{controls.maintenance_mode?"Maintenance":"Available"}</span></div>
+   <div className="orbitDeploymentToggles">
+    <label><input type="checkbox" checked={controls.customer_updates_enabled!==false} disabled={busy==="control"} onChange={e=>void setDeploymentControl({customer_updates_enabled:e.target.checked})}/><span><b>Customer updates</b><small>Allow published Update releases to execute from the customer portal.</small></span></label>
+    <label><input type="checkbox" checked={controls.customer_rollbacks_enabled!==false} disabled={busy==="control"} onChange={e=>void setDeploymentControl({customer_rollbacks_enabled:e.target.checked})}/><span><b>Customer rollbacks</b><small>Allow rollback execution when an Update recovery path requires it.</small></span></label>
+    <label><input type="checkbox" checked={controls.maintenance_mode===true} disabled={busy==="control"} onChange={e=>void setDeploymentControl({maintenance_mode:e.target.checked})}/><span><b>Deployment maintenance</b><small>Pause customer deployment execution from Billing Store.</small></span></label>
+   </div>
+  </section>
   <section className="orbitCompactPanel">
    <div className="orbitPanelHead"><div><p className="eyebrow">FINAL REVIEW</p><h2>Publication queue</h2></div><span className="orbitCount">{pending.length} pending</span></div>
    <div className="orbitSplit">
