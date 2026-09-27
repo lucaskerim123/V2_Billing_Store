@@ -136,11 +136,11 @@ export default function ReleaseChannelsAdmin(){
      <section className="orbitReferenceSection">
       <div className="orbitReferenceSectionHead"><b>Pending access requests</b><span>{channelRequests.length} pending</span></div>
       {channelRequests.length?<div className="orbitReferenceTable requests">
-       <div className="orbitReferenceTableHead"><span>Customer</span><span>Requested</span><span>Channel</span><span>Decision</span></div>
-       {channelRequests.map((r:any)=>{const u=requestCustomer(r);return <div className="orbitReferenceTableRow" key={r.id||r.license_id+":"+r.channel}>
-        <div><b>{u?customerName(u):r.external_reference||"Customer"}</b><small>{u?.email||r.license_id||""}</small></div>
+       <div className="orbitReferenceTableHead"><span>Customer / use case</span><span>Requested</span><span>Environment</span><span>Decision</span></div>
+       {channelRequests.map((r:any)=>{const u=requestCustomer(r),details=r.request_details&&typeof r.request_details==="object"?r.request_details:{};return <div className="orbitReferenceTableRow" key={r.id||r.license_id+":"+r.channel}>
+        <div><b>{u?customerName(u):r.external_reference||"Customer"}</b><small>{u?.email||r.license_id||""}</small>{details.use_case&&<small className="orbitRequestDetail">{details.use_case}</small>}{details.notes&&<small className="orbitRequestNote">{details.notes}</small>}</div>
         <span>{r.requested_at?new Date(r.requested_at).toLocaleDateString():"Pending"}</span>
-        <span>{r.channel}</span>
+        <span>{details.environment||"Not supplied"}</span>
         <div className="orbitReferenceDecision"><button disabled={!!busy} onClick={()=>void mutate({action:"approve",licenseId:r.license_id,channel:r.channel,userId:r.external_reference},"Channel request approved.")}>Approve</button><button className="danger" disabled={!!busy} onClick={()=>void mutate({action:"reject",licenseId:r.license_id,channel:r.channel},"Channel request rejected.")}>Reject</button></div>
        </div>})}
       </div>:<div className="orbitReferenceEmpty compact">No requests are waiting for review on this channel.</div>}
