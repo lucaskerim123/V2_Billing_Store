@@ -666,7 +666,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(requestedChannel))fail("Invalid release channel",400);
   const allowedChannels=await customerReleaseChannels(String(install.auth_user_id),install.license_binding_id||null);
   if(!allowedChannels.includes(requestedChannel))fail(`Release channel "${requestedChannel}" is not available for this installation's licence`,403);
-  await requireSystem(action==="rollback"?"rollback":action==="update"?"update":"deploy");
+  await requireSystem(action==="rollback"?"rollback":action==="base_update"?"base_update":action==="update"?"update":"deploy");
   const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
   const authorityLicenseId=String(registration?.masterLicenseId||"").trim();
   if(registration?.valid!==true||!authorityLicenseId||String(registration?.installationId||"")!==String(install.installation_id||""))fail("Register an OrbitFS licence key for this installation before deployment",409);
@@ -740,8 +740,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const effectiveVersion=pinInstalledBase&&!effectiveReleaseId?String(install.release_version||"").trim()||undefined:version;
   if(action==="redeploy"&&!effectiveReleaseId&&!effectiveVersion)fail("The installation does not have a Base release to redeploy",409);
   const release=await publishedRelease(effectiveVersion,action,requestedChannel,effectiveReleaseId);
-  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null});
+  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null});
   try{
+  if(action==="base_update")return await runBaseUpdateDeployment(install,release,requestedChannel,authorityLicenseId);
   if(action==="update"){
     const parsed=await readArtifact(release);
     if((parsed.root as any).format!=="orbitfs-update-bundle-v3")fail("Published Update release is not an OrbitFS Update Bundle v3",422);
@@ -855,7 +856,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const customer=customerResult.data||null;
   await masterExecuteDeployment({action,phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:previousVersion,deploymentId,deploymentUrl,projectId:install.vercel_project_id,projectName:install.vercel_project_name,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
   await event(data,"deployment.completed","ok",`Vercel deployment ${deploymentId} is ready`,{action,releaseId:release.id,version:release.version,deploymentId});return data;
-  }catch(error){
+  }catch(error:any){
+    if(error?.orbitfsFailureReported===true)throw error;
     await reportDeploymentFailure(install,{action,releaseId:String(release.id),licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version)},error);
     throw error;
   }
