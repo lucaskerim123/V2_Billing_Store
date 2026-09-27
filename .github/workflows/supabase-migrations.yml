@@ -69,19 +69,39 @@ jobs:
       - name: Link exact production database
         if: ${{ steps.pending.outputs.count != '0' }}
         working-directory: .orbitfs-supabase
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+
       - name: Preview migration
         if: ${{ steps.pending.outputs.count != '0' }}
         working-directory: .orbitfs-supabase
-        run: supabase db push --dry-run
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! output="$(supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD" 2>&1)"; then
+            printf '%s\n' "$output"
+            if grep -Eq 'password authentication failed|SQLSTATE 28P01|failed SASL auth|invalid SCRAM' <<<"$output"; then
+              echo "::warning::Supabase pooler authentication failed. Retrying through the direct database connection."
+              supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD" --skip-pooler
+              supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD"
+            else
+              exit 1
+            fi
+          else
+            printf '%s\n' "$output"
+          fi
+
       - name: Apply pending migrations
         if: ${{ steps.pending.outputs.count != '0' }}
         working-directory: .orbitfs-supabase
-        run: supabase db push
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+
       - name: Verify migration history
         if: ${{ steps.pending.outputs.count != '0' }}
         working-directory: .orbitfs-supabase
-        run: supabase migration list
+        run: supabase migration list --password "$SUPABASE_DB_PASSWORD"
       - name: No database changes required
         if: ${{ steps.pending.outputs.count == '0' }}
         run: echo "No pending database migrations."
