@@ -3,7 +3,7 @@
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 
-type Channel={id:string;channel:string;label:string;description?:string;enabled:boolean;customer_visible:boolean;access_mode:string;access_request_enabled:boolean;self_join_enabled:boolean};
+type Channel={id:string;channel:string;label:string;description?:string;enabled:boolean;customer_visible:boolean;access_mode:string;access_request_enabled:boolean;self_join_enabled:boolean;sort_order?:number};
 type Customer={id:string;display_name?:string;company_name?:string;email?:string;customer_number?:string;customer_name?:string;status?:string};
 type Access={id?:string;channel_id?:string;channel?:string;license_id?:string;user_id?:string};
 
@@ -17,6 +17,7 @@ export default function ReleaseChannelsAdmin(){
  const [query,setQuery]=useState("");
  const [busy,setBusy]=useState("");
  const [message,setMessage]=useState("");
+ const [policy,setPolicy]=useState({label:"",description:"",enabled:true,customer_visible:true,access_mode:"closed",access_request_enabled:false,self_join_enabled:false,sort_order:100});
 
  async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
  async function load(){
@@ -26,8 +27,8 @@ export default function ReleaseChannelsAdmin(){
    const j=await r.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not load release channels");
    setData(j);
-   const visible=(j.channels||[]).filter((c:Channel)=>c.enabled&&c.customer_visible);
-   setSelected(current=>visible.some((c:Channel)=>c.channel===current)?current:(visible[0]?.channel||""));
+   const all=(j.channels||[]) as Channel[];
+   setSelected(current=>all.some((c:Channel)=>c.channel===current)?current:(all[0]?.channel||""));
   }catch(e:any){setMessage(e?.message||"Could not load release channels")}finally{setBusy("")}
  }
  useEffect(()=>{void load()},[]);
@@ -42,8 +43,21 @@ export default function ReleaseChannelsAdmin(){
   }catch(e:any){setMessage(e?.message||"Channel access operation failed")}finally{setBusy("")}
  }
 
- const channels:Channel[]=(data.channels||[]).filter((c:Channel)=>c.enabled&&c.customer_visible);
+ const channels:Channel[]=(data.channels||[]);
  const channel=channels.find(c=>c.channel===selected)||channels[0]||null;
+ useEffect(()=>{
+  if(!channel)return;
+  setPolicy({
+   label:channel.label||channel.channel,
+   description:channel.description||"",
+   enabled:channel.enabled!==false,
+   customer_visible:channel.customer_visible!==false,
+   access_mode:channel.access_mode==="open"?"open":"closed",
+   access_request_enabled:channel.access_request_enabled===true,
+   self_join_enabled:channel.self_join_enabled===true,
+   sort_order:Number(channel.sort_order||100)
+  });
+ },[channel?.channel,channel?.label,channel?.description,channel?.enabled,channel?.customer_visible,channel?.access_mode,channel?.access_request_enabled,channel?.self_join_enabled,channel?.sort_order]);
  const customers:Customer[]=(data.customers||[]).filter((u:Customer)=>{
   const q=query.trim().toLowerCase();if(!q)return true;
   return [u.customer_name,u.display_name,u.company_name,u.email,u.customer_number].some(v=>String(v||"").toLowerCase().includes(q));
@@ -73,7 +87,7 @@ export default function ReleaseChannelsAdmin(){
    <aside className="orbitReferenceRail">
     <div className="orbitReferenceRailHead">
      <b>Channels</b>
-     <span>Select a release path to inspect access and publishing controls.</span>
+     <span>Channel definitions are edited here and saved directly to License Manager.</span>
     </div>
     <div className="orbitReferenceRailList">
      {channels.map(c=>{
@@ -81,7 +95,7 @@ export default function ReleaseChannelsAdmin(){
       return <button key={c.id} type="button" className={"orbitReferenceRailCard "+(channel?.channel===c.channel?"active":"")} onClick={()=>setSelected(c.channel)}>
        <div className="orbitReferenceRailCardTop"><b>{c.label}</b><span className={"orbitMiniState "+(c.channel==="stable"?"live":"")}>{channelPolicy(c)}</span></div>
        <small>{c.description||c.channel}</small>
-       <div className="orbitReferenceRailMeta"><span>{c.customer_visible?"Visible":"Hidden"}</span><span>{c.channel==="stable"||c.access_mode==="open"?"Automatic":count+" assigned"}</span></div>
+       <div className="orbitReferenceRailMeta"><span>{c.enabled?"Enabled":"Disabled"}</span><span>{c.customer_visible?"Visible":"Hidden"}</span><span>{c.channel==="stable"||c.access_mode==="open"?"Automatic":count+" assigned"}</span></div>
       </button>
      })}
      {!channels.length&&<div className="orbitReferenceEmpty">No customer-visible release channels are available.</div>}
@@ -101,11 +115,28 @@ export default function ReleaseChannelsAdmin(){
      </div>
 
      <div className="orbitReferenceFacts">
+      <div><span>Channel state</span><b>{channel.enabled?"Enabled":"Disabled"}</b></div>
       <div><span>Visibility</span><b>{channel.customer_visible?"Visible":"Hidden"}</b></div>
       <div><span>Customer access</span><b>{channel.channel==="stable"||channel.access_mode==="open"?"Automatic":channel.self_join_enabled?"Self-join":channel.access_request_enabled?"Request / assigned":"Assigned customers"}</b></div>
-      <div><span>Assigned customers</span><b>{channel.channel==="stable"||channel.access_mode==="open"?"Automatic":assignedCustomers.length+" customers"}</b></div>
       <div><span>Pending requests</span><b>{channelRequests.length}</b></div>
      </div>
+
+     <section className="orbitReferenceSection orbitChannelPolicyEditor">
+      <div className="orbitReferenceSectionHead"><div><b>Channel policy</b><small>Saved to License Manager immediately; Billing does not keep a second channel definition.</small></div><span>{channel.channel}</span></div>
+      <div className="orbitChannelPolicyGrid">
+       <label><span>Label</span><input value={policy.label} onChange={e=>setPolicy({...policy,label:e.target.value})}/></label>
+       <label><span>Sort order</span><input type="number" min="0" value={policy.sort_order} onChange={e=>setPolicy({...policy,sort_order:Number(e.target.value||0)})}/></label>
+       <label className="wide"><span>Description</span><textarea rows={2} value={policy.description} onChange={e=>setPolicy({...policy,description:e.target.value})}/></label>
+       <label><span>Access mode</span><select value={policy.access_mode} onChange={e=>setPolicy({...policy,access_mode:e.target.value})}><option value="open">Open</option><option value="closed">Closed</option></select></label>
+       <label className="orbitChannelToggle"><input type="checkbox" checked={policy.enabled} onChange={e=>setPolicy({...policy,enabled:e.target.checked})}/><span>Channel enabled</span></label>
+       <label className="orbitChannelToggle"><input type="checkbox" checked={policy.customer_visible} onChange={e=>setPolicy({...policy,customer_visible:e.target.checked})}/><span>Customer visible</span></label>
+       <label className="orbitChannelToggle"><input type="checkbox" checked={policy.self_join_enabled} disabled={policy.access_mode==="open"} onChange={e=>setPolicy({...policy,self_join_enabled:e.target.checked})}/><span>Allow self-join</span></label>
+       <label className="orbitChannelToggle"><input type="checkbox" checked={policy.access_request_enabled} disabled={policy.access_mode==="open"||policy.self_join_enabled} onChange={e=>setPolicy({...policy,access_request_enabled:e.target.checked})}/><span>Allow access requests</span></label>
+      </div>
+      <div className="orbitReferenceActions">
+       <button disabled={!!busy||!policy.label.trim()} onClick={()=>void mutate({action:"save",channel:channel.channel,...policy,access_request_enabled:policy.access_mode==="open"||policy.self_join_enabled?false:policy.access_request_enabled,self_join_enabled:policy.access_mode==="open"?false:policy.self_join_enabled},"Channel policy saved to License Manager.")}>{busy==="save"?"Saving…":"Save channel policy"}</button>
+      </div>
+     </section>
 
      <section className="orbitReferenceSection">
       <div className="orbitReferenceSectionHead"><b>Assigned customers</b><span>{channel.channel==="stable"||channel.access_mode==="open"?"automatic":assignedCustomers.length+" assigned"}</span></div>
