@@ -9,7 +9,7 @@ function normalize(r:any,override?:any){
     reviewStatus:r.review_status,releaseType:r.release_type||r.releaseType,
     title:override?.title??m.title??`OrbitFS ${(r.release_type||r.releaseType)==="base"?"Base":"Update"} ${r.version}`,
     description:override?.description??m.description??r.description??null,
-    changelog:override?.changelog??r.changelog??r.notes??null,
+    changelog:override?.changelog??m.customer_changelog??m.customerChangelog??r.changelog??r.notes??null,
     customerNotes:override?.customer_notes??m.customer_notes??m.customerNotes??"",
     internalNotes:m.internal_notes||m.internalNotes||"",severity:m.severity||"normal",required:m.required===true,
     rollout:m.rollout||"public",minimumVersion:m.minimum_version||m.minimumVersion||null,
@@ -51,6 +51,20 @@ export async function GET(req:Request){
 export async function POST(req:Request){
   try{
     await requireOrbitAdmin(req);
-    return Response.json({error:"Use License Manager for technical approval. Billing Store only performs customer-facing release publication and presentation."},{status:409});
+    const body=await req.json().catch(()=>({}));
+    const id=String(body.releaseId||body.id||"").trim();
+    const action=String(body.action||"").trim().toLowerCase();
+    if(!id)throw Object.assign(new Error("Release ID is required"),{status:400});
+    if(!["validate","approve","reject"].includes(action))throw Object.assign(new Error("Unsupported update review action"),{status:400});
+    const current=await masterRequest("/api/v1/releases/"+encodeURIComponent(id),{method:"GET"},"billing");
+    if(String(current?.release?.release_type||"").toLowerCase()!=="update")throw Object.assign(new Error("This Billing control applies to Update releases only"),{status:403});
+    if(action==="validate"){
+      return Response.json(await masterRequest("/api/v1/releases/"+encodeURIComponent(id)+"/validate",{method:"POST"},"billing"),{headers:{"cache-control":"no-store"}});
+    }
+    const result=await masterRequest("/api/v1/releases/"+encodeURIComponent(id),{
+      method:"POST",
+      body:JSON.stringify({action,reason:body.reason?String(body.reason):undefined})
+    },"billing");
+    return Response.json(result,{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
