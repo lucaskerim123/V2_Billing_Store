@@ -83,6 +83,18 @@ export default function BaseDeploymentAdmin(){
   }catch(e:any){setMessage(e?.message||"Could not publish Base release")}finally{setBusy("")}
  }
 
+ async function unpublishBase(r:Release){
+  if(!confirm("Unpublish Base v"+r.version+" from customer deployment?"))return;
+  setBusy("unpublish:"+r.id);setMessage("");
+  try{
+   const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:r.id})});
+   const j=await res.json().catch(()=>({}));
+   if(!res.ok)throw Error(j.error||"Could not unpublish Base release");
+   setMessage("Base release unpublished. License Manager recorded the authoritative release state.");
+   await load({silent:true,preserveMessage:true});
+  }catch(e:any){setMessage(e?.message||"Could not unpublish Base release")}finally{setBusy("")}
+ }
+
  async function savePresentation(){
   if(!selected)return;
   setBusy("edit");setMessage("");
@@ -157,7 +169,7 @@ export default function BaseDeploymentAdmin(){
      <div><b>v{r.version}</b><span>{r.title||"Base release"}</span></div>
      <span>{r.channel||"stable"}</span>
      <span>{r.publishedAt?new Date(r.publishedAt).toLocaleString():"Published"}</span>
-     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>setSelectedId(r.id)}>View</button></div>
+     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>setSelectedId(r.id)}>View</button><button className="orbitAction orbitActionDanger" disabled={busy==="unpublish:"+r.id} onClick={()=>void unpublishBase(r)}>{busy==="unpublish:"+r.id?"Unpublishing…":"Unpublish"}</button></div>
     </div>)}
     {!published.length&&<div className="orbitEmptyCompact">No published Base release history yet.</div>}
    </div>
