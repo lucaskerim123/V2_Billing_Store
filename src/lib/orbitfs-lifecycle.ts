@@ -153,13 +153,15 @@ async function removeOrbitfsStorage(install:any){
   const base=`https://${install.supabase_project_ref}.supabase.co/storage/v1`;
   const headers={authorization:`Bearer ${secret}`,apikey:secret,"content-type":"application/json"};
   const empty=await fetch(`${base}/bucket/${encodeURIComponent(STORAGE_BUCKET)}/empty`,{method:"POST",headers,signal:AbortSignal.timeout(30000)});
-  if(empty.status===404)return {removed:false,missing:true};
-  if(!empty.ok)throw Object.assign(new Error(`Supabase Storage empty failed (${empty.status}): ${await empty.text()}`),{status:502,code:"STORAGE_EMPTY_FAILED"});
+  const emptyError=empty.ok?"":await empty.text();
+  if(empty.status===404||/NoSuchBucket|Bucket not found/i.test(emptyError))return {removed:false,missing:true};
+  if(!empty.ok)throw Object.assign(new Error(`Supabase Storage empty failed (${empty.status}): ${emptyError}`),{status:502,code:"STORAGE_EMPTY_FAILED"});
   let last="";
   for(let attempt=0;attempt<8;attempt++){
     const del=await fetch(`${base}/bucket/${encodeURIComponent(STORAGE_BUCKET)}`,{method:"DELETE",headers,signal:AbortSignal.timeout(30000)});
-    if(del.ok||del.status===404)return {removed:true,missing:del.status===404};
-    last=await del.text();
+    const deleteError=del.ok?"":await del.text();
+    if(del.ok||del.status===404||/NoSuchBucket|Bucket not found/i.test(deleteError))return {removed:del.ok,missing:!del.ok};
+    last=deleteError;
     if(!/not empty|contains|objects/i.test(last))throw Object.assign(new Error(`Supabase Storage delete failed (${del.status}): ${last}`),{status:502,code:"STORAGE_DELETE_FAILED"});
     await new Promise(resolve=>setTimeout(resolve,750));
   }
