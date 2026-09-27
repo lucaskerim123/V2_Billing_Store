@@ -186,6 +186,14 @@ async function readBasePackage(release:any):Promise<{pkg:Package;files:Array<{fi
   validateDeployableBaseFiles(files);
   return {pkg,files,artifactSha256:parsed.artifactSha256};
 }
+async function readCurrentBasePackageForRedeploy(release:any):Promise<{pkg:Package;files:Array<{file:string;data:string;sha256:string;size:number}>;artifactSha256:string}>{
+  const parsed=await readArtifact(release);
+  if((parsed.root as any).format==="orbitfs-update-bundle-v3")fail("Base redeploy cannot use an Update Bundle artifact",422);
+  const pkg=parsed.root as Package;
+  const files=validateFiles(pkg.files,"Installed Base package");
+  validateDeployableBaseFiles(files);
+  return {pkg,files,artifactSha256:parsed.artifactSha256};
+}
 type DatabaseMigration={id:string;file:string;component?:string;encoding:"base64";data:string;size:number;sha256:string};
 function sqlLiteral(value:unknown){return "'"+String(value??"").replaceAll("'","''")+"'";}
 function managementRows(value:any):any[]{
@@ -828,7 +836,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(action==="deploy"&&!install.vercel_project_id)install=await ensureVercelProject(install);
   if(!install.vercel_project_id)fail("Customer Vercel project is unavailable for this deployment action",409);
   await configureVercel(install,String(release.version),undefined,requestedChannel,String(release.id),String(release.sha256||release.checksum||""),String(release.source_sha||release.source_commit||release.manifest?.sourceCommit||""));
-  const parsed=await readBasePackage(release);
+  const parsed=action==="redeploy"?await readCurrentBasePackageForRedeploy(release):await readBasePackage(release);
   const packageDatabaseSchema=String((parsed.pkg as any).databaseSchemaVersion||(parsed.pkg as any).releaseInfo?.databaseSchemaVersion||release.manifest?.databaseSchemaVersion||"").trim();
   const installedDatabaseSchema=String(install.schema_version||"").trim();
   if(packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
