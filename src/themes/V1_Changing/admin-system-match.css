@@ -1,0 +1,189 @@
+/* V1_Changing content language mirrors V3A System pages while keeping a customer-facing website shell. */
+html[data-customer-theme="V1_Changing"] .portalLayout{
+  --c-bg:#0b0d12;
+  --c-surface:#121620;
+  --c-surface-2:#181d29;
+  --c-surface-3:#202635;
+  --c-border:#2b3242;
+  --c-border-strong:#3a4356;
+  --c-text:#f5f7fb;
+  --c-text-2:#cbd2df;
+  --c-muted:#9aa5b5;
+  --c-faint:#758196;
+  --c-indigo:#7c8cff;
+  --c-cyan:#55c2e8;
+  --c-amber:#f2b84b;
+  --c-rose:#ef7187;
+  --c-violet:#b08cff;
+  --c-success:#69c7a5;
+  background:var(--c-bg)!important;
+  color:var(--c-text)!important;
+}
+html[data-customer-theme="V1_Changing"] body{background:var(--c-bg)!important;color:var(--c-text)!important}
+html[data-customer-theme="V1_Changing"] .portalMain{max-width:1320px!important;margin:0 auto!important;padding:16px 18px 36px!important;background:transparent!important}
+
+/* Customer website header, same material language as V3A. */
+html[data-customer-theme="V1_Changing"] .portalTopbar{background:#080a0ff2!important;border-bottom:1px solid #242a37!important;box-shadow:0 8px 28px #00000026!important;backdrop-filter:blur(14px)}
+html[data-customer-theme="V1_Changing"] .portalTopBrand{color:#f5f7fb!important;font-size:14px!important;font-weight:820!important}
+html[data-customer-theme="V1_Changing"] .portalTopBrandMark{background:#1b2130!important;border:1px solid #3b4660!important;color:#dfe5ff!important;border-radius:7px!important}
+html[data-customer-theme="V1_Changing"] .portalTopNav a{color:#9aa5b5!important;font-weight:700!important}
+html[data-customer-theme="V1_Changing"] .portalTopNav a:hover{background:#111620!important;color:#f5f7fb!important}
+html[data-customer-theme="V1_Changing"] .portalTopNav a.active{background:#151a24!important;border-bottom-color:#7c8cff!important;color:#fff!important}
+html[data-customer-theme="V1_Changing"] .portalAccountLink,
+html[data-customer-theme="V1_Changing"] .portalLogoutButton,
+html[data-customer-theme="V1_Changing"] .portalAdminLink{background:#181d29!important;border:1px solid #343d50!important;color:#e9edf5!important;border-radius:7px!important;box-shadow:none!important}
+html[data-customer-theme="V1_Changing"] .portalAdminLink{background:#211f34!important;border-color:#514d7a!important;color:#ddd9ff!important}
+
+/* Page headings should look like V3A System headers, not oversized marketing heroes. */
+html[data-customer-theme="V1_Changing"] .portalMain h1{font-size:22px!important;line-height:1.15!important;letter-spacing:-.025em!important;color:#f7f8fb!important}
+html[data-customer-theme="V1_Changing"] .portalMain h2{font-size:16px!important;line-height:1.25!important;color:#eef1f7!important}
+html[data-customer-theme="V1_Changing"] .portalMain h3{font-size:13px!important;color:#e8ecf4!important}
+html[data-customer-theme="V1_Changing"] .portalMain p,
+html[data-customer-theme="V1_Changing"] .portalMain .muted,
+html[data-customer-theme="V1_Changing"] .portalMain small{color:#aab4c4!important;opacity:1!important}
+
+/* Core System-page panel treatment. */
+html[data-customer-theme="V1_Changing"] .portalMain .panel,
+html[data-customer-theme="V1_Changing"] .portalMain .card,
+html[data-customer-theme="V1_Changing"] .portalMain .portalCard,
+html[data-customer-theme="V1_Changing"] .portalMain .accountSettingsCard,
+html[data-customer-theme="V1_Changing"] .portalMain .portalOverviewCard,
+html[data-customer-theme="V1_Changing"] .portalMain .walletCard,
+html[data-customer-theme="V1_Changing"] .portalMain section[class*="Card"]{
+  background:linear-gradient(180deg,#151a24 0%,#11151d 100%)!important;
+  border:1px solid #2b3342!important;
+  border-top-color:#3a4457!important;
+  border-radius:9px!important;
+  box-shadow:0 10px 30px #0000002e!important;
+}
+html[data-customer-theme="V1_Changing"] .portalMain .panelTitle,
+html[data-customer-theme="V1_Changing"] .portalMain .cardHeader,
+html[data-customer-theme="V1_Changing"] .portalMain [class*="CardHead"],
+html[data-customer-theme="V1_Changing"] .portalMain [class*="SectionHead"]{background:#181e29!important;border-color:#2d3545!important;color:#f0f3f8!important}
+
+/* Compact operational stats, same density as Admin System. */
+html[data-customer-theme="V1_Changing"] .portalMain .stats,
+html[data-customer-theme="V1_Changing"] .portalMain .portalOverviewStats{gap:7px!important}
+html[data-customer-theme="V1_Changing"] .portalMain .stats article,
+html[data-customer-theme="V1_Changing"] .portalMain .portalStatCard,
+html[data-customer-theme="V1_Changing"] .portalMain [class*="StatCard"]{
+  position:relative!important;
+  overflow:hidden!important;
+  min-height:78px!important;
+  padding:10px 12px!important;
+  background:#141923!important;
+  border:1px solid #303849!important;
+  border-top-color:#3c4659!important;
+  border-radius:8px!important;
+  box-shadow:0 8px 22px #00000026!important;
+}
+html[data-customer-theme="V1_Changing"] .portalMain .portalStatCard::before,
+html[data-customer-theme="V1_Changing"] .portalMain [class*="StatCard"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#7c8cff}
+html[data-customer-theme="V1_Changing"] .portalMain .portalStatCard:nth-child(2)::before{background:#f2b84b}
+html[data-customer-theme="V1_Changing"] .portalMain .portalStatCard:nth-child(3)::before{background:#b08cff}
+html[data-customer-theme="V1_Changing"] .portalMain .portalStatCard:nth-child(4)::before{background:#55c2e8}
+html[data-customer-theme="V1_Changing"] .portalMain .portalStatCard strong,
+html[data-customer-theme="V1_Changing"] .portalMain [class*="StatCard"] strong{color:#fff!important;font-variant-numeric:tabular-nums!important;letter-spacing:-.02em!important}
+
+/* System-like forms. */
+html[data-customer-theme="V1_Changing"] .portalMain input,
+html[data-customer-theme="V1_Changing"] .portalMain select,
+html[data-customer-theme="V1_Changing"] .portalMain textarea{background:#0f131a!important;border:1px solid #343d4d!important;color:#f0f3f8!important;border-radius:7px!important;box-shadow:inset 0 1px #ffffff05!important}
+html[data-customer-theme="V1_Changing"] .portalMain input::placeholder,
+html[data-customer-theme="V1_Changing"] .portalMain textarea::placeholder{color:#778396!important}
+html[data-customer-theme="V1_Changing"] .portalMain input:focus,
+html[data-customer-theme="V1_Changing"] .portalMain select:focus,
+html[data-customer-theme="V1_Changing"] .portalMain textarea:focus{outline:none!important;border-color:#6978de!important;box-shadow:0 0 0 2px #7c8cff22!important}
+html[data-customer-theme="V1_Changing"] .portalMain label{color:#cbd2df!important;font-size:11px!important;font-weight:700!important}
+
+/* Shared V3A action hierarchy. */
+html[data-customer-theme="V1_Changing"] .portalMain button:not(.secondary):not(.danger),
+html[data-customer-theme="V1_Changing"] .portalMain .buttonlink:not(.secondary){background:#5968d9!important;border:1px solid #7180ec!important;color:#fff!important;border-radius:7px!important;box-shadow:none!important}
+html[data-customer-theme="V1_Changing"] .portalMain button.secondary,
+html[data-customer-theme="V1_Changing"] .portalMain .secondary{background:#202635!important;border:1px solid #394357!important;color:#e8ecf5!important}
+html[data-customer-theme="V1_Changing"] .portalMain button.danger{background:#351d25!important;border-color:#6b3542!important;color:#ffb1bd!important}
+
+/* Tables and record rows match Admin System lists. */
+html[data-customer-theme="V1_Changing"] .portalMain table{width:100%!important;border-collapse:separate!important;border-spacing:0!important;background:#121720!important;border:1px solid #2a3241!important;border-radius:8px!important;overflow:hidden!important}
+html[data-customer-theme="V1_Changing"] .portalMain th{background:#181e29!important;color:#aeb8c7!important;border-bottom:1px solid #303849!important;font-size:9.5px!important;text-transform:uppercase!important;letter-spacing:.055em!important}
+html[data-customer-theme="V1_Changing"] .portalMain td{color:#d9dfe9!important;border-bottom:1px solid #252d3a!important}
+html[data-customer-theme="V1_Changing"] .portalMain tr:last-child td{border-bottom:0!important}
+html[data-customer-theme="V1_Changing"] .portalMain .listrow,
+html[data-customer-theme="V1_Changing"] .portalMain .recordRow,
+html[data-customer-theme="V1_Changing"] .portalMain [class*="Row"]{border-color:#2a3241!important}
+
+/* Financial records: amount/status first, same operational hierarchy as V3A Billing. */
+html[data-customer-theme="V1_Changing"] .portalMain .invoiceCard,
+html[data-customer-theme="V1_Changing"] .portalMain .orderCard,
+html[data-customer-theme="V1_Changing"] .portalMain [class*="Invoice"],
+html[data-customer-theme="V1_Changing"] .portalMain [class*="OrderCard"]{background:#121720!important;border-color:#2a3241!important;border-radius:7px!important}
+html[data-customer-theme="V1_Changing"] .portalMain .statusBadge,
+html[data-customer-theme="V1_Changing"] .portalMain [class*="Status"]{background:#222938!important;border-color:#3a4457!important;color:#d6dce7!important}
+html[data-customer-theme="V1_Changing"] .portalMain .statusBadge.paid,
+html[data-customer-theme="V1_Changing"] .portalMain .statusBadge.active{background:#173128!important;border-color:#315c4b!important;color:#8ad7ba!important}
+html[data-customer-theme="V1_Changing"] .portalMain .statusBadge.overdue,
+html[data-customer-theme="V1_Changing"] .portalMain .statusBadge.failed{background:#351d25!important;border-color:#6b3542!important;color:#ff9aaa!important}
+html[data-customer-theme="V1_Changing"] .portalMain .statusBadge.pending,
+html[data-customer-theme="V1_Changing"] .portalMain .statusBadge.partial{background:#342a17!important;border-color:#66522a!important;color:#f5cd78!important}
+
+@media(max-width:760px){
+ html[data-customer-theme="V1_Changing"] .portalTopbar{grid-template-columns:auto 1fr!important;padding:7px 10px!important;gap:8px!important}
+ html[data-customer-theme="V1_Changing"] .portalTopNav{grid-column:1/-1!important;order:3!important;margin:0 -10px!important;padding:0 8px!important;border-top:1px solid #202936!important}
+ html[data-customer-theme="V1_Changing"] .portalTopNav a{min-height:40px!important;padding:0 9px!important;font-size:9.5px!important}
+ html[data-customer-theme="V1_Changing"] .portalTopTools{justify-self:end!important;gap:4px!important}
+ html[data-customer-theme="V1_Changing"] .portalAdminLink{display:none!important}
+ html[data-customer-theme="V1_Changing"] .portalAccountLink,
+ html[data-customer-theme="V1_Changing"] .portalLogoutButton{min-height:36px!important;padding:0 8px!important}
+ html[data-customer-theme="V1_Changing"] .portalMain{padding:11px 10px 24px!important}
+ html[data-customer-theme="V1_Changing"] .portalMain .panel,
+ html[data-customer-theme="V1_Changing"] .portalMain .card{padding:10px!important}
+ html[data-customer-theme="V1_Changing"] .portalMain button,
+ html[data-customer-theme="V1_Changing"] .portalMain input,
+ html[data-customer-theme="V1_Changing"] .portalMain select{min-height:40px!important}
+}
+
+
+/* Invoice document is intentionally light. Override global V1_Changing dark text tokens here,
+   in the final-loaded theme layer, so line items/totals can never wash out. */
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument{
+  background:#fff!important;
+  color:#18212f!important;
+}
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument h1,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument h2,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument h3,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument strong,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument b{
+  color:#18212f!important;
+  opacity:1!important;
+}
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument p,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument small,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument span{
+  color:#4b5563!important;
+  opacity:1!important;
+}
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocLabel{
+  color:var(--invoice-accent)!important;
+}
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocItemHead,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocItemHead span{
+  background:#eef2f6!important;
+  color:#3f4a59!important;
+}
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocItemRow,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocItemRow *,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocTotals strong,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocTotalMain span,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocTotalMain strong{
+  color:#18212f!important;
+  opacity:1!important;
+}
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocMeta span b,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocBillTo span b,
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocPaymentDetails strong{
+  color:#253144!important;
+}
+html[data-customer-theme="V1_Changing"] .portalLayout .invoiceDocument .invoiceDocFooter{
+  background:#f8fafc!important;
+}
