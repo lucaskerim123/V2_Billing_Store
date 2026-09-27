@@ -12,6 +12,19 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       throw Object.assign(new Error("Undeploy OrbitFS before resetting setup to Stage 1. Reset never deletes a live Vercel deployment implicitly."),{status:409,code:"UNDEPLOY_REQUIRED"});
     }
 
+    const metadata=install.metadata&&typeof install.metadata==="object"?install.metadata:{};
+
+    const {data:otherInstallations,error:otherInstallationsError}=await licenseDb()
+      .from("orbitfs_installations")
+      .select("id,installation_id,supabase_project_ref,vercel_project_id,state")
+      .eq("auth_user_id",user.id)
+      .neq("id",install.id);
+    if(otherInstallationsError)throw otherInstallationsError;
+    const sharedConnectionUsers=(otherInstallations||[]).filter((row:any)=>row.state!=="uninstalled"&&(row.supabase_project_ref||row.vercel_project_id));
+    if(sharedConnectionUsers.length){
+      throw Object.assign(new Error("This account has another active OrbitFS installation using the shared Supabase/Vercel connectors. Reset that installation separately or remove its dependency before disconnecting the account-wide provider connections."),{status:409,code:"SHARED_PROVIDER_CONNECTION_IN_USE"});
+    }
+
     const disconnectResults=await Promise.allSettled([
       disconnectProviderConnection(user.id,"supabase"),
       disconnectProviderConnection(user.id,"vercel"),
@@ -23,20 +36,8 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       throw Object.assign(new Error(`Could not fully reset provider connections. ${failures.join(" | ")}`),{status:502,code:"PROVIDER_RESET_FAILED"});
     }
 
-    const metadata=install.metadata&&typeof install.metadata==="object"?install.metadata:{};
-
-    const {data:otherInstallations,error:otherInstallationsError}=await licenseDb()
-      .from("orbitfs_installations")
-      .select("id,installation_id,supabase_project_ref,vercel_project_id,state")
-      .eq("auth_user_id",user.id)
-      .neq("id",install.id);
-    if(otherInstallationsError)throw otherInstallationsError;
-    const sharedConnectionUsers=(otherInstallations||[]).filter((row:any)=>row.supabase_project_ref||row.vercel_project_id);
-    if(sharedConnectionUsers.length){
-      throw Object.assign(new Error("This account has another OrbitFS installation using the shared Supabase/Vercel connectors. Reset that installation separately or remove its dependency before disconnecting the account-wide provider connections."),{status:409,code:"SHARED_PROVIDER_CONNECTION_IN_USE"});
-    }
-
-    const preservedMetadata={...metadata,appliedUpdate:null,setupResetAt:now()};
+    const {licenseRegistration:discardedLicenseRegistration,appliedUpdate:discardedAppliedUpdate,...metadataRest}=metadata;
+    const preservedMetadata={...metadataRest,setupResetAt:now()};
 
     const patch={
       state:"awaiting_supabase",
@@ -54,6 +55,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       production_url:null,
       release_id:null,
       release_version:null,
+      release_channel:null,
       release_sha256:null,
       release_source_commit:null,
       previous_release_version:null,
@@ -62,6 +64,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       applied_update_id:null,
       applied_update_sha256:null,
       applied_update_source_commit:null,
+      applied_update_at:null,
       health_status:"unknown",
       last_health_at:null,
       last_deployment_at:null,
@@ -75,7 +78,8 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
 
     await event(data,"setup.reset_to_stage_1","warning","OrbitFS setup reset to Stage 1. Provider connections and installer selections were cleared; customer cloud projects, data, installation ID and licence binding were preserved.",{
       preservedInstallationId:String(install.installation_id||""),
-      preservedLicenseRegistration:Boolean(metadata.licenseRegistration),
+      preservedLicenseBinding:true,
+      runtimeLicenseRegistrationCleared:Boolean(discardedLicenseRegistration),
       supabaseProjectDeleted:false,
       vercelProjectDeleted:false,
     });
