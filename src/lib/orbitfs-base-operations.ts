@@ -125,7 +125,14 @@ export async function runBaseLifecycleOperation(input:{
   try{
     operation=await patchOperation(String(operation.id),{state:"authorising"});
     const installation=await runCustomerDeployer(install,action,input.version,input.channel,input.releaseId,input.reason,async(state,detail={})=>{
-      operation=await patchOperation(String(operation.id),{state,detail:{...(operation?.detail||{}),...detail}});
+      const progressPatch:any={state,detail:{...(operation?.detail||{}),...detail}};
+      if(detail && typeof detail==="object"){
+        if("deploymentId" in detail)progressPatch.vercel_deployment_id=(detail as any).deploymentId||null;
+        if("projectId" in detail)progressPatch.vercel_project_id=(detail as any).projectId||operation?.vercel_project_id||null;
+        if("migrationHeadBefore" in detail)progressPatch.migration_head_before=(detail as any).migrationHeadBefore||null;
+        if("migrationHeadAfter" in detail)progressPatch.migration_head_after=(detail as any).migrationHeadAfter||null;
+      }
+      operation=await patchOperation(String(operation.id),progressPatch);
     });
     operation=await patchOperation(String(operation.id),{
       state:"completed",
