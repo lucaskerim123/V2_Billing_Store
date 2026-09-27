@@ -24,7 +24,7 @@ html[data-customer-theme="V1_Changing"] .orbitZipDeployer{
   display:grid!important;
   gap:0!important;
   min-width:0!important;
-  min-height:calc(100vh - 100px)!important;
+  min-height:0!important;
   overflow:hidden!important;
   border:1px solid var(--bd-line)!important;
   border-radius:12px!important;
@@ -67,7 +67,7 @@ html[data-customer-theme="V1_Changing"] .orbitZipInstalling>.orbitZipWorkspace{
   display:grid!important;
   grid-template-columns:minmax(0,1fr) 276px!important;
   gap:0!important;
-  align-items:stretch!important;
+  align-items:start!important;
   min-width:0!important;
   margin:0!important;
   background:var(--bd-bg)!important;
@@ -128,9 +128,9 @@ html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerStep>spa
   font-size:10px!important;font-weight:800!important;
 }
 html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerStep>div{display:grid!important;gap:2px!important;min-width:0!important}
-html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerStep b{font-size:10px!important;color:#dfeaf1!important}
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerStep b{font-size:12px!important;color:#dfeaf1!important;line-height:1.25!important}
 html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerStep small{
-  font-size:8px!important;line-height:1.35!important;color:#6f879a!important;white-space:normal!important;
+  font-size:10px!important;line-height:1.4!important;color:#7f96a8!important;white-space:normal!important;
 }
 html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerStep.active{
   border-color:#633038!important;background:linear-gradient(90deg,#261318,#101720)!important;
@@ -163,8 +163,8 @@ html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerSubstep>
   display:grid!important;place-items:center!important;width:26px!important;height:26px!important;
   border:1px solid #345064!important;background:#0c1b27!important;color:#99afc1!important;font-size:8px!important;font-weight:800!important;
 }
-html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerSubstep b{font-size:9px!important}
-html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerSubstep small{font-size:8px!important;color:#667e91!important}
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerSubstep b{font-size:11px!important;line-height:1.3!important}
+html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerSubstep small{font-size:9.5px!important;color:#7890a3!important}
 html[data-customer-theme="V1_Changing"] .orbitZipSidebar .orbitInstallerSubstep.active{
   border-color:#65313a!important;background:#211216!important;
 }
@@ -193,7 +193,7 @@ html[data-customer-theme="V1_Changing"] .orbitZipCanvasColumn .panelTitle .muted
 html[data-customer-theme="V1_Changing"] .orbitZipDeployer .state{
   display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:25px!important;padding:4px 9px!important;
   border:1px solid #33495b!important;border-radius:999px!important;background:#0d1c29!important;color:#a9bfd1!important;
-  font-size:8px!important;font-weight:800!important;letter-spacing:.06em!important;
+  font-size:9.5px!important;font-weight:800!important;letter-spacing:.06em!important;
 }
 html[data-customer-theme="V1_Changing"] .orbitZipDeployer .state.current{
   border-color:#7e3740!important;background:#2b151a!important;color:#f1b6bb!important;
@@ -281,9 +281,13 @@ html[data-customer-theme="V1_Changing"] .orbitZipDangerButton{
 
 /* Responsive: preserve hierarchy, not exact geometry */
 @media(max-width:1100px){
-  html[data-customer-theme="V1_Changing"] .orbitZipInstalling{grid-template-columns:210px minmax(0,1fr)!important}
-  html[data-customer-theme="V1_Changing"] .orbitZipInstalling>.orbitZipWorkspace{grid-template-columns:minmax(0,1fr) 230px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipInstalling{grid-template-columns:220px minmax(0,1fr)!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipInstalling>.orbitZipWorkspace{grid-template-columns:1fr!important}
   html[data-customer-theme="V1_Changing"] .orbitZipCanvasColumn{padding:20px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipSummary{
+    grid-column:1!important;border-left:0!important;border-top:1px solid var(--bd-line)!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
 }
 @media(max-width:860px){
   html[data-customer-theme="V1_Changing"] .orbitZipInstalling{grid-template-columns:190px minmax(0,1fr)!important}
@@ -341,4 +345,41 @@ html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerSt
 html[data-customer-theme="V1_Changing"] .orbitZipSidebar button.orbitInstallerSubstep:focus-visible{
   outline:2px solid var(--bd-brand-strong)!important;
   outline-offset:2px!important;
+}
+
+
+/* Provider reconnect + visible reset feedback */
+html[data-customer-theme="V1_Changing"] .orbitProviderQuickLinks{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:7px!important;
+  margin-top:10px!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitProviderQuickLinks button{width:100%!important}
+html[data-customer-theme="V1_Changing"] .orbitProviderDivider{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin:2px 0!important;
+  color:var(--bd-muted)!important;
+  font-size:10px!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitProviderDivider:before,
+html[data-customer-theme="V1_Changing"] .orbitProviderDivider:after{
+  content:""!important;
+  height:1px!important;
+  flex:1!important;
+  background:var(--bd-line)!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitInstallerMessage{
+  margin:0 0 12px!important;
+  padding:10px 12px!important;
+  border:1px solid #31536a!important;
+  border-radius:8px!important;
+  background:#0d1d2a!important;
+  color:#d9e7ef!important;
+  font-size:11px!important;
+}
+@media(max-width:640px){
+  html[data-customer-theme="V1_Changing"] .orbitProviderQuickLinks{grid-template-columns:1fr!important}
 }
