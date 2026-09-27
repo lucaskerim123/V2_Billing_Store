@@ -102,6 +102,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
  };
  const pageName=
   path.startsWith("/portal/orbitfs/license")?"Licence":
+  path.startsWith("/portal/orbitfs/channels")?"Release Channels":
   path.startsWith("/portal/orbitfs/releases")?"Updates":
   path==="/portal/orbitfs"?"Base Deployment":
   path.startsWith("/portal/invoices")?"Invoices":
@@ -142,6 +143,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
      <div className="portalTopNavSub">
       <Link onClick={()=>closeDropdowns()} className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Base Deployment</Link>
       <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/license")?"active":""} href="/portal/orbitfs/license">Licence</Link>
+      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/channels")?"active":""} href="/portal/orbitfs/channels">Release Channels</Link>
       <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Updates</Link>
      </div>
     </details>}
