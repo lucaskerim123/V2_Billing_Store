@@ -164,12 +164,7 @@ export default function AdminCustomerLicenseActions() {
                         {activation.installation_id} · {activation.status || "unknown"}{activation.product_version ? " · v" + activation.product_version : ""}
                       </span>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {String(activation.status || "").toLowerCase() === "locked" ? (
-                          <button disabled={!!busy} onClick={() => void control(binding.license_id, "reactivate-installation", String(activation.installation_id))}>Restore</button>
-                        ) : String(activation.status || "").toLowerCase() === "active" ? (
-                          <button disabled={!!busy} onClick={() => void control(binding.license_id, "lock-installation", String(activation.installation_id))}>Block</button>
-                        ) : null}
-                        {String(activation.status || "").toLowerCase() !== "terminated" && (
+                        {String(activation.status || "").toLowerCase() === "active" && (
                           <button disabled={!!busy} onClick={() => void control(binding.license_id, "unlock-installation", String(activation.installation_id))}>Unlock / release</button>
                         )}
                       </div>
