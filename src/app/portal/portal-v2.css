@@ -992,3 +992,166 @@
 .orbitZipStartGrid b{font-size:10px;color:#edf2f6}
 .orbitZipStartGrid small{font-size:8px;line-height:1.45;color:#77838f}
 @media(max-width:760px){.orbitZipStartGrid{grid-template-columns:1fr}}
+
+
+/* ZIP target palette + geometry lock */
+.orbitZipDeployer{
+  --zip-bg:#03121b;
+  --zip-panel:#071925;
+  --zip-panel-2:#0b2231;
+  --zip-line:#0d2a3c;
+  --zip-line-strong:#153f59;
+  --zip-text:#f8fafc;
+  --zip-muted:#779abc;
+  --zip-accent:#426aff;
+  --zip-accent-soft:#10284e;
+  --zip-good:#00d990;
+  background:#03121b!important;
+  border-color:#0d2a3c!important;
+}
+.orbitZipDeployer>.portalOverviewHero{
+  background:linear-gradient(180deg,#061824,#04131d)!important;
+  border-color:#0d2a3c!important;
+}
+.orbitZipDeployer>.orbitZipSidebar,
+.orbitZipSummary{
+  background:#04131d!important;
+}
+.orbitZipDeployer>.orbitZipSidebar{border-color:#0d2a3c!important}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerHeading{border-color:#0d2a3c!important}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerStep>span{
+  border-color:#244a68!important;
+  background:#0b2330!important;
+  color:#a8c0d9!important;
+}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerStep.active{
+  border-color:#24619d!important;
+  background:linear-gradient(90deg,#0d2842,#071925)!important;
+}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerStep.active>span{
+  border-color:#426aff!important;
+  background:#17335f!important;
+  color:#d8e2ff!important;
+}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerStep.done>span{
+  border-color:#00a974!important;
+  background:#073426!important;
+  color:#bff7e3!important;
+}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerSubstepHead small{color:#5fa5ed!important}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerSubstep{
+  background:#061824!important;
+  border-color:#0d2a3c!important;
+}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerSubstep.active{
+  border-color:#24619d!important;
+  background:#0b2236!important;
+}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerSubstep.active>span{
+  border-color:#426aff!important;
+  background:#17335f!important;
+  color:#d8e2ff!important;
+}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerSubstep.done{
+  border-color:#137655!important;
+  background:#062a20!important;
+}
+.orbitZipDeployer>.orbitZipSidebar .orbitInstallerSubstep.done>span{
+  border-color:#00d990!important;
+  background:#073426!important;
+  color:#d9fff2!important;
+}
+.orbitZipCanvasColumn{background:#05151f!important}
+.orbitZipCanvasColumn>.panel,
+.orbitZipCanvasColumn>.orbitReviewPanel,
+.orbitZipControlSection,
+.orbitZipDeployer>.portalOverviewBottom>.panel{
+  border-color:#15324a!important;
+  background:linear-gradient(180deg,#081d2a,#061722)!important;
+}
+.orbitZipCanvasColumn .orbitInstallerWorkspace>summary{border-color:#123042!important}
+.orbitZipCanvasColumn .state.current{
+  border-color:#24619d!important;
+  background:#10284e!important;
+  color:#b9d4ff!important;
+}
+.orbitZipCanvasColumn input,
+.orbitZipCanvasColumn select{
+  border-color:#15324a!important;
+  background:#03121b!important;
+}
+.orbitZipCanvasColumn input:focus,
+.orbitZipCanvasColumn select:focus{
+  border-color:#426aff!important;
+  box-shadow:0 0 0 3px #426aff24!important;
+}
+.orbitZipCanvasColumn button:not(.secondary),
+.orbitZipCanvasColumn .orbitHeroAction,
+.orbitZipControlPanel .orbitHeroAction{
+  border-color:#426aff!important;
+  background:linear-gradient(180deg,#426aff,#3158dd)!important;
+  color:#fff!important;
+}
+.orbitZipCanvasColumn button:not(.secondary):hover,
+.orbitZipCanvasColumn .orbitHeroAction:hover,
+.orbitZipControlPanel .orbitHeroAction:hover{
+  background:linear-gradient(180deg,#5479ff,#3a63ef)!important;
+}
+.orbitZipCanvasColumn button.secondary,
+.orbitZipCanvasColumn .buttonlink.secondary{
+  border-color:#19405b!important;
+  background:#0a2230!important;
+  color:#c4d4e9!important;
+}
+.orbitZipCanvasColumn .orbitReviewCard,
+.orbitZipCanvasColumn .orbitEnvPanel{
+  border-color:#15324a!important;
+  background:#061824!important;
+}
+.orbitZipSummary{border-color:#0d2a3c!important}
+.orbitZipSummary>.panel{border-color:#123042!important;background:#071925!important}
+.orbitZipControlPanel{
+  background:#04131d!important;
+}
+.orbitZipControlPanel .portalStatCard{
+  border-color:#15324a!important;
+  background:#071925!important;
+}
+.orbitZipControlPanel .portalStatIcon{
+  border-color:#24619d!important;
+  background:#10284e!important;
+  color:#a8caff!important;
+}
+.orbitZipControlPanel .orbitPrimaryActionBar{
+  border-color:#24619d!important;
+  background:linear-gradient(135deg,#0a2238,#071925)!important;
+}
+.orbitZipControlPanel .orbitPrimaryActionCopy small{color:#5fa5ed!important}
+.orbitZipLifecyclePanel{
+  border-color:#244a68!important;
+  background:linear-gradient(180deg,#071a26,#05131c)!important;
+}
+.orbitZipLifecycleRows>div,
+.orbitZipLifecycleRows>details{
+  border-color:#123042!important;
+  background:#061824!important;
+}
+.orbitZipDangerButton{
+  border-color:#8b3943!important;
+  background:#2b141a!important;
+  color:#ffcbd0!important;
+}
+.orbitZipStartGrid>div{
+  border-color:#15324a!important;
+  background:#061824!important;
+}
+.orbitZipStartGrid>div>span{
+  border-color:#426aff!important;
+  background:#10284e!important;
+  color:#d8e2ff!important;
+}
+.orbitZipDeployer .state.ready{
+  border-color:#137655!important;
+  background:#062a20!important;
+  color:#9ef0d1!important;
+}
