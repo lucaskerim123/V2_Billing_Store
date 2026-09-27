@@ -53,6 +53,11 @@ export default function OrbitFSUpdateReleaseDeployer(){
 
  const selected=releases.find(r=>r.id===selectedId)||releases[0]||null;
  useEffect(()=>{setTargetChannel(selected?.channel||"stable")},[selected?.id,selected?.channel]);
+ useEffect(()=>{
+  if(!selected||selected.status==="published"||busy)return;
+  const timer=setInterval(()=>void load({silent:true,preserveMessage:true}),8000);
+  return()=>clearInterval(timer);
+ },[selected?.id,selected?.status,busy]);
  const pending=useMemo(()=>releases.filter(r=>r.status!=="published"),[releases]);
  const published=useMemo(()=>releases.filter(r=>r.status==="published"),[releases]);
  const validationStatus=String(selected?.validation?.status||"");
@@ -79,7 +84,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
  const publicationStage=pipelineError===5?"error":portalPublished?"done":publicationWorking?"working":canPublish?"active":"idle";
 
  function beginEdit(r:UpdateRelease){
-  setSelectedId(r.id);
+  setSelectedId(r.id);setPipelineError(null);
   setDraft({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||"",internal_notes:r.internalNotes||"",severity:r.severity||"normal",required:r.required===true,rollout:r.rollout||"public",minimum_version:r.minimumVersion||"",rollback_version:r.rollbackVersion||""});
   setEditing(true);
  }
@@ -173,7 +178,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
     <div className={stageClass(intakeStage)}><span>1</span><div><b>Intake</b><small>{selected?"v"+selected.version:"Waiting for release"}</small></div></div>
     <div className={stageClass(validationStage)}><span>2</span><div><b>Validation</b><small>{validationStage==="working"?"running…":validationStage==="error"?"failed":validationStatus||"not run"}</small></div></div>
     <div className={stageClass(reviewStage)}><span>3</span><div><b>Technical review</b><small>{reviewStage==="working"?"reviewing…":reviewStage==="error"?"rejected / error":reviewStatus||"pending"}</small></div></div>
-    <div className={stageClass(finalReviewStage)}><span>4</span><div><b>Final customer review</b><small>{finalReviewStage==="working"?"working…":finalReviewStage==="error"?"error":finalReviewReady?"ready":"configuration required"}</small></div></div>
+    <div className={stageClass(finalReviewStage)}><span>4</span><div><b>Final customer review</b><small>{finalReviewStage==="working"?"working…":finalReviewStage==="error"?"error":!reviewApproved?"waiting for approval":finalReviewReady?"ready":"configuration required"}</small></div></div>
     <div className={stageClass(publicationStage)}><span>5</span><div><b>Publication</b><small>{publicationStage==="working"?"publishing…":publicationStage==="error"?"error":portalPublished?"live in portal":canPublish?"ready to publish":"blocked"}</small></div></div>
    </div>
    <div className="orbitSplit">
@@ -251,7 +256,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
      <div><b>v{r.version}</b><span>{r.title||"OrbitFS update"}</span></div>
      <span>{r.channel||"stable"}</span>
      <span>{r.status||"draft"}</span>
-     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>setSelectedId(r.id)}>View</button>{r.status==="published"&&<button className="orbitAction orbitActionDanger" onClick={()=>void unpublish(r)}>Unpublish</button>}</div>
+     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>{setSelectedId(r.id);setPipelineError(null)}}>View</button>{r.status==="published"&&<button className="orbitAction orbitActionDanger" onClick={()=>void unpublish(r)}>Unpublish</button>}</div>
     </div>)}
     {!releases.length&&<div className="orbitEmptyCompact">No Update release history is available.</div>}
    </div>
