@@ -12,7 +12,7 @@ type ReleaseFile={file:string;data:string;encoding?:string;sha256?:string;size?:
 type Package={format?:string;schemaVersion?:number;version:string;releaseId?:string;sourceCommit?:string;components?:string[];projectSettings?:Record<string,unknown>;files:ReleaseFile[];[key:string]:any};
 type UpdateBundle={format:"orbitfs-update-bundle-v3";schemaVersion:number;version:string;sourceCommit?:string;components:string[];minimumBaseVersion?:string;minimumEngineDeployerProtocol?:number;checkpointRequired?:boolean;payloads:{panel:Package|null;engine:Package|null};[key:string]:any};
 type ParsedArtifact={root:Package|UpdateBundle;artifactSha256:string};
-const fail=(message:string,status=400):never=>{throw Object.assign(new Error(message),{status})};
+const fail=(message:string,status=400,code="ORBITFS_DEPLOYMENT_FAILED",retryable=status>=500):never=>{throw Object.assign(new Error(message),{status,code,retryable})};
 const checksum=(buf:Buffer)=>createHash("sha256").update(buf).digest("hex");
 const sha1=(buf:Buffer)=>createHash("sha1").update(buf).digest("hex");
 function decodedReleaseFile(file:{file:string;data:string;sha256?:string;size?:number}){
@@ -487,22 +487,22 @@ async function rollbackEngineUpdatePayload(install:any,release:any,channel:strin
 }
 async function previousDeployment(install:any):Promise<{vercel_deployment_id:string;deployment_url:string|null;release_version:string;release_id:string;created_at:string}>{const {data,error}=await licenseDb().from("orbitfs_installation_releases").select("vercel_deployment_id,deployment_url,release_version,release_id,created_at,action").eq("installation_id",install.id).eq("status","ready").neq("action","update").not("vercel_deployment_id","is",null).order("created_at",{ascending:false}).limit(5);if(error)throw error;const previous=(data||[]).find((r:any)=>r.vercel_deployment_id!==install.vercel_deployment_id);if(!previous)throw Object.assign(new Error("No previous successful Base deployment is available for rollback"),{status:409});if(!previous.vercel_deployment_id||!previous.release_id||!previous.release_version)throw Object.assign(new Error("Previous Base deployment record is incomplete and cannot be rolled back"),{status:409});return {vercel_deployment_id:String(previous.vercel_deployment_id),deployment_url:previous.deployment_url?String(previous.deployment_url):null,release_version:String(previous.release_version),release_id:String(previous.release_id),created_at:String(previous.created_at||"")}}
 
-async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:string,authorityLicenseId:string){
+async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:string,authorityLicenseId:string,progress?:OperationProgress){
   const currentReleaseId=String(install.release_id||"").trim(),currentVersion=String(install.release_version||"").trim();
   const projectId=String(install.vercel_project_id||"").trim(),previousDeploymentId=String(install.vercel_deployment_id||"").trim();
-  if(!currentReleaseId||!currentVersion)fail("Install OrbitFS Base before running a Base update",409);
-  if(!projectId||!previousDeploymentId)fail("The existing Base Vercel project/deployment identity is missing. Base update will not create a replacement project.",409);
+  if(!currentReleaseId||!currentVersion)fail("Install OrbitFS Base before running a Base update",409,"BASE_INSTALLATION_REQUIRED");
+  if(!projectId||!previousDeploymentId)fail("The existing Base Vercel project/deployment identity is missing. Base update will not create a replacement project.",409,"BASE_PROJECT_NOT_FOUND");
   const comparison=compareVersions(String(release.version||""),currentVersion);
-  if(comparison===null)fail("Base versions could not be compared safely",409);
+  if(comparison===null)fail("Base versions could not be compared safely",409,"BASE_VERSION_COMPARISON_FAILED");
   const versionComparison=comparison as number;
-  if(versionComparison===0)fail("This Base version is already installed. Use Redeploy current Base instead.",409);
-  if(versionComparison<0)fail("Base update cannot downgrade an installation. Use the explicit Base rollback route.",409);
+  if(versionComparison===0)fail("This Base version is already installed. Use Redeploy current Base instead.",409,"BASE_ALREADY_INSTALLED");
+  if(versionComparison<0)fail("Base update cannot downgrade an installation. Use the explicit Base rollback route.",409,"BASE_DOWNGRADE_REQUIRES_ROLLBACK");
 
   const currentRelease=await exactRelease(currentReleaseId);
-  if(String(currentRelease.release_type||"").toLowerCase()!=="base")fail("Installed release identity is not a Base release",409);
+  if(String(currentRelease.release_type||"").toLowerCase()!=="base")fail("Installed release identity is not a Base release",409,"BASE_RELEASE_IDENTITY_INVALID");
   const target=await readBasePackage(release);
   const targetSchemaVersion=String((target.pkg as any).databaseSchemaVersion||(target.pkg as any).releaseInfo?.databaseSchemaVersion||"").trim();
-  if(!targetSchemaVersion)fail("Target Base release does not declare a customer database schema version",422);
+  if(!targetSchemaVersion)fail("Target Base release does not declare a customer database schema version",422,"ARTIFACT_INVALID");
 
   let createdDeploymentId="";
   let migrations:any=null;
@@ -510,6 +510,8 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
   await event(install,"base.update.started","info",`Updating OrbitFS Base ${currentVersion} → ${release.version}`,{fromReleaseId:currentReleaseId,toReleaseId:String(release.id),projectId});
 
   try{
+    await progress?.("validated",{fromReleaseId:currentReleaseId,toReleaseId:String(release.id),projectId,fromVersion:currentVersion,toVersion:String(release.version)});
+    await progress?.("migrating",{fromVersion:currentVersion,toVersion:String(release.version)});
     migrations=await applyBaseDatabaseMigrations(install,currentRelease,release,target.pkg,target.files);
     const deploymentInstall={...install,schema_version:targetSchemaVersion};
     await configureVercel(deploymentInstall,String(release.version),undefined,requestedChannel,String(release.id),target.artifactSha256,String(target.pkg.sourceCommit||expectedSource(release)));
@@ -523,16 +525,18 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
       projectSettings:{framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(target.pkg.projectSettings||{})},
       meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:"base_update",orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(target.pkg.sourceCommit||expectedSource(release)),orbitfsInstallationRoute:"billing_store"}
     };
+    await progress?.("deploying",{projectId,fileCount:target.files.length,databaseMigrations:migrations});
     await event(install,"base.update.deploying","info",`Deploying Base ${release.version} to the existing Vercel project`,{projectId,fileCount:target.files.length,databaseMigrations:migrations});
     const created=await vercelApi(String(install.auth_user_id),"/v13/deployments",{method:"POST",body:JSON.stringify(body)});
     if(!created?.id&&!created?.uid)fail("Vercel did not return a Base update deployment id",502);
     createdDeploymentId=String(created.id||created.uid);
     await licenseDb().from("orbitfs_installations").update({vercel_deployment_id:createdDeploymentId,state:"updating",last_error:null,updated_at:new Date().toISOString()}).eq("id",install.id);
+    await progress?.("verifying",{projectId,deploymentId:createdDeploymentId});
 
     const ready=await waitForReady(String(install.auth_user_id),createdDeploymentId);
-    if(String(ready?.readyState||ready?.state||"").toUpperCase()!=="READY")fail("Base update deployment did not become ready within the deployment window",504);
+    if(String(ready?.readyState||ready?.state||"").toUpperCase()!=="READY")fail("Base update deployment did not become ready within the deployment window",504,"VERCEL_DEPLOY_FAILED",true);
     const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:String(install.deployment_url||"");
-    if(!deploymentUrl)fail("Vercel Base update did not return a deployment URL",502);
+    if(!deploymentUrl)fail("Vercel Base update did not return a deployment URL",502,"VERCEL_DEPLOY_FAILED",true);
 
     const settings=await billingOrbitfsConfig();
     try{
@@ -671,7 +675,9 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
   }
 }
 
-export async function runCustomerDeployer(install:any,action:DeployAction,version?:string,channel?:string,releaseId?:string,reason?:string){
+type OperationProgress=(state:"validated"|"deploying"|"migrating"|"verifying"|"promoting",detail?:Record<string,unknown>)=>Promise<void>;
+
+export async function runCustomerDeployer(install:any,action:DeployAction,version?:string,channel?:string,releaseId?:string,reason?:string,progress?:OperationProgress){
   const requestedChannel=String(channel||install.release_channel||"stable").trim().toLowerCase();
   if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(requestedChannel))fail("Invalid release channel",400);
   const allowedChannels=await customerReleaseChannels(String(install.auth_user_id),install.license_binding_id||null);
@@ -751,8 +757,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(action==="redeploy"&&!effectiveReleaseId&&!effectiveVersion)fail("The installation does not have a Base release to redeploy",409);
   const release=await publishedRelease(effectiveVersion,action,requestedChannel,effectiveReleaseId);
   await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null});
+  if(action!=="base_update")await progress?.("validated",{releaseId:String(release.id),releaseVersion:String(release.version),projectId:install.vercel_project_id||null});
   try{
-  if(action==="base_update")return await runBaseUpdateDeployment(install,release,requestedChannel,authorityLicenseId);
+  if(action==="base_update")return await runBaseUpdateDeployment(install,release,requestedChannel,authorityLicenseId,progress);
   if(action==="update"){
     const parsed=await readArtifact(release);
     if((parsed.root as any).format!=="orbitfs-update-bundle-v3")fail("Published Update release is not an OrbitFS Update Bundle v3",422);
@@ -836,13 +843,14 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     }
   }
   if(action==="deploy"&&!install.vercel_project_id)install=await ensureVercelProject(install);
-  if(!install.vercel_project_id)fail("Customer Vercel project is unavailable for this deployment action",409);
+  if(!install.vercel_project_id)fail("Customer Vercel project is unavailable for this deployment action",409,"BASE_PROJECT_NOT_FOUND");
   await configureVercel(install,String(release.version),undefined,requestedChannel,String(release.id),String(release.sha256||release.checksum||""),String(release.source_sha||release.source_commit||release.manifest?.sourceCommit||""));
   const parsed=action==="redeploy"?await readCurrentBasePackageForRedeploy(release):await readBasePackage(release);
   const packageDatabaseSchema=String((parsed.pkg as any).databaseSchemaVersion||(parsed.pkg as any).releaseInfo?.databaseSchemaVersion||release.manifest?.databaseSchemaVersion||"").trim();
   const installedDatabaseSchema=String(install.schema_version||"").trim();
   if(packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
   const projectSettings={framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(parsed.pkg.projectSettings||{})};
+  await progress?.("deploying",{action,releaseId:String(release.id),projectId:install.vercel_project_id,fileCount:parsed.files.length});
   await event(install,"deployment.uploading","info",`Uploading ${parsed.files.length} verified Base files to Vercel`,{action,releaseId:release.id,fileCount:parsed.files.length});
   const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),parsed.files);
   const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:uploadedFiles,projectSettings,meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||""),orbitfsInstallationRoute:"billing_store"}};
@@ -851,6 +859,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const deploymentId=String(created.id||created.uid);
   await licenseDb().from("orbitfs_installations").update({vercel_deployment_id:deploymentId,state:"deploying",last_error:null,updated_at:new Date().toISOString()}).eq("id",install.id);
   await event(install,"deployment.created","info",`Vercel deployment ${deploymentId} created`,{action,releaseId:release.id,deploymentId,projectId:install.vercel_project_id});
+  await progress?.("verifying",{action,releaseId:String(release.id),projectId:install.vercel_project_id,deploymentId});
   const ready=await waitForReady(install.auth_user_id,deploymentId),state=String(ready?.readyState||ready?.state||"");if(state!=="READY")fail("Vercel deployment did not become ready within the deployment window",504);
   const previousVersion=install.release_version||null,deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url;
   await configureVercel(install,String(release.version),deploymentUrl||undefined,requestedChannel,String(release.id),parsed.artifactSha256,String(parsed.pkg.sourceCommit||release.sourceCommit||""));
