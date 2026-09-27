@@ -33,7 +33,7 @@ export async function POST(req:Request){
       presentation=result.data||null;
     }
     const title=String(presentation?.title??manifest.title??"").trim();
-    const changelog=String(presentation?.changelog??release?.notes??release?.changelog??"").trim();
+    const changelog=String(presentation?.changelog??manifest.customer_changelog??manifest.customerChangelog??release?.notes??release?.changelog??"").trim();
     if(!title)throw Object.assign(new Error("Add a customer-facing release title before publishing"),{status:409});
     if(!changelog)throw Object.assign(new Error("Add a customer-facing changelog before publishing"),{status:409});
     if(String(manifest.rollout||"public").toLowerCase()==="internal")throw Object.assign(new Error("Internal rollout cannot be published to the customer portal"),{status:409});
