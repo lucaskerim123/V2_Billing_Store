@@ -101,9 +101,9 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   return path===h||path.startsWith(h+"/");
  };
  const pageName=
-  path.startsWith("/portal/orbitfs/license")?"License Controller":
-  path.startsWith("/portal/orbitfs/releases")?"Update Releaser":
-  path==="/portal/orbitfs"?"Base Deployer":
+  path.startsWith("/portal/orbitfs/license")?"Licence":
+  path.startsWith("/portal/orbitfs/releases")?"Updates":
+  path==="/portal/orbitfs"?"Base Deployment":
   path.startsWith("/portal/invoices")?"Invoices":
   path.startsWith("/portal/orders")||path.startsWith("/portal/checkout")?"Orders":
   path.startsWith("/portal/products")?"Store":
@@ -140,9 +140,9 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
     {!suspended&&<details ref={orbitfsMenuRef} onToggle={e=>{const el=e.currentTarget;if(el.open)closeDropdowns(el)}} className={"portalTopNavGroup "+(path.startsWith("/portal/orbitfs")?"active":"")}>
      <summary>My OrbitFS <span className="portalTopNavChevron">⌄</span></summary>
      <div className="portalTopNavSub">
-      <Link onClick={()=>closeDropdowns()} className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Base Deployer</Link>
-      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/license")?"active":""} href="/portal/orbitfs/license">License Controller</Link>
-      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Update Releaser</Link>
+      <Link onClick={()=>closeDropdowns()} className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Base Deployment</Link>
+      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/license")?"active":""} href="/portal/orbitfs/license">Licence</Link>
+      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Updates</Link>
      </div>
     </details>}
    </nav>
