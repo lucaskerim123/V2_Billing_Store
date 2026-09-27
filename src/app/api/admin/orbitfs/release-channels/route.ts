@@ -57,6 +57,27 @@ export async function POST(req:Request){
       return Response.json({ok:true,channels,authority:"license_manager",mirrored:false});
     }
 
+    if(action==="save"){
+      const channel=String(body.channel||"").trim().toLowerCase();
+      const label=String(body.label||"").trim();
+      if(!channel||!label)throw Object.assign(new Error("Channel and label are required"),{status:400});
+      const remote=await masterRequest("/api/v1/release-channels",{
+        method:"POST",
+        body:JSON.stringify({
+          channel,
+          label,
+          description:String(body.description||""),
+          enabled:body.enabled!==false,
+          customer_visible:body.customer_visible!==false,
+          access_mode:body.access_mode==="open"?"open":"closed",
+          access_request_enabled:body.access_request_enabled===true,
+          self_join_enabled:body.self_join_enabled===true,
+          sort_order:Number.isFinite(Number(body.sort_order))?Number(body.sort_order):100
+        })
+      },"billing");
+      return Response.json({...remote,authority:"license_manager",mirrored:false},{headers:{"cache-control":"no-store"}});
+    }
+
     if(action==="grant"){
       const channel=String(body.channel||"").trim().toLowerCase();
       const userId=String(body.userId||body.user_id||"").trim();
