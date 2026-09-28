@@ -30,7 +30,7 @@ export async function POST(req:Request){
       presentationDeleted=(presentation.data||[]).length;
     }
 
-    const bundles=await db.from("orbitfs_release_bundles").delete().eq("version",version).eq("channel",releaseType).select("id");
+    const bundles=await db.from("orbitfs_release_bundles").delete().eq("version",version).eq("channel",channel).select("id");
     if(bundles.error)throw bundles.error;
 
     return Response.json({
