@@ -79,7 +79,9 @@ export async function GET(req:Request){
       });
     }
   }
-  const base=enrichedBindings.find((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel)||enrichedBindings[0]||null,install=base?installationRows.find((x:any)=>x.license_binding_id===base.id):null;
+  const baseCandidates=enrichedBindings.filter((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel);
+  const base=baseCandidates.find((b:any)=>installationRows.some((x:any)=>String(x.license_binding_id)===String(b.id)))||baseCandidates[0]||enrichedBindings[0]||null;
+  const install=base?installationRows.find((x:any)=>String(x.license_binding_id)===String(base.id)):null;
   if(install?.vercel_project_id)connectionRows=connectionRows.map((x:any)=>x.provider==="vercel"?{...x,team_id:install.vercel_team_id||x.team_id,metadata:{...(x.metadata||{}),team_id:install.vercel_team_id||x.metadata?.team_id||null,team_locked:true}}:x);
   if(install)await expireStaleBaseOperations(String(install.id));
   const [eventRows,installReleaseRows,lifecycleRows,operationRows]=install?await Promise.all([

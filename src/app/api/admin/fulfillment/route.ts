@@ -88,7 +88,7 @@ export async function POST(req:Request){
     const components=authoritativeComponents(remote),now=new Date().toISOString();
     const owner=await db.from("license_bindings").select("id,auth_user_id").eq("license_id",id).is("archived_at",null).limit(1).maybeSingle();
     if(owner.error)throw owner.error;
-    const payload:any={auth_user_id:userId,license_id:id,license_product_key:"orbitfs_base",desired_state:String(remote.status||"active"),remote_state:String(remote.status||"active"),components,license_key_last4:remote.license_key_last4||null,expires_at:remote.expires_at||null,label:remote.product_name||remote.product||"OrbitFS Base",api_source:"license_master",admin_override:true,last_sync_error:null,last_synced_at:now,updated_at:now};
+    const payload:any={auth_user_id:userId,license_id:id,license_product_key:"orbitfs_base",desired_state:String(remote.status||"active"),remote_state:String(remote.status||"active"),components,license_key_last4:remote.license_key_last4||null,expires_at:remote.expires_at||null,label:remote.product_name||remote.product||"OrbitFS Base",api_source:"license_master",admin_override:remote.customer_override===true,last_sync_error:null,last_synced_at:now,updated_at:now};
     let bindingId=owner.data?.id||null;
     if(bindingId){
       const write=await db.from("license_bindings").update(payload).eq("id",bindingId);if(write.error)throw write.error;
@@ -126,7 +126,7 @@ export async function POST(req:Request){
    const userId=String(customer.auth_user_id||customer.user_id||order.auth_user_id),now=new Date().toISOString();
    const owner=await db.from("license_bindings").select("id,auth_user_id").eq("license_id",wanted).is("archived_at",null).limit(1).maybeSingle();if(owner.error)throw owner.error;
    let bindingId=owner.data?.id||null;
-   const bindingPayload:any={auth_user_id:userId,license_id:wanted,license_product_key:"orbitfs_base",desired_state:String(remote.status||"active"),remote_state:String(remote.status||"active"),components,license_key_last4:remote.license_key_last4||null,expires_at:remote.expires_at||null,label:remote.product_name||remote.product||"OrbitFS Base",api_source:"license_master",admin_override:true,last_sync_error:null,last_synced_at:now,updated_at:now};
+   const bindingPayload:any={auth_user_id:userId,license_id:wanted,license_product_key:"orbitfs_base",desired_state:String(remote.status||"active"),remote_state:String(remote.status||"active"),components,license_key_last4:remote.license_key_last4||null,expires_at:remote.expires_at||null,label:remote.product_name||remote.product||"OrbitFS Base",api_source:"license_master",admin_override:remote.customer_override===true,last_sync_error:null,last_synced_at:now,updated_at:now};
    if(bindingId){
     const w=await db.from("license_bindings").update(bindingPayload).eq("id",bindingId);if(w.error)throw w.error;
     if(String(owner.data?.auth_user_id||"")!==userId){const moved=await db.from("orbitfs_installations").update({auth_user_id:userId,updated_at:now}).eq("license_binding_id",bindingId);if(moved.error)throw moved.error;}

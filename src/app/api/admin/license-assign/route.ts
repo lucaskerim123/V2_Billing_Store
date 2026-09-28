@@ -23,6 +23,7 @@ export async function POST(req:Request){
     const customerId=String(body.customerId||"").trim();
     const product=String(body.product||"orbitfs_base").trim().toLowerCase();
     const label=String(body.label||"OrbitFS licence").trim()||"OrbitFS licence";
+    const allowMultiple=body.allowMultiple===true||body.customerOverride===true||body.customer_override===true;
     if(!customerId)return Response.json({error:"Customer is required"},{status:400});
     const {data:customer,error:customerError}=await actor.sb.from("customers").select("id,auth_user_id,user_id,customer_number,name,email").eq("id",customerId).maybeSingle();
     if(customerError)throw customerError;
@@ -32,7 +33,8 @@ export async function POST(req:Request){
     const customerNumber=String(customer.customer_number||"").trim();
     if(!customerNumber)return Response.json({error:"Customer has no Billing Store customer number"},{status:400});
     const orderRef=String(body.orderRef||`admin:${customerNumber}:${Date.now()}`);
-    const result=await masterIssue({product_code:product,customer_external_id:customerNumber,external_reference:orderRef,expires_at:body.expiresAt||null,components:body.components||{[product]:true},max_installations:Number(body.maxInstallations||1),metadata:{source:"billing_store_admin",customerId:customerNumber,customerRecordId:String(customer.id),customerNumber,customerEmail:customer.email||null,label}});
+    const components=body.components&&typeof body.components==="object"?body.components:{[product]:true};
+    const result=await masterIssue({product_code:product,customer_external_id:customerNumber,customer_override:allowMultiple,external_reference:orderRef,expires_at:body.expiresAt||null,components,max_installations:Number(body.maxInstallations||1),metadata:{source:"billing_store_admin",issuance_mode:allowMultiple?"admin_multiple_license_override":"admin_issue",customerId:customerNumber,customerRecordId:String(customer.id),customerNumber,customerEmail:customer.email||null,label}});
     const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
     if(!licenseId)throw new Error("License Master did not return a license ID");
     const key=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||result?.licence?.licenseKey||"");
@@ -40,9 +42,9 @@ export async function POST(req:Request){
     const db=licenseDb();
     const now=new Date().toISOString();
     const {data:existing}=await db.from("license_bindings").select("id").eq("auth_user_id",userId).eq("license_id",licenseId).maybeSingle();
-    const payload={auth_user_id:userId,license_id:licenseId,license_product_key:product,desired_state:"active",remote_state:remoteState,license_key_last4:key?key.slice(-4):null,label,api_source:"license_master",admin_override:true,updated_at:now};
+    const payload={auth_user_id:userId,license_id:licenseId,license_product_key:product,desired_state:"active",remote_state:remoteState,components,license_key_last4:key?key.slice(-4):null,label,api_source:"license_master",admin_override:allowMultiple,updated_at:now};
     const write=existing?.id?await db.from("license_bindings").update(payload).eq("id",existing.id):await db.from("license_bindings").insert(payload).select("id").single();
     if(write.error)throw write.error;
-    return Response.json({ok:true,licenseId,customerId:customer.id,customerNumber,status:remoteState,licenseKey:key||null,alreadyIssued:Boolean(result?.alreadyIssued||result?.idempotent)});
+    return Response.json({ok:true,licenseId,customerId:customer.id,customerNumber,status:remoteState,licenseKey:key||null,allowMultiple,alreadyIssued:Boolean(result?.alreadyIssued||result?.idempotent)});
   }catch(e:any){return Response.json({error:e?.message||"License assignment failed",code:e?.code||"LICENSE_ASSIGN_FAILED"},{status:e?.status||500});}
 }
