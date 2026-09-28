@@ -33,7 +33,7 @@ export async function GET(req:Request){
   const allowedChannels=[...new Set((await customerReleaseChannels(user.id,preferredInstall?.license_binding_id||null).catch(()=>channelAccess||["stable"])).map((x:any)=>String(x)))];
   if(!allowedChannels.length)allowedChannels.push("stable");
   const releaseTypes=preferredInstall?.release_version?["base","update"]:["base"];
-  const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>releaseTypes.map((type:string)=>masterReleases("orbitfs_base",channel,type).then((value:any)=>({ok:true,value})).catch((error:any)=>({ok:false,value:{releases:[]},error:String(error?.message||error)})))));
+  const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>releaseTypes.map((type:string)=>masterReleases("orbitfs_base",channel,type,"billing",true).then((value:any)=>({ok:true,value})).catch((error:any)=>({ok:false,value:{releases:[]},error:String(error?.message||error)})))));
   const releaseDiscoveryAvailable=remoteReleaseResults.every((x:any)=>x.ok===true)&&masterAvailability.reachable===true&&masterAvailability.releaseAuthorityAvailable===true;
   const masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.value?.releases||[]);
   const customerNumber=String(customer?.customer_number||"").trim();
