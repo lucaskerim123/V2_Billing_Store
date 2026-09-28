@@ -58,7 +58,10 @@ export default function MyOrbitFS(){
   },[]);
 
   const bases=(d?.bindings||[]).filter(hasBase),binding=bases[0],install=(d?.installations||[]).find((x:any)=>x.license_binding_id===binding?.id),supabase=(d?.connections||[]).find((x:any)=>x.provider==="supabase"&&x.status==="connected"),vercelConnection=(d?.connections||[]).find((x:any)=>x.provider==="vercel"&&x.status==="connected"),vercelApiReady=vercelConnection?.metadata?.api_ready===true,vercelTeams=Array.isArray(vercelConnection?.metadata?.teams)?vercelConnection.metadata.teams:[],settings=d?.settings||{},history=(d?.releases||[]).filter((x:any)=>x.installation_id===install?.id),events=(d?.events||[]).filter((x:any)=>x.installation_id===install?.id);
-  const supabaseConnectionReady=!!supabase,supabaseReady=supabaseConnectionReady&&!!install?.supabase_project_ref,databaseReady=supabaseReady&&!!install?.database_initialized_at,infrastructureReady=supabaseConnectionReady&&databaseReady&&vercelApiReady,deploymentReady=!!(install?.release_version&&install?.vercel_project_id&&install?.state==="ready"),licenseRegistration=install?.metadata?.licenseRegistration||null,licenseRegistered=licenseRegistration?.valid===true&&String(licenseRegistration?.installationId||"")===String(install?.installation_id||""),validationReady=deploymentReady&&licenseRegistered&&String(install?.health_status||"")==="healthy",panelReady=validationReady,working=!!install&&workingStates.has(String(install.state)),reviewReady=infrastructureReady&&licenseRegistered;
+  const operations=Array.isArray(d?.operations)?d.operations:[],activeOperation=d?.activeOperation||null,latestOperation=operations[0]||null;
+    const baseInstalled=!!(install?.release_version&&install?.release_id&&install?.vercel_project_id&&(install?.vercel_deployment_id||install?.production_url));
+    const operationWorking=!!activeOperation;
+    const supabaseConnectionReady=!!supabase,supabaseReady=supabaseConnectionReady&&!!install?.supabase_project_ref,databaseReady=supabaseReady&&!!install?.database_initialized_at,infrastructureReady=supabaseConnectionReady&&databaseReady&&vercelApiReady,deploymentReady=!!(install?.release_version&&install?.vercel_project_id&&install?.state==="ready"),licenseRegistration=install?.metadata?.licenseRegistration||null,licenseRegistered=licenseRegistration?.valid===true&&String(licenseRegistration?.installationId||"")===String(install?.installation_id||""),validationReady=deploymentReady&&licenseRegistered&&String(install?.health_status||"")==="healthy",panelReady=baseInstalled,working=!!install&&(workingStates.has(String(install.state))||operationWorking),reviewReady=infrastructureReady&&licenseRegistered;
   const authorityLocked=!settings.enabled||settings.maintenance_mode===true||settings.license_authority_available===false;
   const providerSetupUnavailable=authorityLocked;
   const deploymentUnavailable=authorityLocked||settings.release_authority_available===false||settings.deployment_authority_available===false||settings.customer_deploy_enabled===false;
@@ -90,10 +93,10 @@ export default function MyOrbitFS(){
   useEffect(()=>{if(vercelConnection?.team_id!==undefined&&vercelConnection?.team_id!==null&&!vercelTeamId)setVercelTeamId(String(vercelConnection.team_id))},[vercelConnection?.team_id]);
   useEffect(()=>{
     if(!install||!working){pollCount.current=0;return}
-    if(pollCount.current>=18)return;
-    const timer=setTimeout(()=>{pollCount.current+=1;void sync(true)},20000);
+    if(pollCount.current>=180)return;
+    const timer=setTimeout(()=>{pollCount.current+=1;void load(true)},5000);
     return()=>clearTimeout(timer);
-  },[install?.id,install?.state,install?.vercel_deployment_id]);
+  },[install?.id,install?.state,install?.vercel_deployment_id,activeOperation?.id,activeOperation?.state,activeOperation?.heartbeat_at]);
   useEffect(()=>{
     if(!install){setCurrentStep(1);setViewedPrimaryStage(null);return}
     if(panelReady)return;
@@ -170,7 +173,21 @@ export default function MyOrbitFS(){
   }
   async function selectVercelTeam(){setBusy("vercel-team");const r=await fetch("/api/orbitfs/providers/vercel",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"select_team",teamId:vercelTeamId||null})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?"Vercel deployment account updated.":j.error||"Could not select that Vercel team.");if(r.ok)await load()}
   async function registerLicense(){if(!install)return;const key=licenseKey.trim().toUpperCase();if(!/^LIC-[A-Z0-9]{10}-[A-Z0-9]{10}-[A-Z0-9]{10}$/.test(key))return setMsg("Enter a valid OrbitFS licence key in the format LIC-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX.");setBusy("license");try{const r=await fetch(`/api/orbitfs/installations/${install.id}/deploy`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"register_license",licenseKey:key})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Licence registration failed.");setLicenseKey("");setMsg("Licence registered to this OrbitFS installation.");await load()}catch(e:any){setMsg(e?.message||"Licence registration failed.")}finally{setBusy("")}}
-  async function deploy(action:"deploy"|"base_update"|"update"|"rollback"|"redeploy",version?:string,releaseId?:string){if(!install)return;let reason="";if(action==="rollback"){version=undefined;reason=prompt("Why are you rolling this Base deployment back?","")?.trim()||"";if(!reason)return}const actionLabel=action==="base_update"?"Update Base":action==="redeploy"?"Redeploy current Base":action==="update"?"Install normal update":action==="rollback"?"Rollback Base":"Install Base";if(!confirm(`${actionLabel}${version?` to ${version}`:""}?`))return;setBusy(action);const r=await fetch(`/api/orbitfs/installations/${install.id}/deploy`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action,version,releaseId,reason:reason||undefined,channel:String(install.release_channel||d?.settings?.release_channels?.[0]||"stable")})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?(action==="base_update"?`Base update to ${version||"the latest release"} completed in the existing Vercel project.`:action==="redeploy"?`Current Base ${install.release_version||""} redeployed in the existing Vercel project.`:`OrbitFS ${actionLabel.toLowerCase()} started in your Vercel project.`):j.error||`${actionLabel} failed.`);if(r.ok){pollCount.current=0;await load()}}
+  async function deploy(action:"deploy"|"base_update"|"update"|"rollback"|"redeploy",version?:string,releaseId?:string){
+    if(!install)return;
+    if(activeOperation){setMsg(label(activeOperation.action)+" is already "+label(activeOperation.state)+". Deployment status below will update automatically.");return}
+    let reason="";
+    if(action==="rollback"){version=undefined;reason=prompt("Why are you rolling this Base deployment back?","")?.trim()||"";if(!reason)return}
+    const actionLabel=action==="base_update"?"Update Base":action==="redeploy"?"Redeploy current Base":action==="update"?"Install normal update":action==="rollback"?"Rollback Base":"Install Base";
+    if(!confirm(actionLabel+(version?" to "+version:"")+"?"))return;
+    setBusy(action);
+    const r=await fetch("/api/orbitfs/installations/"+install.id+"/deploy",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action,version,releaseId,reason:reason||undefined,channel:String(install.release_channel||d?.settings?.release_channels?.[0]||"stable")})});
+    const j=await r.json().catch(()=>({}));
+    setBusy("");
+    if(r.ok){setMsg(action==="base_update"?"Base update to "+(version||"the latest release")+" completed in the existing Vercel project.":action==="redeploy"?"Current Base "+(install.release_version||"")+" redeployed in the existing Vercel project.":"OrbitFS "+actionLabel.toLowerCase()+" completed.");pollCount.current=0;await load();return}
+    setMsg(j.error||actionLabel+" failed.");
+    if(j.operationId||j.code==="OPERATION_IN_PROGRESS"){pollCount.current=0;await load(true)}
+  }
   async function rollbackUpdate(){if(!install||!appliedUpdateVersion)return;const reason=prompt(`Why are you rolling back Update ${appliedUpdateVersion}?`,"")?.trim()||"";if(!reason)return;if(!confirm(`Roll back OrbitFS Update ${appliedUpdateVersion}? Inner Engine targets will restore their pre-update checkpoint first. Forward-compatible database migrations remain applied.`))return;setBusy("rollback-update");const r=await fetch(`/api/orbitfs/installations/${install.id}/rollback-update`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({reason})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?`OrbitFS Update ${appliedUpdateVersion} rolled back.`:j.error||"Update rollback failed.");if(r.ok){pollCount.current=0;await load()}}
 
   async function sync(auto=false){if(!install)return;const r=await fetch(`/api/orbitfs/installations/${install.id}/status`,{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok){if(!auto)setMsg(j.error||"Could not refresh Panel status.");return}const updated=j.installation;if(updated)setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===updated.id?updated:x)}):current);if(updated&&!workingStates.has(String(updated.state)))await load()}
@@ -238,6 +255,18 @@ export default function MyOrbitFS(){
     {panelReady&&<header className="portalOverviewHero"><div><p className="eyebrow">MY ORBITFS</p><h1>OrbitFS Base</h1><p className="muted">Deployment control, infrastructure status and approved update management.</p></div></header>}
     {deploymentUnavailable&&<section className="panel orbitAuthorityNotice" style={{marginBottom:14,borderColor:"rgba(245,158,11,.55)"}}><div className="panelTitle"><div><p className="eyebrow">{settings.maintenance_mode?"MAINTENANCE":"LICENSE MANAGER CONTROL"}</p><h2>{settings.maintenance_mode?"OrbitFS deployment maintenance is active":"Base deployment is currently restricted"}</h2><p className="muted">{authorityNotice}</p></div><span className="state waiting">{settings.maintenance_mode?"MAINTENANCE":"BLOCKED"}</span></div></section>}
     {msg&&<p className="inlineStatus orbitInstallerMessage" role="status">{msg}</p>}
+
+    {install&&(activeOperation||latestOperation)&&<section className="panel" style={{marginBottom:14}}>
+      <div className="panelTitle"><div><p className="eyebrow">DEPLOYMENT STATUS</p><h2>{activeOperation?label(activeOperation.action)+" · "+label(activeOperation.state):latestOperation?.state==="failed"?"Last deployment attempt failed":"Recent deployment activity"}</h2><p className="muted">{activeOperation?"Live Base operation. This page refreshes every 5 seconds until it finishes.":"Latest Base deployment operation recorded by Billing Store."}</p></div><span className={"state "+(activeOperation?"current":latestOperation?.state==="completed"?"ready":"waiting")}>{String(activeOperation?.state||latestOperation?.state||"status").replaceAll("_"," ").toUpperCase()}</span></div>
+      {activeOperation&&<div className="portalOverviewStats" style={{marginTop:10}}>
+        <div className="portalStatCard"><div><small>ACTION</small><strong>{label(activeOperation.action)}</strong><span>{activeOperation.detail?.version||activeOperation.requested_release_id||"Current release"}</span></div></div>
+        <div className="portalStatCard"><div><small>STAGE</small><strong>{label(activeOperation.state)}</strong><span>{activeOperation.heartbeat_at?"Updated "+new Date(activeOperation.heartbeat_at).toLocaleTimeString():"Waiting for progress"}</span></div></div>
+        <div className="portalStatCard"><div><small>VERCEL</small><strong>{activeOperation.vercel_deployment_id||"Waiting"}</strong><span>{activeOperation.vercel_project_id||install.vercel_project_name||"Existing project"}</span></div></div>
+        <div className="portalStatCard"><div><small>STARTED</small><strong>{activeOperation.created_at?new Date(activeOperation.created_at).toLocaleTimeString():"Now"}</strong><span>{activeOperation.created_at?new Date(activeOperation.created_at).toLocaleDateString():""}</span></div></div>
+      </div>}
+      {!activeOperation&&latestOperation?.error_detail&&<p className="inlineStatus" style={{marginTop:10}}><b>{latestOperation.error_code||"Error"}:</b> {latestOperation.error_detail}</p>}
+      <details style={{marginTop:10}}><summary style={summaryStyle}><b>Recent operations</b> · {operations.length}</summary><div style={{marginTop:8}}>{operations.slice(0,6).map((op:any)=><div className="listrow" key={op.id}><div><b>{label(op.action)} · {label(op.state)}</b><span>{op.error_detail||op.detail?.version||op.requested_release_id||"Deployment operation"}</span></div><span>{op.created_at?new Date(op.created_at).toLocaleString():""}</span></div>)}</div></details>
+    </section>}
 
     {binding?<>
       {panelReady&&<section className="panel orbitZipControlPanel">
