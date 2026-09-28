@@ -99,9 +99,9 @@ export default function CustomerReleaseChannelsPage(){
     const pending=requestStatus==="pending";
     const approved=requestStatus==="approved";
     const rejected=requestStatus==="rejected";
-    const hasAccess=isStable||isOpen||hasExplicit||approved;
+    const hasAccess=isStable||isOpen||hasExplicit;
     const policy=isStable?"Stable":isOpen?"Open":canSelfJoin?"Self-join":canRequest?"Approval required":"Invite only";
-    const lifecycleState=isStable?"Included":isOpen?"Available":approved||hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":"Restricted";
+    const lifecycleState=isStable?"Included":isOpen?"Available":hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":approved?"Approved · syncing":"Restricted";
 
     return <article className={"customerChannelCard "+(hasAccess?"active":"")} key={channel}>
      <div className="customerChannelCardHead">
@@ -109,15 +109,15 @@ export default function CustomerReleaseChannelsPage(){
        <div className="customerChannelTitle"><h2>{c.label||channel}</h2><span className={"channelPolicyBadge "+(hasAccess?"available":"")}>{policy}</span></div>
        <p>{c.description||"OrbitFS release channel"}</p>
       </div>
-      <span className={"state "+((approved||hasExplicit||isStable||isOpen)?"ready":pending?"current":"")}>{lifecycleState}</span>
+      <span className={"state "+((hasExplicit||isStable||isOpen)?"ready":pending||approved?"current":"")}>{lifecycleState}</span>
      </div>
 
      <div className="customerChannelPolicy">
       <div><span>Access</span><b>{isStable?"Included":isOpen?"Open to customers":canSelfJoin?"Join instantly":canRequest?"Staff approval":"Assigned only"}</b></div>
-      <div><span>Status</span><b>{isStable?"Included":isOpen?"Available now":approved||hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":"Not requested"}</b></div>
+      <div><span>Status</span><b>{isStable?"Included":isOpen?"Available now":hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":approved?"Approved · access syncing":"Not requested"}</b></div>
      </div>
 
-     {approved&&<div className="channelRequestFeedback"><b>Approved</b><span>Your access request was approved. This channel is available to your OrbitFS installation.</span></div>}
+     {approved&&<div className="channelRequestFeedback"><b>Approved</b><span>{hasExplicit?"Your access request was approved. This channel is available to your OrbitFS installation.":"Your request is approved, but the access grant has not appeared yet. Refresh this page; deployment remains blocked until the grant is authoritative."}</span></div>}
      {rejected&&<div className="channelRequestFeedback"><b>Denied</b><span>{request?.reason||"Your access request was not approved."}</span></div>}
 
      <div className="customerChannelActions">
@@ -127,7 +127,8 @@ export default function CustomerReleaseChannelsPage(){
       {canSelfJoin&&hasExplicit&&<button className="secondary" disabled={!!busy} onClick={()=>void act("leave",channel)}>{busy==="leave:"+channel?"Leaving…":"Leave channel"}</button>}
       {canRequest&&!hasExplicit&&!approved&&!pending&&<button disabled={!!busy} onClick={()=>{setFormChannel(channel);setForm(emptyRequest)}}>{rejected?"Request again":"Request access"}</button>}
       {canRequest&&pending&&<span className="state current">Request pending</span>}
-      {canRequest&&(approved||hasExplicit)&&<span className="state ready">Approved</span>}
+      {canRequest&&hasExplicit&&<span className="state ready">Approved</span>}
+      {canRequest&&approved&&!hasExplicit&&<button className="secondary" disabled={!!busy} onClick={()=>void load()}>Refresh approved access</button>}
       {canRequest&&rejected&&!pending&&!approved&&<span className="state">Denied</span>}
       {!isStable&&!isOpen&&!canSelfJoin&&!canRequest&&hasExplicit&&<span className="state ready">Assigned by staff</span>}
       {!isStable&&!isOpen&&!canSelfJoin&&!canRequest&&!hasExplicit&&<span className="state">Invite only</span>}
