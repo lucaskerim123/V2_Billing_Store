@@ -10,7 +10,7 @@ export async function customerReleaseChannels(userId:string,bindingId?:string|nu
   const licenseId=String(binding.data?.license_id||"");
   if(!licenseId)return ["stable"];
   const [channelResult,accessResult]=await Promise.all([
-    masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET"},"billing"),
+    masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET",cache:"no-store"},"billing"),
     masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"list_access",license_id:licenseId})},"billing").catch(()=>({access:[]}))
   ]);
   const channels=Array.isArray(channelResult?.channels)?channelResult.channels:[];
