@@ -8,8 +8,6 @@ import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 export const dynamic="force-dynamic";
 const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
 const key=()=>String(process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"");
-function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
-function compareOrbitReleaseVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
 
 async function currentUser(req:Request){const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!token||!url()||!key())throw Object.assign(new Error("Authentication is unavailable"),{status:401});const sb=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}});const result=await sb.auth.getUser(token);if(result.error||!result.data?.user)throw Object.assign(new Error("Unauthorized"),{status:401});return {user:result.data.user,token}}
 export async function GET(req:Request){
