@@ -3,12 +3,13 @@ import {createClient} from "@supabase/supabase-js";
 import {masterLicenses,masterReleases} from "@/lib/master-api";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {expireStaleBaseOperations} from "@/lib/orbitfs-base-operations";
+import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 
 export const dynamic="force-dynamic";
 const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
 const key=()=>String(process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"");
 function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
-function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
+function compareOrbitReleaseVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
 
 async function currentUser(req:Request){const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!token||!url()||!key())throw Object.assign(new Error("Authentication is unavailable"),{status:401});const sb=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}});const result=await sb.auth.getUser(token);if(result.error||!result.data?.user)throw Object.assign(new Error("Unauthorized"),{status:401});return {user:result.data.user,token}}
 export async function GET(req:Request){
@@ -119,7 +120,7 @@ export async function GET(req:Request){
   const selectedChannel=String(install?.release_channel||allowedChannels[0]||"stable");
   const latestMaster=(type:string)=>publishedMaster.filter((r:any)=>String(r.release_type||"")===type&&String(r.channel||"stable")===selectedChannel).sort((a:any,b:any)=>String(b.published_at||b.publishedAt||"").localeCompare(String(a.published_at||a.publishedAt||""))||String(b.version).localeCompare(String(a.version),undefined,{numeric:true}))[0]||null;
   const latestBase=latestMaster("base"),latestUpdate=latestMaster("update");
-  const baseComparison=install?.release_version&&latestBase?.version?compareVersions(latestBase.version,install.release_version):null;
+  const baseComparison=install?.release_version&&latestBase?.version?compareOrbitReleaseVersions(latestBase.version,install.release_version):null;
   const baseUpdateAvailable=Boolean(releaseDiscoveryAvailable&&install?.vercel_project_id&&install?.release_id&&latestBase?.id&&String(latestBase.id)!==String(install.release_id)&&baseComparison!==null&&baseComparison>0);
   const baseUpdateStatus=!releaseDiscoveryAvailable?"authority_unavailable":!install?.release_version?"not_installed":!latestBase?"no_published_release":baseUpdateAvailable?"update_available":"current";
   const activeOperation=(operationRows.data||[]).find((row:any)=>["requested","authorising","validated","deploying","migrating","verifying","promoting"].includes(String(row.state||"")))||null;
