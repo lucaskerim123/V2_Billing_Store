@@ -29,6 +29,7 @@ export default function LicenseControllerPage(){
  const [message,setMessage]=useState("");
  const [masterQuery,setMasterQuery]=useState("");
  const [newKey,setNewKey]=useState("");
+ const [issueComponents,setIssueComponents]=useState({orbitfs_apex:false,orbitfs_mcp:false,orbitfs_studio:false});
 
  async function getToken(){
   const {data:{session}}=await sb.auth.getSession();
@@ -100,6 +101,23 @@ export default function LicenseControllerPage(){
    setMessage(productName(j.product)+" linked"+(mode==="auto"&&j.matchReason?" · matched by "+j.matchReason:"")+".");
    await loadCustomer(customerId);
   }catch(e:any){setError(e?.message||"Could not link licence.")}
+  finally{setBusy("")}
+ }
+
+ async function issueAdditional(){
+  if(!customerId)return;
+  if(!confirm("Issue an additional independent OrbitFS Base licence for this customer? Existing licences will remain active."))return;
+  setBusy("issue-additional");setError("");setMessage("");setNewKey("");
+  try{
+   const t=await getToken();
+   const components={orbitfs_base:true,...issueComponents};
+   const r=await fetch("/api/admin/license-assign",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({customerId,product:"orbitfs_base",label:"Additional OrbitFS licence",allowMultiple:true,components})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not issue additional licence.");
+   if(j.licenseKey)setNewKey(String(j.licenseKey));
+   setMessage(j.alreadyIssued?"License Manager reused the matching request.":"Additional licence issued and linked to this customer.");
+   await loadCustomer(customerId);
+  }catch(e:any){setError(e?.message||"Could not issue additional licence.")}
   finally{setBusy("")}
  }
 
@@ -195,7 +213,7 @@ export default function LicenseControllerPage(){
     </div>
 
     {newKey&&<section className="orbitReferenceKeyBox" role="status">
-     <div><b>Replacement licence key</b><span>Shown once. Save it before leaving this page.</span></div>
+     <div><b>New licence key</b><span>Shown once. Save it before leaving this page.</span></div>
      <code>{newKey}</code>
      <div className="orbitReferenceDecision"><button onClick={()=>void navigator.clipboard?.writeText(newKey)}>Copy key</button><button className="secondary" onClick={()=>setNewKey("")}>Dismiss</button></div>
     </section>}
@@ -233,6 +251,17 @@ export default function LicenseControllerPage(){
        </article>
       })}
      </div>:<div className="orbitReferenceEmpty compact"><b>No licence is linked to this customer.</b><span>Use Auto-link or open the License Manager inventory below to link an existing licence.</span></div>}
+    </section>
+
+    <section className="orbitReferenceSection">
+     <div className="orbitReferenceSectionHead"><div><b>Issue additional licence</b><small>Explicit admin override. Creates another independent Base licence set without replacing the customer's existing current licence.</small></div><span>1 system per licence</span></div>
+     <div className="orbitReferenceInstallations">
+      <div><span><b>OrbitFS Base</b><small>Always included</small></span><span className="orbitMiniState live">Included</span></div>
+      <div><span><b>APEX</b><small>Optional entitlement on the new licence</small></span><input type="checkbox" checked={issueComponents.orbitfs_apex} onChange={e=>setIssueComponents(v=>({...v,orbitfs_apex:e.target.checked}))}/></div>
+      <div><span><b>MCP</b><small>Optional entitlement on the new licence</small></span><input type="checkbox" checked={issueComponents.orbitfs_mcp} onChange={e=>setIssueComponents(v=>({...v,orbitfs_mcp:e.target.checked}))}/></div>
+      <div><span><b>Studio</b><small>Optional entitlement on the new licence</small></span><input type="checkbox" checked={issueComponents.orbitfs_studio} onChange={e=>setIssueComponents(v=>({...v,orbitfs_studio:e.target.checked}))}/></div>
+     </div>
+     <div className="orbitReferenceActions"><button disabled={!!busy||!selectedCustomer} onClick={()=>void issueAdditional()}>{busy==="issue-additional"?"Issuing…":"Issue additional licence"}</button></div>
     </section>
 
     <details className="orbitReferenceInventory">
