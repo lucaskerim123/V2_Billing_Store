@@ -14,7 +14,7 @@ async function billingCustomerReference(userId:string){
 export async function GET(req:Request){
   try{
     const {user}=await requireOrbitUser(req);
-    const channelResult=await masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET"},"billing");
+    const channelResult=await masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET",cache:"no-store"},"billing");
     const customerReference=await billingCustomerReference(user.id);
     async function snapshot(action:"list_requests"|"list_access"){
       try{
