@@ -1,3 +1,4 @@
+import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
@@ -411,7 +412,7 @@ commit;`);
   return {baseline:baseline.count,target:chain.length,required:Math.max(0,chain.length-baseline.count),seeded,applied,skipped,ids};
 }
 function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
-function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
+function compareOrbitReleaseVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
 async function deploymentDiagnostics(userId:string,id:string){
   try{
     const events=await vercelApi(userId,`/v3/deployments/${encodeURIComponent(id)}/events?direction=backward&follow=0&limit=80&builds=1`,{method:"GET"});
@@ -508,7 +509,7 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
   const projectId=String(install.vercel_project_id||"").trim(),previousDeploymentId=String(install.vercel_deployment_id||"").trim();
   if(!currentReleaseId||!currentVersion)fail("Install OrbitFS Base before running a Base update",409,"BASE_INSTALLATION_REQUIRED");
   if(!projectId||!previousDeploymentId)fail("The existing Base Vercel project/deployment identity is missing. Base update will not create a replacement project.",409,"BASE_PROJECT_NOT_FOUND");
-  const comparison=compareVersions(String(release.version||""),currentVersion);
+  const comparison=compareOrbitReleaseVersions(String(release.version||""),currentVersion);
   if(comparison===null)fail("Base versions could not be compared safely",409,"BASE_VERSION_COMPARISON_FAILED");
   const versionComparison=comparison as number;
   if(versionComparison===0)fail("This Base version is already installed. Use Redeploy current Base instead.",409,"BASE_ALREADY_INSTALLED");
@@ -795,7 +796,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     const installedBase=String(install.release_version||"").trim();
     if(!installedBase)fail("Deploy OrbitFS Base before applying an Update release",409);
     const requiredBase=String(bundle.minimumBaseVersion||"").trim();
-    const baseComparison=requiredBase?compareVersions(installedBase,requiredBase):0;
+    const baseComparison=requiredBase?compareOrbitReleaseVersions(installedBase,requiredBase):0;
     if(requiredBase&&(baseComparison===null||baseComparison<0))fail(`Update ${release.version} requires Base ${requiredBase} or newer; this installation is Base ${installedBase}.`,409);
     const wantsPanel=components.includes("base"),wantsEngine=components.some(component=>component!=="base");
     const panel=bundle.payloads?.panel||null,engine=bundle.payloads?.engine||null;
