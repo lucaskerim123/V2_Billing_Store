@@ -11,35 +11,48 @@ export async function GET(req:Request){
   try{
     await requireOrbitAdmin(req);
     const db=licenseDb();
-    const [channels,profiles,customerRows,bindingRows,requests,remoteAccess]=await Promise.all([
+    const [channels,profiles,customerRows,requests,remoteAccess]=await Promise.all([
       authoritativeChannels(),
-      db.from("user_profiles").select("id,display_name,company_name,status,role").eq("role","user").order("display_name"),
-      db.from("customers").select("id,auth_user_id,user_id,customer_number,name,email"),
-      db.from("license_bindings").select("license_id,auth_user_id").eq("license_product_key","orbitfs_base").is("archived_at",null),
-      masterRequest("/api/v1/release-channels/access?status=pending",{method:"GET"},"billing").catch(()=>({requests:[]})),
-      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET"},"billing").catch(()=>({access:[]}))
+      db.from("user_profiles").select("id,display_name,company_name,status,role"),
+      db.from("customers").select("id,auth_user_id,user_id,customer_number,name,email,status").order("name"),
+      masterRequest("/api/v1/release-channels/access?status=pending",{method:"GET"},"billing"),
+      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET"},"billing")
     ]);
     if(profiles.error)throw profiles.error;
     if(customerRows.error)throw customerRows.error;
-    if(bindingRows.error)throw bindingRows.error;
 
-    const customerMap=new Map((customerRows.data||[]).map((c:any)=>[String(c.auth_user_id||c.user_id||c.id),c]));
-    const customers=(profiles.data||[]).map((p:any)=>{
-      const c=customerMap.get(String(p.id));
-      return {...p,email:c?.email||null,customer_id:c?.id||null,customer_number:c?.customer_number||null,customer_name:c?.name||null};
-    }).filter((p:any)=>p.status!=="deleted");
+    const profileMap=new Map((profiles.data||[]).map((p:any)=>[String(p.id),p]));
+    const customers=(customerRows.data||[]).map((customer:any)=>{
+      const userId=String(customer.auth_user_id||customer.user_id||"");
+      const profile:any=profileMap.get(userId)||{};
+      return {
+        id:userId,
+        display_name:profile.display_name||customer.name||null,
+        company_name:profile.company_name||null,
+        status:customer.status||profile.status||"active",
+        role:profile.role||"user",
+        email:customer.email||null,
+        customer_id:customer.id||null,
+        customer_number:customer.customer_number||null,
+        customer_name:customer.name||null
+      };
+    }).filter((customer:any)=>customer.id&&customer.status!=="deleted");
 
-    const userByLicense=new Map((bindingRows.data||[]).map((b:any)=>[String(b.license_id),String(b.auth_user_id)]));
-    const authoritativeAccess=(Array.isArray(remoteAccess?.access)?remoteAccess.access:[]).map((a:any)=>({
-      ...a,
-      user_id:String(a.external_reference||userByLicense.get(String(a.license_id))||"")
-    }));
+    const customerByNumber=new Map(customers.filter((customer:any)=>customer.customer_number).map((customer:any)=>[String(customer.customer_number).toLowerCase(),customer]));
+    const authoritativeAccess=(Array.isArray(remoteAccess?.access)?remoteAccess.access:[]).map((a:any)=>{
+      const customer:any=customerByNumber.get(String(a.external_reference||"").toLowerCase());
+      return {...a,user_id:String(customer?.id||"")};
+    });
+    const authoritativeRequests=(Array.isArray(requests?.requests)?requests.requests:[]).map((request:any)=>{
+      const customer:any=customerByNumber.get(String(request.external_reference||"").toLowerCase());
+      return {...request,user_id:String(customer?.id||"")};
+    });
 
     return Response.json({
       channels,
       access:authoritativeAccess,
       customers,
-      requests:Array.isArray(requests?.requests)?requests.requests:[],
+      requests:authoritativeRequests,
       authority:"license_manager",
       mirrored:false
     },{headers:{"cache-control":"no-store"}});
@@ -89,11 +102,11 @@ export async function POST(req:Request){
       if(authoritative.enabled===false||authoritative.customer_visible===false)throw Object.assign(new Error("Release channel is not available to customers"),{status:400});
 
       const db=licenseDb();
-      const binding=await db.from("license_bindings").select("license_id").eq("auth_user_id",userId).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle();
-      if(binding.error)throw binding.error;
-      if(!binding.data?.license_id)throw Object.assign(new Error("Customer has no linked OrbitFS Base license"),{status:409});
-
-      const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:String(binding.data.license_id),channel,external_reference:userId})},"billing");
+      const customer=await db.from("customers").select("customer_number").or(`auth_user_id.eq.${userId},user_id.eq.${userId}`).limit(1).maybeSingle();
+      if(customer.error)throw customer.error;
+      const customerReference=String(customer.data?.customer_number||"").trim();
+      if(!customerReference)throw Object.assign(new Error("Customer has no Billing customer number"),{status:409});
+      const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",channel,external_reference:customerReference})},"billing");
       return Response.json({access:remote?.access||remote,authority:"license_manager"},{status:201});
     }
 
@@ -109,7 +122,7 @@ export async function POST(req:Request){
       const licenseId=String(body.licenseId||body.license_id||"").trim();
       const channel=String(body.channel||"").trim().toLowerCase();
       if(!licenseId||!channel)throw Object.assign(new Error("License and channel are required"),{status:400});
-      return Response.json(await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:licenseId,channel,external_reference:body.userId||body.user_id||null})},"billing"));
+      return Response.json(await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:licenseId,channel,external_reference:body.customerReference||body.customer_reference||null})},"billing"));
     }
 
     if(action==="reject"){

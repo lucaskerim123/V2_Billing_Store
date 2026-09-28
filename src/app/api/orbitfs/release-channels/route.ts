@@ -2,24 +2,31 @@ import {licenseDb} from "@/lib/license-api";
 import {masterRequest} from "@/lib/master-api";
 import {httpError,requireOrbitUser} from "@/lib/orbitfs-deployment";
 
+async function billingCustomerReference(userId:string){
+  const db=licenseDb();
+  const result=await db.from("customers").select("customer_number").or(`auth_user_id.eq.${userId},user_id.eq.${userId}`).limit(1).maybeSingle();
+  if(result.error)throw result.error;
+  const reference=String(result.data?.customer_number||"").trim();
+  if(!reference)throw Object.assign(new Error("Billing customer number is required for release channel access"),{status:409,code:"CUSTOMER_REFERENCE_REQUIRED"});
+  return reference;
+}
+
 export async function GET(req:Request){
   try{
     const {user}=await requireOrbitUser(req);
-    const db=licenseDb();
-    const [channelResult,bindings]=await Promise.all([
-      masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET"},"billing"),
-      db.from("license_bindings").select("license_id,license_product_key").eq("auth_user_id",user.id).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle(),
-    ]);
-    if(bindings.error)throw bindings.error;
-    const licenseId=String(bindings.data?.license_id||"");
-    let requestResult:any={requests:[]},accessResult:any={access:[]};
-    if(licenseId){
-      const [requestsRemote,accessRemote]=await Promise.all([
-        masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"list_requests",license_id:licenseId})},"billing").catch(()=>({requests:[]})),
-        masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"list_access",license_id:licenseId})},"billing").catch(()=>({access:[]})),
-      ]);
-      requestResult=requestsRemote;accessResult=accessRemote;
+    const channelResult=await masterRequest("/api/v1/release-channels?include_disabled=false",{method:"GET"},"billing");
+    const customerReference=await billingCustomerReference(user.id);
+    async function snapshot(action:"list_requests"|"list_access"){
+      try{
+        return await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action,external_reference:customerReference})},"billing");
+      }catch(error:any){
+        if(Number(error?.status)===403&&String(error?.code||"")==="ACTIVE_BASE_LICENSE_REQUIRED"){
+          return action==="list_requests"?{requests:[]}:{access:[]};
+        }
+        throw error;
+      }
     }
+    const [requestResult,accessResult]=await Promise.all([snapshot("list_requests"),snapshot("list_access")]);
     const channels=Array.isArray(channelResult?.channels)?channelResult.channels.filter((x:any)=>x.enabled!==false&&x.customer_visible!==false):[];
     return Response.json({
       channels,
@@ -37,11 +44,7 @@ export async function POST(req:Request){
     const action=String(body.action||"").trim().toLowerCase();
     const channel=String(body.channel||"").trim().toLowerCase();
     if(!channel)throw Object.assign(new Error("Release channel is required"),{status:400});
-    const db=licenseDb();
-    const binding=await db.from("license_bindings").select("license_id").eq("auth_user_id",user.id).eq("license_product_key","orbitfs_base").is("archived_at",null).order("created_at",{ascending:false}).limit(1).maybeSingle();
-    if(binding.error)throw binding.error;
-    const licenseId=String(binding.data?.license_id||"");
-    if(!licenseId)throw Object.assign(new Error("An active OrbitFS Base license is required"),{status:403});
+    const customerReference=await billingCustomerReference(user.id);
     if(!["request","join","leave"].includes(action))throw Object.assign(new Error("Unsupported channel access action"),{status:400});
     const requestDetails=action==="request"&&body.requestDetails&&typeof body.requestDetails==="object"&&!Array.isArray(body.requestDetails)
       ?{
@@ -56,9 +59,8 @@ export async function POST(req:Request){
       method:"POST",
       body:JSON.stringify({
         action:action==="leave"?"revoke":action,
-        license_id:licenseId,
         channel,
-        external_reference:user.id,
+        external_reference:customerReference,
         ...(requestDetails?{request_details:requestDetails}:{})
       })
     },"billing");

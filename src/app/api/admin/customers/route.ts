@@ -7,6 +7,49 @@ const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+export async function GET(req:Request){
+  const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
+  if(!token)return Response.json({error:"Authentication required."},{status:401});
+  const userDb=createClient(url,publicKey,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false}});
+  const {data:{user},error:userError}=await userDb.auth.getUser(token);
+  if(userError||!user)return Response.json({error:"Invalid session."},{status:401});
+  const {data:access}=await userDb.rpc("get_my_staff_access");
+  if(!access?.permissions?.all&&!access?.permissions?.["customers.view"]&&!access?.permissions?.["customers.edit"])return Response.json({error:"Permission denied."},{status:403});
+
+  const service=createClient(url,serviceKey,{auth:{persistSession:false}});
+  const [customers,profiles,balances]=await Promise.all([
+    service.from("customers").select("*").order("created_at",{ascending:false}),
+    service.from("user_profiles").select("*"),
+    service.from("account_balances").select("*")
+  ]);
+  if(customers.error)return Response.json({error:customers.error.message},{status:500});
+  if(profiles.error)return Response.json({error:profiles.error.message},{status:500});
+  if(balances.error)return Response.json({error:balances.error.message},{status:500});
+
+  const profileMap=new Map((profiles.data||[]).map((p:any)=>[String(p.id),p]));
+  const rows=(customers.data||[])
+    .filter((row:any)=>row.auth_user_id||row.user_id)
+    .map((row:any)=>{
+      const userId=String(row.auth_user_id||row.user_id);
+      const p:any=profileMap.get(userId)||{};
+      return {
+        ...p,
+        ...row,
+        id:userId,
+        auth_user_id:userId,
+        customer_id:row.id,
+        email:row.email,
+        username:row.username,
+        customer_number:row.customer_number||p.customer_number,
+        status:row.status||p.status||"active",
+        email_verified_at:row.email_verified_at||p.email_verified_at
+      };
+    })
+    .filter((row:any)=>row.status!=="deleted");
+
+  return Response.json({customers:rows,balances:balances.data||[]},{headers:{"cache-control":"no-store"}});
+}
+
 export async function POST(req:Request){
   const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
   if(!token)return Response.json({error:"Authentication required."},{status:401});
