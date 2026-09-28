@@ -41,7 +41,7 @@ export async function masterProducts(role:MasterRole="billing"){
 export async function masterLicenses(role:MasterRole="billing"){
   return masterRequest("/api/v1/license",{method:"GET"},role);
 }
-export async function masterReleases(product="orbitfs_base",channel="all",releaseType="all",role:MasterRole="billing"){
+export async function masterReleases(product="orbitfs_base",channel="all",releaseType="all",role:MasterRole="billing",fresh=false){
   const qs=new URLSearchParams();
   const p=String(product||"").trim().toLowerCase();
   const c=String(channel||"").trim().toLowerCase();
@@ -50,7 +50,7 @@ export async function masterReleases(product="orbitfs_base",channel="all",releas
   if(c&&c!=="all")qs.set("channel",c);
   if(t&&t!=="all")qs.set("type",t);
   const query=qs.toString();
-  return masterRequest("/api/v1/releases"+(query?"?"+query:""),{method:"GET"},role);
+  return masterRequest("/api/v1/releases"+(query?"?"+query:""),{method:"GET",...(fresh?{cache:"no-store" as RequestCache}:{})},role);
 }
 
 const ALLOWED_PRODUCTS=new Set(["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
