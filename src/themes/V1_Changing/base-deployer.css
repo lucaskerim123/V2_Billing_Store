@@ -383,3 +383,93 @@ html[data-customer-theme="V1_Changing"] .orbitInstallerMessage{
 @media(max-width:640px){
   html[data-customer-theme="V1_Changing"] .orbitProviderQuickLinks{grid-template-columns:1fr!important}
 }
+
+/* Deployed control-centre cleanup */
+html[data-customer-theme="V1_Changing"] .orbitZipDeployed{
+  gap:12px!important;overflow:visible!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipDeployed>.portalOverviewHero{
+  padding:4px 2px 8px!important;border:0!important;background:transparent!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipDeployed>.portalOverviewHero h1{margin:3px 0!important;font-size:28px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel{
+  gap:12px!important;padding:0!important;background:transparent!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitControlHead,
+html[data-customer-theme="V1_Changing"] .orbitReleaseToolbar,
+html[data-customer-theme="V1_Changing"] .orbitReleaseOverview,
+html[data-customer-theme="V1_Changing"] .orbitReleaseNotes,
+html[data-customer-theme="V1_Changing"] .orbitZipDetailsPanel,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel{
+  border:1px solid #203849!important;border-radius:10px!important;background:#091620!important;box-shadow:none!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitControlHead{padding:17px 18px!important}
+html[data-customer-theme="V1_Changing"] .orbitControlHead h2{font-size:19px!important}
+html[data-customer-theme="V1_Changing"] .orbitControlHead .muted{margin:0!important;font-size:10.5px!important}
+html[data-customer-theme="V1_Changing"] .orbitControlHeadActions .buttonlink,
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel button{
+  min-height:38px!important;padding:8px 12px!important;border-radius:7px!important;font-size:10px!important;font-weight:800!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel button.secondary,
+html[data-customer-theme="V1_Changing"] .orbitControlHeadActions .secondary{
+  border:1px solid #31495c!important;background:#0f1e2a!important;color:#cfdae3!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitHeroAction{
+  border:1px solid var(--bd-brand-strong)!important;background:linear-gradient(180deg,#b9444d,#8e3038)!important;color:#fff!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitReleaseToolbar{
+  grid-template-columns:minmax(170px,.55fr) minmax(240px,1fr) auto!important;padding:12px!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitReleaseToolbar label{gap:5px!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseToolbar label>span{color:#8da2b3!important;font-size:8.5px!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseToolbar select{
+  min-height:39px!important;padding:8px 10px!important;border:1px solid #2a4153!important;border-radius:7px!important;background:#07111a!important;color:#edf5fa!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitReleaseRefresh small{color:#71889b!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseOverview{
+  grid-template-columns:minmax(0,.75fr) auto minmax(0,.75fr) minmax(220px,.65fr)!important;padding:17px 18px!important;background:linear-gradient(135deg,#0d1c28,#0a151f)!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitReleaseIdentity small{color:#c36b73!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseIdentity strong{font-size:24px!important;color:#f2f7fa!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseIdentity span,
+html[data-customer-theme="V1_Changing"] .orbitReleasePrimary small{color:#8297aa!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseArrow{color:#5f7587!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseNotes{padding:10px 13px!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseNotes summary{color:#dce8ef!important}
+html[data-customer-theme="V1_Changing"] .orbitReleaseNotes p{color:#8297aa!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitControlStats{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitControlStats .portalStatCard{min-height:82px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipDetailsPanel,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel{padding:14px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipDetailsPanel>.panelTitle,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel>.panelTitle{
+  margin:0!important;padding:0!important;border:0!important;background:transparent!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipDetailsPanel[open]>.panelTitle,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel[open]>.panelTitle{
+  padding-bottom:12px!important;border-bottom:1px solid #1d3343!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipDetailsPanel .orbitZipControlSection{
+  padding:12px!important;border:1px solid #1d3343!important;background:#08131d!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipDetailsPanel .orbitZipControlRows>div{grid-template-columns:135px minmax(0,1fr)!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows{padding-top:12px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>div,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>details>summary{
+  border-color:#1d3343!important;background:#08131d!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipUninstallOptions{border-top:1px solid #1d3343!important}
+@media(max-width:900px){
+  html[data-customer-theme="V1_Changing"] .orbitReleaseToolbar{grid-template-columns:1fr 1fr!important}
+  html[data-customer-theme="V1_Changing"] .orbitReleaseOverview{grid-template-columns:1fr auto 1fr!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitControlStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:640px){
+  html[data-customer-theme="V1_Changing"] .orbitReleaseToolbar,
+  html[data-customer-theme="V1_Changing"] .orbitReleaseOverview,
+  html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitControlStats{grid-template-columns:1fr!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipDetailsPanel .orbitZipControlRows>div{grid-template-columns:1fr!important}
+}
+
