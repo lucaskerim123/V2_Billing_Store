@@ -38,16 +38,21 @@ export async function GET(req:Request){
       };
     }).filter((customer:any)=>customer.id&&customer.status!=="deleted");
 
-    const authoritativeAccess=(Array.isArray(remoteAccess?.access)?remoteAccess.access:[]).map((a:any)=>({
-      ...a,
-      user_id:String(a.external_reference||"")
-    }));
+    const customerByNumber=new Map(customers.filter((customer:any)=>customer.customer_number).map((customer:any)=>[String(customer.customer_number).toLowerCase(),customer]));
+    const authoritativeAccess=(Array.isArray(remoteAccess?.access)?remoteAccess.access:[]).map((a:any)=>{
+      const customer:any=customerByNumber.get(String(a.external_reference||"").toLowerCase());
+      return {...a,user_id:String(customer?.id||"")};
+    });
+    const authoritativeRequests=(Array.isArray(requests?.requests)?requests.requests:[]).map((request:any)=>{
+      const customer:any=customerByNumber.get(String(request.external_reference||"").toLowerCase());
+      return {...request,user_id:String(customer?.id||"")};
+    });
 
     return Response.json({
       channels,
       access:authoritativeAccess,
       customers,
-      requests:Array.isArray(requests?.requests)?requests.requests:[],
+      requests:authoritativeRequests,
       authority:"license_manager",
       mirrored:false
     },{headers:{"cache-control":"no-store"}});
@@ -96,7 +101,12 @@ export async function POST(req:Request){
       if(!authoritative)throw Object.assign(new Error("Release channel was not found in License Manager"),{status:404});
       if(authoritative.enabled===false||authoritative.customer_visible===false)throw Object.assign(new Error("Release channel is not available to customers"),{status:400});
 
-      const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",channel,external_reference:userId})},"billing");
+      const db=licenseDb();
+      const customer=await db.from("customers").select("customer_number").or(`auth_user_id.eq.${userId},user_id.eq.${userId}`).limit(1).maybeSingle();
+      if(customer.error)throw customer.error;
+      const customerReference=String(customer.data?.customer_number||"").trim();
+      if(!customerReference)throw Object.assign(new Error("Customer has no Billing customer number"),{status:409});
+      const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",channel,external_reference:customerReference})},"billing");
       return Response.json({access:remote?.access||remote,authority:"license_manager"},{status:201});
     }
 
@@ -112,7 +122,7 @@ export async function POST(req:Request){
       const licenseId=String(body.licenseId||body.license_id||"").trim();
       const channel=String(body.channel||"").trim().toLowerCase();
       if(!licenseId||!channel)throw Object.assign(new Error("License and channel are required"),{status:400});
-      return Response.json(await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:licenseId,channel,external_reference:body.userId||body.user_id||null})},"billing"));
+      return Response.json(await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:licenseId,channel,external_reference:body.customerReference||body.customer_reference||null})},"billing"));
     }
 
     if(action==="reject"){
