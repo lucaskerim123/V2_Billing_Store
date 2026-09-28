@@ -9,6 +9,8 @@ const label=(state:any)=>String(state||"waiting").replaceAll("_"," ");
 const sectionGap={display:"grid",gap:12} as const;
 const summaryStyle={cursor:"pointer"} as const;
 const workingStates=new Set(["configuring","deploying","updating"]);
+function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
+function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
 
 export default function MyOrbitFS(){
   const sb=useMemo(()=>createClient(),[]),pollCount=useRef(0);
@@ -30,8 +32,8 @@ export default function MyOrbitFS(){
   const [lifecyclePlan,setLifecyclePlan]=useState<any>(null);
 
   async function authHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{} }
-  async function load(){
-    setLoading(true);
+  async function load(background=false){
+    if(!background)setLoading(true);
     try{
       const headers=await authHeaders();
       if(!headers.Authorization){setMsg("Your session has expired. Please sign in again.");return}
@@ -41,7 +43,7 @@ export default function MyOrbitFS(){
         if(r.ok){setD(j);setMsg("")}else setMsg(j.error||"Could not load My OrbitFS.");
       }catch(e:any){setMsg(e?.name==="AbortError"?"My OrbitFS status request timed out. Please retry.":e?.message||"Could not load My OrbitFS.")}
       finally{clearTimeout(timer)}
-    }finally{setLoading(false)}
+    }finally{if(!background)setLoading(false)}
   }
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
@@ -79,6 +81,9 @@ export default function MyOrbitFS(){
   const selectedRelease=publishedBaseReleases.find((r:any)=>String(r.id)===selectedReleaseId)||publishedBaseReleases[0]||null;
   const selectedReleaseMatchesInstalled=!!(selectedRelease&&install?.release_id&&String(selectedRelease.id)===String(install.release_id));
   const latestBaseRelease=d?.latestBase||null,latestBase=latestBaseRelease?.version,baseUpdateAvailable=Boolean(d?.baseUpdateAvailable&&latestBaseRelease?.id),latestUpdate=d?.latestUpdate?.version,appliedUpdate=install?.metadata?.appliedUpdate||null,appliedUpdateVersion=String(appliedUpdate?.version||""),updateAvailable=!!(install?.release_version&&latestUpdate&&appliedUpdateVersion!==String(latestUpdate)),components=binding?Object.entries(binding.components||{}).filter(([,v])=>v).map(([k])=>k):[];
+  const baseUpdateCandidates=publishedBaseReleases.filter((r:any)=>{const comparison=compareVersions(r.version,install?.release_version);return comparison!==null&&comparison>0});
+  const selectedBaseUpdateRelease=baseUpdateCandidates.find((r:any)=>String(r.id)===selectedReleaseId)||baseUpdateCandidates[0]||null;
+  const selectedBaseUpdateAvailable=Boolean(selectedBaseUpdateRelease?.id);
 
   useEffect(()=>{if(!preferredBaseChannel&&availableBaseChannels.length)setPreferredBaseChannel(String(availableBaseChannels[0]))},[availableBaseChannels.join(","),preferredBaseChannel]);
   useEffect(()=>{if(selectedRelease?.id&&!selectedReleaseId)setSelectedReleaseId(String(selectedRelease.id))},[selectedRelease?.id,selectedReleaseId]);
@@ -102,7 +107,28 @@ export default function MyOrbitFS(){
   async function start(){if(!binding)return;if(providerSetupUnavailable)return setMsg(settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment maintenance is active."):(settings.license_authority_notice||"OrbitFS authority is unavailable."));setBusy("start");try{const r=await fetch("/api/orbitfs/installations/start",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({bindingId:binding.id})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Could not start OrbitFS setup.");const data=j.installation;setMsg("OrbitFS setup started.");await trackCustomerActivity("orbitfs.installation.create",{entityType:"license",entityId:binding.id,detail:{installation_id:data?.installation_id}});await load()}catch(e:any){setMsg(e?.message||"Could not start OrbitFS setup.")}finally{setBusy("")}}
   async function connectSupabase(){if(!install)return;setBusy("supabase");const r=await fetch("/api/orbitfs/oauth/supabase/start",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({installationId:install.id})}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(j.error||"Could not connect Supabase.");location.href=j.url}
   async function resetSupabase(){if(!confirm("Disconnect the current Supabase connector? This removes the saved OAuth tokens. Your Supabase project and its data are not deleted."))return;setBusy("supabase-reset");const r=await fetch("/api/orbitfs/providers/supabase",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"disconnect"})}),j=await r.json().catch(()=>({}));setBusy("");setResources(undefined);if(!r.ok)return setMsg(j.error||"Could not reset Supabase connection.");setMsg("Supabase connector reset. Connect your Supabase account again.");await load()}
-  async function saveReleaseChannel(channel:string){setPreferredBaseChannel(channel);setSelectedReleaseId("");if(!install)return;setBusy("channel");const r=await fetch(`/api/orbitfs/installations/${install.id}/deploy`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"set_channel",channel})}),j=await r.json().catch(()=>({}));if(!r.ok){setBusy("");return setMsg(j.error||"Could not save release channel.")}setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===install.id?{...x,release_channel:channel}:x)}):current);await load();setBusy("");setMsg(`Release channel set to ${channel}.`)}
+  async function saveReleaseChannel(channel:string){
+    setPreferredBaseChannel(channel);setSelectedReleaseId("");
+    if(!install)return;
+    setBusy("channel");
+    try{
+      const r=await fetch(`/api/orbitfs/installations/${install.id}/deploy`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"set_channel",channel})}),j=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(j.error||"Could not save release channel.");
+      setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===install.id?{...x,release_channel:channel}:x)}):current);
+      await load(true);
+      setMsg(`Release channel set to ${channel}. Published releases refreshed.`);
+    }catch(e:any){setMsg(e?.message||"Could not save release channel.")}
+    finally{setBusy("")}
+  }
+  async function refreshReleases(){
+    if(!install)return;
+    setBusy("refresh-releases");
+    try{
+      setSelectedReleaseId("");
+      await load(true);
+      setMsg(`Published releases refreshed for ${selectedChannel}.`);
+    }finally{setBusy("")}
+  }
   async function loadSupabase(){setBusy("resources");const r=await fetch("/api/orbitfs/providers/supabase",{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(j.error||"Could not load your Supabase projects.");setResources(j);const first=j.organizations?.[0];if(!newProject.organizationSlug&&first)setNewProject(current=>({...current,organizationSlug:first.slug||first.id||""}))}
   async function supabaseAction(action:"select"|"create"){if(!install)return;setBusy(action);const body=action==="select"?{action,installationId:install.id,projectRef:selectedProject}:{action,installationId:install.id,...newProject},r=await fetch("/api/orbitfs/providers/supabase",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify(body)}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?`Your Supabase project was ${action==="select"?"selected":"created"}.`:j.error||"Supabase project action failed.");if(r.ok){setResources(undefined);await load()}}
   async function initialize(){if(!install||!selectedRelease)return;if(!selectedReleaseMatchesInstalled&&install.release_version&&install.release_id&&!confirm("This will initialize the selected published Base release, replacing the current installation release identity. Continue?"))return;setBusy("init");const r=await fetch(`/api/orbitfs/installations/${install.id}/initialize`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({releaseId:String(selectedRelease.id)})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?"OrbitFS database initialized in your Supabase project.":j.error||"Database initialization failed.");if(r.ok)await load()}
@@ -214,44 +240,81 @@ export default function MyOrbitFS(){
     {msg&&<p className="inlineStatus orbitInstallerMessage" role="status">{msg}</p>}
 
     {binding?<>
-      {panelReady&&<section className="panel orbitZipControlPanel" style={{marginBottom:14}}><div className="panelTitle"><div><p className="eyebrow">ORBITFS CONTROL PANEL</p><h2>{install.vercel_project_name||"Your OrbitFS Panel"}</h2><p className="muted">Your installation is live. Manage the deployed Panel, release channel and updates from here.</p></div><span className="state ready">ONLINE</span></div><div className="portalOverviewStats" style={{marginTop:12}}><div className="portalStatCard"><span className="portalStatIcon">V</span><div><small>INSTALLED</small><strong>{install.release_version}</strong><span>{install.release_channel||"stable"} · License Master release {install.release_id||"recorded"}</span></div></div><div className="portalStatCard"><span className="portalStatIcon">S</span><div><small>SUPABASE</small><strong>{install.supabase_project_name||"Connected"}</strong><span>{install.supabase_project_ref} · schema {install.schema_version||"unknown"}</span></div></div><div className="portalStatCard"><span className="portalStatIcon">V</span><div><small>VERCEL</small><strong>{install.vercel_project_name||"Connected"}</strong><span>{install.vercel_team_id||"Personal account"} · deployment {install.vercel_deployment_id||"recorded"}</span></div></div><div className="portalStatCard"><span className="portalStatIcon">U</span><div><small>UPDATE</small><strong>{baseUpdateAvailable?`Base ${latestBase} available`:updateAvailable?"Update available":"Up to date"}</strong><span>{baseUpdateAvailable?`Installed Base ${install.release_version} · latest published Base ${latestBase}`:updateAvailable?`Approved Update ${latestUpdate} in ${install.release_channel||"stable"}`:appliedUpdateVersion?`Update ${appliedUpdateVersion} applied`:"No update applied yet"}</span></div></div></div><div className="panel" style={{marginTop:12}}><div className="listrow"><div><b>Installed release identity</b><span>License Master ID {install.release_id||"not recorded"} · source {install.release_source_commit||"not recorded"} · checksum {install.release_sha256||"not recorded"}</span></div><span className="state ready">RECORDED</span></div></div><div className="orbitPrimaryActionBar" style={{marginTop:14}}><div className="orbitPrimaryActionCopy"><small>NEXT ACTION</small><b>{baseUpdateAvailable&&settings.customer_base_updates_enabled?`Update Base ${install.release_version} → ${latestBase}`:updateAvailable&&settings.customer_updates_enabled?`Install Update ${latestUpdate}`:"Your OrbitFS Panel is ready"}</b><span>{baseUpdateAvailable&&settings.customer_base_updates_enabled?"A newer approved Base release is available. It will update this same Vercel project.":updateAvailable&&settings.customer_updates_enabled?"An approved Engine/add-on update is available for your active channel.":"Open the live Panel, or use Manage for channel and maintenance controls."}</span></div><div className="orbitPrimaryActionControls">{baseUpdateAvailable&&settings.customer_base_updates_enabled?<button className="orbitHeroAction" disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered||!latestBaseRelease?.id} onClick={()=>void deploy("base_update",String(latestBase||""),String(latestBaseRelease?.id||""))}>{busy==="base_update"?"Updating Base…":`Update Base to ${latestBase}`}</button>:updateAvailable&&settings.customer_updates_enabled?<button className="orbitHeroAction" disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered} onClick={()=>void deploy("update",String(d?.latestUpdate?.version||""),String(d?.latestUpdate?.id||d?.latestUpdate?.releaseId||""))}>{busy?"Working…":`Install Update ${latestUpdate}`}</button>:install.production_url?<a className="buttonlink orbitHeroAction" href={install.production_url} target="_blank" rel="noreferrer">Open OrbitFS Panel</a>:<button className="orbitHeroAction" disabled={busy!==""} onClick={()=>void sync(false)}>Refresh status</button>}<details className="orbitActionMenu"><summary>Manage</summary><div><label><span>Release channel</span><select value={selectedChannel} disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered} onChange={e=>void saveReleaseChannel(e.target.value)}>{(d?.settings?.release_channels||["stable"]).map((channel:string)=><option key={channel} value={channel}>{channel}</option>)}</select></label>{baseUpdateAvailable&&settings.customer_base_updates_enabled&&<button className="secondary" disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered||!latestBaseRelease?.id} onClick={()=>void deploy("base_update",String(latestBase||""),String(latestBaseRelease?.id||""))}>{`Update Base to ${latestBase}`}</button>}{install.production_url&&<a className="buttonlink secondary" href={install.production_url} target="_blank" rel="noreferrer">Open Panel</a>}<button className="secondary" disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered||!settings.customer_deploy_enabled} onClick={()=>void deploy("redeploy")}>{`Redeploy current Base ${install.release_version}`}</button><button className="secondary" disabled={busy!==""} onClick={()=>void sync(false)}>Refresh status</button></div></details></div></div>
-<div className="orbitZipControlGrid">
-  <div className="panel orbitZipControlSection">
-    <div className="panelTitle"><div><p className="eyebrow">INFRASTRUCTURE</p><h2>Customer-owned services</h2></div><span className="state ready">CONNECTED</span></div>
-    <div className="orbitZipControlRows">
-      <div><span>Supabase project</span><b>{install.supabase_project_name||install.supabase_project_ref}</b></div>
-      <div><span>Database schema</span><b>{install.schema_version||"ready"}</b></div>
-      <div><span>Vercel project</span><b>{install.vercel_project_name||install.vercel_project_id||"Connected"}</b></div>
-      <div><span>Vercel owner</span><b>{install.vercel_team_id||vercelConnection?.team_id||"Personal/default"}</b></div>
-    </div>
-  </div>
-  <div className="panel orbitZipControlSection">
-    <div className="panelTitle"><div><p className="eyebrow">INSTALLATION</p><h2>Authority & identity</h2></div><span className="state ready">VALIDATED</span></div>
-    <div className="orbitZipControlRows">
-      <div><span>Installation ID</span><b>{install.installation_id}</b></div>
-      <div><span>Licence</span><b>{licenseRegistration?.keyHint||"Registered"}</b></div>
-      <div><span>Release ID</span><b>{install.release_id||"Recorded"}</b></div>
-      <div><span>Runtime health</span><b>{install.health_status||"healthy"}</b></div>
-    </div>
-  </div>
-</div>
-<div className="panel orbitZipLifecyclePanel">
-  <div className="panelTitle"><div><p className="eyebrow">LIFECYCLE & RECOVERY</p><h2>Deployment controls</h2><p className="muted">Undeploy removes the running Vercel resources but preserves this installation ID, customer database, storage and licence binding for a clean redeploy.</p></div></div>
-  <div className="orbitZipLifecycleRows">
-    <div><div><b>Undeploy OrbitFS</b><span>Remove the Base runtime and Shared Engine Host from Vercel while preserving the customer installation.</span></div><button className="secondary" disabled={busy!==""||!install.vercel_project_id} onClick={()=>void executeLifecycle("undeploy")}>{busy==="undeploy"?"Undeploying…":"Undeploy"}</button></div>
-    <details>
-      <summary><div><b>Uninstall OrbitFS</b><span>Remove the runtime and optionally clean OrbitFS-owned database, storage and licence binding.</span></div><span>Configure →</span></summary>
-      <div className="orbitZipUninstallOptions">
-        <label><input type="checkbox" checked={uninstallOptions.removeDatabase} onChange={e=>setUninstallOptions(v=>({...v,removeDatabase:e.target.checked}))}/><span><b>Remove OrbitFS database objects</b><small>Deletes OrbitFS-owned tables and functions. The Supabase project itself is never deleted.</small></span></label>
-        <label><input type="checkbox" checked={uninstallOptions.removeStorage} onChange={e=>setUninstallOptions(v=>({...v,removeStorage:e.target.checked}))}/><span><b>Remove OrbitFS storage</b><small>Empties and removes the OrbitFS storage bucket.</small></span></label>
-        <label><input type="checkbox" checked={uninstallOptions.releaseLicense} onChange={e=>setUninstallOptions(v=>({...v,releaseLicense:e.target.checked}))}/><span><b>Release licence binding</b><small>Terminates this installation activation through License Manager.</small></span></label>
-        <button className="orbitZipDangerButton" disabled={busy!==""} onClick={()=>void executeLifecycle("uninstall")}>{busy==="uninstall"?"Uninstalling…":"Review plan & uninstall"}</button>
-        {lifecyclePlan?.plan&&<p className="muted">Plan: {(lifecyclePlan.plan.steps||[]).map((step:any)=>step.label).join(" → ")}</p>}
-      </div>
-    </details>
-  </div>
-</div>
-</section>}
+      {panelReady&&<section className="panel orbitZipControlPanel">
+        <div className="orbitZipControlTop">
+          <div><p className="eyebrow">ORBITFS CONTROL PANEL</p><h2>{install.vercel_project_name||"Your OrbitFS Panel"}</h2><p className="muted">Base deployment, release channel and approved updates in one place.</p></div>
+          <div className="orbitZipControlTopActions"><span className="state ready">ONLINE</span>{install.production_url&&<a className="buttonlink secondary" href={install.production_url} target="_blank" rel="noreferrer">Open Panel</a>}</div>
+        </div>
+
+        <div className="orbitZipReleaseWorkspace">
+          <div className="orbitZipReleaseControls">
+            <label><span>Release channel</span><select value={selectedChannel} disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered} onChange={e=>void saveReleaseChannel(e.target.value)}>{availableBaseChannels.map((channel:string)=><option key={channel} value={channel}>{channel}</option>)}</select></label>
+            <label><span>Available Base release</span><select value={selectedBaseUpdateRelease?.id||""} disabled={busy!==""||!baseUpdateCandidates.length} onChange={e=>setSelectedReleaseId(e.target.value)}><option value="">{baseUpdateCandidates.length?"Choose a newer release":"No newer Base release"}</option>{baseUpdateCandidates.map((r:any)=><option key={r.id} value={r.id}>v{r.version} · {r.title||"OrbitFS Base"}</option>)}</select></label>
+            <button className="secondary orbitZipRefreshButton" disabled={busy!==""} onClick={()=>void refreshReleases()}>{busy==="refresh-releases"?"Refreshing…":"Refresh releases"}</button>
+          </div>
+          <div className="orbitZipReleaseMeta"><span>{baseUpdateCandidates.length?baseUpdateCandidates.length+" newer Base release"+(baseUpdateCandidates.length===1?"":"s")+" in "+selectedChannel:"No newer Base release in "+selectedChannel}</span><span>{d?.lastCheckedAt?"Checked "+new Date(d.lastCheckedAt).toLocaleString():"Release status not checked yet"}</span></div>
+        </div>
+
+        <div className="portalOverviewStats orbitZipOverviewStats">
+          <div className="portalStatCard"><span className="portalStatIcon">B</span><div><small>BASE</small><strong>{install.release_version}</strong><span>{selectedChannel} channel</span></div></div>
+          <div className="portalStatCard"><span className="portalStatIcon">D</span><div><small>DATABASE</small><strong>{install.schema_version||"ready"}</strong><span>{install.supabase_project_name||install.supabase_project_ref||"Supabase connected"}</span></div></div>
+          <div className="portalStatCard"><span className="portalStatIcon">V</span><div><small>VERCEL</small><strong>{install.vercel_project_name||"Connected"}</strong><span>{install.vercel_team_id||"Personal/default"}</span></div></div>
+          <div className="portalStatCard"><span className="portalStatIcon">U</span><div><small>NEXT UPDATE</small><strong>{selectedBaseUpdateAvailable?"Base "+selectedBaseUpdateRelease.version:updateAvailable?"Update "+latestUpdate:"Current"}</strong><span>{selectedBaseUpdateAvailable?"Published in "+selectedChannel:updateAvailable?"Approved Engine/add-on update":"No approved update waiting"}</span></div></div>
+        </div>
+
+        <div className="orbitPrimaryActionBar">
+          <div className="orbitPrimaryActionCopy"><small>NEXT ACTION</small><b>{selectedBaseUpdateAvailable&&settings.customer_base_updates_enabled?"Update Base "+install.release_version+" → "+selectedBaseUpdateRelease.version:updateAvailable&&settings.customer_updates_enabled?"Install Update "+latestUpdate:"OrbitFS Base is current"}</b><span>{selectedBaseUpdateAvailable&&settings.customer_base_updates_enabled?"The selected published Base release will update this existing Vercel project after its database migration chain is verified.":updateAvailable&&settings.customer_updates_enabled?"An approved Engine/add-on update is available for this channel.":"Refresh releases at any time to check License Manager for newly published versions."}</span></div>
+          <div className="orbitPrimaryActionControls">
+            {selectedBaseUpdateAvailable&&settings.customer_base_updates_enabled?<button className="orbitHeroAction" disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered} onClick={()=>void deploy("base_update",String(selectedBaseUpdateRelease.version),String(selectedBaseUpdateRelease.id))}>{busy==="base_update"?"Updating Base…":"Update Base to "+selectedBaseUpdateRelease.version}</button>:updateAvailable&&settings.customer_updates_enabled?<button className="orbitHeroAction" disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered} onClick={()=>void deploy("update",String(d?.latestUpdate?.version||""),String(d?.latestUpdate?.id||d?.latestUpdate?.releaseId||""))}>{busy==="update"?"Installing…":"Install Update "+latestUpdate}</button>:<button className="orbitHeroAction" disabled={busy!==""} onClick={()=>void refreshReleases()}>{busy==="refresh-releases"?"Refreshing…":"Check for updates"}</button>}
+            <details className="orbitActionMenu"><summary>More</summary><div>{install.production_url&&<a className="buttonlink secondary" href={install.production_url} target="_blank" rel="noreferrer">Open Panel</a>}<button className="secondary" disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered||!settings.customer_deploy_enabled} onClick={()=>void deploy("redeploy")}>Redeploy Base {install.release_version}</button><button className="secondary" disabled={busy!==""} onClick={()=>void sync(false)}>Refresh runtime status</button></div></details>
+          </div>
+        </div>
+
+        <details className="orbitZipTechnicalDetails">
+          <summary><div><p className="eyebrow">TECHNICAL DETAILS</p><b>Infrastructure & installation identity</b></div><span>View details</span></summary>
+          <div className="orbitZipControlGrid">
+            <div className="panel orbitZipControlSection">
+              <div className="panelTitle"><div><p className="eyebrow">INFRASTRUCTURE</p><h2>Customer-owned services</h2></div><span className="state ready">CONNECTED</span></div>
+              <div className="orbitZipControlRows">
+                <div><span>Supabase project</span><b>{install.supabase_project_name||install.supabase_project_ref}</b></div>
+                <div><span>Database schema</span><b>{install.schema_version||"ready"}</b></div>
+                <div><span>Vercel project</span><b>{install.vercel_project_name||install.vercel_project_id||"Connected"}</b></div>
+                <div><span>Vercel owner</span><b>{install.vercel_team_id||vercelConnection?.team_id||"Personal/default"}</b></div>
+              </div>
+            </div>
+            <div className="panel orbitZipControlSection">
+              <div className="panelTitle"><div><p className="eyebrow">INSTALLATION</p><h2>Authority & identity</h2></div><span className="state ready">VALIDATED</span></div>
+              <div className="orbitZipControlRows">
+                <div><span>Installation ID</span><b>{install.installation_id}</b></div>
+                <div><span>Licence</span><b>{licenseRegistration?.keyHint||"Registered"}</b></div>
+                <div><span>Release ID</span><b>{install.release_id||"Recorded"}</b></div>
+                <div><span>Runtime health</span><b>{install.health_status||"healthy"}</b></div>
+              </div>
+            </div>
+          </div>
+          <div className="orbitZipReleaseIdentity"><span>Installed release identity</span><b>{install.release_id||"not recorded"}</b><small>Source {install.release_source_commit||"not recorded"} · SHA-256 {install.release_sha256||"not recorded"}</small></div>
+        </details>
+
+        <details className="panel orbitZipLifecyclePanel">
+          <summary><div><p className="eyebrow">LIFECYCLE & RECOVERY</p><b>Deployment controls</b><span>Undeploy, reset or uninstall only when you need recovery or removal.</span></div><span>Open controls</span></summary>
+          <div className="orbitZipLifecycleBody">
+            <p className="muted">Undeploy removes the running Vercel resources but preserves this installation ID, customer database, storage and licence binding for a clean redeploy.</p>
+            <div className="orbitZipLifecycleRows">
+              <div><div><b>Undeploy OrbitFS</b><span>Remove the Base runtime and Shared Engine Host from Vercel while preserving the customer installation.</span></div><button className="secondary" disabled={busy!==""||!install.vercel_project_id} onClick={()=>void executeLifecycle("undeploy")}>{busy==="undeploy"?"Undeploying…":"Undeploy"}</button></div>
+              <details>
+                <summary><div><b>Uninstall OrbitFS</b><span>Remove the runtime and optionally clean OrbitFS-owned database, storage and licence binding.</span></div><span>Configure →</span></summary>
+                <div className="orbitZipUninstallOptions">
+                  <label><input type="checkbox" checked={uninstallOptions.removeDatabase} onChange={e=>setUninstallOptions(v=>({...v,removeDatabase:e.target.checked}))}/><span><b>Remove OrbitFS database objects</b><small>Deletes OrbitFS-owned tables and functions. The Supabase project itself is never deleted.</small></span></label>
+                  <label><input type="checkbox" checked={uninstallOptions.removeStorage} onChange={e=>setUninstallOptions(v=>({...v,removeStorage:e.target.checked}))}/><span><b>Remove OrbitFS storage</b><small>Empties and removes the OrbitFS storage bucket.</small></span></label>
+                  <label><input type="checkbox" checked={uninstallOptions.releaseLicense} onChange={e=>setUninstallOptions(v=>({...v,releaseLicense:e.target.checked}))}/><span><b>Release licence binding</b><small>Terminates this installation activation through License Manager.</small></span></label>
+                  <button className="orbitZipDangerButton" disabled={busy!==""} onClick={()=>void executeLifecycle("uninstall")}>{busy==="uninstall"?"Uninstalling…":"Review plan & uninstall"}</button>
+                  {lifecyclePlan?.plan&&<p className="muted">Plan: {(lifecyclePlan.plan.steps||[]).map((step:any)=>step.label).join(" → ")}</p>}
+                </div>
+              </details>
+            </div>
+          </div>
+        </details>
+      </section>}
 
       <section className="panel orbitInstallerHeader orbitZipSidebar" style={{display:panelReady?"none":undefined}}>
         <div className="orbitInstallerHeading">
