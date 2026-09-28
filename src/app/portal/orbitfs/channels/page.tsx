@@ -95,10 +95,13 @@ export default function CustomerReleaseChannelsPage(){
     const isOpen=c.access_mode==="open";
     const canSelfJoin=!isOpen&&!isStable&&c.self_join_enabled===true;
     const canRequest=!isOpen&&!isStable&&!c.self_join_enabled&&c.access_request_enabled===true;
+    const requestStatus=String(request?.status||"").toLowerCase();
+    const pending=requestStatus==="pending";
+    const approved=requestStatus==="approved";
+    const rejected=requestStatus==="rejected";
     const hasAccess=isStable||isOpen||hasExplicit;
-    const pending=request?.status==="pending";
-    const rejected=request?.status==="rejected";
     const policy=isStable?"Stable":isOpen?"Open":canSelfJoin?"Self-join":canRequest?"Approval required":"Invite only";
+    const lifecycleState=isStable?"Included":isOpen?"Available":hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":approved?"Approved · syncing":"Restricted";
 
     return <article className={"customerChannelCard "+(hasAccess?"active":"")} key={channel}>
      <div className="customerChannelCardHead">
@@ -106,29 +109,33 @@ export default function CustomerReleaseChannelsPage(){
        <div className="customerChannelTitle"><h2>{c.label||channel}</h2><span className={"channelPolicyBadge "+(hasAccess?"available":"")}>{policy}</span></div>
        <p>{c.description||"OrbitFS release channel"}</p>
       </div>
-      <span className={"state "+(hasAccess?"ready":pending?"current":"")}>{hasAccess?"Available":pending?"Pending":"Restricted"}</span>
+      <span className={"state "+((hasExplicit||isStable||isOpen)?"ready":pending||approved?"current":"")}>{lifecycleState}</span>
      </div>
 
      <div className="customerChannelPolicy">
       <div><span>Access</span><b>{isStable?"Included":isOpen?"Open to customers":canSelfJoin?"Join instantly":canRequest?"Staff approval":"Assigned only"}</b></div>
-      <div><span>Status</span><b>{hasExplicit?"Joined":isStable?"Included":isOpen?"Available now":pending?"Request pending":rejected?"Previous request declined":"Not joined"}</b></div>
+      <div><span>Status</span><b>{isStable?"Included":isOpen?"Available now":hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":approved?"Approved · access syncing":"Not requested"}</b></div>
      </div>
 
-     {rejected&&request?.reason&&<div className="channelRequestFeedback"><b>Previous request</b><span>{request.reason}</span></div>}
+     {approved&&<div className="channelRequestFeedback"><b>Approved</b><span>{hasExplicit?"Your access request was approved. This channel is available to your OrbitFS installation.":"Your request is approved, but the access grant has not appeared yet. Refresh this page; deployment remains blocked until the grant is authoritative."}</span></div>}
+     {rejected&&<div className="channelRequestFeedback"><b>Denied</b><span>{request?.reason||"Your access request was not approved."}</span></div>}
 
      <div className="customerChannelActions">
       {isStable&&<span className="state ready">Included with your licence</span>}
       {isOpen&&<span className="state ready">No request required</span>}
       {canSelfJoin&&!hasExplicit&&<button disabled={!!busy} onClick={()=>void act("join",channel)}>{busy==="join:"+channel?"Joining…":"Join channel"}</button>}
       {canSelfJoin&&hasExplicit&&<button className="secondary" disabled={!!busy} onClick={()=>void act("leave",channel)}>{busy==="leave:"+channel?"Leaving…":"Leave channel"}</button>}
-      {canRequest&&!hasExplicit&&!pending&&<button disabled={!!busy} onClick={()=>{setFormChannel(channel);setForm(emptyRequest)}}>{rejected?"Request again":"Request access"}</button>}
-      {canRequest&&pending&&<span className="state current">Awaiting review</span>}
+      {canRequest&&!hasExplicit&&!approved&&!pending&&<button disabled={!!busy} onClick={()=>{setFormChannel(channel);setForm(emptyRequest)}}>{rejected?"Request again":"Request access"}</button>}
+      {canRequest&&pending&&<span className="state current">Request pending</span>}
+      {canRequest&&hasExplicit&&<span className="state ready">Approved</span>}
+      {canRequest&&approved&&!hasExplicit&&<button className="secondary" disabled={!!busy} onClick={()=>void load()}>Refresh approved access</button>}
+      {canRequest&&rejected&&!pending&&!approved&&<span className="state">Denied</span>}
       {!isStable&&!isOpen&&!canSelfJoin&&!canRequest&&hasExplicit&&<span className="state ready">Assigned by staff</span>}
       {!isStable&&!isOpen&&!canSelfJoin&&!canRequest&&!hasExplicit&&<span className="state">Invite only</span>}
       {!isStable&&!isOpen&&hasExplicit&&!canSelfJoin&&<button className="secondary" disabled={!!busy} onClick={()=>void act("leave",channel)}>{busy==="leave:"+channel?"Leaving…":"Leave channel"}</button>}
      </div>
 
-     {formChannel===channel&&canRequest&&!hasExplicit&&!pending&&<div className="channelRequestForm">
+     {formChannel===channel&&canRequest&&!hasExplicit&&!approved&&!pending&&<div className="channelRequestForm">
       <div className="channelRequestFormHead"><div><b>Request {c.label||channel} access</b><span>Three quick fields. Your request is reviewed by OrbitFS staff.</span></div><button className="secondary" type="button" onClick={()=>setFormChannel("")}>Cancel</button></div>
       <label>
        <span>What do you want to test?</span>

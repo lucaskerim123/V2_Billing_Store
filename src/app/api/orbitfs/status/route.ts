@@ -2,6 +2,7 @@ import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 import {createClient} from "@supabase/supabase-js";
 import {masterLicenses,masterReleases} from "@/lib/master-api";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
+import {expireStaleBaseOperations} from "@/lib/orbitfs-base-operations";
 
 export const dynamic="force-dynamic";
 const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
@@ -32,7 +33,7 @@ export async function GET(req:Request){
   const allowedChannels=[...new Set((await customerReleaseChannels(user.id,preferredInstall?.license_binding_id||null).catch(()=>channelAccess||["stable"])).map((x:any)=>String(x)))];
   if(!allowedChannels.length)allowedChannels.push("stable");
   const releaseTypes=preferredInstall?.release_version?["base","update"]:["base"];
-  const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>releaseTypes.map((type:string)=>masterReleases("orbitfs_base",channel,type).then((value:any)=>({ok:true,value})).catch((error:any)=>({ok:false,value:{releases:[]},error:String(error?.message||error)})))));
+  const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>releaseTypes.map((type:string)=>masterReleases("orbitfs_base",channel,type,"billing",true).then((value:any)=>({ok:true,value})).catch((error:any)=>({ok:false,value:{releases:[]},error:String(error?.message||error)})))));
   const releaseDiscoveryAvailable=remoteReleaseResults.every((x:any)=>x.ok===true)&&masterAvailability.reachable===true&&masterAvailability.releaseAuthorityAvailable===true;
   const masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.value?.releases||[]);
   const customerNumber=String(customer?.customer_number||"").trim();
@@ -80,6 +81,7 @@ export async function GET(req:Request){
   }
   const base=enrichedBindings.find((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel)||enrichedBindings[0]||null,install=base?installationRows.find((x:any)=>x.license_binding_id===base.id):null;
   if(install?.vercel_project_id)connectionRows=connectionRows.map((x:any)=>x.provider==="vercel"?{...x,team_id:install.vercel_team_id||x.team_id,metadata:{...(x.metadata||{}),team_id:install.vercel_team_id||x.metadata?.team_id||null,team_locked:true}}:x);
+  if(install)await expireStaleBaseOperations(String(install.id));
   const [eventRows,installReleaseRows,lifecycleRows,operationRows]=install?await Promise.all([
     q(db.from("orbitfs_deployment_events").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)),
     q(db.from("orbitfs_installation_releases").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)),
