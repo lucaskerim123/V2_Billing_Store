@@ -209,9 +209,20 @@ export async function registerInstallationLicense(install:any,licenseKey:string)
   const key=String(licenseKey||"").trim().toUpperCase();
   if(!/^LIC-[A-Z0-9]{10}-[A-Z0-9]{10}-[A-Z0-9]{10}$/.test(key))throw Object.assign(new Error("Invalid OrbitFS licence key format. Use LIC-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX."),{status:400,code:"LICENSE_KEY_FORMAT_INVALID"});
   if(!install?.supabase_project_ref)throw Object.assign(new Error("Choose and initialize the customer Supabase project before registering the licence"),{status:409,code:"SUPABASE_PROJECT_REQUIRED"});
-  const validation=await masterLicenseValidate({licenseKey:key,installationId:String(install.installation_id||""),product:"orbitfs_base",productVersion:String(install.release_version||"")||undefined,metadata:{source:"billing_store_installer"}});
+  const validation=await masterLicenseValidate({action:"activate",activate:true,licenseKey:key,installationId:String(install.installation_id||""),product:"orbitfs_base",productVersion:String(install.release_version||"")||undefined,metadata:{source:"billing_store_installer"}});
   if(validation?.valid!==true)throw Object.assign(new Error(String(validation?.code||"Licence validation failed")),{status:403,code:String(validation?.code||"LICENSE_INVALID")});
   const runtime=validation?.runtime_policy&&typeof validation.runtime_policy==="object"?validation.runtime_policy:{};
+  const directComponents=validation?.components&&typeof validation.components==="object"&&!Array.isArray(validation.components)?validation.components:{};
+  const policyComponents=validation?.metadata?.license_policy?.components&&typeof validation.metadata.license_policy.components==="object"?validation.metadata.license_policy.components:{};
+  const componentIds=["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
+  const components=Object.fromEntries(componentIds.map((id)=>{
+    const direct=directComponents[id];
+    if(direct&&typeof direct==="object"&&!Array.isArray(direct))return [id,direct];
+    const allowed=id==="orbitfs_base"||policyComponents[id]===true;
+    return [id,allowed
+      ?{state:id==="orbitfs_base"?"active":"locked",allowed:true,lockedToThisInstallation:true,reason:null}
+      :{state:"blocked",allowed:false,lockedToThisInstallation:false,reason:"not_included"}];
+  }));
   const now=new Date().toISOString();
   const metadata={
     ...(validation?.metadata&&typeof validation.metadata==="object"?validation.metadata:{}),
