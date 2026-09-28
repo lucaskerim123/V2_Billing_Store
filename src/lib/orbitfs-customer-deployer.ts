@@ -318,10 +318,11 @@ function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:st
     if(!match||match[1]!==id)fail(`Base migration path does not match its id: ${file||id}`,422);
     const packaged=byPath.get(file);
     if(!packaged)fail(`Base migration is missing from the deployment package: ${file}`,422);
+    const packagedFile=packaged as {file:string;data:string;sha256:string;size:number};
     const sha=String(migration?.sha256||"").trim().toLowerCase();
-    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packaged.sha256||Number(migration?.size)!==packaged.size)fail(`Base migration checksum mismatch: ${file}`,422);
+    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packagedFile.sha256||Number(migration?.size)!==packagedFile.size)fail(`Base migration checksum mismatch: ${file}`,422);
     if(index>0&&id<=String(declaredRaw[index-1]?.id||""))fail("Base migration ids must be strictly increasing",422);
-    return {id,file,size:packaged.size,sha256:sha,data:packaged.data};
+    return {id,file,size:packagedFile.size,sha256:sha,data:packagedFile.data};
   });
   if(normalized.at(-1)?.id!==latest)fail("Base release latest migration does not match its migration chain",422);
   const declaredPaths=new Set(normalized.map(entry=>entry.file));
