@@ -10,8 +10,6 @@ const label=(state:any)=>String(state||"waiting").replaceAll("_"," ");
 const sectionGap={display:"grid",gap:12} as const;
 const summaryStyle={cursor:"pointer"} as const;
 const workingStates=new Set(["configuring","deploying","updating"]);
-function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
-function compareOrbitReleaseVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
 
 export default function MyOrbitFS(){
   const sb=useMemo(()=>createClient(),[]),pollCount=useRef(0);
