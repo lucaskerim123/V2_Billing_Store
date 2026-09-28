@@ -285,13 +285,32 @@ commit;`);
 
 type BaseMigration={id:string;file:string;size:number;sha256:string;data:string};
 function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:string;sha256:string;size:number}>):BaseMigration[]{
-  const declared=Array.isArray((pkg as any).databaseMigrations)?(pkg as any).databaseMigrations:[];
+  const declaredRaw=Array.isArray((pkg as any).databaseMigrations)?(pkg as any).databaseMigrations:Array.isArray((pkg as any).releaseInfo?.databaseMigrations)?(pkg as any).releaseInfo.databaseMigrations:[];
   const count=Number((pkg as any).databaseMigrationCount??(pkg as any).releaseInfo?.databaseMigrationCount??0);
   const latest=String((pkg as any).databaseLatestMigration||(pkg as any).releaseInfo?.databaseLatestMigration||"").trim();
-  if(!Number.isInteger(count)||count<1||declared.length!==count||!/^[0-9]{14}$/.test(latest))fail("Base release database migration chain is incomplete",422);
+  if(!Number.isInteger(count)||count<1||!/^[0-9]{14}$/.test(latest))fail("Base release database migration chain is incomplete",422);
+
+  const packagedMigrations=files
+    .map(file=>{
+      const match=file.file.match(/^supabase\/migrations\/([0-9]{14})_[A-Za-z0-9._-]+\.sql$/);
+      return match?{id:match[1],file:file.file,size:file.size,sha256:file.sha256,data:file.data}:null;
+    })
+    .filter((entry):entry is BaseMigration=>Boolean(entry))
+    .sort((a,b)=>a.id.localeCompare(b.id));
+
+  if(packagedMigrations.length!==count||packagedMigrations.at(-1)?.id!==latest)fail("Base release database migration chain is incomplete",422);
+  const packagedIds=new Set(packagedMigrations.map(entry=>entry.id));
+  if(packagedIds.size!==packagedMigrations.length)fail("Base release contains duplicate migration ids",422);
+  for(let index=1;index<packagedMigrations.length;index++){
+    if(packagedMigrations[index].id<=packagedMigrations[index-1].id)fail("Base migration ids must be strictly increasing",422);
+  }
+
+  if(!declaredRaw.length)return packagedMigrations;
+  if(declaredRaw.length!==count)fail("Base release database migration chain is incomplete",422);
+
   const byPath=new Map(files.map(file=>[file.file,file]));
   const seen=new Set<string>();
-  const normalized:BaseMigration[]=declared.map((migration:any,index:number)=>{
+  const normalized:BaseMigration[]=declaredRaw.map((migration:any,index:number)=>{
     const id=String(migration?.id||"").trim(),file=String(migration?.file||"").replaceAll("\\","/");
     if(!/^[0-9]{14}$/.test(id)||seen.has(id))fail("Base release contains an invalid or duplicate migration id",422);
     seen.add(id);
@@ -299,14 +318,19 @@ function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:st
     if(!match||match[1]!==id)fail(`Base migration path does not match its id: ${file||id}`,422);
     const packaged=byPath.get(file);
     if(!packaged)fail(`Base migration is missing from the deployment package: ${file}`,422);
-    const packagedFile=packaged as {file:string;data:string;sha256:string;size:number};
     const sha=String(migration?.sha256||"").trim().toLowerCase();
-    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packagedFile.sha256||Number(migration?.size)!==packagedFile.size)fail(`Base migration checksum mismatch: ${file}`,422);
-    if(index>0&&id<=String(declared[index-1]?.id||""))fail("Base migration ids must be strictly increasing",422);
-    return {id,file,size:packagedFile.size,sha256:sha,data:packagedFile.data};
+    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packaged.sha256||Number(migration?.size)!==packaged.size)fail(`Base migration checksum mismatch: ${file}`,422);
+    if(index>0&&id<=String(declaredRaw[index-1]?.id||""))fail("Base migration ids must be strictly increasing",422);
+    return {id,file,size:packaged.size,sha256:sha,data:packaged.data};
   });
   if(normalized.at(-1)?.id!==latest)fail("Base release latest migration does not match its migration chain",422);
+  const declaredPaths=new Set(normalized.map(entry=>entry.file));
+  if(declaredPaths.size!==packagedMigrations.length||packagedMigrations.some(entry=>!declaredPaths.has(entry.file)))fail("Base release database migration chain does not match the packaged migrations",422);
   return normalized;
+}
+function baseDatabaseSnapshotHash(release:any){
+  const manifest=release?.manifest&&typeof release.manifest==="object"?release.manifest:{};
+  return String(manifest.databaseSchemaSha256||manifest.releaseInfo?.databaseSchemaSha256||"").trim().toLowerCase();
 }
 async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigration[]){
   const source=currentRelease?.manifest&&typeof currentRelease.manifest==="object"?currentRelease.manifest:{};
@@ -336,6 +360,12 @@ async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigrat
 }
 async function applyBaseDatabaseMigrations(install:any,currentRelease:any,targetRelease:any,pkg:Package,files:Array<{file:string;data:string;sha256:string;size:number}>){
   if(!install.supabase_project_ref)fail("Customer Supabase project is not configured for Base migrations",409);
+  const currentSchemaHash=baseDatabaseSnapshotHash(currentRelease);
+  const targetSchemaHash=baseDatabaseSnapshotHash(targetRelease);
+  if(/^[a-f0-9]{64}$/.test(currentSchemaHash)&&currentSchemaHash===targetSchemaHash){
+    await event(install,"base.database.migration.skipped","ok","Base database schema snapshot is unchanged; no forward migration is required.",{fromReleaseId:String(currentRelease.id),toReleaseId:String(targetRelease.id),databaseSchemaSha256:targetSchemaHash});
+    return {baseline:null,target:null,required:0,seeded:0,applied:0,skipped:0,ids:[] as string[],mode:"schema_unchanged"};
+  }
   const chain=validateBaseMigrationChain(pkg,files);
   const baseline=await currentBaseMigrationBaseline(currentRelease,chain);
   const project=String(install.supabase_project_ref);
