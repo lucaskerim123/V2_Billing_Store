@@ -30,7 +30,7 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
    const components={orbitfs_base:true,orbitfs_apex:Boolean(raw.orbitfs_apex),orbitfs_mcp:Boolean(raw.orbitfs_mcp),orbitfs_studio:Boolean(raw.orbitfs_studio)};
    const owner=await db.from("license_bindings").select("id,auth_user_id").eq("license_id",id).is("archived_at",null).limit(1).maybeSingle();
    if(owner.error)throw owner.error;
-   const now=new Date().toISOString(),payload:any={auth_user_id:userId,license_id:id,license_product_key:"orbitfs_base",desired_state:String(remoteLicense.status||"active"),remote_state:String(remoteLicense.status||"active"),components,license_key_last4:remoteLicense.license_key_last4||null,expires_at:remoteLicense.expires_at||null,label:remoteLicense.product_name||remoteLicense.product||"OrbitFS Base",api_source:"license_master",admin_override:true,last_synced_at:now,last_sync_error:null,updated_at:now};
+   const now=new Date().toISOString(),payload:any={auth_user_id:userId,license_id:id,license_product_key:"orbitfs_base",desired_state:String(remoteLicense.status||"active"),remote_state:String(remoteLicense.status||"active"),components,license_key_last4:remoteLicense.license_key_last4||null,expires_at:remoteLicense.expires_at||null,label:remoteLicense.product_name||remoteLicense.product||"OrbitFS Base",api_source:"license_master",admin_override:remoteLicense.customer_override===true,last_synced_at:now,last_sync_error:null,updated_at:now};
    let bindingId=owner.data?.id||null;
    if(bindingId){
     const write=await db.from("license_bindings").update(payload).eq("id",bindingId);if(write.error)throw write.error;
