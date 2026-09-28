@@ -2,6 +2,7 @@ import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 import {createClient} from "@supabase/supabase-js";
 import {masterLicenses,masterReleases} from "@/lib/master-api";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
+import {expireStaleBaseOperations} from "@/lib/orbitfs-base-operations";
 
 export const dynamic="force-dynamic";
 const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
@@ -80,6 +81,7 @@ export async function GET(req:Request){
   }
   const base=enrichedBindings.find((b:any)=>b?.license_product_key==="orbitfs_base"||b?.components?.orbitfs_base||b?.components?.orbitfs_panel)||enrichedBindings[0]||null,install=base?installationRows.find((x:any)=>x.license_binding_id===base.id):null;
   if(install?.vercel_project_id)connectionRows=connectionRows.map((x:any)=>x.provider==="vercel"?{...x,team_id:install.vercel_team_id||x.team_id,metadata:{...(x.metadata||{}),team_id:install.vercel_team_id||x.metadata?.team_id||null,team_locked:true}}:x);
+  if(install)await expireStaleBaseOperations(String(install.id));
   const [eventRows,installReleaseRows,lifecycleRows,operationRows]=install?await Promise.all([
     q(db.from("orbitfs_deployment_events").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)),
     q(db.from("orbitfs_installation_releases").select("*").eq("installation_id",install.id).order("created_at",{ascending:false}).limit(40)),
