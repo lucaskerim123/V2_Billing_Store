@@ -30,7 +30,7 @@ async function currentInstallation(id:string){
   if(error||!data)throw operationError("INSTALLATION_NOT_FOUND","OrbitFS installation not found.",404,false);
   return data;
 }
-async function expireStaleOperation(installationId:string){
+export async function expireStaleBaseOperations(installationId:string){
   const cutoff=new Date(Date.now()-STALE_AFTER_MS).toISOString();
   await licenseDb().from("orbitfs_deployment_operations").update({
     state:"failed",
@@ -79,7 +79,7 @@ export async function runBaseLifecycleOperation(input:{
     reason:input.reason||null
   });
 
-  await expireStaleOperation(String(install.id));
+  await expireStaleBaseOperations(String(install.id));
   const prior=await operationByKey(String(install.id),key);
   if(prior){
     if(String(prior.request_fingerprint)!==requestFingerprint)throw operationError("IDEMPOTENCY_KEY_REUSE","This Idempotency-Key was already used for a different Base lifecycle request.",409,false,String(prior.id));
