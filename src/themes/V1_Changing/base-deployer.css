@@ -279,6 +279,115 @@ html[data-customer-theme="V1_Changing"] .orbitZipDangerButton{
   min-height:40px!important;padding:8px 12px!important;border:1px solid #97414a!important;border-radius:7px!important;background:#2c1419!important;color:#ffd3d6!important;font-weight:800!important;
 }
 
+
+/* Deployed Base control centre */
+html[data-customer-theme="V1_Changing"] .orbitZipControlTop{
+  display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:18px!important;
+  padding-bottom:16px!important;border-bottom:1px solid var(--bd-line)!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlTop h2{margin:3px 0 5px!important;font-size:24px!important;letter-spacing:-.025em!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlTop .muted{margin:0!important;font-size:11px!important;line-height:1.5!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlTopActions{display:flex!important;align-items:center!important;gap:8px!important;flex:0 0 auto!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel button,
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .buttonlink{
+  min-height:38px!important;padding:8px 12px!important;border-radius:7px!important;font-size:10px!important;font-weight:800!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel button.secondary,
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .secondary{
+  border:1px solid #31495c!important;background:#0f1e2a!important;color:#cfdae3!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitHeroAction{
+  border:1px solid var(--bd-brand-strong)!important;background:linear-gradient(180deg,#b9444d,#8e3038)!important;color:#fff!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseWorkspace{
+  display:grid!important;gap:9px!important;padding:14px!important;border:1px solid #274457!important;border-radius:9px!important;
+  background:linear-gradient(180deg,#0d1d29,#091621)!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseControls{
+  display:grid!important;grid-template-columns:minmax(150px,.65fr) minmax(220px,1.35fr) auto!important;gap:9px!important;align-items:end!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseControls label{display:grid!important;gap:5px!important;min-width:0!important}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseControls label>span{
+  color:#91a7b9!important;font-size:9px!important;font-weight:800!important;letter-spacing:.06em!important;text-transform:uppercase!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseControls select{
+  width:100%!important;min-height:39px!important;padding:7px 10px!important;border:1px solid #315066!important;border-radius:7px!important;
+  background:#07111a!important;color:#edf5fa!important;box-shadow:none!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipRefreshButton{white-space:nowrap!important}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseMeta{
+  display:flex!important;justify-content:space-between!important;gap:12px!important;color:#7890a3!important;font-size:9.5px!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipOverviewStats{margin:0!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitPrimaryActionBar{
+  margin:0!important;padding:14px!important;border:1px solid #304d61!important;border-radius:9px!important;background:#0a1823!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitPrimaryActionControls{
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitActionMenu>summary{
+  min-height:38px!important;padding:8px 12px!important;border:1px solid #31495c!important;border-radius:7px!important;background:#0f1e2a!important;color:#cfdae3!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails{
+  margin:0!important;border:1px solid #203849!important;border-radius:9px!important;background:#091722!important;overflow:hidden!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails>summary,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel>summary{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;
+  padding:13px 14px!important;cursor:pointer!important;list-style:none!important;color:#dce8f0!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails>summary::-webkit-details-marker,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel>summary::-webkit-details-marker{display:none!important}
+html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails>summary>div,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel>summary>div{display:grid!important;gap:3px!important;min-width:0!important}
+html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails>summary>span,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel>summary>span{color:#91a7b9!important;font-size:10px!important;white-space:nowrap!important}
+html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails[open]>summary,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel[open]>summary{border-bottom:1px solid #203849!important}
+html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails .orbitZipControlGrid{padding:12px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlSection .panelTitle{
+  display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:10px!important;
+  margin:0 0 7px!important;padding:0 0 10px!important;border-bottom:1px solid #203849!important;background:transparent!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipControlSection .panelTitle h2{margin:3px 0 0!important;font-size:14px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlRows>div span{color:#7f96a8!important;font-size:10px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipControlRows>div b{min-width:0!important;overflow-wrap:anywhere!important;color:#e3edf3!important;font-size:11px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseIdentity{
+  display:grid!important;grid-template-columns:150px minmax(0,1fr)!important;gap:4px 12px!important;margin:0 12px 12px!important;padding:11px 12px!important;
+  border:1px solid #1e3547!important;border-radius:8px!important;background:#07131d!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseIdentity>span{color:#7f96a8!important;font-size:10px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseIdentity>b{overflow-wrap:anywhere!important;font-size:10px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipReleaseIdentity>small{grid-column:1/-1!important;color:#6f8799!important;font-size:9px!important;overflow-wrap:anywhere!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel{padding:0!important;overflow:hidden!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel>summary>div>span{color:#7f96a8!important;font-size:10px!important;font-weight:400!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleBody{display:grid!important;gap:10px!important;padding:12px 14px 14px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleBody>.muted{margin:0!important;font-size:10px!important;line-height:1.5!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows{display:grid!important;gap:8px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>div,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>details{
+  margin:0!important;border:1px solid #263e4f!important;border-radius:8px!important;background:#091620!important;overflow:hidden!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>div{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:12px!important;padding:11px 12px!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>div>div,
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>details>summary>div{display:grid!important;gap:3px!important;min-width:0!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows b{font-size:11px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows span{color:#8097a9!important;font-size:9.5px!important;line-height:1.4!important}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>details>summary{
+  display:flex!important;justify-content:space-between!important;gap:12px!important;align-items:center!important;padding:11px 12px!important;cursor:pointer!important;list-style:none!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>details>summary::-webkit-details-marker{display:none!important}
+html[data-customer-theme="V1_Changing"] .orbitZipUninstallOptions{display:grid!important;gap:8px!important;padding:0 12px 12px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipUninstallOptions label{
+  display:grid!important;grid-template-columns:auto minmax(0,1fr)!important;gap:9px!important;align-items:start!important;padding:9px!important;
+  border:1px solid #253b4b!important;border-radius:7px!important;background:#07131d!important;
+}
+html[data-customer-theme="V1_Changing"] .orbitZipUninstallOptions label input{margin-top:2px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipUninstallOptions label>span{display:grid!important;gap:2px!important}
+html[data-customer-theme="V1_Changing"] .orbitZipUninstallOptions small{color:#708799!important;font-size:9px!important;line-height:1.4!important}
+
 /* Responsive: preserve hierarchy, not exact geometry */
 @media(max-width:1100px){
   html[data-customer-theme="V1_Changing"] .orbitZipInstalling{grid-template-columns:220px minmax(0,1fr)!important}
@@ -300,6 +409,28 @@ html[data-customer-theme="V1_Changing"] .orbitZipDangerButton{
 }
 @media(max-width:640px){
   html[data-customer-theme="V1_Changing"] .orbitZipDeployer{border-radius:0!important;border-left:0!important;border-right:0!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipDeployed>.portalOverviewHero{padding:14px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipDeployed>.portalOverviewHero h1{font-size:25px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlPanel{padding:13px!important;gap:10px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlTop{gap:10px!important;align-items:flex-start!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlTop h2{font-size:19px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlTopActions{flex-direction:column!important;align-items:stretch!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlTopActions .buttonlink{display:none!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipReleaseWorkspace{padding:10px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipReleaseControls{grid-template-columns:1fr!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipRefreshButton{width:100%!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipReleaseMeta{display:grid!important;gap:3px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitPrimaryActionBar{grid-template-columns:1fr!important;gap:10px!important;padding:11px!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitPrimaryActionControls{justify-content:stretch!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipControlPanel .orbitPrimaryActionControls>.orbitHeroAction{flex:1!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails>summary,
+  html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel>summary{align-items:flex-start!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipTechnicalDetails>summary>span,
+  html[data-customer-theme="V1_Changing"] .orbitZipLifecyclePanel>summary>span{white-space:normal!important;text-align:right!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipReleaseIdentity{grid-template-columns:1fr!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipReleaseIdentity>small{grid-column:1!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>div{grid-template-columns:1fr!important}
+  html[data-customer-theme="V1_Changing"] .orbitZipLifecycleRows>div>button{width:100%!important}
   html[data-customer-theme="V1_Changing"] .orbitZipInstalling{grid-template-columns:1fr!important}
   html[data-customer-theme="V1_Changing"] .orbitZipInstalling>.orbitZipSidebar{
     grid-column:1!important;grid-row:auto!important;border-right:0!important;border-bottom:1px solid var(--bd-line)!important;padding:14px 12px!important;

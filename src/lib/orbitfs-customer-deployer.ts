@@ -284,14 +284,24 @@ commit;`);
 }
 
 type BaseMigration={id:string;file:string;size:number;sha256:string;data:string};
+function packagedBaseMigrationEntries(files:Array<{file:string;data:string;sha256:string;size:number}>){
+  return files.flatMap(file=>{
+    const match=file.file.match(/^supabase\/migrations\/([0-9]{14})_[A-Za-z0-9._-]+\.sql$/);
+    return match?[{id:match[1],file:file.file,size:file.size,sha256:file.sha256}]:[];
+  }).sort((a,b)=>a.id.localeCompare(b.id)||a.file.localeCompare(b.file));
+}
 function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:string;sha256:string;size:number}>):BaseMigration[]{
   const declared=Array.isArray((pkg as any).databaseMigrations)?(pkg as any).databaseMigrations:[];
   const count=Number((pkg as any).databaseMigrationCount??(pkg as any).releaseInfo?.databaseMigrationCount??0);
   const latest=String((pkg as any).databaseLatestMigration||(pkg as any).releaseInfo?.databaseLatestMigration||"").trim();
-  if(!Number.isInteger(count)||count<1||declared.length!==count||!/^[0-9]{14}$/.test(latest))fail("Base release database migration chain is incomplete",422);
+  if(!Number.isInteger(count)||count<1||!/^[0-9]{14}$/.test(latest))fail("Base release database migration chain is incomplete",422);
+  const inferred=packagedBaseMigrationEntries(files);
+  if(inferred.length!==count)fail("Base release database migration count does not match its packaged migration files",422);
+  const source=declared.length?declared:inferred;
+  if(source.length!==count)fail("Base release database migration chain is incomplete",422);
   const byPath=new Map(files.map(file=>[file.file,file]));
   const seen=new Set<string>();
-  const normalized:BaseMigration[]=declared.map((migration:any,index:number)=>{
+  const normalized:BaseMigration[]=source.map((migration:any,index:number)=>{
     const id=String(migration?.id||"").trim(),file=String(migration?.file||"").replaceAll("\\","/");
     if(!/^[0-9]{14}$/.test(id)||seen.has(id))fail("Base release contains an invalid or duplicate migration id",422);
     seen.add(id);
@@ -300,9 +310,10 @@ function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:st
     const packaged=byPath.get(file);
     if(!packaged)fail(`Base migration is missing from the deployment package: ${file}`,422);
     const packagedFile=packaged as {file:string;data:string;sha256:string;size:number};
-    const sha=String(migration?.sha256||"").trim().toLowerCase();
-    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packagedFile.sha256||Number(migration?.size)!==packagedFile.size)fail(`Base migration checksum mismatch: ${file}`,422);
-    if(index>0&&id<=String(declared[index-1]?.id||""))fail("Base migration ids must be strictly increasing",422);
+    const sha=String(migration?.sha256||packagedFile.sha256||"").trim().toLowerCase();
+    const size=Number(migration?.size??packagedFile.size);
+    if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packagedFile.sha256||size!==packagedFile.size)fail(`Base migration checksum mismatch: ${file}`,422);
+    if(index>0&&id<=String(source[index-1]?.id||""))fail("Base migration ids must be strictly increasing",422);
     return {id,file,size:packagedFile.size,sha256:sha,data:packagedFile.data};
   });
   if(normalized.at(-1)?.id!==latest)fail("Base release latest migration does not match its migration chain",422);
@@ -313,23 +324,28 @@ async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigrat
   let count=Number(source.databaseMigrationCount??source.releaseInfo?.databaseMigrationCount??0);
   let latest=String(source.databaseLatestMigration||source.releaseInfo?.databaseLatestMigration||"").trim();
   let declared=Array.isArray(source.databaseMigrations)?source.databaseMigrations:[];
-  if(!Number.isInteger(count)||count<1||!/^[0-9]{14}$/.test(latest)){
+  const manifestCountValid=Number.isInteger(count)&&count>0;
+  const manifestLatestValid=/^[0-9]{14}$/.test(latest);
+  if(!manifestCountValid||!manifestLatestValid||declared.length<count){
     const parsed=await readArtifact(currentRelease);
     if((parsed.root as any).format==="orbitfs-update-bundle-v3")fail("Installed Base release points to an Update Bundle",409);
-    const pkg=parsed.root as any;
-    count=Number(pkg.databaseMigrationCount??pkg.releaseInfo?.databaseMigrationCount??0);
-    latest=String(pkg.databaseLatestMigration||pkg.releaseInfo?.databaseLatestMigration||"").trim();
-    declared=Array.isArray(pkg.databaseMigrations)?pkg.databaseMigrations:[];
+    const pkg=parsed.root as Package;
+    const files=validateFiles(pkg.files,"Installed Base package");
+    const chain=validateBaseMigrationChain(pkg,files);
+    const packageCount=chain.length,packageLatest=chain.at(-1)?.id||"";
+    if(manifestCountValid&&count!==packageCount)fail("Installed Base release migration count does not match its immutable package",409);
+    if(manifestLatestValid&&latest!==packageLatest)fail("Installed Base release latest migration does not match its immutable package",409);
+    count=packageCount;
+    latest=packageLatest;
+    declared=chain;
   }
   if(!Number.isInteger(count)||count<1||count>target.length||!/^[0-9]{14}$/.test(latest))fail("Installed Base release does not contain enough migration baseline metadata for an automatic Base update",409);
   if(target[count-1]?.id!==latest)fail("Target Base release does not extend the installed Base migration history",409);
-  if(declared.length){
-    if(declared.length<count)fail("Installed Base migration metadata is incomplete",409);
-    for(let index=0;index<count;index++){
-      const before=declared[index],after=target[index];
-      if(String(before?.id||"")!==after.id||String(before?.file||"").replaceAll("\\","/")!==after.file||String(before?.sha256||"").toLowerCase()!==after.sha256){
-        fail(`Base migration history diverged at ${after.id}. Published migrations are immutable.`,409);
-      }
+  if(declared.length<count)fail("Installed Base migration metadata is incomplete",409);
+  for(let index=0;index<count;index++){
+    const before=declared[index],after=target[index];
+    if(String(before?.id||"")!==after.id||String(before?.file||"").replaceAll("\\","/")!==after.file||String(before?.sha256||"").toLowerCase()!==after.sha256){
+      fail(`Base migration history diverged at ${after.id}. Published migrations are immutable.`,409);
     }
   }
   return {count,latest};
