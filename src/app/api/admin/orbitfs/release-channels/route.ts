@@ -3,7 +3,7 @@ import {masterRequest} from "@/lib/master-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
 async function authoritativeChannels(){
-  const remote=await masterRequest("/api/v1/release-channels?include_disabled=true",{method:"GET"},"billing");
+  const remote=await masterRequest("/api/v1/release-channels?include_disabled=true",{method:"GET",cache:"no-store"},"billing");
   return Array.isArray(remote?.channels)?remote.channels:[];
 }
 
@@ -15,8 +15,8 @@ export async function GET(req:Request){
       authoritativeChannels(),
       db.from("user_profiles").select("id,display_name,company_name,status,role"),
       db.from("customers").select("id,auth_user_id,user_id,customer_number,name,email,status").order("name"),
-      masterRequest("/api/v1/release-channels/access?status=pending",{method:"GET"},"billing"),
-      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET"},"billing")
+      masterRequest("/api/v1/release-channels/access?status=pending",{method:"GET",cache:"no-store"},"billing"),
+      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET",cache:"no-store"},"billing")
     ]);
     if(profiles.error)throw profiles.error;
     if(customerRows.error)throw customerRows.error;
