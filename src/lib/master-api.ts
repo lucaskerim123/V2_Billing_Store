@@ -39,7 +39,7 @@ export async function masterProducts(role:MasterRole="billing"){
   return masterRequest("/api/v1/products",{method:"GET"},role);
 }
 export async function masterLicenses(role:MasterRole="billing"){
-  return masterRequest("/api/v1/license",{method:"GET"},role);
+  return masterRequest("/api/v1/license",{method:"GET",cache:"no-store"},role);
 }
 export async function masterReleases(product="orbitfs_base",channel="all",releaseType="all",role:MasterRole="billing",fresh=false){
   const qs=new URLSearchParams();
@@ -54,7 +54,7 @@ export async function masterReleases(product="orbitfs_base",channel="all",releas
 }
 
 const ALLOWED_PRODUCTS=new Set(["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
-export async function masterLicenseValidate(input:any){const product=String(input.product||input.product_code||"orbitfs_base").trim().toLowerCase();const licenseKey=String(input.licenseKey||input.license_key||"").trim();if(!ALLOWED_PRODUCTS.has(product))throw Object.assign(new Error("Unsupported OrbitFS license product"),{status:400,code:"UNSUPPORTED_PRODUCT"});if(!licenseKey)throw Object.assign(new Error("License key is required"),{status:400,code:"LICENSE_KEY_REQUIRED"});return masterRequest("/api/v1/license/validate",{method:"POST",body:JSON.stringify({license_key:licenseKey,installation_id:input.installationId||input.installation_id,product,component:product,product_version:input.productVersion||input.product_version||input.appVersion||undefined,metadata:input.metadata&&typeof input.metadata==="object"?input.metadata:{}})},"billing");}
+export async function masterLicenseValidate(input:any){const product=String(input.product||input.product_code||"orbitfs_base").trim().toLowerCase();const licenseKey=String(input.licenseKey||input.license_key||"").trim();if(!ALLOWED_PRODUCTS.has(product))throw Object.assign(new Error("Unsupported OrbitFS license product"),{status:400,code:"UNSUPPORTED_PRODUCT"});if(!licenseKey)throw Object.assign(new Error("License key is required"),{status:400,code:"LICENSE_KEY_REQUIRED"});return masterRequest("/api/v1/license/validate",{method:"POST",body:JSON.stringify({action:String(input.action||((input.activate===true)?"activate":"validate")).trim().toLowerCase(),license_key:licenseKey,installation_id:input.installationId||input.installation_id,product,component:String(input.component||product).trim().toLowerCase(),product_version:input.productVersion||input.product_version||input.appVersion||undefined,metadata:input.metadata&&typeof input.metadata==="object"?input.metadata:{}})},"billing");}
 export const masterValidate=masterLicenseValidate;
 export async function masterIssue(input:any){return masterRequest("/api/v1/license",{method:"POST",headers:{"x-orbitfs-order-ref":String(input.external_reference||input.orderRef||"")},body:JSON.stringify({product:input.product||input.product_code||input.productCode||"orbitfs_base",customer_external_id:input.customer_external_id||input.customerRef||null,customer_override:Boolean(input.customer_override??input.customerOverride),external_reference:input.external_reference||input.orderRef||null,expires_at:input.expires_at||input.expiresAt||null,components:input.components||null,max_installations:input.max_installations||input.maxInstallations||null,metadata:input.metadata&&typeof input.metadata==="object"?input.metadata:{}})},"billing");}
 export async function masterPulse(input:any={}){return masterRequest("/api/v1/license/pulse",{method:"POST",body:JSON.stringify(input)},"billing");}
