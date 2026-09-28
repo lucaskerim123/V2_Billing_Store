@@ -1,4 +1,5 @@
 "use client";
+import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 
 import {useEffect,useMemo,useRef,useState} from "react";
 import {createClient} from "@/lib/supabase";
@@ -10,7 +11,7 @@ const sectionGap={display:"grid",gap:12} as const;
 const summaryStyle={cursor:"pointer"} as const;
 const workingStates=new Set(["configuring","deploying","updating"]);
 function versionParts(value:unknown){const m=String(value||"").trim().match(/^(\d+)\.(\d+)\.(\d+)/);return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null}
-function compareVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
+function compareOrbitReleaseVersions(a:unknown,b:unknown){const av=versionParts(a),bv=versionParts(b);if(!av||!bv)return null;return av[0]-bv[0]||av[1]-bv[1]||av[2]-bv[2]}
 
 export default function MyOrbitFS(){
   const sb=useMemo(()=>createClient(),[]),pollCount=useRef(0);
@@ -84,7 +85,7 @@ export default function MyOrbitFS(){
   const selectedRelease=publishedBaseReleases.find((r:any)=>String(r.id)===selectedReleaseId)||publishedBaseReleases[0]||null;
   const selectedReleaseMatchesInstalled=!!(selectedRelease&&install?.release_id&&String(selectedRelease.id)===String(install.release_id));
   const latestBaseRelease=d?.latestBase||null,latestBase=latestBaseRelease?.version,baseUpdateAvailable=Boolean(d?.baseUpdateAvailable&&latestBaseRelease?.id),latestUpdate=d?.latestUpdate?.version,appliedUpdate=install?.metadata?.appliedUpdate||null,appliedUpdateVersion=String(appliedUpdate?.version||""),updateAvailable=!!(install?.release_version&&latestUpdate&&appliedUpdateVersion!==String(latestUpdate)),components=binding?Object.entries(binding.components||{}).filter(([,v])=>v).map(([k])=>k):[];
-  const baseUpdateCandidates=publishedBaseReleases.filter((r:any)=>{const comparison=compareVersions(r.version,install?.release_version);return comparison!==null&&comparison>0});
+  const baseUpdateCandidates=publishedBaseReleases.filter((r:any)=>{const comparison=compareOrbitReleaseVersions(r.version,install?.release_version);return comparison!==null&&comparison>0});
   const selectedBaseUpdateRelease=baseUpdateCandidates.find((r:any)=>String(r.id)===selectedReleaseId)||baseUpdateCandidates[0]||null;
   const selectedBaseUpdateAvailable=Boolean(selectedBaseUpdateRelease?.id);
 
