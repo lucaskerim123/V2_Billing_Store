@@ -13,15 +13,17 @@ export default function Customers(){
  const [rows,setRows]=useState<any[]>([]),[balances,setBalances]=useState<any[]>([]),[q,setQ]=useState(""),[status,setStatus]=useState("all"),[sort,setSort]=useState("recent"),[msg,setMsg]=useState(""),[open,setOpen]=useState(false),[form,setForm]=useState<any>(empty),[saving,setSaving]=useState(false),[loading,setLoading]=useState(true);
 
  async function load(){
-  setLoading(true);
-  const [customers,profiles,b]=await Promise.all([
-   sb.from("customers").select("*").order("created_at",{ascending:false}),
-   sb.from("user_profiles").select("*"),
-   sb.from("account_balances").select("*")
-  ]);
-  const profileMap=new Map((profiles.data||[]).map((p:any)=>[p.id,p]));
-  const merged=(customers.data||[]).filter((row:any)=>row.auth_user_id).map((row:any)=>{const p:any=profileMap.get(row.auth_user_id)||{};return {...p,...row,id:row.auth_user_id,customer_id:row.id,email:row.email,username:row.username,customer_number:row.customer_number||p.customer_number,status:row.status||p.status||"active",email_verified_at:row.email_verified_at||p.email_verified_at}});
-  setRows(merged);setBalances(b.data||[]);setLoading(false);
+  setLoading(true);setMsg("");
+  try{
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");
+   const r=await fetch("/api/admin/customers",{headers:{authorization:`Bearer ${session.access_token}`},cache:"no-store"});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Could not load customers.");
+   setRows(Array.isArray(j.customers)?j.customers:[]);
+   setBalances(Array.isArray(j.balances)?j.balances:[]);
+  }catch(e:any){setMsg(e?.message||"Could not load customers.");setRows([]);setBalances([])}
+  finally{setLoading(false)}
  }
  useEffect(()=>{load()},[]);
 
