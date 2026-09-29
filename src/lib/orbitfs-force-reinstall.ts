@@ -36,16 +36,30 @@ export async function completePendingBaseForceReinstall(install:any){
     throw Object.assign(new Error("Enter and register the new rotated licence key before continuing the Base reinstall."),{status:409,code:"NEW_LICENSE_KEY_REQUIRED"});
   }
 
-  const releaseId=String(pending.targetReleaseId||"").trim();
-  const version=String(pending.targetVersion||"").trim();
-  const channel=String(pending.channel||install.release_channel||"stable").trim().toLowerCase();
-  const licenseId=String(pending.licenseId||registration.masterLicenseId||"").trim();
-  if(!releaseId||!version||!licenseId)throw Object.assign(new Error("Pending Base reinstall identity is incomplete. Start the force reinstall again."),{status:409,code:"BASE_REINSTALL_STATE_INCOMPLETE"});
+  const licenseId=String(registration.masterLicenseId||pending.licenseId||"").trim();
+  if(!licenseId)throw Object.assign(new Error("Pending Base reinstall licence identity is incomplete. Start the force reinstall again."),{status:409,code:"BASE_REINSTALL_STATE_INCOMPLETE"});
+
+  const authority=await masterInstallationLifecycle({
+    action:"base_reinstall",
+    phase:"status",
+    licenseId,
+    installationId:install.installation_id,
+    releaseLicense:true,
+  });
+  const authorityState=authority?.baseReinstall&&typeof authority.baseReinstall==="object"?authority.baseReinstall:null;
+  if(!authorityState)throw Object.assign(new Error("License Manager does not have an active Base reinstall for this installation."),{status:409,code:"BASE_REINSTALL_AUTHORITY_STATE_MISSING"});
+  if(String(authorityState.installationId||"")!==String(install.installation_id||""))throw Object.assign(new Error("License Manager Base reinstall state belongs to a different installation."),{status:409,code:"BASE_REINSTALL_AUTHORITY_MISMATCH"});
+  if(authority?.rotationRequired)throw Object.assign(new Error("Rotate your licence key before continuing the Base reinstall."),{status:409,code:"LICENSE_ROTATION_REQUIRED"});
+
+  const releaseId=String(authorityState.targetReleaseId||"").trim();
+  const version=String(authorityState.targetVersion||"").trim();
+  const channel=String(authorityState.channel||install.release_channel||"stable").trim().toLowerCase();
+  if(!releaseId||!version)throw Object.assign(new Error("License Manager Base reinstall target is incomplete."),{status:409,code:"BASE_REINSTALL_AUTHORITY_STATE_INCOMPLETE"});
 
   const attempt=Math.max(0,Number(pending.attempts||0))+1;
   const startedAt=new Date().toISOString();
-  const rotationCompletedAt=String(pending.rotationCompletedAt||registration.registeredAt||startedAt);
-  const nextPending={...pending,status:"deploying",rotationCompletedAt,attempts:attempt,lastAttemptAt:startedAt,lastError:null};
+  const rotationCompletedAt=String(authorityState.rotationCompletedAt||pending.rotationCompletedAt||registration.registeredAt||startedAt);
+  const nextPending={...pending,status:"deploying",rotationCompletedAt,targetReleaseId:releaseId,targetVersion:version,channel,authorityState:String(authorityState.state||""),attempts:attempt,lastAttemptAt:startedAt,lastError:null};
   install=await patchPending(install,nextPending);
 
   try{
