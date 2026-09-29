@@ -189,6 +189,23 @@ export default function MyOrbitFS(){
     setMsg(apiError(j,actionLabel+" failed."));
     if(j.operationId||j.code==="OPERATION_IN_PROGRESS"){pollCount.current=0;await load(true)}
   }
+  async function forceReinstallBase(){
+    if(!install)return;
+    if(activeOperation){setMsg(label(activeOperation.action)+" is already "+label(activeOperation.state)+". Wait for the active Base operation to finish before forcing a reinstall.");return}
+    const channel=String(install.release_channel||selectedChannel||"stable");
+    if(!confirm("Force reinstall OrbitFS Base? This deletes ONLY the current Base Vercel project, preserves Supabase/database/storage/licence/installation ID and the Shared Engine Host, then installs the newest approved published Base in "+channel+"."))return;
+    setBusy("force-base-reinstall");
+    try{
+      const r=await fetch(`/api/orbitfs/installations/${install.id}/force-reinstall-base`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:"{}"});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(apiError(j,"Force Base reinstall failed."));
+      const version=String(j?.targetRelease?.version||j?.installation?.release_version||"published");
+      setMsg("OrbitFS Base "+version+" was force reinstalled from the approved published release. Supabase, customer data, licence binding, installation ID and Shared Engine Host were preserved.");
+      pollCount.current=0;
+      await load();
+    }catch(e:any){setMsg(e?.message||"Force Base reinstall failed.")}
+    finally{setBusy("")}
+  }
   async function rollbackUpdate(){if(!install||!appliedUpdateVersion)return;const reason=prompt(`Why are you rolling back Update ${appliedUpdateVersion}?`,"")?.trim()||"";if(!reason)return;if(!confirm(`Roll back OrbitFS Update ${appliedUpdateVersion}? Inner Engine targets will restore their pre-update checkpoint first. Forward-compatible database migrations remain applied.`))return;setBusy("rollback-update");const r=await fetch(`/api/orbitfs/installations/${install.id}/rollback-update`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({reason})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?`OrbitFS Update ${appliedUpdateVersion} rolled back.`:apiError(j,"Update rollback failed."));if(r.ok){pollCount.current=0;await load()}}
 
   async function sync(auto=false){if(!install)return;const r=await fetch(`/api/orbitfs/installations/${install.id}/status`,{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok){if(!auto)setMsg(apiError(j,"Could not refresh Panel status."));return}const updated=j.installation;if(updated)setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===updated.id?updated:x)}):current);if(updated&&!workingStates.has(String(updated.state)))await load()}
@@ -326,10 +343,11 @@ export default function MyOrbitFS(){
         </details>
 
         <details className="panel orbitZipLifecyclePanel">
-          <summary><div><p className="eyebrow">LIFECYCLE & RECOVERY</p><b>Deployment controls</b><span>Undeploy, reset or uninstall only when you need recovery or removal.</span></div><span>Open controls</span></summary>
+          <summary><div><p className="eyebrow">LIFECYCLE & RECOVERY</p><b>Deployment controls</b><span>Force reinstall Base, undeploy, reset or uninstall when you need recovery or removal.</span></div><span>Open controls</span></summary>
           <div className="orbitZipLifecycleBody">
-            <p className="muted">Undeploy removes the running Vercel resources but preserves this installation ID, customer database, storage and licence binding for a clean redeploy.</p>
+            <p className="muted">Force reinstall is Base-only: it removes the current Base Vercel project and rebuilds it from the newest approved published Base release in your active channel. It does not remove the Shared Engine Host, Supabase project, database, storage, licence binding or installation ID.</p>
             <div className="orbitZipLifecycleRows">
+              <div><div><b>Force reinstall published Base</b><span>Delete only the current Base deployment and reinstall the authoritative published Base release from License Manager.</span></div><button className="orbitZipDangerButton" disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered} onClick={()=>void forceReinstallBase()}>{busy==="force-base-reinstall"?"Force reinstalling…":"Force reinstall Base"}</button></div>
               <div><div><b>Undeploy OrbitFS</b><span>Remove the Base runtime and Shared Engine Host from Vercel while preserving the customer installation.</span></div><button className="secondary" disabled={busy!==""||!install.vercel_project_id} onClick={()=>void executeLifecycle("undeploy")}>{busy==="undeploy"?"Undeploying…":"Undeploy"}</button></div>
               <details>
                 <summary><div><b>Uninstall OrbitFS</b><span>Remove the runtime and optionally clean OrbitFS-owned database, storage and licence binding.</span></div><span>Configure →</span></summary>
