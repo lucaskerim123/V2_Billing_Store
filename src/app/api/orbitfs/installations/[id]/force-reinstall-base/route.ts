@@ -1,7 +1,7 @@
 import {randomUUID} from "node:crypto";
 import {httpError,loadInstallation,requireOrbitUser,requireSystem,vercelApi} from "@/lib/orbitfs-deployment";
 import {clearPanelRegistration} from "@/lib/orbitfs-lifecycle";
-import {masterReleases} from "@/lib/master-api";
+import {masterInstallationLifecycle,masterReleases} from "@/lib/master-api";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {licenseDb} from "@/lib/license-api";
 import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
@@ -47,6 +47,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const bindingResult=await licenseDb().from("license_bindings").select("license_id,desired_state,remote_state").eq("id",String(install.license_binding_id||"")).eq("auth_user_id",String(user.id)).is("archived_at",null).maybeSingle();
     if(bindingResult.error)throw bindingResult.error;
     if(!bindingResult.data?.license_id)throw Object.assign(new Error("This installation is not linked to an authoritative Billing licence"),{status:409,code:"LICENSE_BINDING_REQUIRED"});
+    const authorityLicenseId=String(bindingResult.data.license_id);
     if(["revoked","expired"].includes(String(bindingResult.data.desired_state||bindingResult.data.remote_state||"").toLowerCase())){
       throw Object.assign(new Error("The installation's Billing licence is not active"),{status:403,code:"LICENSE_BINDING_INACTIVE"});
     }
@@ -61,52 +62,97 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     if(active.data)throw Object.assign(new Error(`A Base lifecycle operation is already ${String(active.data.state).replaceAll("_"," ")}. Wait for it to finish before forcing a reinstall.`),{status:409,code:"OPERATION_IN_PROGRESS",operationId:active.data.id,retryable:true});
 
     const previousProjectId=String(install.vercel_project_id||"").trim()||null;
-    if(previousProjectId){
-      try{
-        await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(previousProjectId)}`,{method:"DELETE"});
-      }catch(error:any){
-        if(Number(error?.status)!==404)throw error;
-      }
-    }
-
-    install=await clearPanelRegistration(install,`Force Base reinstall removed the current Base Vercel project. Reinstalling approved published Base ${release.version} from ${channel}.`);
-
-    const metadata=install?.metadata&&typeof install.metadata==="object"?install.metadata:{};
-    const applied=metadata?.appliedUpdate&&typeof metadata.appliedUpdate==="object"?metadata.appliedUpdate:null;
-    if(applied&&Array.isArray(applied.components)&&applied.components.map((value:any)=>String(value).toLowerCase()).includes("base")){
-      const remaining=applied.components.map((value:any)=>String(value).toLowerCase()).filter((value:string)=>value&&value!=="base");
-      const componentVersions=applied.componentVersions&&typeof applied.componentVersions==="object"?{...applied.componentVersions}:{};
-      delete componentVersions.base;
-      const nextApplied=remaining.length?{...applied,components:remaining,componentVersions,baseReinstalledAt:new Date().toISOString()}:null;
-      const nextMetadata={...metadata,appliedUpdate:nextApplied,lastBaseForceReinstall:{at:new Date().toISOString(),previousProjectId,targetReleaseId:String(release.id),targetVersion:String(release.version),channel}};
-      const patch:any={metadata:nextMetadata,updated_at:new Date().toISOString()};
-      if(!nextApplied)Object.assign(patch,{applied_update_version:null,applied_update_id:null,applied_update_sha256:null,applied_update_source_commit:null,applied_update_at:null});
-      const updated=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
-      if(updated.error)throw updated.error;
-      install=updated.data;
-    }else{
-      const nextMetadata={...metadata,lastBaseForceReinstall:{at:new Date().toISOString(),previousProjectId,targetReleaseId:String(release.id),targetVersion:String(release.version),channel}};
-      const updated=await licenseDb().from("orbitfs_installations").update({metadata:nextMetadata,updated_at:new Date().toISOString()}).eq("id",install.id).select().single();
-      if(updated.error)throw updated.error;
-      install=updated.data;
-    }
-
-    const result=await runBaseLifecycleOperation({
-      install,
-      action:"deploy",
-      version:String(release.version),
-      releaseId:String(release.id),
+    await masterInstallationLifecycle({
+      action:"base_reinstall",
+      phase:"authorize",
+      licenseId:authorityLicenseId,
+      installationId:install.installation_id,
+      releaseLicense:false,
+      projectId:previousProjectId,
+      deploymentId:install.vercel_deployment_id||null,
+      reason:"Customer requested Base-only force reinstall",
+      targetReleaseId:String(release.id),
+      targetVersion:String(release.version),
       channel,
-      reason:"Customer requested force reinstall of published Base",
-      idempotencyKey:`force-base-${randomUUID()}`,
     });
 
-    return Response.json({
-      ok:true,
-      forceReinstall:true,
-      previousProjectId,
-      targetRelease:{id:String(release.id),version:String(release.version),channel},
-      ...result,
-    },{headers:{"cache-control":"no-store"}});
+    try{
+      if(previousProjectId){
+        try{
+          await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(previousProjectId)}`,{method:"DELETE"});
+        }catch(error:any){
+          if(Number(error?.status)!==404)throw error;
+        }
+      }
+
+      install=await clearPanelRegistration(install,`Force Base reinstall removed the current Base Vercel project. Reinstalling approved published Base ${release.version} from ${channel}.`);
+
+      const metadata=install?.metadata&&typeof install.metadata==="object"?install.metadata:{};
+      const applied=metadata?.appliedUpdate&&typeof metadata.appliedUpdate==="object"?metadata.appliedUpdate:null;
+      if(applied&&Array.isArray(applied.components)&&applied.components.map((value:any)=>String(value).toLowerCase()).includes("base")){
+        const remaining=applied.components.map((value:any)=>String(value).toLowerCase()).filter((value:string)=>value&&value!=="base");
+        const componentVersions=applied.componentVersions&&typeof applied.componentVersions==="object"?{...applied.componentVersions}:{};
+        delete componentVersions.base;
+        const nextApplied=remaining.length?{...applied,components:remaining,componentVersions,baseReinstalledAt:new Date().toISOString()}:null;
+        const nextMetadata={...metadata,appliedUpdate:nextApplied,lastBaseForceReinstall:{at:new Date().toISOString(),previousProjectId,targetReleaseId:String(release.id),targetVersion:String(release.version),channel}};
+        const patch:any={metadata:nextMetadata,updated_at:new Date().toISOString()};
+        if(!nextApplied)Object.assign(patch,{applied_update_version:null,applied_update_id:null,applied_update_sha256:null,applied_update_source_commit:null,applied_update_at:null});
+        const updated=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
+        if(updated.error)throw updated.error;
+        install=updated.data;
+      }else{
+        const nextMetadata={...metadata,lastBaseForceReinstall:{at:new Date().toISOString(),previousProjectId,targetReleaseId:String(release.id),targetVersion:String(release.version),channel}};
+        const updated=await licenseDb().from("orbitfs_installations").update({metadata:nextMetadata,updated_at:new Date().toISOString()}).eq("id",install.id).select().single();
+        if(updated.error)throw updated.error;
+        install=updated.data;
+      }
+
+      const result=await runBaseLifecycleOperation({
+        install,
+        action:"deploy",
+        version:String(release.version),
+        releaseId:String(release.id),
+        channel,
+        reason:"Customer requested force reinstall of published Base",
+        idempotencyKey:`force-base-${randomUUID()}`,
+      });
+
+      await masterInstallationLifecycle({
+        action:"base_reinstall",
+        phase:"completed",
+        licenseId:authorityLicenseId,
+        installationId:install.installation_id,
+        releaseLicense:false,
+        projectId:result.installation?.vercel_project_id||null,
+        deploymentId:result.installation?.vercel_deployment_id||null,
+        targetReleaseId:String(release.id),
+        targetVersion:String(release.version),
+        channel,
+        result:{previousProjectId,newProjectId:result.installation?.vercel_project_id||null,newDeploymentId:result.installation?.vercel_deployment_id||null},
+      });
+
+      return Response.json({
+        ok:true,
+        forceReinstall:true,
+        previousProjectId,
+        targetRelease:{id:String(release.id),version:String(release.version),channel},
+        ...result,
+      },{headers:{"cache-control":"no-store"}});
+    }catch(error:any){
+      await masterInstallationLifecycle({
+        action:"base_reinstall",
+        phase:"failed",
+        licenseId:authorityLicenseId,
+        installationId:install.installation_id,
+        releaseLicense:false,
+        projectId:install.vercel_project_id||previousProjectId,
+        deploymentId:install.vercel_deployment_id||null,
+        targetReleaseId:String(release.id),
+        targetVersion:String(release.version),
+        channel,
+        error:error?.message||"Base force reinstall failed",
+      }).catch(()=>{});
+      throw error;
+    }
   }catch(error){return httpError(error)}
 }
