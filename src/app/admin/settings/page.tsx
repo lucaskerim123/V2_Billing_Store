@@ -19,7 +19,7 @@ const sections:Section[]=[
   {title:"Products & catalogue",description:"Fulfilment, addons, upgrades, coupons, quantities, stock and checkout defaults.",href:"/admin/settings/products",badge:"Catalogue",tags:["Fulfilment","Add-ons","Stock"]}
  ]},
  {title:"Licensing, operations & access",description:"License Master connectivity, staff access, messaging, alerts and account enforcement.",cards:[
-  {title:"License Master connection",description:"Authority URL, connection status, runtime policy and health for the technical licensing authority.",href:"/admin/settings/license-master",badge:"Licensing",tags:["Authority","Health","API"]},
+  {title:"API Connections",description:"Select the official OrbitFS API used by Billing. URLs must exactly match the License Manager registry.",href:"/admin/settings/api-connections",badge:"API",tags:["Authority","Registry","Health"]},
   {title:"Licence commerce policy",description:"Billing-side enforcement triggers and customer Licence Controller permissions. License Master remains authoritative for licence state.",href:"/admin/settings/licensing",badge:"Policy",tags:["Enforcement","Customer controls","Grace"]},
   {title:"Staff System",description:"Staff identities, groups, primary roles and exact inherited permission maps.",href:"/admin/settings/staff",badge:"Access",tags:["Staff","Groups","Permissions"]},
   {title:"Permission map",description:"Inspect and maintain administrative permission definitions used by staff groups.",href:"/admin/settings/permissions",badge:"Permissions",tags:["RBAC","Capabilities","Audit"]},
