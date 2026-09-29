@@ -38,7 +38,7 @@ function applyThemeToDocument(surface:ThemeSurface,theme:ActiveTheme){
   }
 }
 
-export default function ThemeRuntime({surface}:{surface:ThemeSurface}){
+export default function ThemeRuntime({surface}:{surface:ThemeSurface;fallback?:string}){
   useEffect(()=>{
     const sb=createClient();
     let alive=true;
