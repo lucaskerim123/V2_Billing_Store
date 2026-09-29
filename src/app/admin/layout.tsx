@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import "@/themes/active/admin.css";
+import "@/themes/admin-shell.css";
 import ThemeRuntime from "@/components/ThemeRuntime";
 import AdminLayoutClient from "./AdminLayoutClient";
 

@@ -1,65 +1,61 @@
 # OrbitFS Theme System
 
-Theme files live under `src/themes/<ThemeId>/` and each completed theme is a self-contained package.
+OrbitFS has two independently selectable theme surfaces: Admin Panel and Customer Portal.
 
-## Active themes
+Current production bases:
+- Admin: V3A
+- Customer Portal: V3C
 
-- Admin: `V3A`
-- Customer Portal (legacy/current baseline): `V3C`
-- Customer Portal (transitional redesign): `V1_Changing`
+New V5 child themes:
+- V5A extends V3A
+- V5C extends V3C
 
-Runtime layouts import only these wrappers:
+V5 starts visually identical to V3 and owns only new overrides. That avoids copying the large legacy CSS stack and gives new design work a clean boundary.
 
-- `src/themes/active/admin.css`
-- `src/themes/active/customer.css`
+## Runtime selection
 
-The wrappers point to one packaged theme entrypoint. Applying a different theme only changes the relevant wrapper.
+Admin layout imports src/themes/active/admin.css.
+Customer layout imports src/themes/active/customer.css.
 
-## Package format
+Those files are registries. They compile the V3 base and built-in child-theme overrides together. ThemeRuntime reads the active theme from Billing settings and sets the exact theme ID on the html element.
 
-Every theme folder requires:
+Legacy compatibility attributes remain in place so existing V3 selectors continue to work while V5 is built.
 
-- `manifest.json`
-- the CSS entry file named by `manifest.entry`
-- any supporting CSS/assets kept inside the theme folder
+Database-imported themes are injected only while active.
 
-Manifest fields:
+## Theme package
 
-```json
-{
-  "id": "V3A",
-  "name": "OrbitFS V3 Admin",
-  "version": "3.0.0",
-  "surface": "admin",
-  "entry": "theme.css"
-}
-```
+Each filesystem theme lives under src/themes/<ThemeId>/ and requires:
+- manifest.json
+- the CSS entry named by manifest.entry
+- optional supporting CSS files
 
-`surface` must be `admin` or `customer` so an admin theme cannot accidentally replace the customer portal theme and vice versa.
+Child themes may declare extends.
 
-## Commands
+V5 child override rules must be scoped to their exact runtime ID:
+- html[data-admin-theme-id="V5A"]
+- html[data-customer-theme-id="V5C"]
 
-From `web/`:
+## ZIP packages
 
-- `npm run theme:pack -- V3A` packages a theme to `theme-packages/` as an `.orbit-theme.zip`.
-- `npm run theme:install -- <path-to-package.zip>` validates and installs a package without activating it.
-- `npm run theme:install-apply -- <path-to-package.zip>` installs and immediately applies it to its declared surface.
-- `npm run theme:apply -- V3A` applies an already installed theme.
+The package format is .orbit-theme.zip. The ZIP root must match the manifest ID and contain exactly one manifest.json.
 
-The installer validates the package manifest, package root, theme surface and entry file, then rewrites only the appropriate active wrapper.
+CLI:
+- npm run theme:pack -- V5C
+- npm run theme:install -- <package.zip>
+- npm run theme:install-apply -- <package.zip>
+- npm run theme:apply -- V5C
+- npm run theme:sync
+
+The Admin Theme Manager can also import ZIP packages. Relative CSS imports are bundled on upload. Runtime-imported assets must be embedded as data URLs.
+
+Local CLI apply changes only the local fallback. Production runtime selection is stored in Billing theme settings.
 
 ## Naming
 
-OrbitFS theme IDs use a version plus surface suffix:
+A = Admin Panel.
+C = Customer Portal.
 
-- `A` = Admin Panel
-- `C` = Customer Portal
+Examples: V3A, V3C, V5A, V5C.
 
-Examples: `V3A`, `V3C`.
-
-
-## V1_Changing
-
-`V1_Changing` is the transitional customer theme used while the customer portal is rebuilt surface-by-surface. It starts from the current customer theme behavior but owns new surface design in its own files. The first rebuilt surface is Base Deployer via `V1_Changing/base-deployer.css`.
-
-Do not add Base Deployer styling back to shared portal CSS; keep it owned by the theme.
+V1_Changing remains historical/transitional work and is no longer the customer theme baseline.
