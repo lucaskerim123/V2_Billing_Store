@@ -164,13 +164,23 @@ async function syncAll(){
   console.log("Theme registries synchronized.");
 }
 
+async function validateAll(){
+  const map=await installedManifests();
+  for(const m of map.values()){
+    inheritanceDepth(m.id,map);
+    await fs.access(path.join(themesDir,m.id,m.entry));
+  }
+  console.log("Validated "+map.size+" filesystem theme packages.");
+}
+
 try{
   if(command==="pack")await packTheme(arg1,arg2);
   else if(command==="install")await installTheme(arg1,false);
   else if(command==="install-apply")await installTheme(arg1,true);
   else if(command==="apply")await applyTheme(arg1);
   else if(command==="sync")await syncAll();
-  else throw new Error("Usage: node tools/theme-manager.mjs pack <ThemeId> [output] | install <zip> | install-apply <zip> | apply <ThemeId> | sync");
+  else if(command==="validate")await validateAll();
+  else throw new Error("Usage: node tools/theme-manager.mjs pack <ThemeId> [output] | install <zip> | install-apply <zip> | apply <ThemeId> | sync | validate");
 }catch(error){
   console.error(error.message||error);
   process.exit(1);

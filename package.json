@@ -13,7 +13,8 @@
     "theme:install-apply": "node tools/theme-manager.mjs install-apply",
     "theme:apply": "node tools/theme-manager.mjs apply",
     "theme:sync": "node tools/theme-manager.mjs sync",
-    "preflight": "node scripts/preflight-report.mjs"
+    "preflight": "node scripts/preflight-report.mjs",
+    "theme:validate": "node tools/theme-manager.mjs validate"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
