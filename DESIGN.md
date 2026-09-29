@@ -51,7 +51,7 @@ spacing:
 components:
   baseDeployer:
     reference: "12ui ZIP installation and deployed-application screens"
-    theme: "V1_Changing"
+    theme: "V5C"
   progressMarker:
     shape: "circle"
     size: "32px"
@@ -62,7 +62,7 @@ components:
 
 ## Overview
 
-**V1_Changing** is the transitional OrbitFS customer theme. It intentionally begins from the current customer portal behavior while individual surfaces are replaced with a new visual system.
+**V5C** is the transitional OrbitFS customer theme. It intentionally begins from the current customer portal behavior while individual surfaces are replaced with a new visual system.
 
 The first rebuilt surface is **Base Deployer** at `/portal/orbitfs`.
 
