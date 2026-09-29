@@ -3,6 +3,7 @@
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase";
+import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 
 export default function OrbitFSReleaseDeployer(){
  const sb=useMemo(()=>createClient(),[]);
@@ -38,13 +39,16 @@ export default function OrbitFSReleaseDeployer(){
   else if(!selectedChannel&&allowedChannels.length)setSelectedChannel(String(allowedChannels[0]));
  },[install?.release_channel,allowedChannels.join(",")]);
 
- const releases=(data?.publishedReleases||[]).filter((x:any)=>String(x.release_type||x.releaseType)==="update"&&allowedChannels.includes(String(x.channel||"stable")));
+ const releases=(data?.publishedReleases||[]).filter((x:any)=>String(x.release_type||x.releaseType)==="update"&&allowedChannels.includes(String(x.channel||"stable"))).sort((a:any,b:any)=>String(b.published_at||b.publishedAt||"").localeCompare(String(a.published_at||a.publishedAt||""))||(compareOrbitReleaseVersions(String(b.version||""),String(a.version||""))??0));
  const settings=data?.settings||{};
  const deploymentUnavailable=!settings.enabled||settings.maintenance_mode===true||settings.license_authority_available===false||settings.release_authority_available===false||settings.deployment_authority_available===false||settings.customer_updates_enabled===false;
  const appliedUpdate=data?.normalUpdate?.applied||install?.metadata?.appliedUpdate||null;
  const appliedUpdateVersion=String(appliedUpdate?.version||"");
  const appliedUpdateId=String(appliedUpdate?.releaseId||"");
- const latestUpdate=releases.find((x:any)=>x.release_type==="update"&&String(x.channel||"stable")===selectedChannel)||null;
+ const selectedChannelReleases=releases.filter((x:any)=>String(x.channel||"stable")===selectedChannel);
+ const latestUpdate=selectedChannelReleases[0]||null;
+ const latestComparison=latestUpdate?.version&&appliedUpdateVersion?compareOrbitReleaseVersions(String(latestUpdate.version),appliedUpdateVersion):latestUpdate?.version?1:null;
+ const updateAvailable=Boolean(latestUpdate&&(!appliedUpdateVersion||latestComparison===1));
 
  async function deploy(release:any){
   if(deploymentUnavailable)return setMessage(settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment maintenance is active."):(settings.license_authority_notice||"License Manager release/deployment authority is unavailable."));
@@ -62,6 +66,23 @@ export default function OrbitFSReleaseDeployer(){
   const j=await r.json().catch(()=>({}));
   setBusy("");setMessage(r.ok?(j.message||"Deployment started."):(j.error||"Deployment failed."));
   if(r.ok)await load();
+ }
+
+ async function rollbackUpdate(){
+  if(!install||!appliedUpdateVersion)return;
+  if(!settings.customer_rollbacks_enabled)return setMessage("Update rollback is disabled by an administrator.");
+  const reason=prompt("Why are you rolling back Update "+appliedUpdateVersion+"?","")?.trim()||"";
+  if(!reason)return;
+  if(!confirm("Roll back OrbitFS Update "+appliedUpdateVersion+"? Engine targets will restore their checkpoint where available. Forward-compatible database migrations remain applied."))return;
+  setBusy("rollback");
+  try{
+   const r=await fetch("/api/orbitfs/installations/"+install.id+"/rollback-update",{method:"POST",headers:{...(await sessionHeaders()),"content-type":"application/json"},body:JSON.stringify({reason})});
+   const j=await r.json().catch(()=>({}));
+   if(!r.ok)throw Error(j.error||"Update rollback failed.");
+   setMessage("OrbitFS Update "+appliedUpdateVersion+" rolled back.");
+   await load();
+  }catch(e:any){setMessage(e?.message||"Update rollback failed.")}
+  finally{setBusy("")}
  }
 
  if(loading)return <main className="portalReleasePage orbitfsReleasesV3"><section className="portalCompactPanel"><h2>Loading releases…</h2><p className="muted">Checking publication and deployment access.</p></section></main>;
@@ -85,7 +106,8 @@ export default function OrbitFSReleaseDeployer(){
     <div><p className="eyebrow">CURRENT INSTALLATION</p><h2>{install?.vercel_project_name||"OrbitFS Panel"}</h2><p className="muted">{install?.release_version?"Base v"+install.release_version:"Base release not deployed yet"} · {appliedUpdateVersion?"Update v"+appliedUpdateVersion:"No Update installed"} · {install?.state||"waiting"}</p></div>
     <label className="portalChannelPicker">Active channel<select value={selectedChannel} onChange={e=>setSelectedChannel(e.target.value)}>{allowedChannels.map((channel:string)=><option key={channel} value={channel}>{channel}</option>)}</select></label>
    </div>
-   {latestUpdate&&appliedUpdateVersion!==String(latestUpdate.version)&&<div className="portalUpdateStrip"><div><b>Update available: v{latestUpdate.version}</b><span>{latestUpdate.title||"Published update"}</span></div><button disabled={!!busy||deploymentUnavailable||!settings.customer_updates_enabled} onClick={()=>void deploy(latestUpdate)}>{busy==="deploy:"+latestUpdate.version?"Starting…":"Deploy update"}</button></div>}
+   {updateAvailable&&latestUpdate&&<div className="portalUpdateStrip"><div><b>Update available: v{latestUpdate.version}</b><span>{latestUpdate.title||"Published update"}{latestUpdate.components?.length?" · "+latestUpdate.components.join(", "):""}</span></div><button disabled={!!busy||deploymentUnavailable||!settings.customer_updates_enabled} onClick={()=>void deploy(latestUpdate)}>{busy==="deploy:"+latestUpdate.version?"Installing…":"Install update"}</button></div>}
+   {!updateAvailable&&install?.release_version&&<div className="portalUpdateStrip"><div><b>{appliedUpdateVersion?"Update v"+appliedUpdateVersion+" installed":"No Update installed"}</b><span>{latestUpdate?"You are current for "+selectedChannel+".":"No published Update is available in "+selectedChannel+"."}</span></div>{appliedUpdateVersion&&<button className="secondary" disabled={!!busy||deploymentUnavailable||!settings.customer_rollbacks_enabled} onClick={()=>void rollbackUpdate()}>{busy==="rollback"?"Rolling back…":"Rollback Update"}</button>}</div>}
   </section>
 
   <section className="portalCompactPanel">
@@ -96,7 +118,7 @@ export default function OrbitFSReleaseDeployer(){
      return <article className="portalReleaseRow" key={r.id||r.version}>
       <div className="portalReleaseIdentity"><span className="state">UPDATE</span><div><b>v{r.version} · {r.title||"OrbitFS Update"}</b><small>{r.channel||"stable"} · {r.published_at?new Date(r.published_at).toLocaleDateString():"Published"}</small></div></div>
       <p>{r.description||r.changelog||"No customer release notes supplied."}</p>
-      <div className="portalReleaseActions">{installed?<span className="state ready">Installed</span>:latestUpdate&&String(r.id||r.releaseId||"")===String(latestUpdate.id||latestUpdate.releaseId||"")?<span className="state current">Recommended above</span>:<button disabled={!!busy||!install?.release_version||deploymentUnavailable||!settings.customer_updates_enabled} onClick={()=>void deploy(r)}>{busy==="deploy:"+r.version?"Starting…":"Deploy update"}</button>}</div>
+      <div className="portalReleaseActions">{installed?<span className="state ready">Installed</span>:latestUpdate&&String(r.id||r.releaseId||"")===String(latestUpdate.id||latestUpdate.releaseId||"")&&updateAvailable?<span className="state current">Recommended above</span>:appliedUpdateVersion&&(compareOrbitReleaseVersions(String(r.version||""),appliedUpdateVersion)??0)<=0?<span className="state">Previous release</span>:<button disabled={!!busy||!install?.release_version||deploymentUnavailable||!settings.customer_updates_enabled} onClick={()=>void deploy(r)}>{busy==="deploy:"+r.version?"Installing…":"Install update"}</button>}</div>
      </article>
     })}
     {!releases.length&&<div className="orbitEmptyCompact">No published Update releases are currently available for your channel access.</div>}
