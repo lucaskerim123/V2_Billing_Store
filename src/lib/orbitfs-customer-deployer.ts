@@ -607,21 +607,39 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
     return data;
   }catch(error:any){
     const message=errorMessage(error,"Base update failed");
-    const recovery:any={databaseMigrations:migrations?"forward migrations retained":"not started",deploymentRollback:false,environmentRestored:false};
-    if(createdDeploymentId&&previousDeploymentId){
-      try{
-        await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(projectId)}/rollback/${encodeURIComponent(previousDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
-        recovery.deploymentRollback=true;
-      }catch(rollbackError:any){recovery.deploymentRollbackError=errorMessage(rollbackError,"Base deployment rollback failed")}
-    }
+    const recovery:any={databaseMigrations:migrations?"forward migrations retained":"not started",freshDeploymentRestore:false,environmentRestored:false};
+    let restoredDeploymentId=previousDeploymentId;
+    let restoredDeploymentUrl=String(install.production_url||install.deployment_url||"");
     try{
-      await configureVercel(install,currentVersion,String(install.production_url||install.deployment_url||""),requestedChannel,currentReleaseId,String(install.release_sha256||""),String(install.release_source_commit||""));
+      const previousPackage=await readBasePackage(currentRelease);
+      await configureVercel(install,currentVersion,restoredDeploymentUrl||undefined,requestedChannel,currentReleaseId,previousPackage.artifactSha256,String(previousPackage.pkg.sourceCommit||expectedSource(currentRelease)));
       recovery.environmentRestored=true;
-    }catch(envError:any){recovery.environmentRestoreError=errorMessage(envError,"Base environment restore failed")}
+      const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),previousPackage.files);
+      const recoveryBody:any={
+        name:install.vercel_project_name||`orbitfs-${String(install.installation_id||"").slice(-8)}`.toLowerCase(),
+        project:projectId,
+        target:"production",
+        files:uploadedFiles,
+        projectSettings:{framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(previousPackage.pkg.projectSettings||{})},
+        meta:{orbitfsReleaseId:currentReleaseId,orbitfsVersion:currentVersion,orbitfsAction:"base_update_recovery",orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(previousPackage.pkg.sourceCommit||expectedSource(currentRelease)),orbitfsInstallationRoute:"billing_store"}
+      };
+      const restored=await vercelApi(String(install.auth_user_id),"/v13/deployments",{method:"POST",body:JSON.stringify(recoveryBody)});
+      if(!restored?.id&&!restored?.uid)fail("Vercel did not return a Base recovery deployment id",502);
+      restoredDeploymentId=String(restored.id||restored.uid);
+      const restoredReady=await waitForReady(String(install.auth_user_id),restoredDeploymentId);
+      if(String(restoredReady?.readyState||restoredReady?.state||"").toUpperCase()!=="READY")fail("Base recovery deployment did not become ready",502);
+      restoredDeploymentUrl=restoredReady?.url?`https://${String(restoredReady.url).replace(/^https?:\/\//,"")}`:restoredDeploymentUrl;
+      await configureVercel(install,currentVersion,restoredDeploymentUrl||undefined,requestedChannel,currentReleaseId,previousPackage.artifactSha256,String(previousPackage.pkg.sourceCommit||expectedSource(currentRelease)));
+      recovery.freshDeploymentRestore=true;
+      recovery.restoredDeploymentId=restoredDeploymentId;
+    }catch(restoreError:any){
+      recovery.restoreError=errorMessage(restoreError,"Base recovery deployment failed");
+    }
+    const recoveryReady=recovery.freshDeploymentRestore===true;
     await Promise.allSettled([
-      licenseDb().from("orbitfs_installations").update({vercel_deployment_id:previousDeploymentId,state:"ready",last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id),
+      licenseDb().from("orbitfs_installations").update({vercel_deployment_id:restoredDeploymentId||null,deployment_url:restoredDeploymentUrl||install.deployment_url||null,state:recoveryReady?"ready":"failed",last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id),
       masterExecuteDeployment({action:"base_update",phase:"failed",releaseId:String(release.id),installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:currentVersion,projectId,projectName:install.vercel_project_name,error:message}),
-      event(install,"base.update.failed","error",message,{fromVersion:currentVersion,toVersion:String(release.version),projectId,recovery})
+      event(install,"base.update.failed",recoveryReady?"warning":"error",message,{fromVersion:currentVersion,toVersion:String(release.version),projectId,recovery})
     ]);
     throw Object.assign(error instanceof Error?error:new Error(message),{orbitfsFailureReported:true,recovery});
   }
