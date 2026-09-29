@@ -46,18 +46,21 @@ export async function masterRequest(path:string,init:RequestInit={},role:MasterR
   const connection=await getMasterApiConnection();
   const suffix=masterPath(path);
   let primaryFailure:any=null;
-  try{
-    const response=await fetchWithTimeout(`${connection.primaryUrl}${suffix}`,fetchInit,role);
-    const {data}=await decodeResponse(response);
-    if(response.ok){
-      if(fallbackBody(data))throw Object.assign(new Error("Primary License Manager returned fallback mode unexpectedly"),{status:503,code:"PRIMARY_AUTHORITY_INVALID",transport:true});
-      return {...data,_authority_transport:{mode:"primary",primary_url:connection.primaryUrl}};
+  for(let attempt=0;attempt<2;attempt+=1){
+    try{
+      const response=await fetchWithTimeout(`${connection.primaryUrl}${suffix}`,fetchInit,role);
+      const {data}=await decodeResponse(response);
+      if(response.ok){
+        if(fallbackBody(data))throw Object.assign(new Error("Primary License Manager returned fallback mode unexpectedly"),{status:503,code:"PRIMARY_AUTHORITY_INVALID",transport:true});
+        return {...data,_authority_transport:{mode:"primary",primary_url:connection.primaryUrl}};
+      }
+      if(!isInfrastructureStatus(response.status))throw responseError(response,data);
+      primaryFailure=responseError(response,data);
+    }catch(error:any){
+      if(Number(error?.status||0)>=400&&Number(error?.status||0)<500&&!error?.transport)throw error;
+      primaryFailure=error;
     }
-    if(!isInfrastructureStatus(response.status))throw responseError(response,data);
-    primaryFailure=responseError(response,data);
-  }catch(error:any){
-    if(Number(error?.status||0)>=400&&Number(error?.status||0)<500&&!error?.transport)throw error;
-    primaryFailure=error;
+    if(attempt===0)await new Promise(resolve=>setTimeout(resolve,150));
   }
 
   if(!connection.failoverEnabled||!connection.fallbackUrl||!fallbackEligible(method)){
