@@ -60,7 +60,9 @@ export default function OrbitFSLicenseController() {
     if (
       !confirm(
         action === "rotate"
-          ? "Rotate your licence key?"
+          ? pendingBaseForceReinstall
+            ? "Rotate your licence key for the pending Base reinstall? The old key becomes invalid immediately and the replacement key is shown once."
+            : "Rotate your licence key?"
           : "Unlock this installation?",
       )
     )
@@ -89,7 +91,8 @@ export default function OrbitFSLicenseController() {
 
     setBusy("");
     if (r.ok) {
-      setMsg(j.message || `Licence ${action} completed.`);
+      const warning=Array.isArray(j.warnings)&&j.warnings.length?" Warning: "+j.warnings.join(" | "):"";
+      setMsg((j.message || `Licence ${action} completed.`)+warning);
       if (action === "rotate" && j.key) setNewKey(String(j.key));
       await load();
     } else {
