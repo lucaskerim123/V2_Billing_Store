@@ -102,6 +102,53 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     });
 
     try{
+      const metadata=install?.metadata&&typeof install.metadata==="object"?{...install.metadata}:{};
+      delete metadata.licenseRegistration;
+
+      const applied=metadata?.appliedUpdate&&typeof metadata.appliedUpdate==="object"?metadata.appliedUpdate:null;
+      if(applied&&Array.isArray(applied.components)&&applied.components.map((value:any)=>String(value).toLowerCase()).includes("base")){
+        const remaining=applied.components.map((value:any)=>String(value).toLowerCase()).filter((value:string)=>value&&value!=="base");
+        const componentVersions=applied.componentVersions&&typeof applied.componentVersions==="object"?{...applied.componentVersions}:{};
+        delete componentVersions.base;
+        metadata.appliedUpdate=remaining.length?{...applied,components:remaining,componentVersions,baseReinstalledAt:new Date().toISOString()}:null;
+      }
+
+      const startedAt=new Date().toISOString();
+      metadata.pendingBaseForceReinstall={
+        status:"releasing_base",
+        startedAt,
+        targetReleaseId:String(release.id),
+        targetVersion:String(release.version),
+        channel,
+        previousProjectId,
+        previousKeyHint,
+        previousKeyLast4:String(bindingResult.data.license_key_last4||"").trim()||null,
+        licenseId:authorityLicenseId,
+        rotationCompletedAt:null,
+        lastError:null,
+      };
+      metadata.lastBaseForceReinstall={
+        at:startedAt,
+        status:"releasing_base",
+        previousProjectId,
+        targetReleaseId:String(release.id),
+        targetVersion:String(release.version),
+        channel,
+      };
+
+      const initialPatch:any={
+        metadata,
+        applied_update_version:metadata.appliedUpdate?.version||null,
+        applied_update_id:metadata.appliedUpdate?.releaseId||null,
+        applied_update_sha256:metadata.appliedUpdate?.sha256||null,
+        applied_update_source_commit:metadata.appliedUpdate?.sourceCommit||null,
+        applied_update_at:metadata.appliedUpdate?.appliedAt||null,
+        updated_at:startedAt,
+      };
+      const initialUpdate=await licenseDb().from("orbitfs_installations").update(initialPatch).eq("id",install.id).select().single();
+      if(initialUpdate.error)throw initialUpdate.error;
+      install=initialUpdate.data;
+
       await clearRuntimeLicence(install);
 
       if(previousProjectId){
@@ -114,50 +161,20 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
 
       install=await clearPanelRegistration(install,`Force Base reinstall removed the current Base Vercel project. Licence activation was released. Rotate the licence key before Base ${release.version} is reinstalled.`);
 
-      const metadata=install?.metadata&&typeof install.metadata==="object"?{...install.metadata}:{};
-      delete metadata.licenseRegistration;
-
-      const applied=metadata?.appliedUpdate&&typeof metadata.appliedUpdate==="object"?metadata.appliedUpdate:null;
-      if(applied&&Array.isArray(applied.components)&&applied.components.map((value:any)=>String(value).toLowerCase()).includes("base")){
-        const remaining=applied.components.map((value:any)=>String(value).toLowerCase()).filter((value:string)=>value&&value!=="base");
-        const componentVersions=applied.componentVersions&&typeof applied.componentVersions==="object"?{...applied.componentVersions}:{};
-        delete componentVersions.base;
-        metadata.appliedUpdate=remaining.length?{...applied,components:remaining,componentVersions,baseReinstalledAt:new Date().toISOString()}:null;
-      }
-
-      metadata.pendingBaseForceReinstall={
+      const waitingMetadata=install?.metadata&&typeof install.metadata==="object"?{...install.metadata}:metadata;
+      waitingMetadata.pendingBaseForceReinstall={
+        ...(waitingMetadata.pendingBaseForceReinstall&&typeof waitingMetadata.pendingBaseForceReinstall==="object"?waitingMetadata.pendingBaseForceReinstall:metadata.pendingBaseForceReinstall),
         status:"waiting_license_rotation",
-        startedAt:new Date().toISOString(),
-        targetReleaseId:String(release.id),
-        targetVersion:String(release.version),
-        channel,
-        previousProjectId,
-        previousKeyHint,
-        previousKeyLast4:String(bindingResult.data.license_key_last4||"").trim()||null,
-        licenseId:authorityLicenseId,
-        rotationCompletedAt:null,
+        baseRemovedAt:new Date().toISOString(),
+        lastError:null,
       };
-      metadata.lastBaseForceReinstall={
-        at:new Date().toISOString(),
+      waitingMetadata.lastBaseForceReinstall={
+        ...(waitingMetadata.lastBaseForceReinstall&&typeof waitingMetadata.lastBaseForceReinstall==="object"?waitingMetadata.lastBaseForceReinstall:metadata.lastBaseForceReinstall),
         status:"waiting_license_rotation",
-        previousProjectId,
-        targetReleaseId:String(release.id),
-        targetVersion:String(release.version),
-        channel,
       };
-
-      const patch:any={
-        metadata,
-        applied_update_version:metadata.appliedUpdate?.version||null,
-        applied_update_id:metadata.appliedUpdate?.releaseId||null,
-        applied_update_sha256:metadata.appliedUpdate?.sha256||null,
-        applied_update_source_commit:metadata.appliedUpdate?.sourceCommit||null,
-        applied_update_at:metadata.appliedUpdate?.appliedAt||null,
-        updated_at:new Date().toISOString(),
-      };
-      const updated=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
-      if(updated.error)throw updated.error;
-      install=updated.data;
+      const waitingUpdate=await licenseDb().from("orbitfs_installations").update({metadata:waitingMetadata,updated_at:new Date().toISOString()}).eq("id",install.id).select().single();
+      if(waitingUpdate.error)throw waitingUpdate.error;
+      install=waitingUpdate.data;
 
       await masterInstallationLifecycle({
         action:"base_reinstall",
@@ -191,6 +208,13 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
         message:`Base was removed and the licence was released. Rotate your licence key, then enter the new key in Base Deployment. OrbitFS will automatically reinstall published Base ${release.version} after the new key is registered.`,
       },{headers:{"cache-control":"no-store"}});
     }catch(error:any){
+      const message=error?.message||"Base force reinstall failed";
+      const failedMetadata=install?.metadata&&typeof install.metadata==="object"?{...install.metadata}:{};
+      if(failedMetadata.pendingBaseForceReinstall&&typeof failedMetadata.pendingBaseForceReinstall==="object"){
+        failedMetadata.pendingBaseForceReinstall={...failedMetadata.pendingBaseForceReinstall,status:"start_failed",lastError:message,lastAttemptAt:new Date().toISOString()};
+        failedMetadata.lastBaseForceReinstall={...(failedMetadata.lastBaseForceReinstall&&typeof failedMetadata.lastBaseForceReinstall==="object"?failedMetadata.lastBaseForceReinstall:{}),status:"start_failed",lastError:message};
+        await licenseDb().from("orbitfs_installations").update({metadata:failedMetadata,last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id).catch(()=>{});
+      }
       await masterInstallationLifecycle({
         action:"base_reinstall",
         phase:"failed",
@@ -202,7 +226,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
         targetReleaseId:String(release.id),
         targetVersion:String(release.version),
         channel,
-        error:error?.message||"Base force reinstall failed",
+        error:message,
       }).catch(()=>{});
       throw error;
     }
