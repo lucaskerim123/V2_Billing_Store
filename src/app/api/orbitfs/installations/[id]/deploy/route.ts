@@ -4,6 +4,7 @@ import {httpError,loadInstallation,registerInstallationLicense,requireOrbitUser,
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {runCustomerDeployer} from "@/lib/orbitfs-customer-deployer";
 import {baseIdempotencyKey,runBaseLifecycleOperation} from "@/lib/orbitfs-base-operations";
+import {completePendingBaseForceReinstall,pendingBaseForceReinstall} from "@/lib/orbitfs-force-reinstall";
 
 const allowed=new Set<DeployAction>(["deploy","base_update","update","rollback","redeploy"]);
 
@@ -16,7 +17,16 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const install=await loadInstallation(id,user.id);
     if(rawAction==="register_license"){
       const key=String(body.licenseKey||body.license_key||"").trim();
+      const pending=pendingBaseForceReinstall(install);
+      const rotatedLast4=String(pending?.rotatedKeyLast4||"").trim();
+      if(pending&&rotatedLast4&&key.slice(-4).toUpperCase()!==rotatedLast4.toUpperCase()){
+        throw Object.assign(new Error("That key does not match the newly rotated licence key. Copy the replacement key shown after rotation."),{status:409,code:"ROTATED_LICENSE_KEY_MISMATCH"});
+      }
       const installation=await registerInstallationLicense(install,key);
+      if(pending){
+        const completion=await completePendingBaseForceReinstall(installation);
+        return Response.json({ok:true,installation:completion?.installation||installation,forceReinstallCompleted:Boolean(completion),operation:completion?.operation||null},{headers:{"cache-control":"no-store"}});
+      }
       return Response.json({ok:true,installation},{headers:{"cache-control":"no-store"}});
     }
     if(rawAction==="set_channel"){
@@ -31,6 +41,10 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     }
     const action=rawAction as DeployAction;
     if(!allowed.has(action))throw Object.assign(new Error("Unsupported deployment action"),{status:400});
+    if(action==="deploy"&&pendingBaseForceReinstall(install)){
+      const completion=await completePendingBaseForceReinstall(install);
+      return Response.json({ok:true,...completion},{headers:{"cache-control":"no-store"}});
+    }
     let version=body.version?String(body.version).trim():undefined;
     let releaseId=body.releaseId?String(body.releaseId).trim():undefined;
     if(version?.startsWith("release:")&&!releaseId){releaseId=version.slice(8).trim()||undefined;version=undefined}
