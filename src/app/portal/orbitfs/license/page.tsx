@@ -52,6 +52,7 @@ export default function OrbitFSLicenseController() {
   );
   const customerUnlockEnabled = d?.settings?.customer_self_unlock_enabled !== false;
   const licenseActive = String(binding?.authoritative_status || binding?.status || '').toLowerCase() === 'active';
+  const pendingBaseForceReinstall=install?.metadata?.pendingBaseForceReinstall&&typeof install.metadata.pendingBaseForceReinstall==="object"?install.metadata.pendingBaseForceReinstall:null;
 
   async function control(action: string) {
     if (!binding?.license_id)
@@ -187,12 +188,16 @@ export default function OrbitFSLicenseController() {
                 </div>
 
                 {newKey && (
-                  <div className="panel" style={{ marginTop: 12 }}>
+                  <div className="panel licenseKeyReveal" style={{ marginTop: 12 }}>
                     <b>New licence key</b>
                     <p className="muted">
-                      Shown once. Save it before leaving this page.
+                      Shown once. Copy it now. {pendingBaseForceReinstall?"Then return to Base Deployment and enter this exact key to continue the Base reinstall.":"Save it before leaving this page."}
                     </p>
                     <code style={{ wordBreak: "break-all" }}>{newKey}</code>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+                      <button type="button" className="secondary" onClick={()=>void navigator.clipboard?.writeText(newKey)}>Copy key</button>
+                      {pendingBaseForceReinstall&&<Link className="buttonlink" href="/portal/orbitfs">Return to Base Deployment →</Link>}
+                    </div>
                   </div>
                 )}
               </div>
@@ -207,13 +212,14 @@ export default function OrbitFSLicenseController() {
             Customer controls are intentionally narrower than administrator
             enforcement controls.
           </p>
+          {pendingBaseForceReinstall&&<div className="panel" style={{margin:"12px 0",borderColor:"rgba(245,158,11,.65)"}}><p className="eyebrow">BASE REINSTALL WAITING</p><h2>Rotate this licence key</h2><p className="muted">The previous Base activation has been released. Rotate the key now. The replacement key is shown once; copy it, then return to Base Deployment and enter it to continue the reinstall of published Base {pendingBaseForceReinstall.targetVersion||"current"}.</p></div>}
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               disabled={!!busy || !binding?.license_id || !licenseActive}
               onClick={() => void control("rotate")}
             >
-              {busy === "rotate" ? "Rotating…" : "Rotate key"}
+              {busy === "rotate" ? "Rotating…" : pendingBaseForceReinstall ? "Rotate key for Base reinstall" : "Rotate key"}
             </button>
             <button
               className="secondary"
