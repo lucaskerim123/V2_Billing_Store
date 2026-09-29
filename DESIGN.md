@@ -2,27 +2,27 @@
 version: alpha
 colors:
   background:
-    value: "#071019"
+    value: "#031422"
   shell:
-    value: "#09141f"
+    value: "#001b2b"
   panel:
-    value: "#0c1925"
+    value: "#002535"
   panelRaised:
-    value: "#102131"
+    value: "#002b40"
   border:
-    value: "#1e3547"
+    value: "#07516a"
   borderStrong:
-    value: "#31536a"
+    value: "#075b72"
   text:
-    value: "#edf5fa"
+    value: "#e6efff"
   muted:
-    value: "#8297aa"
+    value: "#8eafc3"
   brand:
-    value: "#b64049"
+    value: "#19ccdd"
   brandStrong:
-    value: "#d05760"
+    value: "#18e9de"
   success:
-    value: "#53b18f"
+    value: "#28dfcf"
   warning:
     value: "#d39a4b"
   danger:
@@ -66,15 +66,17 @@ components:
 
 The first rebuilt surface is **Base Deployer** at `/portal/orbitfs`.
 
-North Star: the supplied 12ui ZIP installation and deployed-application screens. The deployer should feel like a dedicated infrastructure installer/control console, not a generic Billing Store dashboard card stack.
+Visual authority: the supplied 12ui website package is canonical for Base Deployer and Instance Control Panel presentation. Match its responsive layout, spacing, typography, colors, borders, hierarchy and state composition directly. Do not reinterpret it into a separate OrbitFS theme or use it merely as inspiration.
 
-The design must never drift back toward blue-first SaaS cards, rounded-square step markers, or multiple competing progress systems.
+Base runtime/deployment code remains the functional authority. Visual work adapts real state and actions into the supplied website design without changing deployment semantics.
+
+The design must not drift into a generic Billing Store card stack or introduce a second visual language alongside the supplied website.
 
 ## Colors
 
-The Base Deployer is near-black navy with cool blue-gray structure and a restrained OrbitFS red brand accent.
+The Base Deployer follows the supplied website's deep navy, cyan and teal system. Cyan/teal is the interaction and active-state accent; pale blue-white is primary text; muted blue-gray carries secondary information.
 
-Red is reserved for active installation state, primary action, focus and deliberate emphasis. Green is semantic success only. Amber is warning only. The interface should not glow or use decorative gradients where a border or surface shift communicates hierarchy more clearly.
+Semantic success/warning/danger remain distinct where the supplied state screens use them. Do not substitute the previous red-accent palette.
 
 ## Typography
 
