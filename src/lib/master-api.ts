@@ -1,30 +1,6 @@
-import {licenseDb} from "@/lib/license-api";
+import {getMasterApiUrl} from "@/lib/license-master-config";
 
-const DEFAULT_MASTER_API_BASE = String(process.env.LICENSE_MASTER_URL||"").trim().replace(/\/+$/,"");
-
-function assertMasterApiUrl(value: string) {
-  const u = new URL(value);
-  if (u.protocol !== "https:" || u.search || u.hash || u.pathname.replace(/\/+$/, "") !== "/api/v1") {
-    throw new Error("License Master API URL must be an HTTPS /api/v1 endpoint");
-  }
-  const host=u.hostname.toLowerCase();
-  if(host==="localhost"||host==="127.0.0.1")throw new Error("License Master API URL cannot use a local-only host");
-}
-
-async function configuredMasterApiBase() {
-  try {
-    const {data} = await licenseDb().from("license_master_connection")
-      .select("master_url,enabled").order("updated_at",{ascending:false}).limit(1).maybeSingle();
-    if (data?.enabled !== false && data?.master_url) {
-      const value=String(data.master_url).trim().replace(/\/+$/,"");
-      assertMasterApiUrl(value);
-      return value;
-    }
-  } catch {}
-  if(!DEFAULT_MASTER_API_BASE)throw new Error("LICENSE_MASTER_URL is not configured and no enabled License Master connection exists");
-  assertMasterApiUrl(DEFAULT_MASTER_API_BASE);
-  return DEFAULT_MASTER_API_BASE;
-}
+async function configuredMasterApiBase(){return getMasterApiUrl();}
 
 const timeoutMs=()=>Math.max(1000,Number(process.env.MASTER_API_TIMEOUT_MS||10000));
 const getCacheSeconds=()=>Math.min(300,Math.max(0,Number(process.env.MASTER_API_CACHE_SECONDS||30)));
