@@ -4,8 +4,10 @@ import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase";
 import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
+import {errorMessage} from "@/lib/error-message";
 
 export default function OrbitFSReleaseDeployer(){
+ const apiError=(payload:any,fallback:string)=>errorMessage(payload?.error??payload?.message??payload,fallback);
  const sb=useMemo(()=>createClient(),[]);
  const [data,setData]=useState<any>(null);
  const [message,setMessage]=useState("");
@@ -22,7 +24,7 @@ export default function OrbitFSReleaseDeployer(){
    try{
     const r=await fetch("/api/orbitfs/status",{headers:await sessionHeaders(),cache:"no-store",signal:controller.signal});
     const j=await r.json().catch(()=>({}));
-    if(!r.ok)throw Error(j.error||"Could not load releases ("+r.status+")");
+    if(!r.ok)throw Error(apiError(j,"Could not load releases ("+r.status+")"));
     setData(j);
    }finally{clearTimeout(timer)}
   }catch(e:any){setData(null);setMessage(e?.name==="AbortError"?"License Manager status request timed out. Please retry.":e?.message||"Could not load releases.")}finally{setLoading(false)}
@@ -66,7 +68,7 @@ export default function OrbitFSReleaseDeployer(){
   const requested="update:"+version;
   const r=await fetch("/api/orbitfs/installations/"+install.id+"/deploy",{method:"POST",headers:{...(await sessionHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"update",version:requested,releaseId:releaseId||undefined,channel:selectedChannel})});
   const j=await r.json().catch(()=>({}));
-  setBusy("");setMessage(r.ok?(j.message||"Deployment started."):(j.error||"Deployment failed."));
+  setBusy("");setMessage(r.ok?(errorMessage(j?.message,"Deployment started.")):apiError(j,"Deployment failed."));
   if(r.ok)await load();
  }
 
@@ -80,7 +82,7 @@ export default function OrbitFSReleaseDeployer(){
   try{
    const r=await fetch("/api/orbitfs/installations/"+install.id+"/rollback-update",{method:"POST",headers:{...(await sessionHeaders()),"content-type":"application/json"},body:JSON.stringify({reason})});
    const j=await r.json().catch(()=>({}));
-   if(!r.ok)throw Error(j.error||"Update rollback failed.");
+   if(!r.ok)throw Error(apiError(j,"Update rollback failed."));
    setMessage("OrbitFS Update "+appliedUpdateVersion+" rolled back.");
    await load();
   }catch(e:any){setMessage(e?.message||"Update rollback failed.")}
