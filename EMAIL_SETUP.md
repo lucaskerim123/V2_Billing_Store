@@ -48,6 +48,14 @@ Their values now come from OrbitFS Mail settings, mailbox accounts and template 
 
 ## OrbitFS Mail settings
 
+The standard sender roles are:
+
+- **System / notifications:** `info@orbitfs.cc`
+- **Support:** `support@orbitfs.cc`
+- **Billing:** `billing@orbitfs.cc`
+
+The System sender replaces the older `noreply@orbitfs.cc` default. Support and Billing remain separate reply-capable identities. Templates can either choose a specific mailbox or use `role:system`, `role:support` or `role:billing` so sender changes can be made centrally from Mail Config.
+
 Manage these inside OrbitFS Mail:
 
 - Default sender display name
