@@ -10,5 +10,6 @@
 @import "./license-controller.css";
 @import "./customer-reference-style.css";
 @import "./base-deployer.css";
+@import "./base-deployer-12ui.css";
 @import "../auth.css";
 @import "../auth-fixes.css";
