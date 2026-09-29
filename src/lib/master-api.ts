@@ -1,4 +1,4 @@
-import {getMasterApiUrl} from "@/lib/license-master-config";
+import {getMasterApiConnection,getMasterApiUrl} from "@/lib/license-master-config";
 
 async function configuredMasterApiBase(){return getMasterApiUrl();}
 
@@ -8,8 +8,81 @@ type MasterRole="billing"|"deployer";
 const token=(role:MasterRole="billing")=>String(role==="deployer"?process.env.DEPLOYER_API_TOKEN||"":process.env.BILLING_API_TOKEN||"").trim();
 function requireConfig(role:MasterRole="billing"){const value=token(role);const variable=role==="deployer"?"DEPLOYER_API_TOKEN":"BILLING_API_TOKEN";if(!value)throw new Error(`License Master API token is not configured (set ${variable})`);return {value};}
 function masterPath(path:string){const clean=path.startsWith("/")?path:`/${path}`;return clean.startsWith("/api/v1/")?clean.slice(7):clean.startsWith("/api/")?clean.slice(4):clean;}
-async function fetchWithTimeout(url:string,init:RequestInit,role:MasterRole="billing"){const cfg=requireConfig(role);const headers=new Headers(init.headers);headers.set("authorization",`Bearer ${cfg.value}`);const controller=init.signal?null:new AbortController();const timer=controller?setTimeout(()=>controller.abort(),timeoutMs()):null;try{return await fetch(url,{...init,headers,signal:init.signal||controller?.signal});}catch(error){if(error instanceof Error&&error.name==="AbortError")throw new Error(`License Master request timed out after ${timeoutMs()}ms`);throw new Error(`License Master connection failed: ${error instanceof Error?error.message:String(error)}`);}finally{if(timer)clearTimeout(timer);}}
-export async function masterRequest(path:string,init:RequestInit={},role:MasterRole="billing"){const headers=new Headers(init.headers);if(!headers.has("content-type")&&init.body)headers.set("content-type","application/json");const method=String(init.method||"GET").toUpperCase();const fetchInit:RequestInit={...init,headers};if(method==="GET"&&getCacheSeconds()>0&&fetchInit.cache!=="no-store")(fetchInit as any).next={revalidate:getCacheSeconds()};else fetchInit.cache="no-store";const base=await configuredMasterApiBase();const response=await fetchWithTimeout(`${base}${masterPath(path)}`,fetchInit,role);const text=await response.text();let data:any={};try{data=text?JSON.parse(text):{};}catch{data={error:text||"License Master returned an invalid response"};}if(!response.ok){const code=String(data?.code||"").trim(),message=String(data?.error||data?.message||code||`License Master request failed (${response.status})`);throw Object.assign(new Error(code&&message!==code?`${message} (${code})`:message),{status:response.status,code:code||undefined});}return data;}
+function isInfrastructureStatus(status:number){return [500,502,503,504].includes(status);}
+function fallbackEligible(method:string){return method==="GET"||method==="HEAD";}
+function fallbackBody(value:any){return value?.fallback===true&&String(value?.mode||"").toLowerCase()==="limp"&&value?.restricted===true;}
+async function fetchWithTimeout(url:string,init:RequestInit,role:MasterRole="billing"){
+  const cfg=requireConfig(role);
+  const headers=new Headers(init.headers);
+  headers.set("authorization",`Bearer ${cfg.value}`);
+  const controller=init.signal?null:new AbortController();
+  const timer=controller?setTimeout(()=>controller.abort(),timeoutMs()):null;
+  try{return await fetch(url,{...init,headers,signal:init.signal||controller?.signal});}
+  catch(error){
+    if(error instanceof Error&&error.name==="AbortError")throw Object.assign(new Error(`License Master request timed out after ${timeoutMs()}ms`),{status:503,code:"LICENSE_MASTER_TIMEOUT",transport:true});
+    throw Object.assign(new Error(`License Master connection failed: ${error instanceof Error?error.message:String(error)}`),{status:503,code:"LICENSE_MASTER_TRANSPORT_ERROR",transport:true});
+  }finally{if(timer)clearTimeout(timer);}
+}
+async function decodeResponse(response:Response){
+  const text=await response.text();
+  let data:any={};
+  try{data=text?JSON.parse(text):{};}catch{data={error:text||"License Master returned an invalid response"};}
+  return {data,text};
+}
+function responseError(response:Response,data:any){
+  const code=String(data?.code||"").trim();
+  const message=String(data?.error||data?.message||code||`License Master request failed (${response.status})`);
+  return Object.assign(new Error(code&&message!==code?`${message} (${code})`:message),{status:response.status,code:code||undefined});
+}
+
+export async function masterRequest(path:string,init:RequestInit={},role:MasterRole="billing"){
+  const headers=new Headers(init.headers);
+  if(!headers.has("content-type")&&init.body)headers.set("content-type","application/json");
+  const method=String(init.method||"GET").toUpperCase();
+  const fetchInit:RequestInit={...init,headers};
+  if(method==="GET"&&getCacheSeconds()>0&&fetchInit.cache!=="no-store")(fetchInit as any).next={revalidate:getCacheSeconds()};
+  else fetchInit.cache="no-store";
+
+  const connection=await getMasterApiConnection();
+  const suffix=masterPath(path);
+  let primaryFailure:any=null;
+  try{
+    const response=await fetchWithTimeout(`${connection.primaryUrl}${suffix}`,fetchInit,role);
+    const {data}=await decodeResponse(response);
+    if(response.ok){
+      if(fallbackBody(data))throw Object.assign(new Error("Primary License Manager returned fallback mode unexpectedly"),{status:503,code:"PRIMARY_AUTHORITY_INVALID",transport:true});
+      return {...data,_authority_transport:{mode:"primary",primary_url:connection.primaryUrl}};
+    }
+    if(!isInfrastructureStatus(response.status))throw responseError(response,data);
+    primaryFailure=responseError(response,data);
+  }catch(error:any){
+    if(Number(error?.status||0)>=400&&Number(error?.status||0)<500&&!error?.transport)throw error;
+    primaryFailure=error;
+  }
+
+  if(!connection.failoverEnabled||!connection.fallbackUrl||!fallbackEligible(method)){
+    throw Object.assign(new Error("License Manager authority is unavailable. This operation requires the primary authority."),{
+      status:503,code:"LICENSE_AUTHORITY_UNAVAILABLE",primaryError:String(primaryFailure?.message||primaryFailure||"unavailable"),fallback:false
+    });
+  }
+
+  try{
+    const response=await fetchWithTimeout(`${connection.fallbackUrl}${suffix}`,{...fetchInit,cache:"no-store"},role);
+    const {data}=await decodeResponse(response);
+    if(fallbackBody(data)){
+      return {...data,fallback:true,mode:"limp",restricted:true,_authority_transport:{
+        mode:"fallback",primary_url:connection.primaryUrl,fallback_url:connection.fallbackUrl,
+        primary_error:String(primaryFailure?.message||primaryFailure||"unavailable")
+      }};
+    }
+    throw responseError(response,data);
+  }catch(error:any){
+    throw Object.assign(new Error("License Manager and the registered limp-mode fallback are unavailable."),{
+      status:503,code:"LICENSE_AUTHORITY_UNAVAILABLE",primaryError:String(primaryFailure?.message||primaryFailure||"unavailable"),
+      fallbackError:String(error?.message||error||"unavailable"),fallback:true
+    });
+  }
+}
 
 export async function masterProducts(role:MasterRole="billing"){
   return masterRequest("/api/v1/products",{method:"GET"},role);
@@ -42,7 +115,7 @@ export async function masterPublishRelease(id:string){return masterRequest(`/api
 export async function masterPromoteRelease(id:string,targetChannel:string){return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"promote",target_channel:String(targetChannel).trim().toLowerCase()})},"billing");}
 export async function masterValidateRelease(id:string){return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}/validate`,{method:"POST"},"billing");}
 export async function masterControlRelease(id:string,status:string){const action=status==="paused"?"disable":status==="withdrawn"?"withdraw":status;return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action})},"billing");}
-export async function masterDownloadReleaseArtifact(id:string){const base=await configuredMasterApiBase();const response=await fetchWithTimeout(`${base}${masterPath(`/api/v1/releases/${encodeURIComponent(id)}/artifact`)}`,{method:"GET",cache:"no-store"},"deployer");if(!response.ok){const text=await response.text();let data:any={};try{data=text?JSON.parse(text):{};}catch{}const code=String(data?.code||data?.error||"ARTIFACT_DOWNLOAD_FAILED"),detail=String(data?.message||data?.detail||data?.error||text||"").trim();throw Object.assign(new Error(`License Master artifact download failed for release ${id} (${response.status}, ${code})${detail&&detail!==code?`: ${detail}`:""}`),{status:response.status,code});}return{bytes:Buffer.from(await response.arrayBuffer()),contentType:response.headers.get("content-type")||"application/octet-stream",contentDisposition:response.headers.get("content-disposition")||null};}
+export async function masterDownloadReleaseArtifact(id:string){const base=(await getMasterApiConnection()).primaryUrl;const response=await fetchWithTimeout(`${base}${masterPath(`/api/v1/releases/${encodeURIComponent(id)}/artifact`)}`,{method:"GET",cache:"no-store"},"deployer");if(!response.ok){const text=await response.text();let data:any={};try{data=text?JSON.parse(text):{};}catch{}const code=String(data?.code||data?.error||"ARTIFACT_DOWNLOAD_FAILED"),detail=String(data?.message||data?.detail||data?.error||text||"").trim();throw Object.assign(new Error(`License Master artifact download failed for release ${id} (${response.status}, ${code})${detail&&detail!==code?`: ${detail}`:""}`),{status:response.status,code});}return{bytes:Buffer.from(await response.arrayBuffer()),contentType:response.headers.get("content-type")||"application/octet-stream",contentDisposition:response.headers.get("content-disposition")||null};}
 export async function masterExecuteDeployment(input:any){return masterRequest("/api/v1/deployer",{method:"POST",body:JSON.stringify({...input,phase:input.phase||"authorize"})},"deployer");}
 export async function masterInstallationLifecycle(input:any){return masterRequest("/api/v1/installations/lifecycle",{method:"POST",body:JSON.stringify(input)},"deployer");}
 export const licensingAuthority="orbitfs-license-master-v2";
