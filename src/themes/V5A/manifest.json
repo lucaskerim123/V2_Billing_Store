@@ -1,0 +1,11 @@
+{
+  "id": "V5A",
+  "name": "OrbitFS V5 Admin",
+  "version": "5.0.0",
+  "surface": "admin",
+  "entry": "theme.css",
+  "extends": "V3A",
+  "family": "V5",
+  "compatibility_theme_attr": "v3",
+  "description": "OrbitFS V5 Admin child theme. It inherits the current V3A admin system and owns only V5 overrides."
+}

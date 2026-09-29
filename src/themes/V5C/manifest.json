@@ -1,0 +1,11 @@
+{
+  "id": "V5C",
+  "name": "OrbitFS V5 Customer",
+  "version": "5.0.0",
+  "surface": "customer",
+  "entry": "theme.css",
+  "extends": "V3C",
+  "family": "V5",
+  "compatibility_theme_attr": "V3C",
+  "description": "OrbitFS V5 Customer child theme. It inherits the current V3C customer portal and owns only V5 overrides."
+}

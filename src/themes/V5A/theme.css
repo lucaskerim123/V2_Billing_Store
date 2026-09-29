@@ -1,0 +1,3 @@
+/* OrbitFS V5A — Admin child theme entrypoint.
+   V3A remains the compatibility/base layer; V5A only owns scoped overrides. */
+@import "./overrides.css";

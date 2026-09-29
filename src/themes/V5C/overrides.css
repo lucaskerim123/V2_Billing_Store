@@ -1,0 +1,11 @@
+/*
+ * OrbitFS V5C overrides
+ *
+ * Keep every rule scoped to html[data-customer-theme-id="V5C"] so V3C and V5C
+ * can be compiled together and selected at runtime without leaking into each other.
+ *
+ * V5C intentionally starts visually identical to V3C.
+ */
+html[data-customer-theme-id="V5C"] {
+  --orbitfs-theme-generation: "V5C";
+}

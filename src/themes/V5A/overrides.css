@@ -1,0 +1,11 @@
+/*
+ * OrbitFS V5A overrides
+ *
+ * Keep every rule scoped to html[data-admin-theme-id="V5A"] so V3A and V5A can
+ * be compiled together and selected at runtime without leaking into each other.
+ *
+ * V5A intentionally starts visually identical to V3A.
+ */
+html[data-admin-theme-id="V5A"] {
+  --orbitfs-theme-generation: "V5A";
+}
