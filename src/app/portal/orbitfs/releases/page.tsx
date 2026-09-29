@@ -50,7 +50,7 @@ export default function OrbitFSReleaseDeployer(){
  const selectedChannelReleases=releases.filter((x:any)=>String(x.channel||"stable")===selectedChannel);
  const latestUpdate=selectedChannelReleases[0]||null;
  const latestComparison=latestUpdate?.version&&appliedUpdateVersion?compareOrbitReleaseVersions(String(latestUpdate.version),appliedUpdateVersion):latestUpdate?.version?1:null;
- const updateAvailable=Boolean(latestUpdate&&(!appliedUpdateVersion||latestComparison===1));
+ const updateAvailable=Boolean(latestUpdate&&(!appliedUpdateVersion||(latestComparison!==null&&latestComparison>0)));
 
  async function deploy(release:any){
   if(updateUnavailable)return setMessage(settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment maintenance is active."):settings.customer_updates_enabled===false?"Update deployment is disabled by an administrator.":(settings.license_authority_notice||"License Manager release/deployment authority is unavailable."));
