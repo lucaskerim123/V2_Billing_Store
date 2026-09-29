@@ -18,9 +18,6 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     if(rawAction==="register_license"){
       const key=String(body.licenseKey||body.license_key||"").trim();
       const pending=pendingBaseForceReinstall(install);
-      if(pending&&!pending.rotationCompletedAt){
-        throw Object.assign(new Error("Rotate your licence key first. The Base reinstall cannot accept the old key."),{status:409,code:"LICENSE_ROTATION_REQUIRED"});
-      }
       const rotatedLast4=String(pending?.rotatedKeyLast4||"").trim();
       if(pending&&rotatedLast4&&key.slice(-4).toUpperCase()!==rotatedLast4.toUpperCase()){
         throw Object.assign(new Error("That key does not match the newly rotated licence key. Copy the replacement key shown after rotation."),{status:409,code:"ROTATED_LICENSE_KEY_MISMATCH"});
