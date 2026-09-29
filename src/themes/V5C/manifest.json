@@ -1,0 +1,8 @@
+{
+  "id": "V5C",
+  "name": "OrbitFS V5 Customer",
+  "version": "5.0.0",
+  "surface": "customer",
+  "entry": "theme.css",
+  "description": "OrbitFS V5 customer theme. Starts with the approved website-derived Base Deployer and Instance Control Panel while other customer surfaces remain on the V3C baseline."
+}
