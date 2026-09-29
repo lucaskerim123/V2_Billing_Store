@@ -36,6 +36,7 @@ export default function Portal(){
     <Link href="/portal/orbitfs"><span className="portalOrbitfsStep">01</span><div><b>Base Deployment</b><span>Connect infrastructure, manage Base, install approved updates and view deployment status.</span></div><i>→</i></Link>
     <Link href="/portal/orbitfs/license"><span className="portalOrbitfsStep">02</span><div><b>Licence</b><span>View and manage the licence attached to your OrbitFS installation.</span></div><i>→</i></Link>
     <Link href="/portal/orbitfs/channels"><span className="portalOrbitfsStep">03</span><div><b>Release Channels</b><span>Join open channels or request access to restricted beta and preview releases.</span></div><i>→</i></Link>
+    <Link href="/portal/orbitfs/releases"><span className="portalOrbitfsStep">04</span><div><b>Updates</b><span>View published Update releases, see the installed Update, and deploy approved customer updates.</span></div><i>→</i></Link>
    </div>
   </section>
 
