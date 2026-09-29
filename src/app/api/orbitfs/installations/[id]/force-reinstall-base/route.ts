@@ -87,7 +87,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const previousProjectId=String(install.vercel_project_id||"").trim()||null;
     const previousKeyHint=String(registration?.keyHint||"").trim()||null;
 
-    await masterInstallationLifecycle({
+    const authorityStart=await masterInstallationLifecycle({
       action:"base_reinstall",
       phase:"authorize",
       licenseId:authorityLicenseId,
@@ -100,6 +100,8 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       targetVersion:String(release.version),
       channel,
     });
+    const authorityState=authorityStart?.baseReinstall&&typeof authorityStart.baseReinstall==="object"?authorityStart.baseReinstall:null;
+    if(!authorityState?.targetReleaseId||!authorityState?.targetVersion)throw Object.assign(new Error("License Manager did not record the Base reinstall target."),{status:502,code:"BASE_REINSTALL_AUTHORITY_STATE_MISSING"});
 
     try{
       const metadata=install?.metadata&&typeof install.metadata==="object"?{...install.metadata}:{};
@@ -117,9 +119,9 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       metadata.pendingBaseForceReinstall={
         status:"releasing_base",
         startedAt,
-        targetReleaseId:String(release.id),
-        targetVersion:String(release.version),
-        channel,
+        targetReleaseId:String(authorityState.targetReleaseId),
+        targetVersion:String(authorityState.targetVersion),
+        channel:String(authorityState.channel||channel),
         previousProjectId,
         previousKeyHint,
         previousKeyLast4:String(bindingResult.data.license_key_last4||"").trim()||null,
@@ -131,9 +133,9 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
         at:startedAt,
         status:"releasing_base",
         previousProjectId,
-        targetReleaseId:String(release.id),
-        targetVersion:String(release.version),
-        channel,
+        targetReleaseId:String(authorityState.targetReleaseId),
+        targetVersion:String(authorityState.targetVersion),
+        channel:String(authorityState.channel||channel),
       };
 
       const initialPatch:any={
