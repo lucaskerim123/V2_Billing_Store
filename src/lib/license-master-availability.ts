@@ -33,6 +33,17 @@ export async function getLicenseMasterAvailability(){
   }
   try{
     const pulse=await masterPulseState();
+    if(pulse?.fallback===true&&String(pulse?.mode||"").toLowerCase()==="limp"){
+      return {
+        reachable:false,primaryReachable:false,fallbackReachable:true,fallback:true,mode:"limp",restricted:true,
+        reason:"fallback_limp",authority:null,pulseRevision:Number(pulse?.pulse_revision||0),configuredMode,
+        effectiveMode:"manual" as FulfillmentMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,
+        releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,
+        updateDeploymentAvailable:false,rollbackAvailable:false,
+        notice:"API FALLBACK / LIMP MODE is active. License Manager authority is unavailable; new licence, deployment, update, rollback and release decisions are disabled.",
+        transport:pulse?._authority_transport||null
+      };
+    }
     const authority=pulse?.authority||{};
     const restricted=!authority.system_enabled||!authority.licensing_enabled||Boolean(authority.maintenance_mode);
     const reason=Boolean(authority.maintenance_mode)?"maintenance":!authority.system_enabled?"api_disabled":!authority.licensing_enabled?"licensing_disabled":"online";
@@ -42,10 +53,10 @@ export async function getLicenseMasterAvailability(){
     const baseDeploymentAvailable=deploymentAuthorityAvailable&&authority.base_deployment_enabled!==false;
     const updateDeploymentAvailable=deploymentAuthorityAvailable&&authority.update_deployment_enabled!==false;
     const rollbackAvailable=deploymentAuthorityAvailable&&authority.rollback_enabled!==false;
-    return {reachable:true,restricted,reason,authority,pulseRevision:Number(pulse?.pulse_revision||0),configuredMode,effectiveMode,automaticFulfillmentAllowed:!restricted&&effectiveMode==="automatic",manualFulfillmentAllowed:!restricted&&effectiveMode!=="paused",releaseAuthorityAvailable,deploymentAuthorityAvailable,baseDeploymentAvailable,updateDeploymentAvailable,rollbackAvailable,notice:restricted?notice:null};
+    return {reachable:true,primaryReachable:true,fallbackReachable:false,fallback:false,mode:"primary",restricted,reason,authority,pulseRevision:Number(pulse?.pulse_revision||0),configuredMode,effectiveMode,automaticFulfillmentAllowed:!restricted&&effectiveMode==="automatic",manualFulfillmentAllowed:!restricted&&effectiveMode!=="paused",releaseAuthorityAvailable,deploymentAuthorityAvailable,baseDeploymentAvailable,updateDeploymentAvailable,rollbackAvailable,notice:restricted?notice:null};
   }catch(error:any){
     const effectiveMode:FulfillmentMode=configuredMode==="paused"?"paused":configuredMode==="manual"?"manual":pauseUnreachable?"manual":"automatic";
-    return {reachable:false,restricted:true,reason:"unreachable",authority:null,pulseRevision:0,configuredMode,effectiveMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,updateDeploymentAvailable:false,rollbackAvailable:false,notice,error:String(error?.message||"License Master unavailable")};
+    return {reachable:false,primaryReachable:false,fallbackReachable:false,fallback:false,mode:"unavailable",restricted:true,reason:"unreachable",authority:null,pulseRevision:0,configuredMode,effectiveMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,updateDeploymentAvailable:false,rollbackAvailable:false,notice,error:String(error?.message||"License Master unavailable")};
   }
 }
 
