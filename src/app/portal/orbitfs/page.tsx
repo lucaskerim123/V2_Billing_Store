@@ -281,7 +281,7 @@ export default function MyOrbitFS(){
 
 
   const deploymentNeedsAttention=String(activeOperation?.state||latestOperation?.state||install?.state||"").toLowerCase()==="failed";
-  const websiteState=panelReady?"orbitSiteControl":deploymentNeedsAttention?"orbitSiteAttention":activeOperation?"orbitSiteProgress":currentStep===4?"orbitSiteReview":"orbitSiteDeployer";
+  const websiteState=deploymentNeedsAttention?"orbitSiteAttention":activeOperation?"orbitSiteProgress":panelReady?"orbitSiteControl":currentStep===4?"orbitSiteReview":"orbitSiteDeployer";
 
   return <main className={"portalOverviewV2 orbitfsBaseV3 orbitZipDeployer "+websiteState+" "+(panelReady?"orbitZipDeployed":"orbitZipInstalling")}>
     {panelReady&&<header className="portalOverviewHero"><div><p className="eyebrow">INSTANCE CONTROL PANEL</p><h1>Base System Instance</h1><p className="muted">Runtime status, published Base controls, infrastructure health and recent deployment activity.</p></div></header>}
