@@ -31,8 +31,6 @@ function idempotencyKey(install:any,pending:any,attempt:number){
 export async function completePendingBaseForceReinstall(install:any){
   const pending=pendingBaseForceReinstall(install);
   if(!pending)return null;
-  if(!pending.rotationCompletedAt)throw Object.assign(new Error("Rotate your licence key before continuing the Base reinstall."),{status:409,code:"LICENSE_ROTATION_REQUIRED"});
-
   const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
   if(registration?.valid!==true||String(registration?.installationId||"")!==String(install.installation_id||"")){
     throw Object.assign(new Error("Enter and register the new rotated licence key before continuing the Base reinstall."),{status:409,code:"NEW_LICENSE_KEY_REQUIRED"});
@@ -46,7 +44,8 @@ export async function completePendingBaseForceReinstall(install:any){
 
   const attempt=Math.max(0,Number(pending.attempts||0))+1;
   const startedAt=new Date().toISOString();
-  const nextPending={...pending,status:"deploying",attempts:attempt,lastAttemptAt:startedAt,lastError:null};
+  const rotationCompletedAt=String(pending.rotationCompletedAt||registration.registeredAt||startedAt);
+  const nextPending={...pending,status:"deploying",rotationCompletedAt,attempts:attempt,lastAttemptAt:startedAt,lastError:null};
   install=await patchPending(install,nextPending);
 
   try{
