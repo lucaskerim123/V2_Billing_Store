@@ -213,7 +213,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       if(failedMetadata.pendingBaseForceReinstall&&typeof failedMetadata.pendingBaseForceReinstall==="object"){
         failedMetadata.pendingBaseForceReinstall={...failedMetadata.pendingBaseForceReinstall,status:"start_failed",lastError:message,lastAttemptAt:new Date().toISOString()};
         failedMetadata.lastBaseForceReinstall={...(failedMetadata.lastBaseForceReinstall&&typeof failedMetadata.lastBaseForceReinstall==="object"?failedMetadata.lastBaseForceReinstall:{}),status:"start_failed",lastError:message};
-        await licenseDb().from("orbitfs_installations").update({metadata:failedMetadata,last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id).catch(()=>{});
+        try{await licenseDb().from("orbitfs_installations").update({metadata:failedMetadata,last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id)}catch{}
       }
       await masterInstallationLifecycle({
         action:"base_reinstall",
