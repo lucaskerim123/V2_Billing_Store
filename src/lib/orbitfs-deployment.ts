@@ -4,6 +4,7 @@ import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
 import {masterDownloadReleaseArtifact,masterLicenseValidate,masterReleases} from "@/lib/master-api";
 import {requireLicenseMasterForDeployment,requireLicenseMasterForMutation} from "@/lib/license-master-availability";
+import {getMasterApiConnection} from "@/lib/license-master-config";
 
 const SUPABASE_API="https://api.supabase.com/v1";
 const VERCEL_API="https://api.vercel.com";
@@ -415,7 +416,6 @@ export async function ensureVercelProject(install:any){
 async function upsertVercelEnv(install:any,key:string,value:string){
   await vercelApi(install.auth_user_id,`/v10/projects/${encodeURIComponent(install.vercel_project_id)}/env?upsert=true`,{method:"POST",body:JSON.stringify({key,value,type:"encrypted",target:["production","preview","development"]})});
 }
-const ORBITFS_LICENSE_API_URL="https://incendiarynetworks.cc/api/v1/license";
 const ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER=String(process.env.ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER||"https://incendiarynetworks.cc/api/v1/updater").trim().replace(/\/+$/,"");
 const ORBITFS_ENGINE_RELEASE_TIMEOUT_MS="30000";
 const ORBITFS_VERCEL_TIMEOUT_MS="120000";
@@ -436,6 +436,9 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
   const schemaVersion=String(install.schema_version||"1").trim();
   const channel=String(releaseChannel||install.release_channel||"stable").trim().toLowerCase();
   if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw new Error("Invalid OrbitFS release channel");
+  const masterConnection=await getMasterApiConnection();
+  const licensePrimary=masterConnection.primaryUrl.replace(/\/+$/,"")+"/license";
+  const licenseFallback=masterConnection.fallbackUrl?masterConnection.fallbackUrl.replace(/\/+$/,"")+"/license":"";
   const vars:Record<string,string>={
     SUPABASE_URL:`https://${install.supabase_project_ref}.supabase.co`,
     SUPABASE_PUBLISHABLE_KEY:key,
@@ -443,7 +446,9 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     ORBITFS_DB_SECRET:secret,
     ORBITFS_INSTALLATION_ID:String(install.installation_id||"").trim(),
     ORBITFS_PANEL_URL:panelUrl||"https://panel.incendiarynetworks.cc",
-    ORBITFS_LICENSE_API_URL:ORBITFS_LICENSE_API_URL,
+    ORBITFS_LICENSE_API_URL:licensePrimary,
+    ORBITFS_LICENSE_FALLBACK_URL:licenseFallback,
+    ORBITFS_LICENSE_FAILOVER_ENABLED:masterConnection.failoverEnabled?"true":"false",
     ORBITFS_APP_VERSION:version||"unknown",
     ORBITFS_ENGINE_RELEASE_PROVIDER:ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER,
     ORBITFS_ENGINE_RELEASE_TIMEOUT_MS:ORBITFS_ENGINE_RELEASE_TIMEOUT_MS,
