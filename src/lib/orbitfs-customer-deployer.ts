@@ -711,75 +711,27 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(!authorityLicenseId)fail("This installation is not linked to an authoritative Billing licence",409,"LICENSE_BINDING_REQUIRED");
   if(["revoked","expired"].includes(String(bindingResult.data?.desired_state||bindingResult.data?.remote_state||"").toLowerCase()))fail("The installation's Billing licence is not active",403,"LICENSE_BINDING_INACTIVE");
 
+  let rollbackTarget:any=null;
+  let rollbackReason="";
   if(action==="rollback"){
-    const rollbackReason=String(reason||"").trim();
+    rollbackReason=String(reason||"").trim();
     if(!rollbackReason)fail("A rollback reason is required",400);
     const previous=await previousDeployment(install);
-    const previousDeploymentId=previous.vercel_deployment_id;
-    const previousReleaseId=previous.release_id;
     const rolledBackReleaseId=String(install.release_id||"").trim();
     const rolledBackVersion=String(install.release_version||"").trim();
     if(!rolledBackReleaseId||!rolledBackVersion)fail("Current Base release metadata is incomplete and cannot be recorded as rolled back",409);
     if(install.release_channel&&String(install.release_channel)!==requestedChannel)fail("Installation release channel does not match the requested rollback channel",409);
-    await masterExecuteDeployment({action:"rollback",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version,previousVersion:rolledBackVersion});
-    try{
-      await event(install,"deployment.rollback.started","info",`Rolling back to ${previous.release_version}`,{deploymentId:previousDeploymentId,reason:rollbackReason});
-      const result=await vercelApi(install.auth_user_id,`/v9/projects/${encodeURIComponent(install.vercel_project_id)}/rollback/${encodeURIComponent(previousDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
-      const completedAt=new Date().toISOString();
-      const {data,error}=await licenseDb().from("orbitfs_installations").update({previous_release_version:rolledBackVersion,release_version:previous.release_version,release_id:previousReleaseId,vercel_deployment_id:previousDeploymentId,last_deployment_at:completedAt,last_error:null,state:"ready"}).eq("id",install.id).select().single();
-      if(error)throw error;
-      await masterExecuteDeployment({action:"rollback",phase:"completed",releaseId:previousReleaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:previous.release_version,previousVersion:rolledBackVersion,deploymentId:previousDeploymentId,projectId:install.vercel_project_id,projectName:install.vercel_project_name});
-      await Promise.allSettled([
-        reportDevPanelReleaseEvent({
-          eventId:`base-rollback:${install.installation_id}:${rolledBackReleaseId}:${previousReleaseId}:${completedAt}`,
-          eventType:"rolled_back",
-          releaseId:rolledBackReleaseId,
-          releaseVersion:rolledBackVersion,
-          targetReleaseId:previousReleaseId,
-          targetVersion:previous.release_version,
-          releaseType:"base",
-          channel:requestedChannel,
-          installationId:install.installation_id,
-          reason:rollbackReason,
-          archived:false,
-          status:"completed",
-          occurredAt:completedAt,
-          metadata:{deploymentId:previousDeploymentId,projectId:install.vercel_project_id,projectName:install.vercel_project_name}
-        }),
-        event(data,"deployment.rollback.completed","ok",`Rolled back from ${rolledBackVersion} to ${previous.release_version}`,{deploymentId:previousDeploymentId,result,reason:rollbackReason})
-      ]);
-      return data;
-    }catch(error){
-      const message=error instanceof Error?error.message:String(error||"Rollback failed");
-      const failedAt=new Date().toISOString();
-      await Promise.allSettled([
-        reportDevPanelReleaseEvent({
-          eventId:`base-rollback-failed:${install.installation_id}:${rolledBackReleaseId}:${failedAt}`,
-          eventType:"rollback_failed",
-          releaseId:rolledBackReleaseId,
-          releaseVersion:rolledBackVersion,
-          targetReleaseId:previousReleaseId,
-          targetVersion:previous.release_version,
-          releaseType:"base",
-          channel:requestedChannel,
-          installationId:install.installation_id,
-          reason:rollbackReason+" — "+message,
-          archived:false,
-          status:"failed",
-          occurredAt:failedAt
-        }),
-        licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message}).eq("id",install.id),
-        event(install,"deployment.rollback.failed","error",message,{reason:rollbackReason,releaseId:rolledBackReleaseId})
-      ]);
-      throw error;
-    }
+    rollbackTarget=await exactRelease(previous.release_id);
+    if(String(rollbackTarget.release_type||"").toLowerCase()!=="base")fail("Rollback target is not a Base release",409);
+    if(String(rollbackTarget.review_status||"").toLowerCase()!=="approved"||!String(rollbackTarget.checksum||rollbackTarget.sha256||"").trim())fail("Previous Base release is not a verified rollback artifact",409);
+    await event(install,"deployment.rollback.started","info",`Restoring Base ${previous.release_version} as a fresh deployment`,{reason:rollbackReason,targetReleaseId:previous.release_id,previousDeploymentId:previous.vercel_deployment_id});
   }
 
-  const pinInstalledBase=(action==="deploy"||action==="redeploy")&&!releaseId&&!version;
-  const effectiveReleaseId=pinInstalledBase?String(install.release_id||"").trim()||undefined:releaseId;
-  const effectiveVersion=pinInstalledBase&&!effectiveReleaseId?String(install.release_version||"").trim()||undefined:version;
-  if(action==="redeploy"&&!effectiveReleaseId&&!effectiveVersion)fail("The installation does not have a Base release to redeploy",409);
-  const release=await publishedRelease(effectiveVersion,action,requestedChannel,effectiveReleaseId);
+  // Redeploy always resolves the currently published Base for the selected channel.
+  // Rollback is the only Base action allowed to restore an approved historical artifact.
+  const effectiveReleaseId=action==="redeploy"?undefined:releaseId;
+  const effectiveVersion=action==="redeploy"?undefined:version;
+  const release=rollbackTarget||await publishedRelease(effectiveVersion,action,requestedChannel,effectiveReleaseId);
   await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null});
   if(action!=="base_update")await progress?.("validated",{releaseId:String(release.id),releaseVersion:String(release.version),projectId:install.vercel_project_id||null});
   try{
@@ -869,10 +821,11 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(action==="deploy"&&!install.vercel_project_id)install=await ensureVercelProject(install);
   if(!install.vercel_project_id)fail("Customer Vercel project is unavailable for this deployment action",409,"BASE_PROJECT_NOT_FOUND");
   await configureVercel(install,String(release.version),undefined,requestedChannel,String(release.id),String(release.sha256||release.checksum||""),String(release.source_sha||release.source_commit||release.manifest?.sourceCommit||""));
-  const parsed=action==="redeploy"?await readCurrentBasePackageForRedeploy(release):await readBasePackage(release);
+  const parsed=await readBasePackage(release);
   const packageDatabaseSchema=String((parsed.pkg as any).databaseSchemaVersion||(parsed.pkg as any).releaseInfo?.databaseSchemaVersion||release.manifest?.databaseSchemaVersion||"").trim();
   const installedDatabaseSchema=String(install.schema_version||"").trim();
-  if(packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
+  const requireExactDatabaseSchema=release?.manifest?.compatibility?.databaseSchema?.required===true||release?.manifest?.requireDatabaseSchemaMatch===true;
+  if(requireExactDatabaseSchema&&packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} explicitly requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
   const projectSettings={framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(parsed.pkg.projectSettings||{})};
   await progress?.("deploying",{action,releaseId:String(release.id),projectId:install.vercel_project_id,fileCount:parsed.files.length});
   await event(install,"deployment.uploading","info",`Uploading ${parsed.files.length} verified Base files to Vercel`,{action,releaseId:release.id,fileCount:parsed.files.length});
@@ -898,7 +851,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
   const customer=customerResult.data||null;
   await masterExecuteDeployment({action,phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:previousVersion,deploymentId,deploymentUrl,projectId:install.vercel_project_id,projectName:install.vercel_project_name,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
-  await event(data,"deployment.completed","ok",`Vercel deployment ${deploymentId} is ready`,{action,releaseId:release.id,version:release.version,deploymentId});return data;
+  await event(data,action==="rollback"?"deployment.rollback.completed":"deployment.completed","ok",action==="rollback"?`Base rollback restored ${release.version} as fresh deployment ${deploymentId}`:`Vercel deployment ${deploymentId} is ready`,{action,releaseId:release.id,version:release.version,deploymentId,reason:rollbackReason||undefined});return data;
   }catch(error:any){
     if(error?.orbitfsFailureReported===true)throw error;
     await reportDeploymentFailure(install,{action,releaseId:String(release.id),licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version)},error);
