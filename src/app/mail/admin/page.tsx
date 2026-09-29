@@ -61,18 +61,25 @@ export default function MailConfig(){
 
 function MainSettings({settings,provider,save}:{settings:any,provider:any,save:(b:any)=>Promise<boolean>}){
   const outbound=settings.outbound||{};
-  const [senderName,setSenderName]=useState(outbound.sender_name||'OrbitFS'),[from,setFrom]=useState(outbound.default_from||'noreply@orbitfs.cc'),[reply,setReply]=useState(outbound.reply_to||'admin@orbitfs.cc'),[customerSender,setCustomerSender]=useState(outbound.customer_sender||'support@orbitfs.cc'),[customerName,setCustomerName]=useState(outbound.customer_sender_name||'OrbitFS Support'),[domain,setDomain]=useState(settings.inbound?.domain||'orbitfs.cc'),[enabled,setEnabled]=useState(settings.inbound?.enabled!==false);
-  return <div><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:14}}>
-    <div><label>Default sender name</label><input style={input} value={senderName} onChange={e=>setSenderName(e.target.value)}/></div>
-    <div><label>Default outbound address</label><input style={input} type="email" value={from} onChange={e=>setFrom(e.target.value)}/></div>
-    <div><label>Default Reply-To</label><input style={input} type="email" value={reply} onChange={e=>setReply(e.target.value)}/></div>
-    <div><label>Customer-message sender</label><input style={input} type="email" value={customerSender} onChange={e=>setCustomerSender(e.target.value)}/></div>
-    <div><label>Customer-message sender name</label><input style={input} value={customerName} onChange={e=>setCustomerName(e.target.value)}/></div>
-    <div><label>Inbound domain</label><input style={input} value={domain} onChange={e=>setDomain(e.target.value)}/></div>
-    <div><label>Transport</label><div style={{...input,background:'#f7f8fb'}}>{provider.name||'Mail transport'} · outbound {provider.apiKeyConfigured?'configured':'missing'} · inbox {provider.mailApiKeyConfigured?'configured':'missing'}</div></div>
-    <label style={{display:'flex',alignItems:'center',gap:8}}><input type="checkbox" checked={enabled} onChange={e=>setEnabled(e.target.checked)}/> Inbound mail enabled</label>
-    <div><button onClick={()=>save({action:'settings',rows:[{key:'outbound',value:{sender_name:senderName.trim(),default_from:from.trim().toLowerCase(),reply_to:reply.trim().toLowerCase(),customer_sender:customerSender.trim().toLowerCase(),customer_sender_name:customerName.trim()}},{key:'inbound',value:{domain:domain.trim().toLowerCase(),enabled}},{key:'provider',value:{name:'resend'}}]})}>Save Mail settings</button></div>
-  </div></div>
+  const [senderName,setSenderName]=useState(outbound.sender_name||'OrbitFS'),[systemSender,setSystemSender]=useState(outbound.system_sender||outbound.default_from||'info@orbitfs.cc'),[reply,setReply]=useState(outbound.reply_to||'support@orbitfs.cc'),[supportSender,setSupportSender]=useState(outbound.support_sender||outbound.customer_sender||'support@orbitfs.cc'),[customerName,setCustomerName]=useState(outbound.customer_sender_name||'OrbitFS Support'),[billingSender,setBillingSender]=useState(outbound.billing_sender||'billing@orbitfs.cc'),[domain,setDomain]=useState(settings.inbound?.domain||'orbitfs.cc'),[enabled,setEnabled]=useState(settings.inbound?.enabled!==false);
+  const rows=[
+    {label:'System & notification sender',value:systemSender,set:setSystemSender,help:'Used for account, release, deployment and general system notifications. Standard OrbitFS address: info@orbitfs.cc.'},
+    {label:'Standard Reply-To',value:reply,set:setReply,help:'Replies to system/notification mail are routed here. Support mail keeps its own support address.'},
+    {label:'Support sender',value:supportSender,set:setSupportSender,help:'Used for support and customer-service mail. Standard OrbitFS address: support@orbitfs.cc.'},
+    {label:'Billing sender',value:billingSender,set:setBillingSender,help:'Used for invoices, payments, refunds and other billing mail. Standard OrbitFS address: billing@orbitfs.cc.'}
+  ];
+  return <div>
+    <p style={{...muted,marginTop:0}}>Sender roles are runtime Mail settings, not deployment environment variables. Templates can use the role aliases <code>role:system</code>, <code>role:support</code> and <code>role:billing</code>, or a specific configured mailbox.</p>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:14}}>
+      <div><label>Default sender name</label><input style={input} value={senderName} onChange={e=>setSenderName(e.target.value)}/><div style={{...muted,marginTop:4}}>Fallback display name when a mailbox does not define its own display name.</div></div>
+      {rows.map(r=><div key={r.label}><label>{r.label}</label><input style={input} type="email" value={r.value} onChange={e=>r.set(e.target.value)}/><div style={{...muted,marginTop:4}}>{r.help}</div></div>)}
+      <div><label>Support sender display name</label><input style={input} value={customerName} onChange={e=>setCustomerName(e.target.value)}/><div style={{...muted,marginTop:4}}>Compatibility display name used by customer/support workflows.</div></div>
+      <div><label>Inbound domain</label><input style={input} value={domain} onChange={e=>setDomain(e.target.value)}/></div>
+      <div><label>Transport</label><div style={{...input,background:'#f7f8fb'}}>{provider.name||'Mail transport'} · outbound {provider.apiKeyConfigured?'configured':'missing'} · inbox {provider.mailApiKeyConfigured?'configured':'missing'}</div><div style={{...muted,marginTop:4}}>Outbound uses RESEND_API_KEY. Inbox can use RESEND_MAIL_API_KEY or fall back to the outbound key.</div></div>
+      <label style={{display:'flex',alignItems:'center',gap:8}}><input type="checkbox" checked={enabled} onChange={e=>setEnabled(e.target.checked)}/> Inbound mail enabled</label>
+      <div><button onClick={()=>save({action:'settings',rows:[{key:'outbound',value:{sender_name:senderName.trim(),default_from:systemSender.trim().toLowerCase(),reply_to:reply.trim().toLowerCase(),customer_sender:supportSender.trim().toLowerCase(),customer_sender_name:customerName.trim(),system_sender:systemSender.trim().toLowerCase(),support_sender:supportSender.trim().toLowerCase(),billing_sender:billingSender.trim().toLowerCase()}},{key:'inbound',value:{domain:domain.trim().toLowerCase(),enabled}},{key:'provider',value:{name:'resend'}}]})}>Save Mail settings</button></div>
+    </div>
+  </div>
 }
 
 function TypeSelect({value,onChange}:{value:string,onChange:(v:string)=>void}){
