@@ -6,6 +6,7 @@ import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,mas
 import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
+import {errorMessage} from "@/lib/error-message";
 
 const MAX_FILES=5000,MAX_FILE_BYTES=25*1024*1024,MAX_TOTAL_BYTES=70*1024*1024;
 const SAFE_PATH=/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)(?:\.git|\.vercel|node_modules)(?:\/|$))[A-Za-z0-9._@+\-\/\[\]()=]+$/;
@@ -474,7 +475,7 @@ async function engineUpdateRequest(baseUrl:string,install:any,release:any,channe
     signal:AbortSignal.timeout(mode==='plan'||mode==='refresh'?30000:180000)
   });
   const body:any=await response.json().catch(()=>({}));
-  if(!response.ok&&response.status!==202)fail(String(body?.error||`Installed Base Engine updater returned ${response.status}`),response.status<500?response.status:502);
+  if(!response.ok&&response.status!==202)fail(errorMessage(body?.error??body?.message??body?.detail??body,`Installed Base Engine updater returned ${response.status}`),response.status<500?response.status:502);
   return {status:response.status,body};
 }
 async function applyEngineUpdatePayload(install:any,release:any,channel:string,baseUrl:string){
@@ -605,18 +606,18 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
     await event(data,"base.update.completed","ok",`OrbitFS Base updated from ${currentVersion} to ${release.version}`,{releaseId:String(release.id),deploymentId:createdDeploymentId,projectId,databaseMigrations:migrations});
     return data;
   }catch(error:any){
-    const message=String(error?.message||"Base update failed");
+    const message=errorMessage(error,"Base update failed");
     const recovery:any={databaseMigrations:migrations?"forward migrations retained":"not started",deploymentRollback:false,environmentRestored:false};
     if(createdDeploymentId&&previousDeploymentId){
       try{
         await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(projectId)}/rollback/${encodeURIComponent(previousDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
         recovery.deploymentRollback=true;
-      }catch(rollbackError:any){recovery.deploymentRollbackError=String(rollbackError?.message||rollbackError)}
+      }catch(rollbackError:any){recovery.deploymentRollbackError=errorMessage(rollbackError,"Base deployment rollback failed")}
     }
     try{
       await configureVercel(install,currentVersion,String(install.production_url||install.deployment_url||""),requestedChannel,currentReleaseId,String(install.release_sha256||""),String(install.release_source_commit||""));
       recovery.environmentRestored=true;
-    }catch(envError:any){recovery.environmentRestoreError=String(envError?.message||envError)}
+    }catch(envError:any){recovery.environmentRestoreError=errorMessage(envError,"Base environment restore failed")}
     await Promise.allSettled([
       licenseDb().from("orbitfs_installations").update({vercel_deployment_id:previousDeploymentId,state:"ready",last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id),
       masterExecuteDeployment({action:"base_update",phase:"failed",releaseId:String(release.id),installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:currentVersion,projectId,projectName:install.vercel_project_name,error:message}),
@@ -627,7 +628,7 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
 }
 
 async function reportDeploymentFailure(install:any,input:{action:DeployAction;releaseId:string;licenseId:string;channel:string;productVersion?:string},error:unknown){
-  const message=error instanceof Error?error.message:String(error||"Deployment failed");
+  const message=errorMessage(error,"Deployment failed");
   await Promise.allSettled([
     masterExecuteDeployment({action:input.action,phase:"failed",releaseId:input.releaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:input.licenseId,channel:input.channel,productVersion:input.productVersion,previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null,error:message}),
     licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message}).eq("id",install.id),
@@ -853,15 +854,15 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
         try{
           const rolledBack=await rollbackEngineUpdatePayload(install,release,requestedChannel,currentBaseUrl);
           recovery.engine={ok:true,checkpointId:rolledBack.checkpointId||null,restoredVersion:rolledBack.restoredVersion||null};
-        }catch(recoveryError){recovery.engine={ok:false,error:recoveryError instanceof Error?recoveryError.message:String(recoveryError)}}
+        }catch(recoveryError){recovery.engine={ok:false,error:errorMessage(recoveryError,"Update recovery failed")}}
       }
       if(panelResult?.deploymentId&&install.vercel_project_id&&install.vercel_deployment_id){
         try{
           await vercelApi(install.auth_user_id,`/v9/projects/${encodeURIComponent(String(install.vercel_project_id))}/rollback/${encodeURIComponent(String(install.vercel_deployment_id))}`,{method:"POST",body:JSON.stringify({})});
           recovery.panel={ok:true,deploymentId:String(install.vercel_deployment_id)};
-        }catch(recoveryError){recovery.panel={ok:false,error:recoveryError instanceof Error?recoveryError.message:String(recoveryError)}}
+        }catch(recoveryError){recovery.panel={ok:false,error:errorMessage(recoveryError,"Update recovery failed")}}
       }
-      await event(install,"update.recovery",recovery.panel?.ok===false||recovery.engine?.ok===false?"warning":"ok","Update failed; recovery attempted",{releaseId:release.id,components,recovery,error:updateError instanceof Error?updateError.message:String(updateError)});
+      await event(install,"update.recovery",recovery.panel?.ok===false||recovery.engine?.ok===false?"warning":"ok","Update failed; recovery attempted",{releaseId:release.id,components,recovery,error:errorMessage(updateError,"Update failed")});
       throw updateError;
     }
   }
