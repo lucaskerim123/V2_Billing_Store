@@ -1,6 +1,8 @@
 name: Store Full Scan
 
 on:
+  push:
+    branches: [APIFallback]
   pull_request:
     branches: [main]
   workflow_dispatch:
