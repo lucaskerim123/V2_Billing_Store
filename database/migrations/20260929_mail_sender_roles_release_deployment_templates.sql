@@ -27,7 +27,21 @@ values (
 on conflict (key) do update
 set value=coalesce(public.mail_settings.value,'{}'::jsonb)||excluded.value;
 
--- Retire the old no-reply sender without deleting delivery history or mailbox data.
+-- Normalize existing templates by mail responsibility before retiring the old
+-- no-reply sender. Delivery history and mailbox records are left untouched.
+update public.mail_templates
+set from_account='support@orbitfs.cc'
+where lower(coalesce(category,''))='support'
+   or lower(coalesce(template_key,'')) like 'support.%';
+
+update public.mail_templates
+set from_account='billing@orbitfs.cc'
+where lower(coalesce(category,''))='billing'
+   or lower(coalesce(template_key,'')) like 'invoice.%'
+   or lower(coalesce(template_key,'')) like 'payment.%'
+   or lower(coalesce(template_key,'')) like 'refund.%'
+   or lower(coalesce(template_key,''))='order.paid';
+
 update public.mail_templates
 set from_account='info@orbitfs.cc'
 where lower(coalesce(from_account,''))='noreply@orbitfs.cc';
