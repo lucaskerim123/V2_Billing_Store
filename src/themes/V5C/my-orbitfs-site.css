@@ -916,3 +916,13 @@ html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Support .buttonlink{
     grid-template-columns:minmax(0,1fr)!important;
   }
 }
+
+/* Compact real deployment telemetry; no second journey beneath the top stepper. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveProgress .portalOverviewStats{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important;
+  gap:9px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveProgress .portalStatCard{
+  min-width:0!important;overflow-wrap:anywhere!important;
+}
