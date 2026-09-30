@@ -1,14 +1,12 @@
 "use client";
 import {FormEvent,useEffect,useMemo,useState} from "react";
 import Link from "next/link";
-import {useRouter} from "next/navigation";
 import {createClient} from "@/lib/supabase";
 
 export default function LoginPage(){
  const [message,setMessage]=useState("");
  const [unverifiedEmail,setUnverifiedEmail]=useState("");
  const [id,setId]=useState<any>({site_name:"OrbitFS",login_title:"Welcome back"});
- const router=useRouter();
  const sb=useMemo(()=>createClient(),[]);
  useEffect(()=>{sb.from('app_settings').select('key,value').eq('category','identity').then(({data})=>{const m=Object.fromEntries((data||[]).map((x:any)=>[x.key.split('.').pop(),x.value]));setId((v:any)=>({...v,...m}));document.title=m.login_title||`Sign in · ${m.site_name||'OrbitFS'}`})},[sb]);
  async function submit(e:FormEvent<HTMLFormElement>){
@@ -17,8 +15,20 @@ export default function LoginPage(){
   const r=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password})});
   const d=await r.json().catch(()=>({}));
   if(!r.ok){setMessage(d.error||"Could not sign in.");if(r.status===403)setUnverifiedEmail(email);return;}
+  if(!d.browser_session?.access_token||!d.browser_session?.refresh_token){
+   setMessage("Sign in did not return a browser session. Please retry.");return;
+  }
+  const {data:session,error:sessionError}=await sb.auth.setSession({
+   access_token:d.browser_session.access_token,
+   refresh_token:d.browser_session.refresh_token
+  });
+  if(sessionError||!session.user||session.user.id!==d.user?.id){
+   setMessage("Your browser session could not be verified. Please retry.");return;
+  }
   try{localStorage.removeItem("orbitfs_account_blocked");sessionStorage.removeItem("orbitfs_account_blocked")}catch{}
-  router.push("/portal");
+  // The canonical cookie was set by the API; a full navigation ensures both
+  // browser and server components see the new sessions before portal guards run.
+  window.location.assign("/portal");
  }
  async function resendVerification(){if(!unverifiedEmail)return;setMessage("Sending a new verification email…");const r=await fetch("/api/auth/email-verification/resend",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:unverifiedEmail})});const d=await r.json().catch(()=>({}));setMessage(d.message||"If the account still needs verification, a new email has been sent.")}
  return <main className="orbitAuthPage orbitAuthCustomer">
