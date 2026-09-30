@@ -86,8 +86,7 @@ begin
  where auth_user_id=new.id or user_id=new.id;
  return new;
 end
-$function$
-
+$function$;
 
 -- Heal existing confirmed linked customer accounts without deleting/updating
 -- existing profiles, identity rows, or wallet balances.
