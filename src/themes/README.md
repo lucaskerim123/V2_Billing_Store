@@ -1,75 +1,72 @@
 # OrbitFS Theme System
 
-Theme files live under `src/themes/<ThemeId>/` and each completed theme is a self-contained package.
+OrbitFS has two independent theme surfaces:
 
-## Active themes
+- `A` = **Admin Panel**
+- `C` = **Customer Portal**
 
-- Admin: `V3A`
-- Customer Portal (legacy/current baseline): `V3C`
-- Customer Portal (current redesign): `V5C`
+That suffix is part of the theme contract. Admin theme IDs must end in `A`; customer theme IDs must end in `C`.
 
-Runtime layouts import only these wrappers:
+## Built-in families
+
+- `V3A` — stable Admin baseline
+- `V5A` — current Admin redesign, extending `V3A`
+- `V3C` — stable Customer baseline
+- `V5C` — current Customer redesign, extending `V3C`
+
+V5 is an overlay family. It keeps the V3 baseline underneath it and only owns the surfaces intentionally redesigned for V5.
+
+## Runtime switching
+
+The application always bundles the built-in baseline and its built-in overlays:
 
 - `src/themes/active/admin.css`
 - `src/themes/active/customer.css`
 
-The wrappers point to one packaged theme entrypoint. Applying a different theme only changes the relevant wrapper.
+The database setting chooses which theme ID is active for each surface. `ThemeRuntime` sets `data-orbitfs-theme` and built-in V5 CSS is scoped to that exact ID, so Admin and Customer themes can be switched independently without moving files around.
 
-## Package format
+The Admin Theme Manager at `/admin/settings/themes` is the production switch. It has separate Admin and Customer selectors and broadcasts a change to other open OrbitFS tabs.
 
-Every theme folder requires:
+## Theme package format
+
+Every filesystem theme lives under `src/themes/<ThemeId>/` and requires:
 
 - `manifest.json`
-- the CSS entry file named by `manifest.entry`
-- any supporting CSS/assets kept inside the theme folder
+- the CSS entry named by `manifest.entry`
+- optional supporting CSS/assets inside the theme folder
 
-Manifest fields:
+Example child theme:
 
 ```json
 {
-  "id": "V3A",
-  "name": "OrbitFS V3 Admin",
-  "version": "3.0.0",
-  "surface": "admin",
-  "entry": "theme.css"
+  "id": "V5C",
+  "name": "OrbitFS V5 Customer",
+  "version": "5.0.0",
+  "surface": "customer",
+  "entry": "theme.css",
+  "family": "V5",
+  "extends": "V3C"
 }
 ```
 
-`surface` must be `admin` or `customer` so an admin theme cannot accidentally replace the customer portal theme and vice versa.
+An `.orbit-theme.zip` must contain exactly one theme root whose folder name matches the manifest ID. Runtime-uploaded package assets must be embedded as data URLs.
 
 ## Commands
 
-From `web/`:
+- `npm run theme:pack -- V5C` — create an `.orbit-theme.zip`
+- `npm run theme:install -- <package.zip>` — validate/install a filesystem theme
+- `npm run theme:install-apply -- <package.zip>` — install and change the local fallback
+- `npm run theme:apply -- V5C` — change the local fallback only
+- `npm run theme:sync` — rebuild built-in CSS bundles
+- `npm run theme:validate` — validate IDs, surfaces, inheritance and entry files
 
-- `npm run theme:pack -- V3A` packages a theme to `theme-packages/` as an `.orbit-theme.zip`.
-- `npm run theme:install -- <path-to-package.zip>` validates and installs a package without activating it.
-- `npm run theme:install-apply -- <path-to-package.zip>` installs and immediately applies it to its declared surface.
-- `npm run theme:apply -- V3A` applies an already installed theme.
+Production selection stays database-backed in the Theme Manager. The CLI fallback is only used when runtime theme settings are unavailable.
 
-The installer validates the package manifest, package root, theme surface and entry file, then rewrites only the appropriate active wrapper.
+## V5C ownership
 
-## Naming
+V5C currently owns the customer Base Deployer redesign in:
 
-OrbitFS theme IDs use a version plus surface suffix:
+- `src/themes/V5C/base-deployer-foundation.css`
+- `src/themes/V5C/base-deployer.css`
 
-- `A` = Admin Panel
-- `C` = Customer Portal
-
-Examples: `V3A`, `V3C`.
-
-
-## V5C
-
-`V5C` is the transitional customer theme used while the customer portal is rebuilt surface-by-surface. It starts from the current customer theme behavior but owns new surface design in its own files. The first rebuilt surface is Base Deployer via `V1_Changing/base-deployer.css`.
-
-Do not add Base Deployer styling back to shared portal CSS; keep it owned by the theme.
-
-
-## V5 theme family
-
-- Admin legacy: `V3A`
-- Admin current: `V5A`
-- Customer legacy: `V3C`
-- Customer current redesign: `V5C`
-
-Theme Manager selects Admin and Customer surfaces independently. V5A/V5C are layered over the stable V3 baselines so either surface can be returned to V3 without changing runtime data.
+Do not move V5C Base Deployer styling back into shared V3C portal CSS.
