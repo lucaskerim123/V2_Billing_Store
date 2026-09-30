@@ -788,14 +788,21 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     let engineResult:any=null;
     let engineAttempted=false;
     try{
+      await event(install,"update.database.started","info","Checking and applying approved customer database migrations",{releaseId:release.id,releaseVersion:release.version,migrationCount:databaseMigrations.length});
       const databaseResult=await applyCustomerDatabaseMigrations(install,release,bundle);
+      await event(install,"update.database.completed","ok","Customer database migrations completed",{releaseId:release.id,releaseVersion:release.version,migrationCount:databaseMigrations.length});
+      if(panel)await event(install,"update.panel.started","info","Deploying the verified Panel update payload",{releaseId:release.id,releaseVersion:release.version});
       panelResult=panel?await deployPanelUpdatePayload(install,release,bundle,panel,parsed.artifactSha256,requestedChannel):null;
+      if(panel)await event(install,"update.panel.completed","ok","Panel update deployment completed",{releaseId:release.id,releaseVersion:release.version});
       const engineBaseUrl=String(panelResult?.deploymentUrl||install.production_url||install.deployment_url||"").trim();
       if(wantsEngine&&!engineBaseUrl)fail("Installed OrbitFS Base URL is unavailable for the Engine update",409);
       if(wantsEngine){
+        await event(install,"update.engine.started","info","Applying the verified Engine update payload",{releaseId:release.id,releaseVersion:release.version,components:components.filter(component=>component!=="base")});
         engineAttempted=true;
         engineResult=await applyEngineUpdatePayload(install,release,requestedChannel,engineBaseUrl);
+        await event(install,"update.engine.completed","ok","Engine update payload completed",{releaseId:release.id,releaseVersion:release.version});
       }
+      await event(install,"update.recording","info","Recording successful Update deployment and reporting to License Manager",{releaseId:release.id,releaseVersion:release.version});
       const appliedAt=new Date().toISOString();
       const componentVersions=bundle.componentVersions&&typeof bundle.componentVersions==="object"&&!Array.isArray(bundle.componentVersions)?bundle.componentVersions:{};
       const componentState=Object.fromEntries(components.map((component:string)=>[component,{version:String(componentVersions?.[component]||(component==="base"?install.release_version:release.version)||""),status:"installed"}]));
