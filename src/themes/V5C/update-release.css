@@ -196,6 +196,24 @@ html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseMain{
 }
 html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseMain h3{margin-bottom:4px}
 html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseMain p{margin-top:4px}
+html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseMain>div{min-width:0;flex:1}
+html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseMain .orbitV5UpdateSummary{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+  line-clamp:3;overflow:hidden;overflow-wrap:anywhere;
+  max-width:850px;margin-top:8px;font-size:12px;line-height:1.5;
+  color:#abc5ce;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseDetails{
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;flex:1 1 260px;min-width:0;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseDetails details{min-width:120px}
+html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseDetails details[open]{flex:1 1 100%;width:100%}
+html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseDetails .orbitV5UpdateNotes{
+  max-height:240px;overflow:auto;padding:9px 11px;
+  border:1px solid #285d6d;border-radius:6px;background:#092b39;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5UpdateReleaseActions>button{flex:0 0 auto;margin-left:auto}
+
 html[data-orbitfs-theme="V5C"] .orbitV5UpdateChips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 html[data-orbitfs-theme="V5C"] .orbitV5UpdateChips span{
   color:#acdce1;background:#154555;border:1px solid #316b79;
