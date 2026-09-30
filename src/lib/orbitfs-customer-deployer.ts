@@ -439,9 +439,12 @@ async function waitForReady(userId:string,id:string):Promise<any>{
 }
 async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBundle,panel:Package,artifactSha256:string,channel:string){
   const installedBase=String(install.release_version||"").trim();
-  const baseline=String((panel as any).baseVersion||bundle.minimumBaseVersion||"").trim();
+  const minimumBase=String(bundle.minimumBaseVersion||(panel as any).baseVersion||"").trim();
   if(!installedBase)fail("Deploy OrbitFS Base before applying a Panel update",409);
-  if(!baseline||installedBase!==baseline)fail(`Panel update ${release.version} was built on Base ${baseline||"unknown"}, but this installation is Base ${installedBase}. Use a matching update or publish a newer Base deployment.`,409);
+  if(minimumBase){
+    const comparison=compareOrbitReleaseVersions(installedBase,minimumBase);
+    if(comparison===null||comparison<0)fail(`Panel update ${release.version} requires Base ${minimumBase} or newer; this installation is Base ${installedBase}.`,409);
+  }
   const files=validateFiles(panel.files,"Panel update payload");
   const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),files);
   await configureVercelUpdateIdentity(install,{version:String(release.version),releaseId:String(release.id),sha256:artifactSha256,sourceCommit:bundle.sourceCommit||expectedSource(release),channel,components:bundle.components});
