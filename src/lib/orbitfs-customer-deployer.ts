@@ -489,7 +489,11 @@ async function applyEngineUpdatePayload(install:any,release:any,channel:string,b
     result=await engineUpdateRequest(baseUrl,install,release,channel,"refresh");
   }
   if(result.status===202||result.body?.waiting===true)fail("Engine Host update did not become ready within the deployment window",504);
-  return {deploymentId:String(result.body?.host?.deploymentId||""),hostUrl:String(result.body?.host?.hostUrl||""),state:String(result.body?.host?.state||"ready")};
+  const host=result.body?.host||{};
+  if(String(host.releaseId||"")!==String(release.id))fail("Engine Host completed with a different release than License Manager authorized",409,"ENGINE_UPDATE_FINAL_RELEASE_MISMATCH");
+  if(String(host.releaseVersion||"")!==String(release.version))fail("Engine Host completed with a different version than License Manager authorized",409,"ENGINE_UPDATE_FINAL_VERSION_MISMATCH");
+  if(host.updaterConnected!==true)fail("Engine Host completed without a verified License Manager updater connection",409,"ENGINE_UPDATE_AUTHORITY_VERIFY_FAILED");
+  return {deploymentId:String(host.deploymentId||""),hostUrl:String(host.hostUrl||""),state:String(host.state||"ready"),releaseId:String(host.releaseId||""),releaseVersion:String(host.releaseVersion||"")};
 }
 async function rollbackEngineUpdatePayload(install:any,release:any,channel:string,baseUrl:string){
   let result=await engineUpdateRequest(baseUrl,install,release,channel,"rollback");
@@ -816,6 +820,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       if(!currentBaseUrl)fail("Installed OrbitFS Base URL is unavailable for Engine update preflight",409);
       const planned=await engineUpdateRequest(currentBaseUrl,install,release,requestedChannel,"plan");
       enginePreflight=planned.body?.plan||null;
+      if(String(planned.body?.release?.id||"")!==String(release.id))fail("Installed Base planned a different Engine release than License Manager authorized",409,"ENGINE_UPDATE_RELEASE_IDENTITY_MISMATCH");
+      if(String(planned.body?.release?.version||"")!==String(release.version))fail("Installed Base planned a different Engine version than License Manager authorized",409,"ENGINE_UPDATE_VERSION_MISMATCH");
       if(planned.body?.release?.checkpointRequired!==true)fail("Installed Base rejected the Engine update checkpoint contract",409);
     }
     await event(install,"update.started","info",`Applying OrbitFS Update ${release.version}`,{releaseId:release.id,components,checksum:parsed.artifactSha256,databaseMigrationCount:databaseMigrations.length,enginePreflight});
