@@ -734,6 +734,11 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   if(bindingResult.error)throw bindingResult.error;
   const authorityLicenseId=String(bindingResult.data?.license_id||"").trim();
   if(!authorityLicenseId)fail("This installation is not linked to an authoritative Billing licence",409,"LICENSE_BINDING_REQUIRED");
+  // Do not ask License Manager to authorize a different licence from the one
+  // activated for this exact customer installation.
+  const registeredMasterLicenseId=String(registration?.masterLicenseId||"").trim();
+  if(!registeredMasterLicenseId)fail("Registered installation licence identity is missing. Re-register the assigned licence before deploying.",409,"REGISTERED_LICENSE_ID_MISSING");
+  if(registeredMasterLicenseId!==authorityLicenseId)fail("The registered runtime licence differs from this installation's Billing entitlement. Resolve the binding before retrying.",409,"INSTALLATION_LICENSE_BINDING_MISMATCH");
   if(["revoked","expired"].includes(String(bindingResult.data?.desired_state||bindingResult.data?.remote_state||"").toLowerCase()))fail("The installation's Billing licence is not active",403,"LICENSE_BINDING_INACTIVE");
 
   let rollbackTarget:any=null;
@@ -763,11 +768,15 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   try{
     await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null});
   }catch(error:any){
-    if(action==="update"){
-      const code=String(error?.code||"").trim();
-      const message=errorMessage(error,"License Manager declined Update authorization");
-      await event(install,"update.authorization.failed","error",code?`Update authorization rejected: ${message} [${code}]`:`Update authorization rejected: ${message}`,{releaseId:String(release.id),releaseVersion:String(release.version),code:code||null,httpStatus:Number(error?.status)||null});
-    }
+    const code=String(error?.code||"LICENSE_MANAGER_AUTHORIZATION_FAILED").trim();
+    const message=errorMessage(error,"License Manager declined deployment authorization");
+    const eventType=action==="update"?"update.authorization.failed":action==="base_update"?"base.update.authorization.failed":"deployment.authorization.failed";
+    // An authorization rejection is not a failed deployment. Keep the
+    // installed version and state intact and preserve the authority's code.
+    try{
+      await event(install,eventType,"error",`License Manager authorization rejected: ${message} [${code}]`,
+        {action,releaseId:String(release.id),releaseVersion:String(release.version),code,httpStatus:Number(error?.status)||null});
+    }catch(eventError){console.error("Could not record License Manager authorization rejection",eventError)}
     throw error;
   }
   if(action!=="base_update")await progress?.("validated",{releaseId:String(release.id),releaseVersion:String(release.version),projectId:install.vercel_project_id||null});
