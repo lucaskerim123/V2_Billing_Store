@@ -2,6 +2,7 @@ import {createClient} from "@supabase/supabase-js";
 import {wrapOrbitFsHtml,wrapOrbitFsText} from "@/lib/mail-branding";
 import {loadMailRuntimeConfig,resolveMailDeliveryIdentity} from "@/lib/mail-config-server";
 import {orbitfsStoreOrigin} from "@/lib/site-origin";
+import {customerAllowsMail} from "@/lib/mail-subscriptions-server";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -16,6 +17,7 @@ export async function sendAutomation(eventKey:string,to:string,vars:Record<strin
   if(ae)throw ae;if(!a?.template_key)return {ok:true,skipped:true,eventKey};
   const {data:t,error:te}=await db.rpc("mail_get_template",{p_template_key:a.template_key});
   if(te||!t)throw new Error(te?.message||"Mail template is disabled or missing.");
+  if(!(await customerAllowsMail(db,to,eventKey,String(a.template_key))))return {ok:true,skipped:true,eventKey,reason:"unsubscribed"};
   const siteUrl=await orbitfsStoreOrigin();
   const autoVars:Record<string,string>={...vars,site_url:siteUrl};
   if(relatedType==="invoice"&&relatedId&&!autoVars.invoice_url)autoVars.invoice_url=`${siteUrl}/portal/invoices/${relatedId}`;
