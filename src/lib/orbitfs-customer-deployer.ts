@@ -750,7 +750,19 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const effectiveReleaseId=action==="redeploy"?undefined:releaseId;
   const effectiveVersion=action==="redeploy"?undefined:version;
   const release=rollbackTarget||await publishedRelease(effectiveVersion,action,requestedChannel,effectiveReleaseId);
-  await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null});
+  // Authorization must succeed before touching the customer's deployment.
+  // Persist the authoritative rejection code so a refresh explains the failed
+  // preflight instead of leaving an ambiguous, apparently running Update.
+  try{
+    await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null});
+  }catch(error:any){
+    if(action==="update"){
+      const code=String(error?.code||"").trim();
+      const message=errorMessage(error,"License Manager declined Update authorization");
+      await event(install,"update.authorization.failed","error",code?`Update authorization rejected: ${message} [${code}]`:`Update authorization rejected: ${message}`,{releaseId:String(release.id),releaseVersion:String(release.version),code:code||null,httpStatus:Number(error?.status)||null});
+    }
+    throw error;
+  }
   if(action!=="base_update")await progress?.("validated",{releaseId:String(release.id),releaseVersion:String(release.version),projectId:install.vercel_project_id||null});
   try{
   if(action==="base_update")return await runBaseUpdateDeployment(install,release,requestedChannel,authorityLicenseId,progress);
