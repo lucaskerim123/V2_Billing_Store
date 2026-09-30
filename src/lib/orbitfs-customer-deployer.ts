@@ -670,6 +670,13 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
   if(bindingResult.error)throw bindingResult.error;
   const authorityLicenseId=String(bindingResult.data?.license_id||"").trim();
   if(!authorityLicenseId)fail("This installation is not linked to an authoritative Billing licence",409,"LICENSE_BINDING_REQUIRED");
+  // Runtime registration and the Billing entitlement must identify the same
+  // authoritative licence. Never submit a different Billing licence ID for
+  // a customer's registered installation.
+  const registeredLicenseId=String(registration?.masterLicenseId||"").trim();
+  if(registeredLicenseId&&registeredLicenseId!==authorityLicenseId){
+    fail("The licence registered on this installation does not match its Billing entitlement. Register the licence assigned to this installation before applying an Update.",409,"INSTALLATION_LICENSE_BINDING_MISMATCH");
+  }
   if(["revoked","expired"].includes(String(bindingResult.data?.desired_state||bindingResult.data?.remote_state||"").toLowerCase()))fail("The installation's Billing licence is not active",403,"LICENSE_BINDING_INACTIVE");
   const wantsPanel=components.includes("base"),wantsEngine=components.some((component:string)=>component!=="base");
   const baseUrl=String(install.production_url||install.deployment_url||"").trim();
