@@ -478,6 +478,24 @@ export async function configureVercelUpdateIdentity(install:any,input:{version:s
   for(const [name,value] of Object.entries(vars)){if(value)await upsertVercelEnv(install,name,value)}
 }
 
+// Resolve only a project-level production address; generated deployment URLs can be protected.
+export async function resolveProductionUrl(install:any,deployment?:any):Promise<string|null>{
+ const normalize=(v:any)=>String(v||"").trim().replace(/^https?:\/\//,"").replace(/\/$/,"").toLowerCase();
+ const projectDomain=`${String(install.vercel_project_name||"").trim().toLowerCase()}.vercel.app`;
+ const deploymentHost=normalize(deployment?.url);
+ const aliases=Array.isArray(deployment?.alias)?deployment.alias.map(normalize):[];
+ if(aliases.includes(projectDomain)&&projectDomain!==deploymentHost)return `https://${projectDomain}`;
+ const result=await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(String(install.vercel_project_id))}/domains`,{method:"GET"});
+ const domains=Array.isArray(result?.domains)?result.domains:[];
+ const candidates=domains.filter((d:any)=>d?.verified!==false&&normalize(d?.name)&&normalize(d?.name)!==deploymentHost);
+ const chosen=candidates.find((d:any)=>normalize(d.name)===projectDomain)||candidates.find((d:any)=>!d.redirect&&normalize(d.name).endsWith(".vercel.app"))||candidates.find((d:any)=>!d.redirect)||candidates[0];
+ const name=normalize(chosen?.name);
+ return name?`https://${name}`:null;
+}
+export async function checkPublicPanelHealth(url:string,path:string):Promise<boolean>{
+ try{const r=await fetch(new URL(path||"/api/health",url),{redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(15000)});return r.status>=200&&r.status<300&&!r.headers.get("x-vercel-mitigated")}catch{return false}
+}
+
 export async function syncDeployment(install:any){
   if(!install.vercel_deployment_id)return install;
   const result=await vercelApi(install.auth_user_id,`/v13/deployments/${encodeURIComponent(String(install.vercel_deployment_id))}`,{method:"GET"});
@@ -500,16 +518,10 @@ export async function syncDeployment(install:any){
   if(!history.data)return install;
 
   const resultUrl=result?.url?`https://${String(result.url).replace(/^https?:\/\//,"")}`:null;
-  const url=install.production_url||install.deployment_url||history.data.deployment_url||resultUrl||null;
-  let healthy=false;
-  if(url){
-    try{
-      const settings=await billingOrbitfsConfig();
-      const response=await fetch(new URL(settings.health_path||"/api/health",url),{redirect:"follow",cache:"no-store"});
-      healthy=response.status<500;
-    }catch{healthy=false}
-  }
-  const patch={state:"ready",health_status:healthy?"healthy":"degraded",last_health_at:new Date().toISOString(),production_url:url,deployment_url:url,last_error:healthy?null:"Panel deployed but health check did not succeed"};
+  const url=await resolveProductionUrl(install,result);
+  const settings=await billingOrbitfsConfig();
+  const healthy=url?await checkPublicPanelHealth(url,settings.health_path||"/api/health"):false;
+  const patch={state:"ready",health_status:healthy?"healthy":"degraded",last_health_at:new Date().toISOString(),production_url:url,deployment_url:resultUrl||install.deployment_url||history.data.deployment_url||null,last_error:healthy?null:!url?"Production domain is not assigned":"Production Panel public health check failed; inspect Vercel protection and runtime"};
   const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
   if(error)throw error;
   await event(data,"panel.ready",healthy?"ok":"warning",healthy?"OrbitFS Panel is ready in the customer Vercel account":"Panel deployed; health check is degraded",{url});
