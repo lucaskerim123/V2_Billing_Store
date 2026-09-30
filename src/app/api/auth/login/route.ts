@@ -81,13 +81,13 @@ export async function POST(req:Request){
   if(!lookupError&&authRecord?.user){
    // The canonical password was already verified above; bring the transport
    // credential into sync without changing the canonical account authority.
-   const {error:syncError}=await admin.auth.admin.updateUserById(user.id,{password,email_confirm:!!user.email_verified_at});
+   const {error:syncError}=await admin.auth.admin.updateUserById(user.id,{password,email_confirm:!!user.email_verified_at||!requireVerification});
    if(syncError)return Response.json({error:"Could not synchronize the browser session."},{status:500});
   }else{
    // Strictly guarded: only new customer accounts with no business history may
    // link to a generated Auth identity. SQL performs the entire rekey atomically.
    const {data:newAuth,error:newAuthError}=await admin.auth.admin.createUser({
-    email,password,email_confirm:!!user.email_verified_at,
+    email,password,email_confirm:!!user.email_verified_at||!requireVerification,
     user_metadata:{orbitfs_identity_bridge:true}
    });
    if(newAuthError||!newAuth.user){
