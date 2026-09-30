@@ -69,6 +69,52 @@ export async function POST(req:Request){
  const {data:verificationSetting}=await settingsDb.from("app_settings").select("value").eq("key","general.require_email_verification").maybeSingle();
  const requireVerification=verificationSetting?.value!==false;
  if(requireVerification&&!user.email_verified_at)return Response.json({error:"Verify your email address before signing in."},{status:403});
+ // Browser portal APIs still require Supabase Auth JWTs. A canonical OrbitFS
+ // session cookie by itself is not a valid browser database identity.
+ const admin=service();
+ let browserAuth=await service().auth.signInWithPassword({email,password});
+ if(browserAuth.data.user&&browserAuth.data.user.id!==user.id){
+  return Response.json({error:"This email has conflicting login identities. Contact support; your account has not been changed."},{status:409});
+ }
+ if(!browserAuth.data.session){
+  const {data:authRecord,error:lookupError}=await admin.auth.admin.getUserById(user.id);
+  if(!lookupError&&authRecord?.user){
+   // The canonical password was already verified above; bring the transport
+   // credential into sync without changing the canonical account authority.
+   const {error:syncError}=await admin.auth.admin.updateUserById(user.id,{password});
+   if(syncError)return Response.json({error:"Could not synchronize the browser session."},{status:500});
+  }else{
+   // Strictly guarded: only new customer accounts with no business history may
+   // link to a generated Auth identity. SQL performs the entire rekey atomically.
+   const {data:newAuth,error:newAuthError}=await admin.auth.admin.createUser({
+    email,password,email_confirm:!!user.email_verified_at,
+    user_metadata:{orbitfs_identity_bridge:true}
+   });
+   if(newAuthError||!newAuth.user){
+    return Response.json({error:"Your login identity needs reconciliation. Contact support; your account has not been changed."},{status:409});
+   }
+   const {error:linkError}=await admin.rpc("link_recent_orbitfs_customer_auth",{
+    p_old_user_id:user.id,p_new_auth_user_id:newAuth.user.id
+   });
+   if(linkError){
+    await admin.auth.admin.deleteUser(newAuth.user.id);
+    console.error("[auth/login] guarded identity link failed",linkError);
+    return Response.json({error:"Could not securely link your new account. Contact support; existing records were preserved."},{status:409});
+   }
+   user={...user,id:newAuth.user.id};
+  }
+  browserAuth=await service().auth.signInWithPassword({email,password});
+ }
+ if(!browserAuth.data.session||!browserAuth.data.user||browserAuth.data.user.id!==user.id){
+  return Response.json({error:"Unable to establish a matching secure browser session. Contact support."},{status:503});
+ }
  await createOrbitSession(user.id,req);
- return Response.json({ok:true,user:{id:user.id,email:user.email,display_name:user.display_name||user.first_name||user.email}});
+ return Response.json({
+  ok:true,
+  user:{id:user.id,email:user.email,display_name:user.display_name||user.first_name||user.email},
+  browser_session:{
+   access_token:browserAuth.data.session.access_token,
+   refresh_token:browserAuth.data.session.refresh_token
+  }
+ });
 }
