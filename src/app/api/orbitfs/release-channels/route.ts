@@ -1,15 +1,17 @@
 import {licenseDb} from "@/lib/license-api";
 import {masterRequest} from "@/lib/master-api";
 import {httpError,requireOrbitUser} from "@/lib/orbitfs-deployment";
+import {notifyChannelCustomer,notifyChannelRequestAdmins} from "@/lib/release-channel-notifications";
 
-async function billingCustomerReference(userId:string){
+async function billingCustomerIdentity(userId:string){
   const db=licenseDb();
-  const result=await db.from("customers").select("customer_number").or(`auth_user_id.eq.${userId},user_id.eq.${userId}`).limit(1).maybeSingle();
+  const result=await db.from("customers").select("customer_number,name,email").or(`auth_user_id.eq.${userId},user_id.eq.${userId}`).limit(1).maybeSingle();
   if(result.error)throw result.error;
   const reference=String(result.data?.customer_number||"").trim();
   if(!reference)throw Object.assign(new Error("Billing customer number is required for release channel access"),{status:409,code:"CUSTOMER_REFERENCE_REQUIRED"});
-  return reference;
+  return {reference,name:String(result.data?.name||result.data?.email||reference)};
 }
+async function billingCustomerReference(userId:string){return (await billingCustomerIdentity(userId)).reference;}
 
 export async function GET(req:Request){
   try{
@@ -44,7 +46,8 @@ export async function POST(req:Request){
     const action=String(body.action||"").trim().toLowerCase();
     const channel=String(body.channel||"").trim().toLowerCase();
     if(!channel)throw Object.assign(new Error("Release channel is required"),{status:400});
-    const customerReference=await billingCustomerReference(user.id);
+    const customerIdentity=await billingCustomerIdentity(user.id);
+    const customerReference=customerIdentity.reference;
     if(!["request","join","leave"].includes(action))throw Object.assign(new Error("Unsupported channel access action"),{status:400});
     const requestDetails=action==="request"&&body.requestDetails&&typeof body.requestDetails==="object"&&!Array.isArray(body.requestDetails)
       ?{
@@ -64,7 +67,20 @@ export async function POST(req:Request){
         ...(requestDetails?{request_details:requestDetails}:{})
       })
     },"billing");
-    // License Manager is authoritative for channel access. Billing Store does not persist a competing access record.
+    // License Manager is authoritative for channel access. Billing only publishes UI notifications after the authority succeeds.
+    const label=channel.replace(/[-_]+/g," ").replace(/\b\w/g,m=>m.toUpperCase());
+    try{
+      if(action==="request"){
+        await notifyChannelRequestAdmins({
+          channel,label,customerName:customerIdentity.name,customerUserId:user.id,
+          requestId:String(result?.request?.id||"")||null
+        });
+      }else if(action==="join"){
+        await notifyChannelCustomer(user.id,{eventType:"release_channel.joined",channel,label,message:`You've joined the ${label} channel.`,severity:"success"});
+      }else if(action==="leave"){
+        await notifyChannelCustomer(user.id,{eventType:"release_channel.left",channel,label,message:`You've left the ${label} channel.`,severity:"info"});
+      }
+    }catch(notificationError){console.error("release channel notification failed",notificationError)}
     return Response.json(result,{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
