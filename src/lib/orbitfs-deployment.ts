@@ -302,7 +302,7 @@ alter table public.orbitfs_schema_migrations enable row level security;
 revoke all on public.orbitfs_schema_migrations from anon, authenticated;
 grant all on public.orbitfs_schema_migrations to service_role;
 insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
-values ('${safe(baseMigrationId)}','${safe(schemaAsset.sha256)}','base','${safe(schemaAsset.path)}','${safe(String(release.id))}','${safe(String(release.version))}',now())
+values ('${safe(baseMigrationId)}','${safe(schemaAsset.sha256)}','shared','${safe(schemaAsset.path)}','${safe(String(release.id))}','${safe(String(release.version))}',now())
 on conflict (migration_id) do nothing;
 insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-files','orbitfs-files',false,1073741824) on conflict (id) do update set name=excluded.name,public=false,file_size_limit=excluded.file_size_limit;`;
   const legacyRlsCompatPrelude=[
