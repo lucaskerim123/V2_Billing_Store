@@ -1,6 +1,7 @@
 import {licenseDb} from "@/lib/license-api";
 import {masterRequest} from "@/lib/master-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
+import {notifyChannelCustomer} from "@/lib/release-channel-notifications";
 
 async function authoritativeChannels(){
   const remote=await masterRequest("/api/v1/release-channels?include_disabled=true",{method:"GET",cache:"no-store"},"billing");
@@ -107,6 +108,9 @@ export async function POST(req:Request){
       const customerReference=String(customer.data?.customer_number||"").trim();
       if(!customerReference)throw Object.assign(new Error("Customer has no Billing customer number"),{status:409});
       const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",channel,external_reference:customerReference})},"billing");
+      const label=String(authoritative.label||channel);
+      try{await notifyChannelCustomer(userId,{eventType:"release_channel.added",channel,label,message:`You've been added to the ${label} channel.`,severity:"success"})}
+      catch(notificationError){console.error("release channel grant notification failed",notificationError)}
       return Response.json({access:remote?.access||remote,authority:"license_manager"},{status:201});
     }
 
@@ -114,7 +118,13 @@ export async function POST(req:Request){
       const licenseId=String(body.licenseId||body.license_id||"").trim();
       const channel=String(body.channel||"").trim().toLowerCase();
       if(!licenseId||!channel)throw Object.assign(new Error("License and channel are required"),{status:400});
-      const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"revoke",license_id:licenseId,channel,external_reference:body.userId||body.user_id||null})},"billing");
+      const userId=String(body.userId||body.user_id||"").trim();
+      const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"revoke",license_id:licenseId,channel,external_reference:userId||null})},"billing");
+      if(userId){
+        const channels=await authoritativeChannels();const label=String(channels.find((x:any)=>String(x.channel)===channel)?.label||channel);
+        try{await notifyChannelCustomer(userId,{eventType:"release_channel.removed",channel,label,message:`You've been removed from the ${label} channel.`,severity:"warning"})}
+        catch(notificationError){console.error("release channel revoke notification failed",notificationError)}
+      }
       return Response.json({ok:true,access:remote?.access||null,authority:"license_manager"});
     }
 
@@ -122,14 +132,28 @@ export async function POST(req:Request){
       const licenseId=String(body.licenseId||body.license_id||"").trim();
       const channel=String(body.channel||"").trim().toLowerCase();
       if(!licenseId||!channel)throw Object.assign(new Error("License and channel are required"),{status:400});
-      return Response.json(await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:licenseId,channel,external_reference:body.customerReference||body.customer_reference||null})},"billing"));
+      const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"grant",license_id:licenseId,channel,external_reference:body.customerReference||body.customer_reference||null})},"billing");
+      const userId=String(body.userId||body.user_id||"").trim();
+      if(action==="approve"&&userId){
+        const channels=await authoritativeChannels();const label=String(channels.find((x:any)=>String(x.channel)===channel)?.label||channel);
+        try{await notifyChannelCustomer(userId,{eventType:"release_channel.request.approved",channel,label,message:`Your request was accepted. You've been added to the ${label} channel.`,severity:"success"})}
+        catch(notificationError){console.error("release channel approval notification failed",notificationError)}
+      }
+      return Response.json(remote);
     }
 
     if(action==="reject"){
       const licenseId=String(body.licenseId||body.license_id||"").trim();
       const channel=String(body.channel||"").trim().toLowerCase();
       if(!licenseId||!channel)throw Object.assign(new Error("License and channel are required"),{status:400});
-      return Response.json(await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"reject",license_id:licenseId,channel,reason:body.reason||null})},"billing"));
+      const remote=await masterRequest("/api/v1/release-channels/access",{method:"POST",body:JSON.stringify({action:"reject",license_id:licenseId,channel,reason:body.reason||null})},"billing");
+      const userId=String(body.userId||body.user_id||"").trim();
+      if(userId){
+        const channels=await authoritativeChannels();const label=String(channels.find((x:any)=>String(x.channel)===channel)?.label||channel);
+        try{await notifyChannelCustomer(userId,{eventType:"release_channel.request.denied",channel,label,message:`Your request to join the ${label} channel was denied.`,severity:"warning"})}
+        catch(notificationError){console.error("release channel rejection notification failed",notificationError)}
+      }
+      return Response.json(remote);
     }
 
     throw Object.assign(new Error("Unsupported release-channel action"),{status:400});
