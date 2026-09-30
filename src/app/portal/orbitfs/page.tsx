@@ -343,6 +343,18 @@ export default function MyOrbitFS(){
 
 
 
+    {panelReady&&install&&(activeOperation||latestOperation)&&<section className="panel orbitV5OperationPanel orbitV5InstalledProgress" style={{marginBottom:14}}>
+      <div className="panelTitle"><div><p className="eyebrow">DEPLOYMENT STATUS</p><h2>{activeOperation?label(activeOperation.action)+" · "+label(activeOperation.state):latestOperation?.state==="failed"?"Last deployment attempt failed":"Recent deployment activity"}</h2><p className="muted">{activeOperation?"Live Base operation. This page refreshes every 5 seconds until it finishes.":"Latest Base deployment operation recorded by Billing Store."}</p></div><span className={"state "+(activeOperation?"current":latestOperation?.state==="completed"?"ready":"waiting")}>{String(activeOperation?.state||latestOperation?.state||"status").replaceAll("_"," ").toUpperCase()}</span></div>
+      {activeOperation&&<div className="portalOverviewStats" style={{marginTop:10}}>
+        <div className="portalStatCard"><div><small>ACTION</small><strong>{label(activeOperation.action)}</strong><span>{activeOperation.detail?.version||activeOperation.requested_release_id||"Current release"}</span></div></div>
+        <div className="portalStatCard"><div><small>STAGE</small><strong>{label(activeOperation.state)}</strong><span>{activeOperation.heartbeat_at?"Updated "+new Date(activeOperation.heartbeat_at).toLocaleTimeString():"Waiting for progress"}</span></div></div>
+        <div className="portalStatCard"><div><small>VERCEL</small><strong>{activeOperation.vercel_deployment_id||"Waiting"}</strong><span>{activeOperation.vercel_project_id||install.vercel_project_name||"Existing project"}</span></div></div>
+        <div className="portalStatCard"><div><small>STARTED</small><strong>{activeOperation.created_at?new Date(activeOperation.created_at).toLocaleTimeString():"Now"}</strong><span>{activeOperation.created_at?new Date(activeOperation.created_at).toLocaleDateString():""}</span></div></div>
+      </div>}
+      {!activeOperation&&latestOperation?.error_detail&&<p className="inlineStatus" style={{marginTop:10}}><b>{latestOperation.error_code||"Error"}:</b> {latestOperation.error_detail}</p>}
+      <details style={{marginTop:10}}><summary style={summaryStyle}><b>Recent operations</b> · {operations.length}</summary><div style={{marginTop:8}}>{operations.slice(0,6).map((op:any)=><div className="listrow" key={op.id}><div><b>{label(op.action)} · {label(op.state)}</b><span>{op.error_detail||op.detail?.version||op.requested_release_id||"Deployment operation"}</span></div><span>{op.created_at?new Date(op.created_at).toLocaleString():""}</span></div>)}</div></details>
+    </section>}
+
     {binding?<>
       {panelReady&&<section className="panel orbitZipControlPanel">
         <div className="orbitZipControlTop">
