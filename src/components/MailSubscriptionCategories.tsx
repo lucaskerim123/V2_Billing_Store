@@ -38,6 +38,7 @@ export default function MailSubscriptionCategories({
   const [newKey,setNewKey]=useState("");
   const [keyEdited,setKeyEdited]=useState(false);
   const [newDescription,setNewDescription]=useState("");
+  const [eventSearch,setEventSearch]=useState("");
   useEffect(()=>setDrafts(Object.fromEntries(categories.map(c=>[c.category_key,{...c}]))),[categories]);
   const sorted=useMemo(()=>[...categories].sort((a,b)=>a.sort_order-b.sort_order||a.label.localeCompare(b.label)),[categories]);
   const map=useMemo(()=>Object.fromEntries(events.map(e=>[e.event_key,e.category_key])),[events]);
@@ -70,23 +71,27 @@ export default function MailSubscriptionCategories({
       <div><h3>Customer email categories</h3><p>Customers start subscribed. These categories appear in Account Settings and control the actual mail-sending paths.</p></div>
       <span className={styles.count}>{sorted.length} categories</span>
     </div>
-    <div className={styles.grid}>
+    <details className={styles.categoryDrawer}>
+      <summary className={styles.drawerSummary}><span>Manage subscription categories</span><span className={styles.count}>{sorted.length} categories</span></summary>
+      <div className={styles.grid}>
       {sorted.map(c=>{
         const d=drafts[c.category_key]||c;
         const eventCount=automations.filter(a=>(map[a.event_key]||inferred(a.event_key))===c.category_key).length;
-        return <article className={styles.card} key={c.category_key}>
-          <div className={styles.cardTop}><span className={styles.key}>{c.category_key.replaceAll("_"," ")}</span>{c.required?<span className={styles.required}>Mandatory</span>:<span className={styles.optional}>Optional</span>}</div>
-          <label className={styles.field}>Customer-facing category name<input value={d.label} maxLength={80} onChange={e=>patch(c.category_key,{label:e.target.value})}/></label>
-          <label className={styles.field}>Description<textarea rows={3} maxLength={400} value={d.description} onChange={e=>patch(c.category_key,{description:e.target.value})}/></label>
-          <div className={styles.controls}>
-            <label><input type="checkbox" checked={d.required||d.default_subscribed} disabled={d.required} onChange={e=>patch(c.category_key,{default_subscribed:e.target.checked})}/><span>Default subscribed</span></label>
-            <label><input type="checkbox" checked={d.required||d.enabled} disabled={d.required} onChange={e=>patch(c.category_key,{enabled:e.target.checked})}/><span>Category enabled</span></label>
+        return <details className={styles.card} key={c.category_key}>
+          <summary className={styles.cardTop}>
+            <span className={styles.cardTitle}><b>{c.label}</b><small>{c.category_key.replaceAll("_"," ")} · {c.required?"Mandatory":eventCount+" linked events"}</small></span>
+            <span className={c.required?styles.required:styles.optional}>{c.required?"Required":c.enabled?"Optional":"Paused"}</span>
+          </summary>
+          <div className={styles.cardBody}>
+            <label className={styles.field}>Customer-facing category name<input value={d.label} maxLength={80} onChange={e=>patch(c.category_key,{label:e.target.value})}/></label>
+            <label className={styles.field}>Description<textarea rows={2} maxLength={400} value={d.description} onChange={e=>patch(c.category_key,{description:e.target.value})}/></label>
+            <div className={styles.controls}>
+              <label><input type="checkbox" checked={d.required||d.default_subscribed} disabled={d.required} onChange={e=>patch(c.category_key,{default_subscribed:e.target.checked})}/><span>Subscribed by default</span></label>
+              <label><input type="checkbox" checked={d.required||d.enabled} disabled={d.required} onChange={e=>patch(c.category_key,{enabled:e.target.checked})}/><span>Category enabled</span></label>
+            </div>
+            <div className={styles.cardFoot}><small>{c.required?"Critical messages cannot be turned off":eventCount+" linked email events"}</small><button type="button" disabled={busy!==""} onClick={()=>saveCategory(c)}>{busy===c.category_key?"Saving…":"Save category"}</button></div>
           </div>
-          <div className={styles.cardFoot}>
-            <small>{c.required?"Cannot be unsubscribed from":eventCount+" linked mail events"}</small>
-            <button type="button" disabled={busy!==""} onClick={()=>saveCategory(c)}>{busy===c.category_key?"Saving…":"Save"}</button>
-          </div>
-        </article>;
+        </details>;
       })}
     </div>
     <details className={styles.addCategory}><summary>Add another optional category</summary>
@@ -98,18 +103,34 @@ export default function MailSubscriptionCategories({
       </div>
       <p className={styles.help}>New categories start enabled and subscribed by default. Assign events below to make them control delivery. Disable a category to pause it without removing existing customer choices.</p>
     </details>
-    {showEvents&&<details className={styles.routing}><summary>Mail event routing <span>{automations.length} automations</span></summary>
-      <p>Each automation belongs to one customer subscription category. Security, payment and deployment-problem events are always mandatory, regardless of the dropdown.</p>
-      <div className={styles.eventList}>
-        {[...automations].sort((a,b)=>a.event_key.localeCompare(b.event_key)).map(a=>{
-          const critical=isCritical(a.event_key);
-          const categoryKey=critical?"system":map[a.event_key]||inferred(a.event_key);
-          return <div className={styles.event} key={a.event_key}>
-            <div><b>{a.name}</b><small>{a.event_key}</small><small>{a.template_key?available.has(a.template_key)?"Template: "+a.template_key:"Template missing: "+a.template_key:"No template assigned"}</small></div>
-            <div className={styles.eventControl}><select aria-label={a.name+" category"} disabled={critical||busy!==""} value={categoryKey} onChange={e=>assignEvent(a.event_key,e.target.value)}>
-              {sorted.map(c=><option key={c.category_key} value={c.category_key}>{c.label}</option>)}
-            </select>{critical&&<small>Locked · mandatory</small>}</div>
-          </div>;
+    </details>
+    {showEvents&&<details className={styles.routing}>
+      <summary>Mail event routing <span>{automations.length} automations</span></summary>
+      <p>Choose a category to view its events. Security, payment and deployment-problem events always stay mandatory.</p>
+      <input className={styles.eventSearch} placeholder="Find an automation…" value={eventSearch} onChange={e=>setEventSearch(e.target.value)} aria-label="Search mail events"/>
+      <div className={styles.eventGroups}>
+        {sorted.map(c=>{
+          const members=[...automations].filter(a=>(isCritical(a.event_key)?"system":map[a.event_key]||inferred(a.event_key))===c.category_key)
+            .filter(a=>`${a.name} ${a.event_key} ${a.template_key||""}`.toLowerCase().includes(eventSearch.toLowerCase()))
+            .sort((a,b)=>a.event_key.localeCompare(b.event_key));
+          if(!members.length)return null;
+          return <details className={styles.eventGroup} key={c.category_key} open={eventSearch.trim()?true:undefined}>
+            <summary>{c.label} <small>{members.length} events</small></summary>
+            <div className={styles.eventList}>
+              {members.map(a=>{
+                const critical=isCritical(a.event_key);
+                const categoryKey=critical?"system":map[a.event_key]||inferred(a.event_key);
+                return <div className={styles.event} key={a.event_key}>
+                  <div><b>{a.name}</b><small>{a.event_key}</small><small>{a.template_key?available.has(a.template_key)?"Template: "+a.template_key:"Template missing: "+a.template_key:"No template assigned"}</small></div>
+                  <div className={styles.eventControl}>
+                    <select aria-label={a.name+" category"} disabled={critical||busy!==""} value={categoryKey} onChange={e=>assignEvent(a.event_key,e.target.value)}>
+                      {sorted.map(option=><option key={option.category_key} value={option.category_key} disabled={!critical&&option.required}>{option.label}</option>)}
+                    </select>{critical&&<small>Locked · mandatory</small>}
+                  </div>
+                </div>;
+              })}
+            </div>
+          </details>;
         })}
       </div>
     </details>}
