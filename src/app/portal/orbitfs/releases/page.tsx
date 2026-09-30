@@ -278,9 +278,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     Array.isArray(publishedUpdates.find(release=>idOf(release)===progressTarget)?.components)?
       publishedUpdates.find(release=>idOf(release)===progressTarget)?.components||[]:updateComponents;
   const phases=progressMode==="rollback"?[
-    {label:"Authorize rollback",start:"update.rollback.started",end:"update.rollback.completed"},
-    {label:"Restore saved components",start:"update.rollback.started",end:"update.rollback.completed"},
-    {label:"Record rollback",start:"update.rollback.started",end:"update.rollback.completed"}
+    {label:"Authorized rollback and recovery",start:"update.rollback.started",end:"update.rollback.completed"}
   ]:[
     {label:"Validate artifact & authorize",start:"update.started",end:"update.database.started"},
     {label:"Database migrations",start:"update.database.started",end:"update.database.completed"},
