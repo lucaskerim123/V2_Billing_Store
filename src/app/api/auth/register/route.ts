@@ -49,7 +49,7 @@ export async function POST(req:Request){
  try{
   await setOrbitPassword(user.id,password);
   const {error:customerError}=await client.from("customers").insert({
-   user_id:user.id,email,name:username,username,display_name:username,status:"active",
+   user_id:user.id,auth_user_id:user.id,email,name:username,username,display_name:username,status:"active",
    email_verified_at:requireVerification?null:now,metadata:{registration_source:"public"},updated_at:now
   });
   if(customerError)throw customerError;
