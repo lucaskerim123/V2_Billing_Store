@@ -652,9 +652,10 @@ async function reportDeploymentFailure(install:any,input:{action:DeployAction;re
   const message=errorMessage(error,"Deployment failed");
   await Promise.allSettled([
     masterExecuteDeployment({action:input.action,phase:"failed",releaseId:input.releaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:input.licenseId,channel:input.channel,productVersion:input.productVersion,previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null,error:message}),
-    // An Update failure is not evidence that the previously installed Base failed.
-    // Preserve Base state; report the Update failure separately through authority + events.
-    ...(input.action==="update"&&!(error as any)?.updateRecovery?.panel?.ok===false&&!(error as any)?.updateRecovery?.engine?.ok===false?[]:[
+    // Update execution is separate from Base installation health. A rejected
+    // or failed Update must never overwrite an otherwise valid Base install
+    // as failed; Update state is reported through deployment authority + events.
+    ...(input.action==="update"?[]:[
       licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message}).eq("id",install.id)
     ]),
     event(install,input.action==="base_update"?"base.update.failed":input.action==="update"?"update.failed":input.action==="rollback"?"deployment.rollback.failed":"deployment.failed","error",message,{action:input.action,releaseId:input.releaseId})
