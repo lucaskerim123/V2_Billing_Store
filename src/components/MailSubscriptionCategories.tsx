@@ -36,6 +36,7 @@ export default function MailSubscriptionCategories({
   const [message,setMessage]=useState("");
   const [newLabel,setNewLabel]=useState("");
   const [newKey,setNewKey]=useState("");
+  const [keyEdited,setKeyEdited]=useState(false);
   const [newDescription,setNewDescription]=useState("");
   useEffect(()=>setDrafts(Object.fromEntries(categories.map(c=>[c.category_key,{...c}]))),[categories]);
   const sorted=useMemo(()=>[...categories].sort((a,b)=>a.sort_order-b.sort_order||a.label.localeCompare(b.label)),[categories]);
@@ -55,7 +56,7 @@ export default function MailSubscriptionCategories({
     if(categories.some(c=>c.category_key===key)){setMessage("A category with this key already exists.");return}
     setBusy("new-category");setMessage("");
     const ok=await onSave({action:"subscription_category",key,label:newLabel.trim(),description:newDescription.trim(),defaultSubscribed:true,enabled:true,sortOrder:sorted.length?Math.max(...sorted.map(c=>c.sort_order))+10:10});
-    if(ok){setNewLabel("");setNewKey("");setNewDescription("");setMessage("Category added and subscribed by default.");}else setMessage("Could not create the category.");
+    if(ok){setNewLabel("");setNewKey("");setNewDescription("");setKeyEdited(false);setMessage("Category added and subscribed by default.");}else setMessage("Could not create the category.");
     setBusy("");
   }
   async function assignEvent(eventKey:string,categoryKey:string){
@@ -90,8 +91,8 @@ export default function MailSubscriptionCategories({
     </div>
     <details className={styles.addCategory}><summary>Add another optional category</summary>
       <div className={styles.newCategoryForm}>
-        <label className={styles.field}>Category name<input value={newLabel} maxLength={80} onChange={e=>{const value=e.target.value;setNewLabel(value);if(!newKey)setNewKey(value.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,48))}} placeholder="Maintenance announcements"/></label>
-        <label className={styles.field}>Category key<input value={newKey} maxLength={48} onChange={e=>setNewKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,""))} placeholder="maintenance_announcements"/></label>
+        <label className={styles.field}>Category name<input value={newLabel} maxLength={80} onChange={e=>{const value=e.target.value;setNewLabel(value);if(!keyEdited)setNewKey(value.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,48))}} placeholder="Maintenance announcements"/></label>
+        <label className={styles.field}>Category key<input value={newKey} maxLength={48} onChange={e=>{setKeyEdited(true);setNewKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,""))}} placeholder="maintenance_announcements"/></label>
         <label className={styles.field}>Description<textarea rows={2} maxLength={400} value={newDescription} onChange={e=>setNewDescription(e.target.value)} placeholder="What will customers receive?"/></label>
         <button type="button" disabled={busy!==""} onClick={addCategory}>{busy==="new-category"?"Adding…":"Add category"}</button>
       </div>
