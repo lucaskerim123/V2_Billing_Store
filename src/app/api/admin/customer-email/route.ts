@@ -2,6 +2,7 @@ import {createClient} from "@supabase/supabase-js";
 import {wrapOrbitFsHtml,wrapOrbitFsText} from "@/lib/mail-branding";
 import {loadMailRuntimeConfig,resolveMailDeliveryIdentity} from "@/lib/mail-config-server";
 import {orbitfsStoreOrigin} from "@/lib/site-origin";
+import {customerAllowsMail} from "@/lib/mail-subscriptions-server";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const pub=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -62,6 +63,8 @@ export async function POST(req:Request){
  const relatedType=["customer","invoice","order"].includes(String(b.relatedType||""))?String(b.relatedType):"customer";
  const relatedId=String(b.relatedId||id);
  const eventType=String(b.eventType||`admin.quick_send.${relatedType}`);
+ const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY||"";if(!serviceKey)return Response.json({error:"Mail subscription verification unavailable."},{status:503});
+ try{const mailDb=createClient(url,serviceKey,{auth:{persistSession:false}});if(!(await customerAllowsMail(mailDb,String(snap.email),eventType,templateKey||null)))return Response.json({ok:true,skipped:true,reason:"unsubscribed"});}catch{return Response.json({error:"Mail subscription verification failed."},{status:503});}
  const {data:prep,error:pe}=await c.db.rpc("mail_prepare_delivery",{p_template_key:templateKey||null,p_event_type:eventType,p_related_type:relatedType,p_related_id:relatedId,p_recipient:snap.email,p_sender:identity.from,p_subject:subject});
  if(pe||!prep?.reference_id)return Response.json({error:pe?.message||"Could not prepare email record."},{status:500});
 
