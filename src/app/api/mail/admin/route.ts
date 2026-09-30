@@ -5,13 +5,14 @@ export async function GET(req:Request){
   const ctx:any=await requireMailUser(req);if(ctx.error)return ctx.error;
   const canAdmin=isMailAdmin(ctx)||isMailAdmin(ctx,'mail.settings')||isMailAdmin(ctx,'mail.templates')||isMailAdmin(ctx,'mail.queue.view')||isMailAdmin(ctx,'mail.queue.manage');
   if(!canAdmin)return Response.json({error:'Mail administration denied.'},{status:403});
-  const [{data,error},{data:queue,error:queueError},config]=await Promise.all([ctx.db.rpc('mail_admin_snapshot'),ctx.db.rpc('mail_admin_queue_snapshot'),loadMailRuntimeConfig(ctx.db)]);
+  const [{data,error},{data:queue,error:queueError},config,{data:subscriptionCategories,error:categoriesError},{data:subscriptionEvents,error:eventsError}]=await Promise.all([ctx.db.rpc('mail_admin_snapshot'),ctx.db.rpc('mail_admin_queue_snapshot'),loadMailRuntimeConfig(ctx.db),ctx.db.from('mail_subscription_categories').select('*').order('sort_order'),ctx.db.from('mail_subscription_events').select('event_key,category_key')]);
   if(error)return Response.json({error:error.message},{status:500});
   if(queueError)return Response.json({error:queueError.message},{status:500});
+  if(categoriesError||eventsError)return Response.json({error:categoriesError?.message||eventsError?.message},{status:500});
   if(!data)return Response.json({error:'Mail administration denied.'},{status:403});
   const outboundConfigured=!!String(process.env.RESEND_API_KEY||'').trim();
   const inboundConfigured=!!String(process.env.RESEND_MAIL_API_KEY||process.env.RESEND_API_KEY||'').trim();
-  return Response.json({...data,queue:queue||{summary:{},queue:[],stuck_logs:[]},runtimeConfig:config,provider:{name:'Resend transport',apiKeyConfigured:outboundConfigured,mailApiKeyConfigured:inboundConfigured,separateMailApiKeyConfigured:!!String(process.env.RESEND_MAIL_API_KEY||'').trim(),secretsLocation:'Vercel environment'}})
+  return Response.json({...data,subscriptionCategories:subscriptionCategories||[],subscriptionEvents:subscriptionEvents||[],queue:queue||{summary:{},queue:[],stuck_logs:[]},runtimeConfig:config,provider:{name:'Resend transport',apiKeyConfigured:outboundConfigured,mailApiKeyConfigured:inboundConfigured,separateMailApiKeyConfigured:!!String(process.env.RESEND_MAIL_API_KEY||'').trim(),secretsLocation:'Vercel environment'}})
 }
 
 export async function PUT(req:Request){
@@ -60,6 +61,26 @@ export async function PUT(req:Request){
     if(!isMailAdmin(ctx,'mail.settings'))return Response.json({error:'Mail settings permission required.'},{status:403});
     const {error}=await ctx.db.rpc('mail_admin_save_automation',{p_event_key:String(b.eventKey||''),p_template_key:b.templateKey?String(b.templateKey):null,p_enabled:b.enabled!==false});
     return error?Response.json({error:error.message},{status:403}):Response.json({ok:true});
+  }
+  if(b.action==='subscription_category'){
+    if(!isMailAdmin(ctx,'mail.settings'))return Response.json({error:'Mail settings permission required.'},{status:403});
+    const {data,error}=await ctx.db.rpc('mail_admin_save_subscription_category',{
+      p_key:String(b.key||''),
+      p_label:String(b.label||''),
+      p_description:String(b.description||''),
+      p_default_subscribed:b.defaultSubscribed!==false,
+      p_enabled:b.enabled!==false,
+      p_sort_order:Number(b.sortOrder??100)
+    });
+    return error?Response.json({error:error.message},{status:403}):Response.json(data||{ok:true});
+  }
+  if(b.action==='subscription_event'){
+    if(!isMailAdmin(ctx,'mail.settings'))return Response.json({error:'Mail settings permission required.'},{status:403});
+    const {data,error}=await ctx.db.rpc('mail_admin_assign_subscription_event',{
+      p_event_key:String(b.eventKey||''),
+      p_category_key:String(b.categoryKey||'')
+    });
+    return error?Response.json({error:error.message},{status:403}):Response.json(data||{ok:true});
   }
   if(b.action==='queue'){
     if(!isMailAdmin(ctx,'mail.queue.manage'))return Response.json({error:'Mail queue manage permission required.'},{status:403});
