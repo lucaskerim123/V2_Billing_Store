@@ -28,7 +28,7 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
 
  async function load(){
   const {data:{session}}=await sb.auth.getSession();
-  if(!session?.access_token){setMsg("Administrator session expired. Sign in again.");return;}
+  if(!session?.access_token){setMsg("Administrator session expired. Sign in again.");return false;}
   const [response,c,o,i,t,l,ac,au]=await Promise.all([
    fetch(`/api/admin/customers/${id}/profile`,{headers:{authorization:`Bearer ${session.access_token}`},cache:"no-store"}),
    sb.from("account_balances").select("*").eq("user_id",id).single(),
@@ -40,9 +40,10 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
    sb.from("admin_audit_log").select("*").or(`target_id.eq.${id},actor_id.eq.${id}`).order("created_at",{ascending:false}).limit(100)
   ]);
   const detail=await response.json().catch(()=>({}));
-  if(!response.ok){setMsg(detail.error||"Could not load customer profile.");return;}
+  if(!response.ok){setMsg(detail.error||"Could not load customer profile.");return false;}
   const profile=detail.profile,customer=detail.customer;
   setP({...customer,...profile,id,customer_id:customer.id,name:customer.name,email:customer.email,username:customer.username,customer_number:customer.customer_number||profile.customer_number,status:customer.status||profile.status,email_verified_at:customer.email_verified_at||profile.email_verified_at});setB(c.data);setOrders(o.data||[]);setInvoices(i.data||[]);setTickets(t.data||[]);setLedger(l.data||[]);setActivity(ac.data?.events||[]);setIpSummary(ac.data?.ips||[]);setAudit(au.data||[]);
+  return true;
  }
 
  useEffect(()=>{load();loadMail()},[id]);
@@ -133,8 +134,8 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
    const response=await fetch(`/api/admin/customers/${id}/profile`,{method:"PATCH",headers:{"content-type":"application/json",authorization:`Bearer ${session.access_token}`},body:JSON.stringify(changes)});
    const result=await response.json().catch(()=>({}));
    if(!response.ok||!result.ok){setMsg(result.error||"Customer update failed.");return;}
-   await load();
-   setMsg("Customer updated and verified.");
+   const reloaded=await load();
+   if(reloaded)setMsg("Customer updated and verified.");
   }catch(e:any){setMsg(e?.message||"Customer update failed.");}
  }
  async function sendReset(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token){setMsg("Authentication required.");return}const r=await fetch("/api/admin/customers/password-reset",{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${session.access_token}`},body:JSON.stringify({userId:id})});const j=await r.json().catch(()=>({}));setMsg(r.ok?(j.message||"Password reset sent."):(j.error||"Could not send password reset."))}
