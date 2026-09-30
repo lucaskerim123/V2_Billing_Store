@@ -152,7 +152,16 @@ export async function GET(req:Request){
   let presentationOverrides:any[]=[];
   if(publishedIds.length){const result=await q(db.from("orbitfs_release_presentation_overrides").select("*").in("release_id",publishedIds));presentationOverrides=result.data||[];}
   const presentationMap=new Map(presentationOverrides.map((o:any)=>[String(o.release_id),o]));
-  const publishedMaster=[...masterReleaseRows].filter((r:any)=>String(r.status||"")==="published").map((r:any)=>{const m=r.manifest&&typeof r.manifest==="object"?r.manifest:{},o=presentationMap.get(String(r.id));return {...r,title:o?.title??m.title??`OrbitFS ${r.release_type==="base"?"Base":"Update"} ${r.version}`,description:o?.description??m.description??null,changelog:o?.changelog??m.customer_changelog??m.customerChangelog??r.notes??null,customer_notes:o?.customer_notes??m.customer_notes??m.customerNotes??"",severity:m.severity||"normal",required:m.required===true,rollout:m.rollout||"public",minimum_version:m.minimum_version||m.minimumVersion||null,rollback_version:m.rollback_version||m.rollbackVersion||null,components:Array.isArray(m.components)?m.components:[]}});
+  const entitledComponents=base?.components&&typeof base.components==="object"?base.components:{};
+  const updateVisibleToLicence=(release:any)=>{
+    if(String(release?.release_type||"")!=="update")return true;
+    const manifest=release?.manifest&&typeof release.manifest==="object"?release.manifest:{};
+    const targets=(Array.isArray(manifest.components)?manifest.components:[]).map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean);
+    if(targets.some((component:string)=>["base","orbitfs_base","core"].includes(component)))return true;
+    const engineTargets=targets.filter((component:string)=>["apex","mcp","studio"].includes(component));
+    return engineTargets.length===0||engineTargets.some((component:string)=>Boolean(entitledComponents["orbitfs_"+component]));
+  };
+  const publishedMaster=[...masterReleaseRows].filter((r:any)=>String(r.status||"")==="published"&&updateVisibleToLicence(r)).map((r:any)=>{const m=r.manifest&&typeof r.manifest==="object"?r.manifest:{},o=presentationMap.get(String(r.id));return {...r,title:o?.title??m.title??`OrbitFS ${r.release_type==="base"?"Base":"Update"} ${r.version}`,description:o?.description??m.description??null,changelog:o?.changelog??m.customer_changelog??m.customerChangelog??r.notes??null,customer_notes:o?.customer_notes??m.customer_notes??m.customerNotes??"",severity:m.severity||"normal",required:m.required===true,rollout:m.rollout||"public",minimum_version:m.minimum_version||m.minimumVersion||null,rollback_version:m.rollback_version||m.rollbackVersion||null,components:Array.isArray(m.components)?m.components:[]}});
   const selectedChannel=String(install?.release_channel||allowedChannels[0]||"stable");
   const latestMaster=(type:string)=>publishedMaster.filter((r:any)=>String(r.release_type||"")===type&&String(r.channel||"stable")===selectedChannel).sort((a:any,b:any)=>String(b.published_at||b.publishedAt||"").localeCompare(String(a.published_at||a.publishedAt||""))||String(b.version).localeCompare(String(a.version),undefined,{numeric:true}))[0]||null;
   const latestBase=latestMaster("base"),latestUpdate=latestMaster("update");
