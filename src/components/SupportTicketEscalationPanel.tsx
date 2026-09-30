@@ -66,7 +66,7 @@ export default function SupportTicketEscalationPanel(){
           <h2>{currentDepartment?.name||"No department"} · {assigned?.display_name||"Unassigned"}</h2>
           <p className="muted">{LEVELS[current]} routing · {claimRequired?"Claim required":closed?"Closed":status||"Open"}</p>
         </div>
-        <span className="supportCommandToggleLabel">{open?"Collapse":"Expand controls"} {open?"↑":"↓"}</span>
+        <span className="supportCommandToggleLabel">{open?"Hide controls":"Show controls"} {open?"↑":"↓"}</span>
       </button>
       <div className="supportCommandHeadBadges">
         <span className={closed?"supportState closed":"supportState open"}>{closed?"Closed":status||"Open"}</span>
@@ -82,8 +82,8 @@ export default function SupportTicketEscalationPanel(){
     {claimRequired&&<div className="supportEscalationAlert compact"><b>Claim required</b><span>{targetClaimLabel} or a higher authorised support tier must claim this handoff before reassignment.</span></div>}
 
     <div className="supportCommandGrid">
-      <label><span>Department</span>{(can("support.department")||can("support.manage"))?<select value={t.department_id||""} onChange={e=>department(e.target.value)} disabled={busy}>{(data.departments||[]).map((d:any)=><option value={d.id} key={d.id}>{d.name}</option>)}</select>:<strong>{currentDepartment?.name||"—"}</strong>}</label>
-      <label><span>Owner</span>{claimRequired?<strong>Unassigned · awaiting claim</strong>:(can("support.assign")||can("support.transfer")||can("support.manage")?<select value={t.assigned_to||""} onChange={e=>update({assigned_to:e.target.value||null},e.target.value?(t.assigned_to?"transfer":"assign"):"unassign")} disabled={busy}><option value="">Unassigned</option>{(data.staff||[]).map((s:any)=><option value={s.user_id} key={s.user_id}>{s.display_name} · {s.rank_label}</option>)}</select>:<strong>{assigned?.display_name||"Unassigned"}</strong>)}</label>
+      <label><span>Transfer to department</span>{(can("support.department")||can("support.manage"))?<select value={t.department_id||""} onChange={e=>department(e.target.value)} disabled={busy}>{(data.departments||[]).map((d:any)=><option value={d.id} key={d.id}>{d.name}</option>)}</select>:<strong>{currentDepartment?.name||"—"}</strong>}</label>
+      <label><span>Assign / transfer staff</span>{claimRequired?<strong>Unassigned · awaiting claim</strong>:(can("support.assign")||can("support.transfer")||can("support.manage")?<select value={t.assigned_to||""} onChange={e=>update({assigned_to:e.target.value||null},e.target.value?(t.assigned_to?"transfer":"assign"):"unassign")} disabled={busy}><option value="">Unassigned</option>{(data.staff||[]).map((s:any)=><option value={s.user_id} key={s.user_id}>{s.display_name} · {s.rank_label}</option>)}</select>:<strong>{assigned?.display_name||"Unassigned"}</strong>)}</label>
       <div className="supportCommandMeta"><span>Escalation</span><strong>{current?LEVELS[current]:"None"}</strong><small>{t.escalated_at?new Date(t.escalated_at).toLocaleString():"Not escalated"}</small></div>
       <div className="supportCommandMeta"><span>Current owner</span><strong>{assigned?.display_name||"Unassigned"}</strong><small>{isMine?"Assigned to you":" "}</small></div>
     </div>
