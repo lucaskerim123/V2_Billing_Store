@@ -57,7 +57,15 @@ export async function notifyChannelCustomer(userId:string,input:{
 
 export async function notifyChannelRequestAdmins(input:{channel:string;label?:string|null;customerName:string;customerUserId:string;requestId?:string|null}){
   const db=licenseDb();
-  const staff=await db.from("staff_members").select("user_id").eq("status","active");
+  const groups=await db.from("staff_groups").select("id").in("slug",["admin","superadmin"]).eq("is_active",true);
+  if(groups.error)throw groups.error;
+  const groupIds=(groups.data||[]).map((x:any)=>String(x.id||"")).filter(Boolean);
+  if(!groupIds.length)return;
+  const memberships=await db.from("staff_member_groups").select("user_id").in("group_id",groupIds);
+  if(memberships.error)throw memberships.error;
+  const memberIds=[...new Set((memberships.data||[]).map((x:any)=>String(x.user_id||"")).filter(Boolean))];
+  if(!memberIds.length)return;
+  const staff=await db.from("staff_members").select("user_id").eq("status","active").in("user_id",memberIds);
   if(staff.error)throw staff.error;
   const recipients=[...new Set((staff.data||[]).map((x:any)=>String(x.user_id||"")).filter(Boolean))];
   await Promise.all(recipients.map(userId=>insertNotification({
