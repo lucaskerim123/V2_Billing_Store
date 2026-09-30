@@ -3,6 +3,10 @@ import {createClient} from "@supabase/supabase-js";
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY||"";
+// Keep the helper parameter tied to the configured service client, rather than
+// ReturnType<typeof createClient> (which loses the inferred schema generics).
+const serviceClient=()=>createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
+type ServiceClient=ReturnType<typeof serviceClient>;
 const validId=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const editable=["display_name","first_name","last_name","company_name","phone","address_line1","address_line2","city","state_region","postal_code","country_code","timezone","currency","language","admin_notes","enforcement_notes"] as const;
 
@@ -18,10 +22,10 @@ async function context(req:Request){
  const canView=permissions.all===true||permissions["customers.view"]===true||permissions["customers.edit"]===true;
  const canEdit=permissions.all===true||permissions["customers.edit"]===true;
  if(!canView)return {error:"Customer access denied.",status:403} as const;
- return {db:createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}}),user,canEdit} as const;
+ return {db:serviceClient(),user,canEdit} as const;
 }
 
-async function getProfile(db:ReturnType<typeof createClient>,id:string){
+async function getProfile(db:ServiceClient,id:string){
  const [profile,customer]=await Promise.all([
   db.from("user_profiles").select("*").eq("id",id).maybeSingle(),
   db.from("customers").select("*").or(`auth_user_id.eq.${id},user_id.eq.${id}`).maybeSingle()
