@@ -838,3 +838,38 @@ html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Support .buttonlink{
   html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigWorkspace>.panel,
   html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveWorkspace>.panel{padding:13px!important}
 }
+
+/* Final V5C sizing for Steps 2, 5 and installed Step 6. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5DatabaseStep .form{
+  max-width:780px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveProgress .portalOverviewStats{
+  display:grid!important;grid-template-columns:repeat(auto-fit,minmax(155px,1fr))!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveProgress .portalStatCard{
+  min-width:0!important;overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed .orbitV5ControlHero{
+  padding:18px 21px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed .orbitZipControlPanel{
+  padding:17px 21px!important;gap:12px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed .portalStatCard{
+  padding:12px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed .portalOverviewBottom{
+  gap:10px!important;padding:0 21px 18px!important;
+}
+@media(max-width:650px){
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed .orbitV5ControlHero{
+    padding:17px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed .orbitZipControlPanel{
+    padding:14px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed .portalOverviewBottom{
+    padding:0 14px 14px!important;
+  }
+}
