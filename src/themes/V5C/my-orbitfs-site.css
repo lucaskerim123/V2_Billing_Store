@@ -432,3 +432,44 @@ html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipWorkspace>.orbitZipCan
   }
   html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ReleaseStep .form button{grid-column:1!important}
 }
+
+/* Supplied Review deployment screen: live, backend-derived summary. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Requirements{
+  display:flex!important;flex-direction:column!important;gap:11px!important;
+  border:1px solid #205366!important;padding:23px 26px!important;
+  background:#092c3d!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Requirements[hidden]{display:none!important}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:9px 0;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid>div{
+  display:flex;flex-direction:column;gap:5px;border:1px solid #1c5364;
+  border-radius:9px;background:#0a3648;padding:16px;min-width:0;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid small{
+  font-size:10px;color:#8ad5d9;letter-spacing:.07em;font-weight:800;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid b{
+  font-size:15px;color:#f0faff;overflow-wrap:anywhere;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid span{
+  font-size:12px;color:#98bbcb;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers{
+  padding:14px 17px;border:1px solid #225567;border-radius:9px;background:#082536;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers h3{
+  font-size:16px!important;margin:0 0 8px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers ul{
+  display:grid;gap:8px;padding:0 0 0 21px;margin:0;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers li{
+  font-size:12px;line-height:1.5;color:#f4d9a8;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers li.ready{color:#7be8ce}
+@media(max-width:600px){
+  html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid{grid-template-columns:1fr}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Requirements{padding:18px!important}
+}
