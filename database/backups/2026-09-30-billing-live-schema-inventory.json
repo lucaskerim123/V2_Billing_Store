@@ -1,0 +1,1222 @@
+{
+  "jobs": [
+    {
+      "name": "orbitfs-support-auto-close",
+      "active": true,
+      "schedule": "37 * * * *"
+    },
+    {
+      "name": "orbitfs-guest-support-expiry",
+      "active": true,
+      "schedule": "17 * * * *"
+    }
+  ],
+  "scope": "live metadata only, not restorable SQL",
+  "views": [
+    "admin_metrics"
+  ],
+  "bucket": [
+    {
+      "id": "support-attachments",
+      "limit": 26214400,
+      "private": true
+    }
+  ],
+  "tables": [
+    "account_activity",
+    "account_balances",
+    "admin_audit_log",
+    "app_settings",
+    "coupon_redemptions",
+    "coupons",
+    "credit_ledger",
+    "custom_field_definitions",
+    "custom_field_values",
+    "customer_credentials",
+    "customer_sessions",
+    "customers",
+    "download_entitlements",
+    "enforcement_settings",
+    "gift_deliveries",
+    "guest_support_access_attempts",
+    "invoice_items",
+    "invoice_payments",
+    "invoice_refunds",
+    "invoices",
+    "license_api_clients",
+    "license_api_settings",
+    "license_bindings",
+    "license_controller_requests",
+    "license_enforcement_queue",
+    "license_fulfillments",
+    "license_installations",
+    "license_key_deliveries",
+    "license_key_delivery",
+    "license_master_connection",
+    "license_revision",
+    "license_validation_log",
+    "mail_account_access",
+    "mail_accounts",
+    "mail_automations",
+    "mail_delivery_log",
+    "mail_event_outbox",
+    "mail_message_state",
+    "mail_messages",
+    "mail_settings",
+    "mail_spam_events",
+    "mail_spam_rules",
+    "mail_templates",
+    "news_posts",
+    "notifications",
+    "option_sets",
+    "orbitfs_deployment_events",
+    "orbitfs_deployment_operations",
+    "orbitfs_email_verification_tokens",
+    "orbitfs_installation_releases",
+    "orbitfs_installations",
+    "orbitfs_lifecycle_jobs",
+    "orbitfs_oauth_states",
+    "orbitfs_password_reset_tokens",
+    "orbitfs_provider_connections",
+    "orbitfs_release_bundles",
+    "orbitfs_release_channel_access",
+    "orbitfs_release_channel_access_audit",
+    "orbitfs_release_channels",
+    "orbitfs_release_presentation_overrides",
+    "orbitfs_release_system_settings",
+    "orbitfs_themes",
+    "order_cancellation_requests",
+    "order_items",
+    "orders",
+    "payment_attempts",
+    "payment_events",
+    "payment_gateway_setups",
+    "payment_gateways",
+    "payment_subscriptions",
+    "product_artifacts",
+    "product_dependencies",
+    "product_options",
+    "products",
+    "role_definitions",
+    "role_permissions",
+    "shopping_cart_items",
+    "shopping_carts",
+    "staff_access",
+    "staff_groups",
+    "staff_member_groups",
+    "staff_members",
+    "staff_note_revisions",
+    "staff_notes",
+    "support_attachments",
+    "support_department_staff",
+    "support_departments",
+    "support_kb_articles",
+    "support_kb_categories",
+    "support_message_templates",
+    "support_premade_messages",
+    "support_ticket_events",
+    "support_ticket_messages",
+    "support_tickets",
+    "system_settings",
+    "user_preferences",
+    "user_profiles",
+    "users",
+    "wallet_recharges",
+    "webhook_events"
+  ],
+  "project_ref": "bealqgenrcytjzjoikmk",
+  "captured_at_utc": "2026-09-30T10:12:05.733779+00:00",
+  "support_columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_attachments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "ticket_id",
+      "type": "uuid",
+      "table": "support_attachments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "message_id",
+      "type": "uuid",
+      "table": "support_attachments",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "uploader_user_id",
+      "type": "uuid",
+      "table": "support_attachments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "file_name",
+      "type": "text",
+      "table": "support_attachments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "storage_path",
+      "type": "text",
+      "table": "support_attachments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "mime_type",
+      "type": "text",
+      "table": "support_attachments",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "file_size_bytes",
+      "type": "bigint",
+      "table": "support_attachments",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_attachments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "department_id",
+      "type": "uuid",
+      "table": "support_department_staff",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "table": "support_department_staff",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "created_by",
+      "type": "uuid",
+      "table": "support_department_staff",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_department_staff",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "slug",
+      "type": "text",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "table": "support_departments",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "table": "support_departments",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "client_can_close",
+      "type": "boolean",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "auto_close_hours",
+      "type": "integer",
+      "table": "support_departments",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "sort_order",
+      "type": "integer",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "allow_direct_create",
+      "type": "boolean",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "min_support_rank",
+      "type": "integer",
+      "table": "support_departments",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "escalation_department_id",
+      "type": "uuid",
+      "table": "support_departments",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "category_id",
+      "type": "uuid",
+      "table": "support_kb_articles",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "title",
+      "type": "text",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "slug",
+      "type": "text",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "summary",
+      "type": "text",
+      "table": "support_kb_articles",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "body",
+      "type": "text",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "customer_visible",
+      "type": "boolean",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "featured",
+      "type": "boolean",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "sort_order",
+      "type": "integer",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "created_by",
+      "type": "uuid",
+      "table": "support_kb_articles",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "updated_by",
+      "type": "uuid",
+      "table": "support_kb_articles",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "published_at",
+      "type": "timestamp with time zone",
+      "table": "support_kb_articles",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "table": "support_kb_articles",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_kb_categories",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "table": "support_kb_categories",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "slug",
+      "type": "text",
+      "table": "support_kb_categories",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "table": "support_kb_categories",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "table": "support_kb_categories",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "sort_order",
+      "type": "integer",
+      "table": "support_kb_categories",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_kb_categories",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "table": "support_kb_categories",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_message_templates",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "event_key",
+      "type": "text",
+      "table": "support_message_templates",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "label",
+      "type": "text",
+      "table": "support_message_templates",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "body",
+      "type": "text",
+      "table": "support_message_templates",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "table": "support_message_templates",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "customer_visible",
+      "type": "boolean",
+      "table": "support_message_templates",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "table": "support_message_templates",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_premade_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "table": "support_premade_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "category",
+      "type": "text",
+      "table": "support_premade_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "body",
+      "type": "text",
+      "table": "support_premade_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "active",
+      "type": "boolean",
+      "table": "support_premade_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "sort_order",
+      "type": "integer",
+      "table": "support_premade_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "created_by",
+      "type": "uuid",
+      "table": "support_premade_messages",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_premade_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "table": "support_premade_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_ticket_events",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "ticket_id",
+      "type": "uuid",
+      "table": "support_ticket_events",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "actor_user_id",
+      "type": "uuid",
+      "table": "support_ticket_events",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "event_type",
+      "type": "text",
+      "table": "support_ticket_events",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "detail",
+      "type": "jsonb",
+      "table": "support_ticket_events",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_ticket_events",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_ticket_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "ticket_id",
+      "type": "uuid",
+      "table": "support_ticket_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "author_user_id",
+      "type": "uuid",
+      "table": "support_ticket_messages",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "author_role",
+      "type": "text",
+      "table": "support_ticket_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "body",
+      "type": "text",
+      "table": "support_ticket_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "internal_note",
+      "type": "boolean",
+      "table": "support_ticket_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "attachments",
+      "type": "jsonb",
+      "table": "support_ticket_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "edited_at",
+      "type": "timestamp with time zone",
+      "table": "support_ticket_messages",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_ticket_messages",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "id",
+      "type": "uuid",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "ticket_number",
+      "type": "bigint",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": "nextval('support_ticket_number_repair_seq'::regclass)"
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "department_id",
+      "type": "uuid",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "assigned_to",
+      "type": "uuid",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "subject",
+      "type": "text",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "priority",
+      "type": "text",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "source",
+      "type": "text",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "related_order_id",
+      "type": "uuid",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "related_license_id",
+      "type": "text",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "last_reply_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "closed_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "last_staff_reply_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "last_client_reply_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "metadata",
+      "type": "jsonb",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "closed_by",
+      "type": "uuid",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "reopened_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "archived_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "archived_by",
+      "type": "uuid",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "archive_reason",
+      "type": "text",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "escalation_level",
+      "type": "integer",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    },
+    {
+      "name": "escalation_reason",
+      "type": "text",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "escalated_at",
+      "type": "timestamp with time zone",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "escalated_by",
+      "type": "uuid",
+      "table": "support_tickets",
+      "nullable": "YES",
+      "default_sequence": null
+    },
+    {
+      "name": "claim_required",
+      "type": "boolean",
+      "table": "support_tickets",
+      "nullable": "NO",
+      "default_sequence": null
+    }
+  ],
+  "support_policies": [
+    {
+      "cmd": "INSERT",
+      "name": "support_attachment_rows_owner_insert",
+      "table": "support_attachments"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "support_attachment_rows_owner_read",
+      "table": "support_attachments"
+    },
+    {
+      "cmd": "ALL",
+      "name": "support_attachment_rows_staff",
+      "table": "support_attachments"
+    },
+    {
+      "cmd": "ALL",
+      "name": "support_department_staff_manage",
+      "table": "support_department_staff"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "support_department_staff_read",
+      "table": "support_department_staff"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "departments_public_read",
+      "table": "support_departments"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "guest_read_support_departments",
+      "table": "support_departments"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "public_read_support_departments",
+      "table": "support_departments"
+    },
+    {
+      "cmd": "ALL",
+      "name": "support_departments_manage",
+      "table": "support_departments"
+    },
+    {
+      "cmd": "ALL",
+      "name": "support_kb_articles_manage",
+      "table": "support_kb_articles"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "support_kb_articles_read",
+      "table": "support_kb_articles"
+    },
+    {
+      "cmd": "ALL",
+      "name": "support_kb_categories_manage",
+      "table": "support_kb_categories"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "support_kb_categories_read",
+      "table": "support_kb_categories"
+    },
+    {
+      "cmd": "ALL",
+      "name": "support_templates_manage",
+      "table": "support_message_templates"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "support_templates_staff_read",
+      "table": "support_message_templates"
+    },
+    {
+      "cmd": "ALL",
+      "name": "support_premade_manage",
+      "table": "support_premade_messages"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "support_premade_staff_read",
+      "table": "support_premade_messages"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "support_event_staff",
+      "table": "support_ticket_events"
+    },
+    {
+      "cmd": "INSERT",
+      "name": "messages_ticket_owner_insert",
+      "table": "support_ticket_messages"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "messages_ticket_owner_read",
+      "table": "support_ticket_messages"
+    },
+    {
+      "cmd": "INSERT",
+      "name": "staff_messages_insert",
+      "table": "support_ticket_messages"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "staff_messages_read",
+      "table": "support_ticket_messages"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "staff_tickets_read",
+      "table": "support_tickets"
+    },
+    {
+      "cmd": "UPDATE",
+      "name": "staff_tickets_update",
+      "table": "support_tickets"
+    },
+    {
+      "cmd": "INSERT",
+      "name": "tickets_self_insert",
+      "table": "support_tickets"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "tickets_self_read",
+      "table": "support_tickets"
+    }
+  ],
+  "support_routines": [
+    {
+      "args": "p_ticket_id uuid, p_reason text, p_archive boolean",
+      "name": "admin_archive_support_ticket"
+    },
+    {
+      "args": "p_user_id uuid, p_department_id uuid, p_subject text, p_priority text, p_body text, p_related_order_id uuid",
+      "name": "admin_create_support_ticket"
+    },
+    {
+      "args": "p_department_id uuid",
+      "name": "admin_delete_support_department"
+    },
+    {
+      "args": "p_ticket_id uuid, p_reason text",
+      "name": "admin_delete_support_ticket"
+    },
+    {
+      "args": "p_ticket_id uuid, p_target_level integer, p_reason text",
+      "name": "admin_escalate_support_ticket"
+    },
+    {
+      "args": "p_ticket_id uuid, p_body text",
+      "name": "admin_reply_and_close_support_ticket"
+    },
+    {
+      "args": "p_ticket_id uuid, p_body text, p_internal boolean",
+      "name": "admin_reply_support_ticket"
+    },
+    {
+      "args": "p_ticket_id uuid, p_body text, p_internal boolean, p_status text",
+      "name": "admin_reply_ticket"
+    },
+    {
+      "args": "p_id uuid, p_name text, p_slug text, p_description text, p_email text, p_enabled boolean, p_client_can_close boolean, p_auto_close_hours integer, p_sort_order integer",
+      "name": "admin_save_support_department"
+    },
+    {
+      "args": "p_ticket_id uuid, p_event_key text",
+      "name": "admin_send_support_system_message"
+    },
+    {
+      "args": "p_department_id uuid, p_user_ids uuid[]",
+      "name": "admin_set_support_department_members"
+    },
+    {
+      "args": "p_department_id uuid, p_allow_direct_create boolean, p_min_support_rank integer, p_escalation_department_id uuid",
+      "name": "admin_set_support_department_routing"
+    },
+    {
+      "args": "",
+      "name": "admin_support_queue_snapshot"
+    },
+    {
+      "args": "",
+      "name": "admin_support_settings_snapshot"
+    },
+    {
+      "args": "p_ticket_id uuid, p_subject text, p_priority text, p_department_id uuid, p_status text, p_assigned_to uuid, p_assignment_action text",
+      "name": "admin_update_support_ticket"
+    },
+    {
+      "args": "p_ticket_id uuid, p_subject text, p_related_order_id uuid",
+      "name": "admin_update_support_ticket_details"
+    },
+    {
+      "args": "p_ticket_id uuid, p_message_id uuid, p_file_name text, p_storage_path text, p_mime_type text, p_file_size_bytes bigint",
+      "name": "attach_support_file"
+    },
+    {
+      "args": "p_department_id uuid, p_subject text, p_priority text, p_body text, p_related_order_id uuid",
+      "name": "create_support_ticket"
+    },
+    {
+      "args": "p_ticket_id uuid",
+      "name": "customer_close_support_ticket"
+    },
+    {
+      "args": "p_ticket_id uuid, p_body text",
+      "name": "customer_reply_support_ticket"
+    },
+    {
+      "args": "",
+      "name": "is_support"
+    },
+    {
+      "args": "",
+      "name": "mail_event_support_message_trigger"
+    },
+    {
+      "args": "",
+      "name": "mail_event_support_ticket_trigger"
+    },
+    {
+      "args": "p_ticket_id uuid, p_provider_id text, p_template_key text, p_event_type text, p_recipient text, p_sender text, p_subject text, p_status text, p_error text, p_sent_at timestamp with time zone",
+      "name": "mail_log_support_delivery"
+    },
+    {
+      "args": "p_department_id uuid, p_actor_user_id uuid, p_event_type text, p_title text, p_message text, p_severity text, p_ticket_id uuid, p_metadata jsonb, p_exact_rank integer, p_exclude_user_id uuid",
+      "name": "notification_notify_support_department"
+    },
+    {
+      "args": "",
+      "name": "notify_support_message_created"
+    },
+    {
+      "args": "",
+      "name": "notify_support_ticket_created"
+    },
+    {
+      "args": "",
+      "name": "notify_support_ticket_updated"
+    },
+    {
+      "args": "",
+      "name": "process_expired_guest_support_tickets"
+    },
+    {
+      "args": "",
+      "name": "process_support_auto_close"
+    },
+    {
+      "args": "p_ticket uuid, p_event text, p_detail jsonb",
+      "name": "support_emit_system_message"
+    },
+    {
+      "args": "",
+      "name": "support_guard_staff_message_insert"
+    },
+    {
+      "args": "",
+      "name": "support_guard_ticket_staff_update"
+    },
+    {
+      "args": "p_ticket_id uuid, p_user_id uuid",
+      "name": "support_staff_can_access_ticket"
+    },
+    {
+      "args": "",
+      "name": "support_staff_departments"
+    },
+    {
+      "args": "p_user_id uuid",
+      "name": "support_staff_rank"
+    },
+    {
+      "args": "p_rank integer",
+      "name": "support_staff_rank_label"
+    },
+    {
+      "args": "p_ticket_id uuid",
+      "name": "support_ticket_billing_context"
+    },
+    {
+      "args": "p_ticket_id uuid",
+      "name": "support_ticket_mail_context"
+    },
+    {
+      "args": "p_ticket_id uuid",
+      "name": "support_ticket_routing_snapshot"
+    },
+    {
+      "args": "p_user_id uuid, p_department_id uuid",
+      "name": "support_user_has_department"
+    }
+  ],
+  "support_triggers": [
+    {
+      "name": "notify_support_message_created_trg",
+      "table": "support_ticket_messages"
+    },
+    {
+      "name": "notify_support_ticket_created_trg",
+      "table": "support_tickets"
+    },
+    {
+      "name": "notify_support_ticket_updated_trg",
+      "table": "support_tickets"
+    },
+    {
+      "name": "trg_mail_support_message",
+      "table": "support_ticket_messages"
+    },
+    {
+      "name": "trg_mail_support_ticket",
+      "table": "support_tickets"
+    },
+    {
+      "name": "trg_support_guard_staff_message",
+      "table": "support_ticket_messages"
+    },
+    {
+      "name": "trg_support_guard_staff_update",
+      "table": "support_tickets"
+    }
+  ]
+}
