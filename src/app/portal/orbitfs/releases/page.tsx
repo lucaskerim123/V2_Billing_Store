@@ -382,15 +382,20 @@ export default function OrbitFSUpdateReleaseSystem(){
             <div className="orbitV5UpdateReleaseMain">
               <div><p className="eyebrow">UPDATE · {release.channel||channel}</p><h3>{release.title||"OrbitFS Update"}</h3>
                 <p>v{release.version} · {dateLabel(release.published_at||release.publishedAt)||"Published Update"}</p>
-                {release.description&&<p>{release.description}</p>}
+                {release.description&&<p className="orbitV5UpdateSummary">{release.description}</p>}
                 {Array.isArray(release.components)&&release.components.length>0&&<div className="orbitV5UpdateChips">{release.components.map(name=><span key={name}>{name}</span>)}</div>}
               </div>
               <span className={"state "+(installed?"ready":selectable?"current":"waiting")}>{installed?"INSTALLED":older?"OLDER":!compatibleRelease?"INCOMPATIBLE":"PUBLISHED"}</span>
             </div>
             {minBase&&<small className="orbitV5UpdateMinBase">Minimum Base: v{minBase}</small>}
             <div className="orbitV5UpdateReleaseActions">
-              <details><summary>Release notes</summary><p className="orbitV5UpdateNotes">{release.changelog||release.description||"No customer release notes supplied."}</p>
-                {release.customer_notes&&<p className="orbitV5UpdateNotes">{release.customer_notes}</p>}</details>
+              <div className="orbitV5UpdateReleaseDetails">
+                {release.description&&<details><summary>Full description</summary><p className="orbitV5UpdateNotes">{release.description}</p></details>}
+                {(release.changelog||release.customer_notes)&&<details><summary>Release notes</summary>
+                  {release.changelog&&<p className="orbitV5UpdateNotes">{release.changelog}</p>}
+                  {release.customer_notes&&<p className="orbitV5UpdateNotes">{release.customer_notes}</p>}
+                </details>}
+              </div>
               {selectable&&<button type="button" className={rid===selectedId?"secondary":""} disabled={!!busy} onClick={()=>{setSelectedId(rid);setConfirmed(false);setMessage("");setStage(3)}}>{rid===selectedId?"Review selected Update":"Select & review →"}</button>}
             </div>
           </article>;
