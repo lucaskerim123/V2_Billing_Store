@@ -44,7 +44,7 @@ export async function PATCH(req:Request){
   const {data:binding,error:readError}=await db.from("license_bindings").select("id,license_product_key").eq("id",bindingId).eq("auth_user_id",userId).is("archived_at",null).maybeSingle();
   if(readError)throw readError;
   if(!binding)return Response.json({error:"Licence binding not found for this customer"},{status:404});
-  const label=nickname||({orbitfs_base:"OrbitFS Base"}[String(binding.license_product_key)]||"OrbitFS licence");
+  const label=nickname||(String(binding.license_product_key)==="orbitfs_base"?"OrbitFS Base":"OrbitFS licence");
   const {error:writeError}=await db.from("license_bindings").update({label,updated_at:new Date().toISOString()}).eq("id",bindingId).eq("auth_user_id",userId);
   if(writeError)throw writeError;
   return Response.json({ok:true,bindingId,label});
