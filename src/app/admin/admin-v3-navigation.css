@@ -81,6 +81,32 @@ html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav .adminCollapsibl
 html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav .adminCollapsibleItems a.active{
   box-shadow:inset 2px 0 var(--page-accent)!important;
 }
+
+/* Desktop topbar interaction authority.
+   Keep the utility/tool row (especially notifications) above navigation hit areas.
+   This also covers phones/tablets using the browser's Desktop site mode. */
+html[data-admin-theme="v3"] .adminV3Topbar{
+  position:relative!important;
+  isolation:isolate!important;
+  overflow:visible!important;
+}
+html[data-admin-theme="v3"] .adminV3Primary.adminCollapsibleNav{
+  position:relative!important;
+  z-index:10!important;
+}
+html[data-admin-theme="v3"] .adminV3Tools{
+  position:relative!important;
+  z-index:500!important;
+  overflow:visible!important;
+  pointer-events:auto!important;
+}
+html[data-admin-theme="v3"] .adminV3Tools [data-surface="admin"],
+html[data-admin-theme="v3"] .adminV3Tools [data-surface="admin"]>button{
+  position:relative!important;
+  z-index:510!important;
+  pointer-events:auto!important;
+}
+
 html[data-admin-theme="v3"] .adminV3MobileMenuButton,
 html[data-admin-theme="v3"] .adminV3MobileMenu{display:none!important}
 @media(max-width:760px){
