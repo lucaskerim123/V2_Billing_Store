@@ -246,3 +246,33 @@
     gap:8px!important;
   }
 }
+
+/* The notification sheet is portaled to document.body so transformed/sticky
+   admin headers cannot clip it or establish the wrong fixed-position origin. */
+.panel[data-surface="admin"]{
+ position:fixed;
+ top:58px;
+ right:10px;
+ left:auto;
+ bottom:auto;
+ z-index:10000;
+ width:min(460px,calc(100vw - 20px));
+ max-height:calc(100dvh - 70px);
+}
+.panel[data-surface="portal"]{
+ position:fixed;
+ z-index:10000;
+}
+@media(max-width:760px){
+ .panel[data-surface="admin"],.panel[data-surface="portal"]{
+  position:fixed;
+  top:auto;
+  right:6px;
+  bottom:calc(6px + env(safe-area-inset-bottom));
+  left:6px;
+  width:auto;
+  height:min(76dvh,620px);
+  max-height:calc(100dvh - 18px - env(safe-area-inset-top));
+  border-radius:12px;
+ }
+}
