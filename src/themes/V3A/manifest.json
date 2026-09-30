@@ -4,5 +4,6 @@
   "version": "3.0.0",
   "surface": "admin",
   "entry": "theme.css",
+  "family": "V3",
   "description": "Compact dark OrbitFS administration theme with indigo-led accents and semantic billing/support/licensing states."
 }

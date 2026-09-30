@@ -4,5 +4,7 @@
   "version": "5.0.0",
   "surface": "customer",
   "entry": "theme.css",
+  "family": "V5",
+  "extends": "V3C",
   "description": "OrbitFS V5 customer theme. Starts with the approved website-derived Base Deployer and Instance Control Panel while other customer surfaces remain on the V3C baseline."
 }

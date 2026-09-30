@@ -4,5 +4,6 @@
   "version": "3.0.0",
   "surface": "customer",
   "entry": "theme.css",
+  "family": "V3",
   "description": "Compact customer portal theme derived from V3A with matching graphite surfaces, indigo/cyan accents and billing-focused record displays."
 }

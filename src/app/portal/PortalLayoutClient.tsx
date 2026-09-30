@@ -7,6 +7,7 @@ import {createClient} from "@/lib/supabase";
 import {trackCustomerActivity} from "@/lib/customer-activity";
 import NotificationCenter from "@/components/NotificationCenter";
 import ThemeRuntime from "@/components/ThemeRuntime";
+import themeDefaults from "@/themes/active/defaults.json";
 
 type NavItem={label:string;href:string;short:string};
 
@@ -120,7 +121,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
  }
 
  return <div className="portalLayout portalCustomerSite">
-  <ThemeRuntime surface="customer" fallback="V3C"/>
+  <ThemeRuntime surface="customer" fallback={themeDefaults.customer}/>
 
   <header className="portalTopbar">
    <Link className="portalTopBrand" href="/portal">OrbitFS</Link>
