@@ -649,7 +649,11 @@ async function reportDeploymentFailure(install:any,input:{action:DeployAction;re
   const message=errorMessage(error,"Deployment failed");
   await Promise.allSettled([
     masterExecuteDeployment({action:input.action,phase:"failed",releaseId:input.releaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:input.licenseId,channel:input.channel,productVersion:input.productVersion,previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null,error:message}),
-    licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message}).eq("id",install.id),
+    // An Update failure is not evidence that the previously installed Base failed.
+    // Preserve Base state; report the Update failure separately through authority + events.
+    ...(input.action==="update"?[]:[
+      licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message}).eq("id",install.id)
+    ]),
     event(install,input.action==="base_update"?"base.update.failed":input.action==="update"?"update.failed":input.action==="rollback"?"deployment.rollback.failed":"deployment.failed","error",message,{action:input.action,releaseId:input.releaseId})
   ]);
 }
@@ -713,7 +717,7 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
     const message=error instanceof Error?error.message:String(error||"Update rollback failed");
     await Promise.allSettled([
       masterExecuteDeployment({action:"rollback",rollbackScope:"update",phase:"failed",releaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel,productVersion:String(install.release_version||""),previousVersion:releaseVersion,components,error:message}),
-      licenseDb().from("orbitfs_installations").update({state:"failed",last_error:message}).eq("id",install.id),
+      // A failed Update rollback must not overwrite the independently verified Base state.
       event(install,"update.rollback.failed","error",message,{releaseId,components,reason:rollbackReason,engine:engineResult,panel:panelResult})
     ]);
     throw error;
