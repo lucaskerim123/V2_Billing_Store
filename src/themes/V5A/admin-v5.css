@@ -1490,3 +1490,30 @@ html[data-orbitfs-theme="V5A"] .orbitDeploymentToggles small{color:#7892a3!impor
 @media(max-width:800px){
   html[data-orbitfs-theme="V5A"] .orbitDeploymentToggles{grid-template-columns:1fr!important}
 }
+
+
+/* Keep the notification bell directly tappable in the mobile admin topbar.
+   Other desktop utilities remain inside the existing mobile Menu. */
+@media (max-width:760px){
+ html[data-orbitfs-theme="V5A"] .adminV3Topbar{position:relative!important;isolation:isolate!important}
+ html[data-orbitfs-theme="V5A"] .adminV3Tools{
+  display:flex!important;position:absolute!important;
+  right:56px!important;top:calc(5px + env(safe-area-inset-top))!important;
+  width:40px!important;height:40px!important;padding:0!important;
+  margin:0!important;align-items:center!important;justify-content:center!important;
+  overflow:visible!important;z-index:100!important;pointer-events:auto!important;
+ }
+ html[data-orbitfs-theme="V5A"] .adminV3Tools>:not([data-surface="admin"]){display:none!important}
+ html[data-orbitfs-theme="V5A"] .adminV3Tools [data-surface="admin"]{
+  display:inline-flex!important;position:relative!important;z-index:101!important;
+  pointer-events:auto!important;
+ }
+ html[data-orbitfs-theme="V5A"] .adminV3Tools [data-surface="admin"]>button{
+  width:38px!important;min-width:38px!important;
+  height:38px!important;min-height:38px!important;
+  cursor:pointer!important;pointer-events:auto!important;
+ }
+ html[data-orbitfs-theme="V5A"] .adminV3MobileMenuButton{
+  position:relative!important;z-index:102!important;
+ }
+}
