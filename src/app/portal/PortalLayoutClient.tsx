@@ -22,6 +22,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    if(!alive)return false;
    if(enf?.state==="banned"){
     try{const payload=JSON.stringify({...enf,stored_at:new Date().toISOString()});localStorage.setItem("orbitfs_account_blocked",payload);sessionStorage.setItem("orbitfs_account_blocked",payload)}catch{}
+    await fetch("/api/auth/logout",{method:"POST"}).catch(()=>null);
     await sb.auth.signOut();location.replace("/account-blocked");return false;
    }
    if(enf?.state==="active"){try{localStorage.removeItem("orbitfs_account_blocked");sessionStorage.removeItem("orbitfs_account_blocked")}catch{}}
@@ -117,7 +118,9 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
  async function logout(){
   if(loggingOut)return;setLoggingOut(true);
   await trackCustomerActivity("logout",{source:"auth",route:path});
-  await sb.auth.signOut();router.replace("/login");router.refresh();
+  const response=await fetch("/api/auth/logout",{method:"POST"}).catch(()=>null);
+  if(!response?.ok){setLoggingOut(false);return;}
+  await sb.auth.signOut();location.replace("/login");
  }
 
  return <div className="portalLayout portalCustomerSite">
