@@ -1,0 +1,500 @@
+/* V5C / My OrbitFS: responsive adaptation of the supplied 12ui site.
+   This file is intentionally last in V5C: it replaces the inherited old-portal
+   composition without changing the existing deployment data or actions. */
+html[data-orbitfs-theme="V5C"] body:has(.orbitZipDeployer){background:#051927!important;color:#e6f3fa}
+html[data-orbitfs-theme="V5C"] .portalMain:has(.orbitZipDeployer){
+  width:100%!important;max-width:1440px!important;min-width:0!important;
+  padding:22px 24px 40px!important;margin:0 auto!important;overflow-x:clip!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipInstalling,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed{
+  --v5c-bg:#051927;--v5c-card:#06283a;--v5c-card-raised:#093346;--v5c-line:#164a5d;
+  --v5c-muted:#9bb5c4;--v5c-bright:#eefaff;--v5c-teal:#22d2cf;--v5c-good:#60e0c8;
+  display:flex!important;flex-direction:column!important;grid-template-columns:unset!important;
+  width:100%!important;max-width:none!important;min-width:0!important;min-height:0!important;
+  margin:0 auto!important;padding:0!important;gap:16px!important;overflow:visible!important;
+  background:transparent!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;color:var(--v5c-bright)!important;
+  font:400 14px/1.55 Inter,Geist,system-ui,sans-serif!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer *,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer *:before,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer *:after{box-sizing:border-box!important;min-width:0}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer [hidden]{display:none!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .eyebrow{
+  display:block!important;margin:0 0 9px!important;letter-spacing:.12em!important;
+  font-size:11px!important;line-height:1.4!important;color:#75dfe8!important;font-weight:800!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer h1{font-size:clamp(28px,3.1vw,40px)!important;line-height:1.18!important;letter-spacing:-.025em!important;margin:0 0 13px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer h2{font-size:clamp(19px,1.7vw,25px)!important;line-height:1.27!important;letter-spacing:-.018em!important;margin:0 0 8px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer h3{font-size:17px!important;line-height:1.3!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer p{line-height:1.55!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .muted{font-size:13px!important;line-height:1.55!important;color:var(--v5c-muted)!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer button,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .buttonlink{
+  min-height:40px!important;font-size:13px!important;font-weight:750!important;
+  line-height:1.3!important;border-radius:7px!important;padding:10px 15px!important;white-space:normal!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer button:focus-visible,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer a:focus-visible,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer summary:focus-visible{
+  outline:2px solid #31eff0!important;outline-offset:3px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer button:not(.secondary):not(.orbitZipDangerButton):not(.danger),
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitHeroAction{
+  border:1px solid #25c9d2!important;
+  background:linear-gradient(180deg,#25d8dd,#08a7b5)!important;color:#03212d!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer button:disabled{opacity:.55!important;cursor:not-allowed!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer input,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer select{
+  display:block!important;width:100%!important;max-width:100%!important;min-height:44px!important;
+  background:#041d2e!important;border:1px solid #246078!important;border-radius:7px!important;
+  color:#eefbff!important;font-size:13px!important;padding:9px 12px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .panel,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitReviewPanel{
+  border:1px solid var(--v5c-line)!important;border-radius:10px!important;
+  background:var(--v5c-card)!important;box-shadow:none!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .state{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:28px!important;padding:5px 10px!important;font-size:10px!important;
+  line-height:1.25!important;font-weight:850!important;letter-spacing:.05em!important;
+  border:1px solid #276879!important;background:#083c45!important;color:#afeced!important;border-radius:999px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .state.ready{color:#b6fae7!important;border-color:#277a76!important;background:#104943!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .state.waiting{color:#ffe3a8!important;border-color:#94703b!important;background:#45351e!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .state.current{color:#b2faff!important;background:#075663!important;border-color:#219ca5!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .listrow{
+  gap:12px!important;align-items:center!important;padding:13px 0!important;
+  border-color:#174456!important;background:transparent!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .listrow b{font-size:13px!important;line-height:1.4!important;overflow-wrap:anywhere}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .listrow span{font-size:12px!important;line-height:1.5!important;color:#9bb5c4!important;overflow-wrap:anywhere}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .inlineStatus{font-size:13px!important;padding:13px 16px!important;overflow-wrap:anywhere}
+/* Header and ready banner lifted from the submitted Base System Deployer composition */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Hero{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:30px!important;
+  padding:34px 40px!important;margin:0!important;min-height:174px!important;
+  background:linear-gradient(110deg,#06293d,#052333)!important;border:1px solid #0b4052!important;
+  border-radius:10px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Hero>div:first-child{max-width:780px}
+html[data-orbitfs-theme="V5C"] .orbitV5Lead{font-size:17px!important;line-height:1.52!important;max-width:750px;color:#c0dce9!important;margin:0 0 9px!important}
+html[data-orbitfs-theme="V5C"] .orbitV5Note{font-size:13px!important;color:#93b5c5!important;margin:0!important}
+html[data-orbitfs-theme="V5C"] .orbitV5HeroState{
+  align-self:flex-start;display:flex;flex-direction:column;align-items:flex-end;gap:9px;max-width:260px;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5HeroState small{font-size:11px!important;color:#96b7c7;overflow-wrap:anywhere;text-align:right}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Start{
+  display:grid!important;grid-template-columns:70px minmax(0,1fr) auto!important;align-items:center!important;
+  column-gap:24px!important;row-gap:12px!important;min-height:155px!important;margin:0!important;
+  padding:26px 32px!important;border:1px solid #146075!important;border-radius:10px!important;
+  background:linear-gradient(112deg,#083145,#052536)!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5StartGlyph{
+  display:grid;place-items:center;width:68px;height:68px;background:#0b4553;border:1px solid #20768b;
+  color:#8ef2e8;border-radius:15px;font-size:34px;font-weight:750;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Start p:last-child{margin:0!important;max-width:570px!important;color:#a9c8d5}
+html[data-orbitfs-theme="V5C"] .orbitV5StartControls{display:flex;flex-direction:column;align-items:stretch;gap:10px;min-width:210px}
+html[data-orbitfs-theme="V5C"] .orbitV5StartControls small{color:#8bb1c2!important;text-align:center;font-size:11px}
+/* Visible four-step navigation: large touch targets, not the old vertical sidebar */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Flow{
+  display:block!important;margin:0!important;padding:23px 26px!important;
+  border:1px solid #164b5e!important;border-radius:10px!important;background:#06283a!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5SectionTitle{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:19px;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5SectionTitle h2{margin:0 0 6px!important}
+html[data-orbitfs-theme="V5C"] .orbitV5SectionTitle p:not(.eyebrow){margin:0!important;color:#a5c0d0!important}
+html[data-orbitfs-theme="V5C"] .orbitV5SectionTitle>span{color:#84d4d8;font-size:12px;font-weight:800;white-space:nowrap}
+html[data-orbitfs-theme="V5C"] .orbitV5FlowCards{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:11px!important;margin:0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard{
+  display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:13px!important;
+  text-align:left!important;padding:16px!important;min-height:162px!important;width:100%!important;
+  border:1px solid #21566a!important;border-radius:9px!important;background:#093344!important;
+  color:#e6f6ff!important;cursor:pointer!important;box-shadow:none!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard:disabled{opacity:1!important;cursor:default!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard.active{border-color:#24d3d4!important;background:linear-gradient(135deg,#105565,#09404f)!important;box-shadow:inset 0 3px #2fe7e3!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard.done{border-color:#277f78!important;background:#0c3b43!important}
+html[data-orbitfs-theme="V5C"] .orbitV5FlowIndex{
+  display:grid;place-items:center;width:35px;height:35px;border:1px solid #2b7280;border-radius:50%;
+  background:#0d4453;color:#ccf7f8;font-size:16px;font-weight:900;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5FlowCard.done .orbitV5FlowIndex{background:#0d615e;color:#ccfff3;border-color:#31af9c}
+html[data-orbitfs-theme="V5C"] .orbitV5FlowCard>span:last-child{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+html[data-orbitfs-theme="V5C"] .orbitV5FlowCard b{font-size:15px!important;color:#ecffff!important;line-height:1.3}
+html[data-orbitfs-theme="V5C"] .orbitV5FlowCard small{font-size:12px!important;line-height:1.5!important;color:#a4c0ce!important;font-weight:450}
+html[data-orbitfs-theme="V5C"] .orbitV5FlowCard em{color:#69deda;font:800 10px/1.4 Inter,Geist,system-ui;text-transform:uppercase;letter-spacing:.07em;font-style:normal;margin-top:auto}
+html[data-orbitfs-theme="V5C"] .orbitV5DetailSteps{margin-top:14px!important;border-top:1px solid #164a5d!important;padding-top:11px!important}
+html[data-orbitfs-theme="V5C"] .orbitV5DetailSteps>summary{cursor:pointer;color:#9de7e9!important;font-size:12px!important;font-weight:750!important}
+html[data-orbitfs-theme="V5C"] .orbitV5DetailSteps nav{display:flex;flex-wrap:wrap;gap:8px;padding-top:13px}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5DetailSteps button{display:flex;align-items:center;gap:9px;padding:9px 13px!important;min-height:40px!important;background:#093343!important;color:#c7e4ed!important;border:1px solid #2b5f72!important}
+html[data-orbitfs-theme="V5C"] .orbitV5DetailSteps button span{border-radius:50%;color:#fff;font-weight:900;font-size:11px}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5DetailSteps button.done{border-color:#348779!important;color:#96eadd!important}
+/* Real installer workspace + next-step overview use the screenshot's two-column layout */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipInstalling>.orbitZipWorkspace{
+  display:grid!important;grid-template-columns:minmax(0,1.72fr) minmax(300px,.8fr)!important;align-items:start!important;
+  width:100%!important;margin:0!important;gap:15px!important;background:transparent!important;grid-column:unset!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn{
+  display:grid!important;gap:14px!important;width:100%!important;padding:0!important;
+  margin:0!important;background:transparent!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipSummary{
+  display:flex!important;flex-direction:column!important;gap:14px!important;
+  padding:0!important;margin:0!important;width:100%!important;border:0!important;background:transparent!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn>.panel,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn>.orbitReviewPanel{
+  width:100%!important;margin:0!important;padding:24px 27px!important;box-shadow:none!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipSummary>.panel{margin:0!important;padding:21px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitInstallerWorkspace>.panelTitle,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitReviewPanel>.panelTitle{
+  display:flex!important;justify-content:space-between!important;align-items:flex-start!important;gap:12px!important;
+  padding:0 0 20px!important;margin:0 0 16px!important;border-bottom:1px solid #1a5365!important;background:transparent!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitInstallerWorkspace>.panelTitle h2,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitReviewPanel>.panelTitle h2{font-size:23px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn .form{
+  display:grid!important;gap:13px!important;min-width:0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn label{
+  display:grid!important;gap:7px!important;width:100%!important;color:#c7e5ee!important;
+  font-size:13px!important;font-weight:750!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn .form p,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitReviewCard>span{font-size:13px!important;color:#adcbd7!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn .form button,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn .controllerActions button{
+  width:auto!important;max-width:100%!important;justify-self:start!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:12px}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigGrid>div{
+  display:flex;flex-direction:column;gap:6px;padding:17px;border:1px solid #1c5267;border-radius:8px;background:#093447;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ConfigGrid small{color:#79ccd4;font-size:10px;font-weight:850;letter-spacing:.09em}
+html[data-orbitfs-theme="V5C"] .orbitV5ConfigGrid b{color:#f1ffff;font-size:17px}
+html[data-orbitfs-theme="V5C"] .orbitV5ConfigGrid span{font-size:12px;color:#9ebac9;line-height:1.5}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Next>p:not(.eyebrow){color:#9bbcc9;margin:0 0 15px}
+html[data-orbitfs-theme="V5C"] .orbitV5Next>div{
+  display:flex;align-items:flex-start;gap:12px;padding:15px 0;border-top:1px solid #1c4b5d;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Next>div>span{
+  flex:0 0 40px;display:grid;place-items:center;height:42px;background:#0a4254;
+  border:1px solid #236b7e;border-radius:8px;color:#95eaf0;font-size:13px;font-weight:850;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Next>div>span.done{background:#104e46;border-color:#398575;color:#beffeb}
+html[data-orbitfs-theme="V5C"] .orbitV5Next>div>section{display:flex;flex-direction:column;gap:4px}
+html[data-orbitfs-theme="V5C"] .orbitV5Next b{font-size:13px;color:#eefaff;line-height:1.35}
+html[data-orbitfs-theme="V5C"] .orbitV5Next small{font-size:12px;line-height:1.5;color:#9db7c5}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipSummary>.panel:not(.orbitV5Next) h2{font-size:17px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipSummary>.panel:nth-child(2){order:1}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipSummary>.orbitV5Next{order:0}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipSummary>.panel:nth-child(3){order:2}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitProviderQuickLinks{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitProviderQuickLinks button{width:100%!important}
+/* Distinct supplied progress / needs-attention states, no manufactured metrics */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5OperationPanel{
+  margin:0!important;padding:23px 26px!important;border-color:#23586b!important;background:#072c3e!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitSiteAttention .orbitV5OperationPanel{
+  border-color:#855463!important;background:#252332!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:19px 0 8px}
+html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine>div{
+  display:flex;align-items:center;gap:10px;border:1px solid #20536a;border-radius:8px;
+  padding:12px;background:#093449;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine>div>span{
+  display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;
+  border-radius:50%;background:#0b4b5c;border:1px solid #2b7b8b;color:#d5fbfa;font-weight:850;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine>div.done>span{border-color:#328e7d;background:#166455}
+html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine>div.current{border-color:#35cad0}
+html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine>div b{display:block;color:#eafaff;font-size:12px}
+html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine>div small{font-size:10px;color:#9fc0d0}
+/* Actual instance control: screenshot hierarchy, recorded health, no fictional CPU figures */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed{
+  gap:0!important;border:1px solid #0f5362!important;border-radius:10px!important;background:#041e2d!important;overflow:hidden!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ControlHero{
+  display:flex!important;justify-content:space-between!important;align-items:flex-start!important;gap:18px!important;
+  margin:0!important;padding:29px 35px!important;border:0!important;border-bottom:1px solid #174758!important;
+  background:linear-gradient(120deg,#082a3c,#073746)!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Destination{display:flex;flex-direction:column;gap:3px;padding:12px 0 0}
+html[data-orbitfs-theme="V5C"] .orbitV5Destination small{font-size:10px;letter-spacing:.1em;color:#82c4c9;font-weight:850}
+html[data-orbitfs-theme="V5C"] .orbitV5Destination a{color:#8de6ed!important;font-size:15px;font-weight:750;overflow-wrap:anywhere}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipControlPanel{
+  display:flex!important;flex-direction:column!important;gap:18px!important;margin:0!important;
+  padding:24px 34px!important;border:0!important;border-radius:0!important;background:transparent!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipControlTop{align-items:center!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipOverviewStats{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:11px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .portalStatCard{
+  display:flex!important;align-items:center!important;gap:13px!important;padding:17px!important;
+  border:1px solid #1c5369!important;border-radius:9px!important;background:#08364a!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .portalStatCard strong{font-size:18px!important;overflow-wrap:anywhere!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .portalStatCard small{font-size:10px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .portalStatCard span{font-size:11px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitPrimaryActionBar{
+  margin:0!important;padding:18px!important;gap:14px!important;border-radius:9px!important;
+  border:1px solid #206275!important;background:#0a3d4f!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitPrimaryActionCopy>span{font-size:12px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipLifecyclePanel{margin:0!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .portalOverviewBottom{
+  margin:0!important;padding:0 34px 25px!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;background:transparent!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .portalOverviewBottom .panel{margin:0!important;background:#082f42!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FooterGrid{
+  display:grid;grid-template-columns:minmax(0,1.45fr) 1fr 1fr;gap:14px;margin:0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5FooterGrid>section{
+  background:#06283a;border:1px solid #164a5d;border-radius:10px;padding:23px;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5FooterGrid p:not(.eyebrow){font-size:12px!important;color:#a8c3d0!important;margin:0 0 13px}
+html[data-orbitfs-theme="V5C"] .orbitV5FooterGrid h2{font-size:18px!important}
+html[data-orbitfs-theme="V5C"] .orbitV5Safe{display:flex;gap:15px;align-items:flex-start}
+html[data-orbitfs-theme="V5C"] .orbitV5Safe>span{display:grid;place-items:center;flex:0 0 54px;width:54px;height:54px;background:#104457;border:1px solid #236d7e;border-radius:10px;color:#9cf0e6;font-size:32px}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Help .buttonlink{display:inline-flex!important}
+/* Only change nav treatment while viewing the redesigned Base page. */
+html[data-orbitfs-theme="V5C"] body:has(.orbitZipDeployer) .portalTopbar{
+  border-bottom:1px solid #1a4455!important;background:#061d2b!important;
+}
+html[data-orbitfs-theme="V5C"] body:has(.orbitZipDeployer) .portalTopNavGroup.active>summary{
+  color:#dbfdff!important;border-bottom-color:#27d9d7!important;
+}
+@media(max-width:1050px){
+  html[data-orbitfs-theme="V5C"] .orbitV5FlowCards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipInstalling>.orbitZipWorkspace{grid-template-columns:minmax(0,1fr)!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipOverviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5FooterGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5Safe{grid-column:1/-1}
+}
+@media(max-width:700px){
+  html[data-orbitfs-theme="V5C"] .portalMain:has(.orbitZipDeployer){padding:12px 12px 24px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer{gap:12px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Hero{padding:22px 20px!important;gap:13px!important;min-height:0!important;flex-direction:column!important;align-items:stretch!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5HeroState{align-items:flex-start!important;max-width:100%}
+  html[data-orbitfs-theme="V5C"] .orbitV5HeroState small{text-align:left}
+  html[data-orbitfs-theme="V5C"] .orbitV5Lead{font-size:15px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Start{grid-template-columns:48px minmax(0,1fr)!important;gap:13px!important;padding:21px!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5StartGlyph{width:45px;height:45px;font-size:25px}
+  html[data-orbitfs-theme="V5C"] .orbitV5StartControls{grid-column:1/-1;min-width:0}
+  html[data-orbitfs-theme="V5C"] .orbitV5StartControls button{width:100%!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Flow{padding:18px!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5SectionTitle{flex-direction:column;gap:8px}
+  html[data-orbitfs-theme="V5C"] .orbitV5FlowCards{grid-template-columns:1fr!important;gap:9px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard{display:grid!important;grid-template-columns:38px minmax(0,1fr)!important;min-height:0!important;padding:14px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn>.panel,
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipCanvasColumn>.orbitReviewPanel{padding:18px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipSummary>.panel{padding:17px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigGrid{grid-template-columns:1fr!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine{grid-template-columns:repeat(2,minmax(0,1fr))}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ControlHero{flex-direction:column!important;padding:22px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipControlPanel{padding:18px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipOverviewStats{grid-template-columns:1fr!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .portalOverviewBottom{grid-template-columns:1fr!important;padding:0 18px 18px!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5FooterGrid{grid-template-columns:1fr!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5Safe{grid-column:auto}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitProviderQuickLinks{grid-template-columns:1fr!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5OperationPanel{padding:18px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .portalStatCard strong{font-size:16px!important}
+}
+@media(max-width:380px){
+  html[data-orbitfs-theme="V5C"] .portalMain:has(.orbitZipDeployer){padding:8px 8px 18px!important}
+  html[data-orbitfs-theme="V5C"] .orbitV5ProgressLine{grid-template-columns:1fr}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer h1{font-size:28px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Flow{padding:15px!important}
+}
+
+/* Supplied desktop shell, circular five-stage guide and configuration row. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipInstalling{
+  padding:18px!important;border:1px solid #1b485d!important;border-radius:12px!important;
+  background:linear-gradient(130deg,#071f2e,#092b3d)!important;gap:14px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipInstalling>.orbitV5Hero{
+  border:0!important;border-radius:0!important;background:transparent!important;
+  padding:10px 12px 13px!important;min-height:0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Lead{font-size:14px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Flow{
+  padding:20px!important;border-radius:9px!important;background:#0b3042!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards{
+  position:relative;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  align-items:start!important;gap:0!important;overflow:visible!important;padding-top:2px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards::before{
+  position:absolute;content:"";height:3px;background:#235566!important;
+  left:10%;right:10%;top:23px;z-index:0;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard.active,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard.done{
+  z-index:1;display:flex!important;flex-direction:column!important;align-items:center!important;
+  gap:11px!important;min-height:0!important;width:100%!important;padding:0 6px!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;color:#eef9fc!important;text-align:center!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowIndex{
+  flex:0 0 43px!important;width:43px!important;height:43px!important;border:2px solid #527488!important;
+  border-radius:50%!important;background:#0b3042!important;font-size:15px!important;color:#e4f6fd!important;
+  box-shadow:0 0 0 5px #0b3042!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard.active .orbitV5FlowIndex{
+  border-color:#54e5df!important;background:#073e4c!important;box-shadow:0 0 0 5px #0b3042,0 0 14px #1ce4df55!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard.done .orbitV5FlowIndex{
+  border-color:#6be5c7!important;background:#13685e!important;color:#e2fff9!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard>span:last-child{
+  display:flex!important;flex-direction:column!important;align-items:center!important;gap:5px!important;
+  width:100%!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard b{
+  font-size:13px!important;font-weight:760!important;line-height:1.3!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard small{
+  max-width:160px!important;font-size:10px!important;line-height:1.5!important;
+  color:#9db8c8!important;font-weight:400!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard:hover:not(:disabled) .orbitV5FlowIndex{
+  border-color:#64e8e6!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard:focus-visible{
+  outline:2px solid #61ddde!important;outline-offset:4px!important;border-radius:3px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ReleaseStep .form{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:13px!important;align-items:end!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ReleaseStep .form button{grid-column:1/-1!important}
+html[data-orbitfs-theme="V5C"] .orbitV5ReleaseSelected{
+  margin-top:16px;border:1px solid #1e5366;border-radius:9px;background:#0b3347;padding:11px 16px;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReleaseSelected details{margin-top:7px;font-size:12px}
+html[data-orbitfs-theme="V5C"] .orbitV5ReleaseSelected summary{cursor:pointer;color:#9be9e7}
+html[data-orbitfs-theme="V5C"] .orbitV5StepActions{display:flex;justify-content:flex-end;margin-top:16px}
+html[data-orbitfs-theme="V5C"] .orbitV5ReleaseLocked{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  border:1px solid #1a5365;border-radius:8px;background:#0d3649;padding:12px;margin-top:9px;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReleaseLocked small{font-size:10px;color:#9ed8d6}
+html[data-orbitfs-theme="V5C"] .orbitV5ReleaseLocked b{font-size:13px;color:#eaffff}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ReleaseLocked button{flex:0 0 auto!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitZipWorkspace>.orbitZipCanvasColumn>.orbitInstallerWorkspace+ .orbitInstallerWorkspace{
+  margin-top:0!important;
+}
+@media(max-width:850px){
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards{
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:0!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard{
+    display:flex!important;flex-direction:column!important;padding:0 2px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard b{font-size:11px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard small{font-size:9px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Flow{padding:15px!important}
+}
+@media(max-width:540px){
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipInstalling{padding:9px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards{overflow-x:auto!important;min-width:0!important;scroll-snap-type:x proximity}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard{
+    padding:0 2px!important;scroll-snap-align:center;min-width:0!important;gap:7px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowIndex{
+    width:31px!important;height:31px!important;flex:0 0 31px!important;font-size:11px!important;
+    box-shadow:0 0 0 3px #0b3042!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards::before{
+    left:10%;right:10%;top:18px;height:2px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard b{
+    font-size:9px!important;line-height:1.2!important;overflow-wrap:anywhere;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard small{
+    display:none!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ReleaseStep .form{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ReleaseStep .form button{grid-column:1!important}
+}
+
+/* Supplied Review deployment screen: live, backend-derived summary. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Requirements{
+  display:flex!important;flex-direction:column!important;gap:11px!important;
+  border:1px solid #205366!important;padding:23px 26px!important;
+  background:#092c3d!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Requirements[hidden]{display:none!important}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:9px 0;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid>div{
+  display:flex;flex-direction:column;gap:5px;border:1px solid #1c5364;
+  border-radius:9px;background:#0a3648;padding:16px;min-width:0;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid small{
+  font-size:10px;color:#8ad5d9;letter-spacing:.07em;font-weight:800;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid b{
+  font-size:15px;color:#f0faff;overflow-wrap:anywhere;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid span{
+  font-size:12px;color:#98bbcb;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers{
+  padding:14px 17px;border:1px solid #225567;border-radius:9px;background:#082536;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers h3{
+  font-size:16px!important;margin:0 0 8px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers ul{
+  display:grid;gap:8px;padding:0 0 0 21px;margin:0;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers li{
+  font-size:12px;line-height:1.5;color:#f4d9a8;
+}
+html[data-orbitfs-theme="V5C"] .orbitV5Blockers li.ready{color:#7be8ce}
+@media(max-width:600px){
+  html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid{grid-template-columns:1fr}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Requirements{padding:18px!important}
+}
+
+/* Supplied Deployment needs attention screen; actual operation error text. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure{
+  display:flex!important;align-items:flex-start!important;justify-content:space-between!important;
+  flex-wrap:wrap!important;gap:19px!important;padding:25px!important;
+  border:1px solid #a66566!important;border-radius:10px!important;
+  background:linear-gradient(115deg,#352839,#112c3b)!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure h2{font-size:23px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure p:not(.eyebrow){
+  color:#e0bcc2!important;font-size:13px!important;max-width:700px;
+  overflow-wrap:anywhere;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure small{color:#cba2b5!important;font-size:11px}
+html[data-orbitfs-theme="V5C"] .orbitV5FailureActions{
+  display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:190px;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FailureActions button,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FailureActions .buttonlink{
+  text-align:center;justify-content:center;
+}
+@media(max-width:700px){
+  html[data-orbitfs-theme="V5C"] .orbitV5FailureActions{width:100%}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure{padding:18px!important}
+}
