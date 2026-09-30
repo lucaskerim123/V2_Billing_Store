@@ -34,6 +34,9 @@ export default function MailSubscriptionCategories({
   const [drafts,setDrafts]=useState<Record<string,Category>>({});
   const [busy,setBusy]=useState<string>("");
   const [message,setMessage]=useState("");
+  const [newLabel,setNewLabel]=useState("");
+  const [newKey,setNewKey]=useState("");
+  const [newDescription,setNewDescription]=useState("");
   useEffect(()=>setDrafts(Object.fromEntries(categories.map(c=>[c.category_key,{...c}]))),[categories]);
   const sorted=useMemo(()=>[...categories].sort((a,b)=>a.sort_order-b.sort_order||a.label.localeCompare(b.label)),[categories]);
   const map=useMemo(()=>Object.fromEntries(events.map(e=>[e.event_key,e.category_key])),[events]);
@@ -44,6 +47,15 @@ export default function MailSubscriptionCategories({
     setBusy(c.category_key);setMessage("");
     const ok=await onSave({action:"subscription_category",key:c.category_key,label:d.label,description:d.description,defaultSubscribed:d.default_subscribed,enabled:d.enabled,sortOrder:d.sort_order});
     setMessage(ok?"Subscription category saved.":"Could not save category.");
+    setBusy("");
+  }
+  async function addCategory(){
+    const key=newKey.trim().toLowerCase();
+    if(!/^[a-z][a-z0-9_]{1,47}$/.test(key)||newLabel.trim().length<2){setMessage("Enter a valid category name and lowercase key.");return}
+    if(categories.some(c=>c.category_key===key)){setMessage("A category with this key already exists.");return}
+    setBusy("new-category");setMessage("");
+    const ok=await onSave({action:"subscription_category",key,label:newLabel.trim(),description:newDescription.trim(),defaultSubscribed:true,enabled:true,sortOrder:sorted.length?Math.max(...sorted.map(c=>c.sort_order))+10:10});
+    if(ok){setNewLabel("");setNewKey("");setNewDescription("");setMessage("Category added and subscribed by default.");}else setMessage("Could not create the category.");
     setBusy("");
   }
   async function assignEvent(eventKey:string,categoryKey:string){
@@ -76,6 +88,15 @@ export default function MailSubscriptionCategories({
         </article>;
       })}
     </div>
+    <details className={styles.addCategory}><summary>Add another optional category</summary>
+      <div className={styles.newCategoryForm}>
+        <label className={styles.field}>Category name<input value={newLabel} maxLength={80} onChange={e=>{const value=e.target.value;setNewLabel(value);if(!newKey)setNewKey(value.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,48))}} placeholder="Maintenance announcements"/></label>
+        <label className={styles.field}>Category key<input value={newKey} maxLength={48} onChange={e=>setNewKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,""))} placeholder="maintenance_announcements"/></label>
+        <label className={styles.field}>Description<textarea rows={2} maxLength={400} value={newDescription} onChange={e=>setNewDescription(e.target.value)} placeholder="What will customers receive?"/></label>
+        <button type="button" disabled={busy!==""} onClick={addCategory}>{busy==="new-category"?"Adding…":"Add category"}</button>
+      </div>
+      <p className={styles.help}>New categories start enabled and subscribed by default. Assign events below to make them control delivery. Disable a category to pause it without removing existing customer choices.</p>
+    </details>
     {showEvents&&<details className={styles.routing}><summary>Mail event routing <span>{automations.length} automations</span></summary>
       <p>Each automation belongs to one customer subscription category. Security, payment and deployment-problem events are always mandatory, regardless of the dropdown.</p>
       <div className={styles.eventList}>
