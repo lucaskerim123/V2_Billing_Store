@@ -96,9 +96,11 @@ export default function CustomerReleaseChannelsPage(){
     const canSelfJoin=!isOpen&&!isStable&&c.self_join_enabled===true;
     const canRequest=!isOpen&&!isStable&&!c.self_join_enabled&&c.access_request_enabled===true;
     const requestStatus=String(request?.status||"").toLowerCase();
-    const pending=requestStatus==="pending";
-    const approved=requestStatus==="approved";
-    const rejected=requestStatus==="rejected";
+    // Authoritative access always wins over request history. A rejected/approved
+    // request is historical once License Manager says this licence has access.
+    const pending=!hasExplicit&&requestStatus==="pending";
+    const approved=!hasExplicit&&requestStatus==="approved";
+    const rejected=!hasExplicit&&requestStatus==="rejected";
     const hasAccess=isStable||isOpen||hasExplicit;
     const policy=isStable?"Stable":isOpen?"Open":canSelfJoin?"Self-join":canRequest?"Approval required":"Invite only";
     const lifecycleState=isStable?"Included":isOpen?"Available":hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":approved?"Approved · syncing":"Restricted";
@@ -117,7 +119,7 @@ export default function CustomerReleaseChannelsPage(){
       <div><span>Status</span><b>{isStable?"Included":isOpen?"Available now":hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":approved?"Approved · access syncing":"Not requested"}</b></div>
      </div>
 
-     {approved&&<div className="channelRequestFeedback"><b>Approved</b><span>{hasExplicit?"Your access request was approved. This channel is available to your OrbitFS installation.":"Your request is approved, but the access grant has not appeared yet. Refresh this page; deployment remains blocked until the grant is authoritative."}</span></div>}
+     {approved&&<div className="channelRequestFeedback"><b>Approved</b><span>Your request is approved, but the access grant has not appeared yet. Refresh this page; deployment remains blocked until the grant is authoritative.</span></div>}
      {rejected&&<div className="channelRequestFeedback"><b>Denied</b><span>{request?.reason||"Your access request was not approved."}</span></div>}
 
      <div className="customerChannelActions">
