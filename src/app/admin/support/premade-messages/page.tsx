@@ -3,7 +3,19 @@ import {useEffect,useRef,useState} from "react";
 import {PREMADE_SUPPORT_VARIABLES} from "@/lib/support-premade-variables";
 import {createClient} from "@/lib/supabase";
 import {usePermissions} from "@/lib/usePermissions";
-export default function PremadeMessages(){const sb=createClient(),{can}=usePermissions();const [rows,setRows]=useState<any[]>([]),[edit,setEdit]=useState<any>({active:true,category:'General',sort_order:0}),[msg,setMsg]=useState('');
+export default function PremadeMessages(){const sb=createClient(),{can}=usePermissions();const [rows,setRows]=useState<any[]>([]),[edit,setEdit]=useState<any>({active:true,category:'General',sort_order:0}),[msg,setMsg]=useState(''),bodyRef=useRef<HTMLTextAreaElement>(null);
+function insertVariable(key:string){
+ const token=`{${key}}`;
+ const input=bodyRef.current;
+ const current=String(edit.body||'');
+ const start=input?.selectionStart??current.length;
+ const end=input?.selectionEnd??start;
+ setEdit((previous:any)=>({...previous,body:current.slice(0,start)+token+current.slice(end)}));
+ requestAnimationFrame(()=>{
+  bodyRef.current?.focus();
+  bodyRef.current?.setSelectionRange(start+token.length,start+token.length);
+ });
+}
 async function load(){const {data}=await sb.from('support_premade_messages').select('*').order('category').order('sort_order');setRows(data||[])}useEffect(()=>{load()},[]);
 async function save(){if(!edit.name?.trim()||!edit.body?.trim())return setMsg('Name and message are required.');const payload={name:edit.name.trim(),category:edit.category||'General',body:edit.body,active:!!edit.active,sort_order:Number(edit.sort_order||0),updated_at:new Date().toISOString()};const q=edit.id?sb.from('support_premade_messages').update(payload).eq('id',edit.id):sb.from('support_premade_messages').insert(payload);const {error}=await q;setMsg(error?.message||'Premade message saved.');if(!error){setEdit({active:true,category:'General',sort_order:0});load()}}
 async function remove(id:string){if(!confirm('Delete this premade message?'))return;const {error}=await sb.from('support_premade_messages').delete().eq('id',id);setMsg(error?.message||'Premade message deleted.');if(!error)load()}
