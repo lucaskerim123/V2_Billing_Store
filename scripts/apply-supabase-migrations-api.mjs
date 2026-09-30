@@ -42,7 +42,11 @@ for(const item of pending){
   const name=source.split("/").pop().replace(/\.sql$/,"").replace(/^\d+_?/,"").replace(/[^A-Za-z0-9_]+/g,"_").replace(/^_+|_+$/g,"").toLowerCase();
   if(!name)throw new Error("Could not derive migration name from "+source);
 
-  if(liveNames.has(name)){
+  // Some migrations were previously applied directly to the confirmed
+  // production project with a dated _20260930 suffix. Treat only that exact
+  // known equivalent as applied, rather than replaying it under a second name.
+  const alreadyApplied=liveNames.has(name)||liveNames.has(name+"_20260930");
+  if(alreadyApplied){
     console.log(`Already applied: ${name} (${source})`);
     continue;
   }
