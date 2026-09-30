@@ -150,7 +150,7 @@ grant all on public.mail_subscription_categories,public.mail_subscription_events
 -- messages cannot be disabled, opted out of or reassigned to an optional group.
 create or replace function public.mail_subscription_protected_event(p_event_key text)
 returns boolean language sql immutable as $$
-  select coalesce(p_event_key,'') ~ '^(auth\\.|security\\.|password\\.|customer\\.|invoice\\.|payment\\.|cancellation\\.|licen[cs]e\\.|order\\.created$|order\\.paid$|service\\.suspended$|service\\.terminated$|deployment\\.failed$|deployment\\.action_required$|deployment\\.rollback_succeeded$|support\\.ticket\\.created$)';
+  select coalesce(p_event_key,'') ~ '^(auth[.]|security[.]|password[.]|customer[.]|invoice[.]|payment[.]|cancellation[.]|licen[cs]e[.]|order[.]created$|order[.]paid$|service[.]suspended$|service[.]terminated$|deployment[.]failed$|deployment[.]action_required$|deployment[.]rollback_succeeded$|support[.]ticket[.]created$)';
 $$;
 
 create or replace function public.mail_admin_save_subscription_category(
