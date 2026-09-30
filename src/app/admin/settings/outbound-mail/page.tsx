@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";import Link from "next/link";import {createClient} from "@/lib/supabase";
 import MailSubscriptionCategories from "@/components/MailSubscriptionCategories";
+import "./outbound-mail-collapse.css";
 async function json(r:Response){const t=await r.text();try{return t?JSON.parse(t):{}}catch{return {error:t}}}
 export default function OutboundMail(){const sb=createClient();const [data,setData]=useState<any>(),[q,setQ]=useState(""),[cat,setCat]=useState("All"),[edit,setEdit]=useState<any>(),[msg,setMsg]=useState("");
 async function token(){return (await sb.auth.getSession()).data.session?.access_token||""}async function load(){const t=await token();if(!t)return location.href="/login";const r=await fetch("/api/mail/admin",{headers:{Authorization:`Bearer ${t}`},cache:"no-store"});const j=await json(r);if(!r.ok)return setMsg(j.error||"Could not load outbound mail settings.");setData(j)}useEffect(()=>{load()},[]);
