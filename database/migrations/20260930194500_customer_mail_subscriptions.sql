@@ -192,6 +192,9 @@ begin
   if public.mail_subscription_protected_event(p_event_key) and p_category_key<>'system' then
     raise exception 'Critical system/transactional events must remain mandatory';
   end if;
+  if not public.mail_subscription_protected_event(p_event_key) and p_category_key='system' then
+    raise exception 'Only critical transactional events can be assigned to the mandatory system category';
+  end if;
   insert into public.mail_subscription_events(event_key,category_key)
   values(p_event_key,p_category_key)
   on conflict(event_key) do update set category_key=excluded.category_key,updated_at=now();
@@ -219,6 +222,12 @@ begin
 
   select m.category_key into v_category
     from public.mail_subscription_events m where m.event_key=p_event_key;
+  -- Direct staff sends may use a custom event key; an explicitly selected
+  -- newsletter/release template must still obey its own subscription category.
+  if v_category is null and p_template_key is not null then
+    select m.category_key into v_category
+    from public.mail_subscription_events m where m.event_key=p_template_key;
+  end if;
 
   if v_category is null then
     if coalesce(p_event_key,'') like 'news.%' or coalesce(p_template_key,'') like 'news.%' then
