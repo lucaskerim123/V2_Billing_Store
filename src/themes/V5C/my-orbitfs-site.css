@@ -473,3 +473,28 @@ html[data-orbitfs-theme="V5C"] .orbitV5Blockers li.ready{color:#7be8ce}
   html[data-orbitfs-theme="V5C"] .orbitV5ReviewGrid{grid-template-columns:1fr}
   html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Requirements{padding:18px!important}
 }
+
+/* Supplied Deployment needs attention screen; actual operation error text. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure{
+  display:flex!important;align-items:flex-start!important;justify-content:space-between!important;
+  flex-wrap:wrap!important;gap:19px!important;padding:25px!important;
+  border:1px solid #a66566!important;border-radius:10px!important;
+  background:linear-gradient(115deg,#352839,#112c3b)!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure h2{font-size:23px!important}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure p:not(.eyebrow){
+  color:#e0bcc2!important;font-size:13px!important;max-width:700px;
+  overflow-wrap:anywhere;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure small{color:#cba2b5!important;font-size:11px}
+html[data-orbitfs-theme="V5C"] .orbitV5FailureActions{
+  display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:190px;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FailureActions button,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FailureActions .buttonlink{
+  text-align:center;justify-content:center;
+}
+@media(max-width:700px){
+  html[data-orbitfs-theme="V5C"] .orbitV5FailureActions{width:100%}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure{padding:18px!important}
+}
