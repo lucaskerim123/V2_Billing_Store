@@ -73,3 +73,9 @@
 .eventGroup>summary small{font-size:10px;color:var(--soft);font-weight:500}
 .eventGroup .eventList{padding:0 2px 5px}
 .event{padding:9px 2px}
+
+/* Native details with flex summaries still need a visible open/close affordance. */
+.root summary{list-style:none}
+.root summary::-webkit-details-marker{display:none}
+.root summary::before{content:"›";display:inline-block;color:var(--soft);font-size:17px;line-height:1;flex:0 0 auto;margin-right:7px;transition:transform .16s ease}
+.root details[open]>summary::before{transform:rotate(90deg)}
