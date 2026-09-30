@@ -2,6 +2,7 @@
 import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import MailSubscriptionCategories from "@/components/MailSubscriptionCategories";
 
 async function readJson(r:Response){const t=await r.text();if(!t)return {};try{return JSON.parse(t)}catch{return {error:t||`Request failed (${r.status})`}}}
 const panel:any={background:'#fff',border:'1px solid #e1e6ef',borderRadius:16,padding:18};
@@ -49,9 +50,10 @@ export default function MailConfig(){
       {loading&&<p>Loading Mail Config…</p>}
       {!loading&&adminData&&<section style={{display:'grid',gap:12}}>
         {caps.settings&&<details open style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Mail settings</summary><div style={{marginTop:14}}><MainSettings settings={settings} provider={adminData.provider||{}} save={save}/></div></details>}
+        {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Email subscriptions & categories</summary><div style={{marginTop:14}}><MailSubscriptionCategories categories={adminData.subscriptionCategories||[]} events={adminData.subscriptionEvents||[]} automations={adminData.automations||[]} templates={adminData.templates||[]} onSave={save}/></div></details>}
         {caps.settings&&<details open style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Mailbox settings</summary><div style={{marginTop:14}}><MailboxSettings rows={adminData.accounts||[]} users={adminData.users||[]} save={save}/></div></details>}
         {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Spam protection</summary><div style={{marginTop:14}}><SpamProtection data={spamData} token={token} reload={load}/></div></details>}
-        {caps.templates&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Templates</summary><div style={{marginTop:14}}><Templates rows={adminData.templates||[]} save={save}/></div></details>}
+        {caps.templates&&<details open style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Templates · release, news & deployment</summary><div style={{marginTop:14}}><Templates rows={adminData.templates||[]} save={save}/></div></details>}
         {caps.admin&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Delivery history</summary><div style={{marginTop:14}}><Delivery rows={adminData.logs||[]}/></div></details>}
         {!caps.settings&&!caps.templates&&caps.admin&&<div style={panel}><b>Mail administration overview</b><p style={{...muted,marginBottom:0}}>You can view Mail administration status, but changing config requires the Mail settings or Mail templates permission.</p></div>}
       </section>}
