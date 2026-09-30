@@ -2,6 +2,7 @@
 import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import "./mail-config-compact.css";
 import MailSubscriptionCategories from "@/components/MailSubscriptionCategories";
 
 async function readJson(r:Response){const t=await r.text();if(!t)return {};try{return JSON.parse(t)}catch{return {error:t||`Request failed (${r.status})`}}}
@@ -42,7 +43,7 @@ export default function MailConfig(){
   }
   const settings=useMemo(()=>Object.fromEntries((adminData?.settings||[]).map((x:any)=>[x.key,x.value])),[adminData]);
 
-  return <main style={{minHeight:'100vh',background:'#f4f6fa',fontFamily:'Arial,sans-serif',color:'#172033'}}>
+  return <main className="mailConfigCompact" style={{minHeight:'100vh',background:'#f4f6fa',fontFamily:'Arial,sans-serif',color:'#172033'}}>
     <header style={{background:'#111827',color:'#fff',padding:'20px 18px'}}><div style={{maxWidth:1280,margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}><div><h1 style={{margin:0,fontSize:24}}>Mail Config</h1><p style={{margin:'5px 0 0',opacity:.7}}>OrbitFS Mail settings and mailbox management.</p></div><div style={{display:'flex',gap:16,flexWrap:'wrap'}}><Link href="/mail" style={{color:'#fff',fontWeight:700,textDecoration:'none'}}>Mail & Queue</Link><Link href="/admin" style={{color:'#fff',fontWeight:700,textDecoration:'none'}}>Back to Admin</Link></div></div></header>
     <div style={{maxWidth:1280,margin:'0 auto',padding:'20px 16px 30px'}}>
       {error&&<div style={{padding:14,border:'1px solid #f2b8b5',background:'#fff5f5',borderRadius:12,color:'#a52727',marginBottom:16}}>{error}</div>}
