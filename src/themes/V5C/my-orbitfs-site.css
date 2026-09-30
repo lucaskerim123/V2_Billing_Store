@@ -498,3 +498,125 @@ html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FailureActions .buttonl
   html[data-orbitfs-theme="V5C"] .orbitV5FailureActions{width:100%}
   html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Failure{padding:18px!important}
 }
+
+/* Six-step Base journey: true five setup/progress stages and finished control panel.
+   Only V5C's My OrbitFS page is affected; V3C and other customer views are unchanged. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards{
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  align-items:start!important;
+  gap:0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards::before{
+  left:8.333%!important;
+  right:8.333%!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard{
+  padding:0 4px!important;
+  min-width:0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard b{
+  font-size:12px!important;
+  line-height:1.4!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard small{
+  max-width:148px!important;
+  font-size:10px!important;
+  text-wrap:balance!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard:disabled{
+  opacity:.7!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Connections,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigWorkspace,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveWorkspace{
+  display:grid!important;
+  gap:14px!important;
+  align-content:start!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Connections[hidden],
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigWorkspace[hidden],
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveWorkspace[hidden]{
+  display:none!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Connections>.panel,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigWorkspace>.panel,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveWorkspace>.panel{
+  width:100%!important;
+  margin:0!important;
+  padding:22px 25px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Connections>.orbitInstallerWorkspace,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigWorkspace>.orbitInstallerWorkspace{
+  border-color:#23677a!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5StepIntro{
+  background:linear-gradient(120deg,#0b3548,#082b3b)!important;
+  border-color:#1c6475!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5StepIntro p:last-child{
+  margin:0!important;
+  color:#a4c8d3!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5StepActions{
+  margin-top:14px!important;
+  display:flex!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Connections>.orbitV5StepActions{
+  margin-top:0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5DeployRunning{
+  padding:16px!important;
+  border:1px solid #277389!important;
+  border-radius:9px!important;
+  background:#0c3d4d!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveProgress{
+  background:#0b3042!important;
+  border-color:#2b7586!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ProgressLine{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowStep{overflow-wrap:anywhere}
+@media(max-width:950px){
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard small{
+    font-size:9px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard b{font-size:11px!important}
+}
+@media(max-width:650px){
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Flow{padding:15px 10px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowIndex{
+    flex:0 0 30px!important;width:30px!important;height:30px!important;
+    font-size:11px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards::before{top:17px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard b{
+    font-size:9px!important;
+    overflow-wrap:anywhere!important;
+    hyphens:auto;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard small{display:none!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5Connections>.panel,
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ConfigWorkspace>.panel,
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5LiveWorkspace>.panel{
+    padding:18px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ProgressLine{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5StepActions>button{max-width:100%!important}
+}
+@media(max-width:380px){
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCard b{font-size:8px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowIndex{
+    flex-basis:27px!important;width:27px!important;height:27px!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5FlowCards::before{top:16px!important}
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployer .orbitV5ProgressLine{grid-template-columns:1fr!important}
+}
