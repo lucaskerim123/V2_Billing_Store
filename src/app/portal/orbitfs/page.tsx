@@ -36,15 +36,15 @@ export default function MyOrbitFS(){
   const [lifecyclePlan,setLifecyclePlan]=useState<any>(null);
 
   async function authHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{} }
-  async function load(background=false){
+  async function load(background=false,bootstrap=false){
     if(!background)setLoading(true);
     try{
       const headers=await authHeaders();
       if(!headers.Authorization){setMsg("Your session has expired. Please sign in again.");return}
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
       try{
-        const r=await fetch("/api/orbitfs/status",{headers,cache:"no-store",signal:controller.signal}),j=await r.json().catch(()=>({}));
-        if(r.ok){setD(j);setMsg("")}else setMsg(apiError(j,"Could not load My OrbitFS."));
+        const r=await fetch("/api/orbitfs/status"+(bootstrap?"?view=bootstrap":""),{headers,cache:"no-store",signal:controller.signal}),j=await r.json().catch(()=>({}));
+        if(r.ok){setD(j);setMsg("");if(bootstrap)void load(true,false)}else setMsg(apiError(j,"Could not load My OrbitFS."));
       }catch(e:any){setMsg(e?.name==="AbortError"?"My OrbitFS status request timed out. Please retry.":e?.message||"Could not load My OrbitFS.")}
       finally{clearTimeout(timer)}
     }finally{if(!background)setLoading(false)}
@@ -55,7 +55,7 @@ export default function MyOrbitFS(){
     if(callbackError)setMsg(callbackError);
     else if(connected==="supabase")setMsg("Supabase account connected. Loading your projects…");
     else if(connected==="vercel")setMsg("Vercel account connected.");
-    void load().finally(()=>{
+    void load(false,true).finally(()=>{
       if(connected==="supabase"&&!callbackError)setMsg("Supabase account connected. Choose an existing project or create a new one.");
       if(connected||callbackError)window.history.replaceState({},document.title,window.location.pathname);
     });
@@ -380,10 +380,10 @@ export default function MyOrbitFS(){
         <div className="orbitZipReleaseWorkspace">
           <div className="orbitZipReleaseControls">
             <label><span>Release channel</span><select value={selectedChannel} disabled={busy!==""||deploymentUnavailable||!infrastructureReady||!licenseRegistered} onChange={e=>void saveReleaseChannel(e.target.value)}>{availableBaseChannels.map((channel:string)=><option key={channel} value={channel}>{channel}</option>)}</select></label>
-            <label><span>Available Base release</span><select value={selectedBaseUpdateRelease?.id||""} disabled={busy!==""||!baseUpdateCandidates.length} onChange={e=>setSelectedReleaseId(e.target.value)}><option value="">{baseUpdateCandidates.length?"Choose a newer release":"No newer Base release"}</option>{baseUpdateCandidates.map((r:any)=><option key={r.id} value={r.id}>v{r.version} · {r.title||"OrbitFS Base"}</option>)}</select></label>
+            <label><span>Available Base release</span><select value={selectedBaseUpdateRelease?.id||""} disabled={busy!==""||!baseUpdateCandidates.length} onChange={e=>setSelectedReleaseId(e.target.value)}><option value="">{d?.releaseCatalogLoading?"Checking published releases…":baseUpdateCandidates.length?"Choose a newer release":d?.baseReleaseDiscoveryByChannel?.[selectedChannel]?.available!==true?"Release authority unavailable":"No newer Base release"}</option>{baseUpdateCandidates.map((r:any)=><option key={r.id} value={r.id}>v{r.version} · {r.title||"OrbitFS Base"}</option>)}</select></label>
             <button className="secondary orbitZipRefreshButton" disabled={busy!==""} onClick={()=>void refreshReleases()}>{busy==="refresh-releases"?"Refreshing…":"Refresh releases"}</button>
           </div>
-          <div className="orbitZipReleaseMeta"><span>{baseUpdateCandidates.length?baseUpdateCandidates.length+" newer Base release"+(baseUpdateCandidates.length===1?"":"s")+" in "+selectedChannel:"No newer Base release in "+selectedChannel}</span><span>{d?.lastCheckedAt?"Checked "+new Date(d.lastCheckedAt).toLocaleString():"Release status not checked yet"}</span></div>
+          <div className="orbitZipReleaseMeta"><span>{baseUpdateCandidates.length?baseUpdateCandidates.length+" newer Base release"+(baseUpdateCandidates.length===1?"":"s")+" in "+selectedChannel:d?.releaseCatalogLoading?"Checking published Base releases…":d?.baseReleaseDiscoveryByChannel?.[selectedChannel]?.available!==true?"Base release lookup unavailable":"No newer Base release in "+selectedChannel}</span><span>{d?.lastCheckedAt?"Checked "+new Date(d.lastCheckedAt).toLocaleString():"Release status not checked yet"}</span></div>
         </div>
 
         <div className="portalOverviewStats orbitZipOverviewStats">
