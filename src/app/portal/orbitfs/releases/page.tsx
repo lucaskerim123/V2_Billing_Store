@@ -112,7 +112,6 @@ export default function OrbitFSUpdateReleaseSystem(){
     });
   const releases=publishedUpdates.filter(release=>String(release.channel||"stable")===channel);
   const selected=releases.find(release=>idOf(release)===selectedId)||null;
-  const latest=releases[0]||null;
   const applied=progress?.appliedUpdate||data?.normalUpdate?.applied||install?.metadata?.appliedUpdate||null;
   const appliedVersion=String(applied?.version||"");
   const appliedId=String(applied?.releaseId||"");
