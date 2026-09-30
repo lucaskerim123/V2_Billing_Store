@@ -3,7 +3,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest} from "@/lib/master-api";
-import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,resolveProductionUrl,checkPublicPanelHealth,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,resolveProductionUrl,checkPublicPanelHealth,ensureStandardPanelProtection,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 import {errorMessage} from "@/lib/error-message";
@@ -543,6 +543,7 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
     };
     await progress?.("deploying",{projectId,fileCount:target.files.length,databaseMigrations:migrations});
     await event(install,"base.update.deploying","info",`Deploying Base ${release.version} to the existing Vercel project`,{projectId,fileCount:target.files.length,databaseMigrations:migrations});
+    await ensureStandardPanelProtection(install);
     const created=await vercelApi(String(install.auth_user_id),"/v13/deployments",{method:"POST",body:JSON.stringify(body)});
     if(!created?.id&&!created?.uid)fail("Vercel did not return a Base update deployment id",502);
     createdDeploymentId=String(created.id||created.uid);
@@ -844,6 +845,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   }
   if(action==="deploy"&&!install.vercel_project_id)install=await ensureVercelProject(install);
   if(!install.vercel_project_id)fail("Customer Vercel project is unavailable for this deployment action",409,"BASE_PROJECT_NOT_FOUND");
+  await ensureStandardPanelProtection(install);
   await configureVercel(install,String(release.version),undefined,requestedChannel,String(release.id),String(release.sha256||release.checksum||""),String(release.source_sha||release.source_commit||release.manifest?.sourceCommit||""));
   const parsed=await readBasePackage(release);
   const packageDatabaseSchema=String((parsed.pkg as any).databaseSchemaVersion||(parsed.pkg as any).releaseInfo?.databaseSchemaVersion||release.manifest?.databaseSchemaVersion||"").trim();
