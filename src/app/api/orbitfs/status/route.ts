@@ -120,7 +120,15 @@ export async function GET(req:Request){
   if(install){
     const metadata=install.metadata&&typeof install.metadata==="object"?{...install.metadata}:{};
     if(!metadata.appliedUpdate){
-      const applied=installHistory.find((row:any)=>String(row.action||"").toLowerCase()==="update"&&String(row.status||"").toLowerCase()==="ready");
+      // Recover an applied Update from successful execution history only if
+      // it wasn't subsequently rolled back. Base and Update have independent
+      // version numbers, so neither implies the other's installation state.
+      const rolledBackAt=metadata.rolledBackUpdate?.rolledBackAt?Date.parse(String(metadata.rolledBackUpdate.rolledBackAt)):0;
+      const applied=installHistory.find((row:any)=>{
+        if(String(row.action||"").toLowerCase()!=="update"||String(row.status||"").toLowerCase()!=="ready")return false;
+        const completedAt=Date.parse(String(row.ready_at||row.created_at||""));
+        return !rolledBackAt||(Number.isFinite(completedAt)&&completedAt>rolledBackAt);
+      });
       if(applied){
         metadata.appliedUpdate={
           version:String(applied.release_version||""),
