@@ -50,6 +50,7 @@ export default function OrbitFSUpdateReleaseSystem(){
   const [confirmed,setConfirmed]=useState(false);
   const [progress,setProgress]=useState<UpdateProgress|null>(null);
   const [progressTarget,setProgressTarget]=useState("");
+  const [attemptStartedAt,setAttemptStartedAt]=useState(0);
   const [progressMode,setProgressMode]=useState<UpdateMode>("update");
   const [progressIssue,setProgressIssue]=useState("");
   const [rollbackReason,setRollbackReason]=useState("");
@@ -178,7 +179,8 @@ export default function OrbitFSUpdateReleaseSystem(){
       if(!active||!next||requestInFlight.current)return;
       const target=progressTarget;
       const events=(next.events||[]).filter(event=>isUpdateEvent(event,progressMode)&&
-        (target?event.releaseId===target:false));
+        (target?event.releaseId===target:false)&&(!attemptStartedAt||
+          Date.parse(event.createdAt)>=attemptStartedAt-5000));
       const completed=progressMode==="update"?"update.completed":"update.rollback.completed";
       const failed=progressMode==="update"?"update.failed":"update.rollback.failed";
       const success=events.find(event=>event.type===completed);
@@ -197,7 +199,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     void tick();
     const timer=setInterval(()=>{void tick()},4500);
     return()=>{active=false;clearInterval(timer)};
-  },[stage,install?.id,progressTarget,progressMode,refreshProgress,load]);
+  },[stage,install?.id,progressTarget,progressMode,attemptStartedAt,refreshProgress,load]);
 
   // Recover a running update after a page reload using only recorded event history.
   useEffect(()=>{
@@ -211,6 +213,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     if(!newerTerminal&&recent){
       setProgressMode("update");
       setProgressTarget(latestStart.releaseId);
+      setAttemptStartedAt(Date.parse(latestStart.createdAt)||0);
       setStage(4);
     }
   },[progress?.installationId,progress?.events?.[0]?.id,install?.id,stage,progressTarget]);
@@ -220,7 +223,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     const version=versionOf(selected),releaseId=idOf(selected);
     if(!confirmed){setMessage("Review and confirm the Update before installing.");setStage(3);return}
     if(!window.confirm("Install published OrbitFS Update v"+version+" from "+channel+"?"))return;
-    setProgressTarget(releaseId);setProgressMode("update");setProgress(null);
+    setProgressTarget(releaseId);setProgressMode("update");setProgress(null);setAttemptStartedAt(Date.now());
     completionReported.current="";setStage(4);setBusy("update");setMessage("");
     requestInFlight.current=true;
     try{
@@ -248,7 +251,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     if(!reason){setMessage("Enter a rollback reason before proceeding.");return}
     if(!window.confirm("Roll back installed Update v"+appliedVersion+"? Forward-compatible database migrations will remain applied."))return;
     const releaseId=String(applied?.releaseId||"");
-    setProgressTarget(releaseId);setProgressMode("rollback");setProgress(null);setStage(4);
+    setProgressTarget(releaseId);setProgressMode("rollback");setProgress(null);setAttemptStartedAt(Date.now());setStage(4);
     setBusy("rollback");setMessage("");completionReported.current="";
     requestInFlight.current=true;
     try{
@@ -268,8 +271,15 @@ export default function OrbitFSUpdateReleaseSystem(){
     }finally{requestInFlight.current=false;setBusy("")}
   }
 
-  const trackedEvents=(progress?.events||[]).filter(event=>isUpdateEvent(event,progressMode)&&
+  // Filter historical attempts for the same release so a previous failure
+  // or completion cannot be mistaken for the currently running operation.
+  const allTargetEvents=(progress?.events||[]).filter(event=>isUpdateEvent(event,progressMode)&&
     (!progressTarget||event.releaseId===progressTarget));
+  const firstEventType=progressMode==="rollback"?"update.rollback.started":"update.started";
+  const latestStart=allTargetEvents.find(event=>event.type===firstEventType);
+  const startBoundary=attemptStartedAt||Date.parse(latestStart?.createdAt||"")||0;
+  const trackedEvents=allTargetEvents.filter(event=>!startBoundary||
+    Date.parse(event.createdAt)>=startBoundary-5000);
   const failedEvent=trackedEvents.find(event=>event.type===(progressMode==="rollback"?"update.rollback.failed":"update.failed"));
   const completedEvent=trackedEvents.find(event=>event.type===(progressMode==="rollback"?"update.rollback.completed":"update.completed"));
   const stageDone=(n:Stage)=>n===1?hasBase:n===2?Boolean(selected):n===3?confirmed:n===4?Boolean(completedEvent):false;
