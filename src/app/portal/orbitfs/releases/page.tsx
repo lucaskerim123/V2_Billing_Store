@@ -121,6 +121,7 @@ export default function OrbitFSUpdateReleaseSystem(){
   const licenceReady=Boolean(install?.metadata?.licenseRegistration?.valid===true);
   const hasBase=Boolean(install?.vercel_project_id&&baseVersion);
   const blockingBaseOperation=Boolean(data?.activeOperation);
+  const updateDiscoveryReady=data?.updateReleaseDiscoveryAvailable??data?.releaseDiscoveryAvailable!==false;
   const selectedComparison=selected&&appliedVersion?compareOrbitReleaseVersions(versionOf(selected),appliedVersion):null;
   const alreadyInstalled=Boolean(selected&&(appliedId&&appliedId===idOf(selected)||
     appliedVersion&&appliedVersion===versionOf(selected)&&String(applied?.channel||channel)===channel));
@@ -130,7 +131,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     (baseVersion&&compareOrbitReleaseVersions(baseVersion,requiredBase)!==null&&
       (compareOrbitReleaseVersions(baseVersion,requiredBase)??-1)>=0));
   const canInstall=Boolean(selected&&baseReady&&licenceReady&&compatible&&!isPrevious&&!alreadyInstalled&&
-    !updateUnavailable&&!blockingBaseOperation&&!busy&&data?.releaseDiscoveryAvailable!==false);
+    !updateUnavailable&&!blockingBaseOperation&&!busy&&updateDiscoveryReady);
 
   useEffect(()=>{
     if(!data||statusInitialised.current)return;
@@ -367,7 +368,7 @@ export default function OrbitFSUpdateReleaseSystem(){
         <div><small>INSTALLED UPDATE</small><b>{appliedVersion?"v"+appliedVersion:"No Update installed"}</b></div>
         <Link className="buttonlink secondary" href="/portal/orbitfs/channels">Manage channel access ↗</Link>
       </div>
-      {!data.releaseDiscoveryAvailable&&<p className="orbitV5UpdateHint">Release discovery is currently unavailable. Existing results may be incomplete. Installation remains disabled until authority returns.</p>}
+      {!updateDiscoveryReady&&<p className="orbitV5UpdateHint">Update release discovery is unavailable. {data?.updateReleaseDiscoveryError||"Refresh or wait for License Manager to respond."} Installation remains disabled until Update authority returns.</p>}
       <div className="orbitV5UpdateReleaseList">
         {releases.map(release=>{
           const rid=idOf(release);
@@ -424,11 +425,13 @@ export default function OrbitFSUpdateReleaseSystem(){
           {selected.customer_notes&&<><p className="eyebrow">CUSTOMER NOTES</p><p className="orbitV5UpdateNotes">{selected.customer_notes}</p></>}
         </div>
         <div className="orbitV5UpdateChecks"><p className="eyebrow">PRE-DEPLOYMENT CHECK</p>
-          <div><span className={hasBase?"ok":"blocked"}>{hasBase?"✓":"!"}</span><p>Installed Base {hasBase?"found":"required"}</p></div>
+          <div><span className={baseReady?"ok":"blocked"}>{baseReady?"✓":"!"}</span><p>{!hasBase?"Installed Base required":baseReady?"Installed Base ready":`Installed Base status is ${String(install?.state||"unknown")}; verify Base deployment is ready before updating`}</p></div>
           <div><span className={licenceReady?"ok":"blocked"}>{licenceReady?"✓":"!"}</span><p>Installation licence {licenceReady?"registered":"required"}</p></div>
           <div><span className={compatible?"ok":"blocked"}>{compatible?"✓":"!"}</span><p>{requiredBase?"Requires Base v"+requiredBase: "No minimum Base version specified"}{!compatible?" · incompatible":""}</p></div>
           <div><span className={!updateUnavailable?"ok":"blocked"}>{!updateUnavailable?"✓":"!"}</span><p>{updateUnavailable?"Update execution currently disabled":"Update authority available"}</p></div>
+          <div><span className={updateDiscoveryReady?"ok":"blocked"}>{updateDiscoveryReady?"✓":"!"}</span><p>{updateDiscoveryReady?"Published Update discovery available":`Update discovery failed: ${String(data?.updateReleaseDiscoveryError||"License Manager release lookup unavailable")}`}</p></div>
           {blockingBaseOperation&&<p className="orbitV5UpdateHint">Finish the active Base operation before installing an Update.</p>}
+          {busy&&<p className="orbitV5UpdateHint">Please wait for the current request to finish.</p>}
           {(alreadyInstalled||isPrevious)&&<p className="orbitV5UpdateHint">{alreadyInstalled?"This Update is already installed.":"This version is not newer than your recorded installed Update."}</p>}
         </div>
       </div>
