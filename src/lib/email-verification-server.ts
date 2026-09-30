@@ -26,6 +26,16 @@ export async function completeEmailVerification(token:string){
  const {data:row,error}=await db.from("orbitfs_email_verification_tokens").select("id,user_id,expires_at,used_at").eq("token_hash",tokenHash).maybeSingle();
  if(error||!row||row.used_at||new Date(row.expires_at).getTime()<Date.now())return {ok:false,error:"This verification link is invalid or has expired."};
  const verifiedAt=new Date().toISOString();
+ // The portal needs Supabase Auth and canonical email-verification status to
+ // agree. Older canonical-only users are linked during the verified login.
+ const {data:authUser,error:authLookupError}=await db.auth.admin.getUserById(row.user_id);
+ if(authLookupError&&authLookupError.status!==404){
+  return {ok:false,error:"Unable to synchronize verification with the login provider. Retry the link."};
+ }
+ if(authUser?.user){
+  const {error:authVerifyError}=await db.auth.admin.updateUserById(row.user_id,{email_confirm:true});
+  if(authVerifyError)return {ok:false,error:"Unable to verify the browser login identity. Retry the link."};
+ }
  const {error:updateUser}=await db.from("users").update({email_verified_at:verifiedAt,status:"active",updated_at:verifiedAt}).eq("id",row.user_id);
  if(updateUser)return {ok:false,error:updateUser.message};
  await db.from("customers").update({email_verified_at:verifiedAt,updated_at:verifiedAt}).eq("user_id",row.user_id);
