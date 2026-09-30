@@ -4,6 +4,7 @@ import {readFileSync} from "node:fs";
 const read=(path)=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const deployer=read("src/lib/orbitfs-customer-deployer.ts");
 const master=read("src/lib/master-api.ts");
+const status=read("src/app/api/orbitfs/status/route.ts");
 
 assert(deployer.includes('await masterExecuteDeployment({action,releaseId:release.id'),"Every customer deployment/update must be authorized by License Manager before mutation.");
 assert(deployer.includes('String(planned.body?.release?.id||"")!==String(release.id)'),"V2 must verify Base planned the exact License Manager Engine release.");
@@ -12,4 +13,5 @@ assert(deployer.includes('host.updaterConnected!==true'),"V2 must require post-u
 assert(master.includes('masterExecuteDeployment(input:any)'),"V2 must use the License Manager deployer API.");
 assert(master.includes('"deployer"'),"Deployment authorization must use the deployer-scoped License Manager credential.");
 assert(master.includes('masterDownloadReleaseArtifact'),"Release artifacts must be downloaded through License Manager authority.");
+assert(status.includes("updateVisibleToLicence"),"V2 must filter Engine-only updates by entitlement intersection.");
 console.log("OrbitFS V2 update authority contract checks passed.");
