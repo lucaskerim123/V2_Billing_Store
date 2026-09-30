@@ -64,16 +64,17 @@ export default function OrbitFSUpdateReleaseSystem(){
     return {Authorization:"Bearer "+session.access_token};
   },[sb]);
 
-  const load=useCallback(async(background=false)=>{
+  const load=useCallback(async(background=false,bootstrap=false)=>{
     if(!background)setLoading(true);
     try{
       const abort=new AbortController();
       const timer=setTimeout(()=>abort.abort(),25000);
       try{
-        const res=await fetch("/api/orbitfs/status",{headers:await headers(),cache:"no-store",signal:abort.signal});
+        const res=await fetch("/api/orbitfs/status"+(bootstrap?"?view=bootstrap":""),{headers:await headers(),cache:"no-store",signal:abort.signal});
         const body=await res.json().catch(()=>({}));
         if(!res.ok)throw Error(body.error||"Could not load your Update status.");
         setData(body);
+        if(bootstrap)void load(true,false);
       }finally{clearTimeout(timer)}
     }catch(error:any){
       setMessage(error?.name==="AbortError"?"The update status request timed out. Refresh to retry.":error?.message||"Could not load Update information.");
@@ -81,7 +82,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     }finally{if(!background)setLoading(false)}
   },[headers]);
 
-  useEffect(()=>{void load()},[load]);
+  useEffect(()=>{void load(false,true)},[load]);
 
   const binding=(data?.bindings||[]).find((value:any)=>value.license_product_key==="orbitfs_base"||value.components?.orbitfs_base||value.components?.orbitfs_panel)||null;
   const install=(data?.installations||[]).find((value:any)=>String(value.license_binding_id)===String(binding?.id))||null;
@@ -315,6 +316,7 @@ export default function OrbitFSUpdateReleaseSystem(){
       </div>
     </header>
 
+    {data?.releaseCatalogLoading&&<p className="orbitV5UpdateHint" role="status">Installation loaded. Checking authorized published Updates in the background…</p>}
     {message&&<section className={"orbitV5UpdateMessage "+(failedEvent?"error":"")} role="status">{message}</section>}
     {(authorityUnavailable||settings.customer_updates_enabled===false)&&<section className="orbitV5UpdateWarning" role="status">
       <b>{settings.maintenance_mode?"Deployment maintenance":authorityUnavailable?"Deployment authority unavailable":"Customer Updates paused"}</b>
