@@ -46,3 +46,30 @@
 .newCategoryForm button:disabled{opacity:.5;cursor:default}
 @media(max-width:900px){.newCategoryForm{grid-template-columns:repeat(2,minmax(0,1fr))}.newCategoryForm .field:nth-child(3){grid-column:1/-1}}
 @media(max-width:520px){.newCategoryForm{grid-template-columns:1fr}.newCategoryForm .field:nth-child(3){grid-column:auto}}
+
+/* Collapsed-by-default settings; list rows open individually instead of large cards. */
+.categoryDrawer{border:1px solid var(--stroke);border-radius:12px;padding:0 14px 13px}
+.drawerSummary{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;list-style:revert;padding:13px 2px;font-size:13px;font-weight:800;color:var(--ink)}
+.drawerSummary .count{font-weight:600}
+.categoryDrawer:not([open]){padding-bottom:0}
+.categoryDrawer .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;padding-top:5px}
+.card{display:block;min-width:0;padding:0;background:var(--paper)}
+.cardTop{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;cursor:pointer}
+.cardTitle{display:grid;gap:3px;min-width:0}
+.cardTitle b{font-size:12px;color:var(--ink);font-weight:800}
+.cardTitle small{font-size:10px;font-weight:500;color:var(--soft)}
+.cardBody{display:grid;gap:11px;border-top:1px solid var(--stroke);padding:13px}
+.cardBody .controls{display:flex;flex-wrap:wrap;gap:13px}
+.cardFoot{padding-top:10px}
+.card:not([open]) .cardBody{display:none}
+.routing{padding:0}
+.routing>summary{padding:13px 15px}
+.routing[open]{padding-bottom:12px}
+.routing>p,.routing>.eventSearch,.routing>.eventGroups{margin-left:15px;margin-right:15px}
+.eventSearch{display:block;width:calc(100% - 30px);box-sizing:border-box;background:var(--control);border:1px solid var(--stroke);border-radius:8px;color:var(--ink);font-size:12px;padding:10px;margin-top:12px;margin-bottom:12px}
+.eventGroups{display:grid;gap:6px}
+.eventGroup{border:1px solid var(--stroke);border-radius:8px;padding:0 11px}
+.eventGroup>summary{cursor:pointer;display:flex;justify-content:space-between;gap:14px;padding:11px 0;font-size:12px;font-weight:800;color:var(--ink)}
+.eventGroup>summary small{font-size:10px;color:var(--soft);font-weight:500}
+.eventGroup .eventList{padding:0 2px 5px}
+.event{padding:9px 2px}
