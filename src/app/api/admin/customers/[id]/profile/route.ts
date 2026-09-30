@@ -1,4 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
+import {licenseDb} from "@/lib/license-api";
+import {masterInstallationDetails} from "@/lib/master-api";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -45,7 +47,19 @@ export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){
   const {profile,customer}=await getProfile(ctx.db,id);
   if(!customer)return Response.json({error:"Customer record not found."},{status:404});
   if(!profile)return Response.json({error:"This customer is missing its linked user profile. Repair account identity before editing."},{status:409});
-  return Response.json({profile,customer},{headers:{"cache-control":"no-store"}});
+  const installationRows=await licenseDb().from("orbitfs_installations").select("id,installation_id,component_key,state,supabase_project_ref,supabase_project_name,supabase_region,schema_version,vercel_team_id,vercel_project_id,vercel_project_name,vercel_deployment_id,deployment_url,production_url,release_version,release_id,health_status,last_health_at,last_error,metadata,created_at,updated_at").eq("auth_user_id",id).order("created_at",{ascending:false});
+  if(installationRows.error)throw Error(installationRows.error.message);
+  const installations=await Promise.all((installationRows.data||[]).map(async (install:any)=>{
+    const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:{};
+    const masterLicenseId=String(registration?.masterLicenseId||"").trim()||null;
+    try{
+      const authority=await masterInstallationDetails(String(install.installation_id||""),masterLicenseId);
+      return {...install,master_license_id:masterLicenseId,authority:authority?.installation||null,authority_source:authority?.authority||"orbitfs-license-master-v2",authority_error:null};
+    }catch(error:any){
+      return {...install,master_license_id:masterLicenseId,authority:null,authority_source:"orbitfs-license-master-v2",authority_error:error?.message||"License Manager installation details unavailable"};
+    }
+  }));
+  return Response.json({profile,customer,installations},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:e.message||"Customer could not be loaded."},{status:500})}
 }
 
