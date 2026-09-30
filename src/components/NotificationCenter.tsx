@@ -102,6 +102,15 @@ export default function NotificationCenter({surface}:{surface:Surface}){
     return()=>{cancelled=true;if(channel)void sb.removeChannel(channel)};
   },[sb,surface,load]);
 
+  // Reconcile the unread count if a browser pauses or loses its websocket.
+  useEffect(()=>{
+    if(!configReady||!systemEnabled)return;
+    const interval=window.setInterval(()=>{
+      if(document.visibilityState==="visible")void load(feedLimit);
+    },60000);
+    return()=>window.clearInterval(interval);
+  },[configReady,systemEnabled,load,feedLimit]);
+
   useEffect(()=>{
     if(!open)return;
     const close=(e:PointerEvent)=>{if(!rootRef.current?.contains(e.target as Node)&&!panelRef.current?.contains(e.target as Node))setOpen(false)};
@@ -113,7 +122,8 @@ export default function NotificationCenter({surface}:{surface:Surface}){
     if(!n.read_at){
       setItems(v=>v.map(x=>x.id===n.id?{...x,read_at:new Date().toISOString()}:x));
       setUnread(v=>Math.max(0,v-1));
-      await sb.rpc("notification_mark_read",{p_notification_id:n.id,p_read:true});
+      const {error:markError}=await sb.rpc("notification_mark_read",{p_notification_id:n.id,p_read:true});
+      if(markError){setError(markError.message);void load(feedLimit);return;}
     }
     setOpen(false);
     if(n.action_url)router.push(n.action_url);
