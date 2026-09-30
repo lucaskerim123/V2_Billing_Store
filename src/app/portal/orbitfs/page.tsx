@@ -242,7 +242,6 @@ export default function MyOrbitFS(){
       detail:deploymentReady?`Base ${install?.release_version||"deployed"}`:!vercelApiReady?"Connect Vercel":!licenseRegistered?"Register Base licence":reviewReady?"Configure / install Base":"Complete Base configuration",
       substeps:[
         {id:"2a",title:"Connect Vercel",ready:vercelApiReady},
-        {id:"2b",title:"Manual environment variables (none required)",ready:vercelApiReady},
         {id:"2c",title:"Register Base licence",ready:licenseRegistered},
         {id:"2d",title:"Configure / install Base",ready:deploymentReady}
       ]
@@ -287,10 +286,10 @@ export default function MyOrbitFS(){
   const deploymentNeedsAttention=String(activeOperation?.state||latestOperation?.state||install?.state||"").toLowerCase()==="failed";
 
   // Five visual steps mapped to existing backend actions.
-  const releaseReady=Boolean(selectedRelease?.id||install?.release_id);
+  const releaseReady=Boolean(selectedRelease?.id);
   const journey=[
     {id:1,title:"Base Release",text:"Choose your authorized Base version and release channel.",done:releaseReady},
-    {id:2,title:"Database",text:"Connect Supabase, select a project and initialize its Base schema.",done:databaseReady&&(!selectedRelease||selectedReleaseMatchesInstalled)},
+    {id:2,title:"Database",text:"Connect Supabase, select a project and initialize its Base schema.",done:databaseReady&&selectedReleaseMatchesInstalled},
     {id:3,title:"Hosting",text:"Connect and configure your customer-owned Vercel account.",done:vercelApiReady},
     {id:4,title:"Licence",text:"Register the Base licence against this installation.",done:licenseRegistered},
     {id:5,title:"Deploy",text:"Review, deploy and validate your Base System instance.",done:validationReady}
@@ -433,7 +432,7 @@ export default function MyOrbitFS(){
         <nav className="orbitV5FlowCards" aria-label="Base installation stages">{journey.map(x=><button type="button" key={x.id} disabled={!install} onClick={()=>openSiteStep(x.id)} className={"orbitV5FlowCard "+(x.done?"done":activeSiteStep===x.id?"active":"")} aria-current={activeSiteStep===x.id?"step":undefined}>
           <span className="orbitV5FlowIndex">{x.done?"✓":x.id}</span><span><b>{x.title}</b><small>{x.text}</small></span>
         </button>)}</nav>
-        {install&&<details className="orbitV5DetailSteps"><summary>View detailed setup steps</summary><nav>{primaryFlow.flatMap(stage=>stage.substeps.filter(x=>x.id!=="2b").map(x=><button type="button" key={x.id} onClick={()=>navigateSubstep(x.id)} className={x.ready?"done":""}><span>{x.ready?"✓":x.id.toUpperCase()}</span>{x.title}</button>))}</nav></details>}
+        {install&&<details className="orbitV5DetailSteps"><summary>View detailed setup steps</summary><nav>{primaryFlow.flatMap(stage=>stage.substeps.map(x=><button type="button" key={x.id} onClick={()=>navigateSubstep(x.id)} className={x.ready?"done":""}><span>{x.ready?"✓":x.id.toUpperCase()}</span>{x.title}</button>))}</nav></details>}
       </section>}
 
       {!install?<div className="portalOverviewGrid orbitZipWorkspace orbitZipWorkspaceStart">
