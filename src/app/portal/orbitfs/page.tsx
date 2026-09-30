@@ -285,22 +285,25 @@ export default function MyOrbitFS(){
 
   const deploymentNeedsAttention=String(activeOperation?.state||latestOperation?.state||install?.state||"").toLowerCase()==="failed";
 
-  // Five visual steps mapped to existing backend actions.
+  // Presentation-only step changes; existing deployment APIs stay authoritative.
+  const connectionsReady=supabaseConnectionReady&&vercelApiReady;
   const releaseReady=Boolean(selectedRelease?.id);
+  const configDatabaseReady=databaseReady&&selectedReleaseMatchesInstalled;
+  const configurationReady=configDatabaseReady&&licenseRegistered&&vercelApiReady;
   const journey=[
-    {id:1,title:"Base Release",text:"Choose your authorized Base version and release channel.",done:releaseReady},
-    {id:2,title:"Database",text:"Connect Supabase, select a project and initialize its Base schema.",done:databaseReady&&selectedReleaseMatchesInstalled},
-    {id:3,title:"Hosting",text:"Connect and configure your customer-owned Vercel account.",done:vercelApiReady},
-    {id:4,title:"Licence",text:"Register the Base licence against this installation.",done:licenseRegistered},
-    {id:5,title:"Deploy",text:"Review, deploy and validate your Base System instance.",done:validationReady}
+    {id:1,title:"Connections",text:"Connect Supabase and Vercel.",done:connectionsReady},
+    {id:2,title:"Database",text:"Choose the Supabase project.",done:supabaseReady},
+    {id:3,title:"Channel / Release",text:"Choose the channel and published Base release.",done:releaseReady},
+    {id:4,title:"Configuration",text:"Initialize the Base schema and register the licence.",done:configurationReady},
+    {id:5,title:"Live Progress",text:"Deploy and follow the actual installation progress.",done:panelReady},
+    {id:6,title:"Finished",text:"Manage the installed Base in the control panel.",done:panelReady}
   ];
-  const journeyCurrent=journey.find(x=>!x.done)?.id||5;
+  const journeyCurrent=pendingBaseForceReinstall?4:journey.find(x=>!x.done)?.id||5;
   const activeSiteStep=siteStep??journeyCurrent;
   const websiteState=deploymentNeedsAttention?"orbitSiteAttention":activeOperation?"orbitSiteProgress":panelReady?"orbitSiteControl":activeSiteStep===5?"orbitSiteReview":"orbitSiteDeployer";
   function openSiteStep(n:number){
-    setSiteStep(n);
-    setViewedPrimaryStage(n<=2?1:n<=4?2:3);
-    setCurrentStep(n===1?2:n===2?(!supabaseConnectionReady?1:2):n===3?3:n===4?4:6);
+    if(n===6){if(panelReady)window.scrollTo({top:0,behavior:"smooth"});return}
+    if(n>=1&&n<=5)setSiteStep(n);
   }
 
   return <main className={"portalOverviewV2 orbitfsBaseV3 orbitZipDeployer "+websiteState+" "+(panelReady?"orbitZipDeployed":"orbitZipInstalling")} aria-label="OrbitFS Base Deployer">
@@ -428,11 +431,11 @@ export default function MyOrbitFS(){
       </section>}
 
       {!panelReady&&<section className="orbitV5Flow">
-        <div className="orbitV5SectionTitle"><div><p className="eyebrow">DEPLOYMENT FLOW</p><h2>From setup to live — in a few simple steps.</h2><p>Complete each stage in order. You can revisit previous settings.</p></div><span>{journey.filter(x=>x.done).length} / 5 complete</span></div>
-        <nav className="orbitV5FlowCards" aria-label="Base installation stages">{journey.map(x=><button type="button" key={x.id} disabled={!install} onClick={()=>openSiteStep(x.id)} className={"orbitV5FlowCard "+(x.done?"done":activeSiteStep===x.id?"active":"")} aria-current={activeSiteStep===x.id?"step":undefined}>
+        <div className="orbitV5SectionTitle"><div><p className="eyebrow">DEPLOYMENT FLOW</p><h2>From setup to live — in a few simple steps.</h2><p>Complete each stage in order. You can revisit previous settings.</p></div><span>{journey.filter(x=>x.done).length} / 6 complete</span></div>
+        <nav className="orbitV5FlowCards" aria-label="Base installation stages">{journey.map(x=><button type="button" key={x.id} disabled={!install||(x.id===6&&!panelReady)} onClick={()=>openSiteStep(x.id)} className={"orbitV5FlowCard "+(x.done?"done":activeSiteStep===x.id?"active":"")} aria-current={(panelReady?x.id===6:activeSiteStep===x.id)?"step":undefined}>
           <span className="orbitV5FlowIndex">{x.done?"✓":x.id}</span><span><b>{x.title}</b><small>{x.text}</small></span>
         </button>)}</nav>
-        {install&&<details className="orbitV5DetailSteps"><summary>View detailed setup steps</summary><nav>{primaryFlow.flatMap(stage=>stage.substeps.map(x=><button type="button" key={x.id} onClick={()=>navigateSubstep(x.id)} className={x.ready?"done":""}><span>{x.ready?"✓":x.id.toUpperCase()}</span>{x.title}</button>))}</nav></details>}
+
       </section>}
 
       {!install?<div className="portalOverviewGrid orbitZipWorkspace orbitZipWorkspaceStart">
