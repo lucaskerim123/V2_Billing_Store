@@ -7,7 +7,7 @@ async function insertNotification(input:{
   severity?:Severity;actionUrl?:string;sourceId?:string|null;dedupeKey?:string|null;metadata?:Record<string,unknown>;
 }){
   const db=licenseDb();
-  const {error}=await db.from("notifications").upsert({
+  const row={
     recipient_user_id:input.recipientUserId,
     surface:input.surface,
     category:"release_channel",
@@ -23,8 +23,18 @@ async function insertNotification(input:{
     read_at:null,
     archived_at:null,
     created_at:new Date().toISOString()
-  },{onConflict:"recipient_user_id,surface,dedupe_key"});
-  if(error)throw error;
+  };
+  if(input.dedupeKey){
+    const existing=await db.from("notifications").select("id").eq("recipient_user_id",input.recipientUserId).eq("surface",input.surface).eq("dedupe_key",input.dedupeKey).maybeSingle();
+    if(existing.error)throw existing.error;
+    if(existing.data?.id){
+      const updated=await db.from("notifications").update(row).eq("id",existing.data.id);
+      if(updated.error)throw updated.error;
+      return;
+    }
+  }
+  const inserted=await db.from("notifications").insert(row);
+  if(inserted.error)throw inserted.error;
 }
 
 export async function notifyChannelCustomer(userId:string,input:{
