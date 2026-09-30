@@ -14,7 +14,8 @@
     "theme:apply": "node tools/theme-manager.mjs apply",
     "preflight": "node scripts/preflight-report.mjs",
     "theme:sync": "node tools/theme-manager.mjs sync",
-    "theme:validate": "node tools/theme-manager.mjs validate"
+    "theme:validate": "node tools/theme-manager.mjs validate",
+    "check:orbitfs-update-contract": "node scripts/check-orbitfs-update-contract.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
