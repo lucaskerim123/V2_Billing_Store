@@ -189,8 +189,8 @@ export default function LicenseControllerPage(){
     <p className="muted">Manage Billing Store customer links and run permitted licence actions through the authoritative License Manager APIs.</p>
    </div>
    <div className="orbitReferenceHeroActions">
-    <button className="orbitIconAction" title="Refresh customer licences" aria-label="Refresh customer licences" onClick={()=>void refresh()} disabled={loading}>↻ <span>Refresh</span></button>
-    <button className="orbitIconAction primary" title="Find and automatically link the single matching existing License Manager licence for this customer" aria-label="Auto-link matching licence" onClick={()=>void link("","auto")} disabled={!selectedCustomer||!!busy}>↗ <span>Auto-link</span></button>
+    <button className="orbitIconAction" title="Refresh customer licences" aria-label="Refresh customer licences" onClick={()=>void refresh()} disabled={loading}>↻</button>
+    <button className="orbitIconAction primary" title="Find and automatically link the single matching existing License Manager licence for this customer" aria-label="Auto-link matching licence" onClick={()=>void link("","auto")} disabled={!selectedCustomer||!!busy}>↗</button>
    </div>
   </header>
 
