@@ -69,7 +69,6 @@ export default function MailSubscriptionCategories({
   return <div className={styles.root+" "+(tone==="dark"?styles.dark:"")}>
     <div className={styles.header}>
       <div><h3>Customer email categories</h3><p>Customers start subscribed. These categories appear in Account Settings and control the actual mail-sending paths.</p></div>
-      <span className={styles.count}>{sorted.length} categories</span>
     </div>
     <details className={styles.categoryDrawer}>
       <summary className={styles.drawerSummary}><span>Manage subscription categories</span><span className={styles.count}>{sorted.length} categories</span></summary>
