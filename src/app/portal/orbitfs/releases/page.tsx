@@ -183,7 +183,7 @@ export default function OrbitFSUpdateReleaseSystem(){
       const completed=progressMode==="update"?"update.completed":"update.rollback.completed";
       const failed=progressMode==="update"?"update.failed":"update.rollback.failed";
       const success=events.find(event=>event.type===completed);
-      const error=events.find(event=>event.type===failed);
+      const error=events.find(event=>event.type===failed||(progressMode==="update"&&event.type==="update.authorization.failed"));
       if(success&&completionReported.current!==success.id){
         completionReported.current=success.id;
         setMessage(success.message||"Update operation completed.");
@@ -279,7 +279,7 @@ export default function OrbitFSUpdateReleaseSystem(){
   const startBoundary=attemptStartedAt||Date.parse(latestStart?.createdAt||"")||0;
   const trackedEvents=allTargetEvents.filter(event=>!startBoundary||
     Date.parse(event.createdAt)>=startBoundary-5000);
-  const failedEvent=trackedEvents.find(event=>event.type===(progressMode==="rollback"?"update.rollback.failed":"update.failed"));
+  const failedEvent=trackedEvents.find(event=>event.type===(progressMode==="rollback"?"update.rollback.failed":"update.failed")||(progressMode==="update"&&event.type==="update.authorization.failed"));
   const completedEvent=trackedEvents.find(event=>event.type===(progressMode==="rollback"?"update.rollback.completed":"update.completed"));
   const stageDone=(n:Stage)=>n===1?hasBase:n===2?Boolean(selected):n===3?confirmed:n===4?Boolean(completedEvent):false;
   const updateComponents=Array.isArray(selected?.components)?selected.components:[];
