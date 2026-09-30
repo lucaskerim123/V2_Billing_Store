@@ -20,8 +20,8 @@ export default function MailConfig(){
   const sb=createClient();
   const [caps,setCaps]=useState<any>({}),[adminData,setAdminData]=useState<any>(null),[spamData,setSpamData]=useState<any>({rules:[],events:[]}),[loading,setLoading]=useState(true),[error,setError]=useState(''),[msg,setMsg]=useState('');
   async function token(){const {data}=await sb.auth.getSession();return data.session?.access_token||''}
-  async function load(){
-    setLoading(true);setError('');
+  async function load(silent=false){
+    if(!silent)setLoading(true);setError('');
     try{
       const t=await token();if(!t){location.href='/login';return}
       const cr=await fetch('/api/mail/accounts',{headers:{Authorization:`Bearer ${t}`},cache:'no-store'});
@@ -31,14 +31,14 @@ export default function MailConfig(){
       const ar=await fetch('/api/mail/admin',{headers:{Authorization:`Bearer ${t}`},cache:'no-store'});
       const aj:any=await readJson(ar);if(!ar.ok)throw new Error(aj.error||'Could not load Mail Config.');setAdminData(aj);
       if(nextCaps.settings){const sr=await fetch('/api/mail/spam',{headers:{Authorization:`Bearer ${t}`},cache:'no-store'});const sj:any=await readJson(sr);if(sr.ok)setSpamData(sj)}
-    }catch(e:any){setError(e.message)}finally{setLoading(false)}
+    }catch(e:any){setError(e.message)}finally{if(!silent)setLoading(false)}
   }
   useEffect(()=>{load()},[]);
   async function save(body:any){
     setMsg('Saving…');const t=await token();
     const r=await fetch('/api/mail/admin',{method:'PUT',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const j:any=await readJson(r);if(!r.ok){setMsg(j.error||'Save failed.');return false}
-    setMsg('Saved.');await load();return true;
+    setMsg('Saved.');await load(true);return true;
   }
   const settings=useMemo(()=>Object.fromEntries((adminData?.settings||[]).map((x:any)=>[x.key,x.value])),[adminData]);
 
@@ -52,7 +52,7 @@ export default function MailConfig(){
         {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Mail settings</summary><div style={{marginTop:14}}><MainSettings settings={settings} provider={adminData.provider||{}} save={save}/></div></details>}
         {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Email subscriptions & categories</summary><div style={{marginTop:14}}><MailSubscriptionCategories categories={adminData.subscriptionCategories||[]} events={adminData.subscriptionEvents||[]} automations={adminData.automations||[]} templates={adminData.templates||[]} onSave={save}/></div></details>}
         {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Mailbox settings</summary><div style={{marginTop:14}}><MailboxSettings rows={adminData.accounts||[]} users={adminData.users||[]} save={save}/></div></details>}
-        {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Spam protection</summary><div style={{marginTop:14}}><SpamProtection data={spamData} token={token} reload={load}/></div></details>}
+        {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Spam protection</summary><div style={{marginTop:14}}><SpamProtection data={spamData} token={token} reload={()=>load(true)}/></div></details>}
         {caps.templates&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Templates · release, news & deployment</summary><div style={{marginTop:14}}><Templates rows={adminData.templates||[]} save={save}/></div></details>}
         {caps.admin&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Delivery history</summary><div style={{marginTop:14}}><Delivery rows={adminData.logs||[]}/></div></details>}
         {!caps.settings&&!caps.templates&&caps.admin&&<div style={panel}><b>Mail administration overview</b><p style={{...muted,marginBottom:0}}>You can view Mail administration status, but changing config requires the Mail settings or Mail templates permission.</p></div>}
