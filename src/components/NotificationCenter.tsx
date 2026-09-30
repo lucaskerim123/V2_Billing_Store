@@ -82,8 +82,9 @@ export default function NotificationCenter({surface}:{surface:Surface}){
 
       if(surface==="admin"){
         const {data:access}=await sb.rpc("get_my_staff_access");
-        const p:any=(access as any)?.permissions||{};
-        setCanSend(!!p.all||!!p["notifications.send"]);
+        const accessRow:any=Array.isArray(access)?access[0]:access;
+        const p:any=accessRow?.permissions||{};
+        setCanSend(p?.all===true||(Array.isArray(p)?p.includes("notifications.send"):Boolean(p?.["notifications.send"])));
       }
 
       if(cfg?.enabled===false){setLoading(false);setConfigReady(true);return}
