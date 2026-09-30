@@ -10,6 +10,7 @@ export async function drainMailOutbox(){
  const q=await db.from("mail_event_outbox").select("id,dispatch_token").in("state",["pending","processing"]).lte("next_attempt_at",now).order("created_at").limit(20);
  if(q.error)throw q.error;const config=await loadMailRuntimeConfig(db);let sent=0,failed=0;
  for(const row of q.data||[]){try{
+  const gate=await db.rpc("mail_subscription_outbox_gate",{p_id:String(row.id),p_token:String(row.dispatch_token)});if(gate.error)throw gate.error;if(gate.data?.allowed===false)continue;
   const p=await db.rpc("mail_outbox_prepare",{p_id:String(row.id),p_token:String(row.dispatch_token)});if(p.error)throw p.error;const prep:any=p.data;if(prep?.skip)continue;
   const recipient=String(prep?.recipient||"").trim();if(!recipient)throw new Error("Mail queue recipient is missing.");
   const identity=await resolveMailDeliveryIdentity(db,config,String(prep?.from_account||config.outbound.default_from));
