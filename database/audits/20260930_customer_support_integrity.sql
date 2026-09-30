@@ -65,4 +65,9 @@ select
    join pg_namespace ns on ns.oid=cl.relnamespace
    where not t.tgisinternal and ns.nspname='public') public_custom_triggers,
  (select count(*) from information_schema.columns where table_schema='public'
-     and is_nullable='NO' and column_default is null and is_identity='NO') explicitly_supplied_required_columns;
+     and is_nullable='NO' and column_default is null and is_identity='NO') explicitly_supplied_required_columns,
+ (select count(*) from pg_class cl join pg_namespace ns on ns.oid=cl.relnamespace
+    where ns.nspname='public' and cl.relkind in ('r','p') and not cl.relrowsecurity) public_tables_without_rls,
+ (select count(*) from pg_proc p join pg_namespace ns on ns.oid=p.pronamespace
+    where ns.nspname='public' and p.prosecdef
+      and has_function_privilege('anon',p.oid,'EXECUTE')) anonymous_callable_security_definers;
