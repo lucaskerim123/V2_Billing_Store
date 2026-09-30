@@ -13,6 +13,8 @@ export default function Settings(){
  const sb=createClient();
  const [tab,setTab]=useState<Tab>("profile"),[profile,setProfile]=useState<any>(),[customer,setCustomer]=useState<any>();
  const [prefs,setPrefs]=useState<any>({theme:"system",accent:"blue",locale:"en-AU",email_news:true,email_support:true,email_orders:true});
+ const [mailCategories,setMailCategories]=useState<any[]>([]),[mailChoices,setMailChoices]=useState<Record<string,boolean>>({}),[mailBaseline,setMailBaseline]=useState<Record<string,boolean>>({}),[mailError,setMailError]=useState("");
+
  const [wallet,setWallet]=useState<any>({available_cents:0}),[ledger,setLedger]=useState<any[]>([]),[recharges,setRecharges]=useState<any[]>([]),[walletGateways,setWalletGateways]=useState<any[]>([]);
  const [walletAmount,setWalletAmount]=useState("20.00"),[walletCoupon,setWalletCoupon]=useState(""),[walletGateway,setWalletGateway]=useState(""),[walletMsg,setWalletMsg]=useState(""),[walletBusy,setWalletBusy]=useState<WalletBusy>(null),[openReceipt,setOpenReceipt]=useState<string|null>(null);
  const [billingCfg,setBillingCfg]=useState<any>({allowCredit:true,topups:true,minTopup:500,maxTopup:100000});
@@ -20,7 +22,7 @@ export default function Settings(){
 
  async function load(){
   const {data:{user}}=await sb.auth.getUser();if(!user)return;
-  const [{data:p},{data:c},{data:x},{data:b},{data:l},{data:r},{data:g},{data:s}]=await Promise.all([
+  const [{data:p},{data:c},{data:x},{data:b},{data:l},{data:r},{data:g},{data:s},{data:mailCats,error:mailCatError},{data:mailSaved,error:mailSavedError}]=await Promise.all([
    sb.from("user_profiles").select("*").eq("id",user.id).single(),
    sb.from("customers").select("id,customer_number,email,name,auth_user_id").eq("auth_user_id",user.id).maybeSingle(),
    sb.from("user_preferences").select("*").eq("user_id",user.id).maybeSingle(),
@@ -28,10 +30,18 @@ export default function Settings(){
    sb.from("credit_ledger").select("*").eq("user_id",user.id).order("created_at",{ascending:false}).limit(20),
    sb.from("wallet_recharges").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false}).limit(30),
    sb.rpc("wallet_recharge_gateways"),
-   sb.from("app_settings").select("key,value").in("key",["billing.allow_account_credit","billing.credit_topups_enabled","billing.minimum_credit_topup_cents","billing.maximum_credit_topup_cents"])
+   sb.from("app_settings").select("key,value").in("key",["billing.allow_account_credit","billing.credit_topups_enabled","billing.minimum_credit_topup_cents","billing.maximum_credit_topup_cents"]),
+   sb.from("mail_subscription_categories").select("category_key,label,description,required,default_subscribed,enabled,sort_order").order("sort_order"),
+   sb.from("mail_customer_subscriptions").select("category_key,subscribed").eq("user_id",user.id)
   ]);
   const cfg=Object.fromEntries((s||[]).map((x:any)=>[x.key,x.value]));
   setBillingCfg({allowCredit:cfg["billing.allow_account_credit"]!==false,topups:cfg["billing.credit_topups_enabled"]!==false,minTopup:Number(cfg["billing.minimum_credit_topup_cents"]||500),maxTopup:Number(cfg["billing.maximum_credit_topup_cents"]||100000)});
+  if(mailCatError||mailSavedError)setMailError("Email subscriptions are not available yet: "+(mailCatError?.message||mailSavedError?.message));else{
+    setMailError("");setMailCategories(mailCats||[]);
+    const overrides=Object.fromEntries((mailSaved||[]).map((v:any)=>[v.category_key,v.subscribed===true]));
+    const effective=Object.fromEntries((mailCats||[]).map((c:any)=>[c.category_key,c.required===true?true:overrides[c.category_key]??(c.default_subscribed!==false)]));
+    setMailChoices(effective);setMailBaseline(effective);
+  }
   setProfile({...p,email:user.email});setCustomer(c||null);if(x)setPrefs(x);setWallet(b||{available_cents:0});setLedger(l||[]);setRecharges(r||[]);
   const gateways=Array.isArray(g)?g:[];setWalletGateways(gateways);setWalletGateway(v=>v&&gateways.some((z:any)=>z.code===v)?v:(gateways[0]?.code||""));
  }
@@ -40,13 +50,19 @@ export default function Settings(){
  async function save(e?:FormEvent){
   e?.preventDefault();setMsg("Saving…");
   const {data:{user}}=await sb.auth.getUser();if(!user)return;
-  const [{error:a},{error:b}]=await Promise.all([
+  const changes=mailCategories
+   .filter(c=>!c.required&&c.enabled!==false&&mailChoices[c.category_key]!==mailBaseline[c.category_key])
+   .map(c=>({user_id:user.id,category_key:c.category_key,subscribed:mailChoices[c.category_key]===true,updated_at:new Date().toISOString()}));
+  const legacyPrefs=mailCategories.length?{...prefs,email_news:mailChoices.news!==false,email_support:mailChoices.support!==false,email_orders:mailChoices.orders!==false}:prefs;
+  const [{error:a},{error:b},mailSave]=await Promise.all([
    sb.from("user_profiles").update({first_name:profile.first_name,last_name:profile.last_name,display_name:profile.display_name,company_name:profile.company_name,phone:profile.phone,address_line1:profile.address_line1,address_line2:profile.address_line2,city:profile.city,state_region:profile.state_region,postal_code:profile.postal_code,country_code:profile.country_code,timezone:profile.timezone,language:profile.language}).eq("id",user.id),
-   sb.from("user_preferences").upsert({...prefs,user_id:user.id,updated_at:new Date().toISOString()})
+   sb.from("user_preferences").upsert({...legacyPrefs,user_id:user.id,updated_at:new Date().toISOString()}),
+   changes.length?sb.from("mail_customer_subscriptions").upsert(changes,{onConflict:"user_id,category_key"}):Promise.resolve({error:null})
   ]);
-  setMsg(a?.message||b?.message||"Settings saved.");
-  await trackCustomerActivity("account.settings_updated",{entityType:"account",entityId:user.id,success:!a&&!b});
-  if(!a&&!b)await load();
+  const c=mailSave?.error;
+  setMsg(a?.message||b?.message||c?.message||"Settings saved.");
+  await trackCustomerActivity("account.settings_updated",{entityType:"account",entityId:user.id,success:!a&&!b&&!c});
+  if(!a&&!b&&!c)await load();
  }
 
  async function changePassword(){
@@ -104,7 +120,22 @@ export default function Settings(){
 
    {tab==="billing"&&<section className="panel accountSettingsCard"><div className="settingsSectionHead"><div><p className="eyebrow">BILLING</p><h2>Billing details</h2><p className="muted">These fields are the canonical customer billing details used on invoices.</p></div></div><div className="form"><label>Address line 1<input value={profile.address_line1||""} onChange={e=>setProfile({...profile,address_line1:e.target.value})}/></label><label>Address line 2<input value={profile.address_line2||""} onChange={e=>setProfile({...profile,address_line2:e.target.value})}/></label><div className="two"><label>City<input value={profile.city||""} onChange={e=>setProfile({...profile,city:e.target.value})}/></label><label>State / region<input value={profile.state_region||""} onChange={e=>setProfile({...profile,state_region:e.target.value})}/></label></div><div className="two"><label>Postcode<input value={profile.postal_code||""} onChange={e=>setProfile({...profile,postal_code:e.target.value})}/></label><label>Country code<input value={profile.country_code||""} onChange={e=>setProfile({...profile,country_code:e.target.value.toUpperCase()})} placeholder="AU"/></label></div><div className="billingPreview"><small>INVOICE PREVIEW</small><b>{[profile.first_name,profile.last_name].filter(Boolean).join(" ")||profile.display_name||"Customer"}</b>{profile.company_name&&<span>{profile.company_name}</span>}<span>{customerId}</span><span>{[profile.address_line1,profile.address_line2,profile.city,profile.state_region,profile.postal_code,profile.country_code].filter(Boolean).join(", ")||"No billing address set"}</span></div></div></section>}
 
-   {tab==="preferences"&&<section className="panel accountSettingsCard"><div className="settingsSectionHead"><div><p className="eyebrow">PREFERENCES</p><h2>Experience & notifications</h2></div></div><div className="settingsPreferenceGrid"><div className="form"><label>Theme<select value={prefs.theme||"system"} onChange={e=>setPrefs({...prefs,theme:e.target.value})}><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></label><label>Accent<select value={prefs.accent||"blue"} onChange={e=>setPrefs({...prefs,accent:e.target.value})}><option value="blue">Blue</option><option value="violet">Violet</option><option value="green">Green</option><option value="orange">Orange</option></select></label></div><div className="settingsToggles">{[["email_orders","Orders & licences"],["email_support","Support replies"],["email_news","OrbitFS news"]].map(([k,l])=><label className="toggle" key={k}><input type="checkbox" checked={!!prefs[k]} onChange={e=>setPrefs({...prefs,[k]:e.target.checked})}/><span><b>{l}</b><small>Email notifications</small></span></label>)}</div></div></section>}
+   {tab==="preferences"&&<>
+    <section className="panel accountSettingsCard"><div className="settingsSectionHead"><div><p className="eyebrow">PREFERENCES</p><h2>Appearance</h2><p className="muted">Choose how your OrbitFS customer portal looks.</p></div></div><div className="form" style={{maxWidth:560}}><div className="two"><label>Theme<select value={prefs.theme||"system"} onChange={e=>setPrefs({...prefs,theme:e.target.value})}><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></label><label>Accent<select value={prefs.accent||"blue"} onChange={e=>setPrefs({...prefs,accent:e.target.value})}><option value="blue">Blue</option><option value="violet">Violet</option><option value="green">Green</option><option value="orange">Orange</option></select></label></div></div></section>
+    <section className="panel accountSettingsCard mailSubscriptionCard">
+     <div className="settingsSectionHead"><div><p className="eyebrow">COMMUNICATIONS</p><h2>Email subscriptions</h2><p className="muted">You're subscribed to every available category by default. Choose which optional emails you want to receive.</p></div></div>
+     {mailError?<p role="alert" className="inlineStatus">{mailError}</p>:!mailCategories.length?<p className="muted">No email categories are configured yet.</p>:<div className="mailSubscriptionList">
+      {mailCategories.map(c=>{
+        const locked=c.required===true,paused=c.enabled===false,checked=locked||mailChoices[c.category_key]!==false;
+        return <label className={"mailSubscriptionRow"+(locked?" locked":"")+(paused?" paused":"")} key={c.category_key}>
+         <span className="mailSubscriptionCopy"><span className="mailSubscriptionHeading"><b>{c.label}</b>{locked?<em>Required</em>:paused?<em>Paused</em>:null}</span><small>{c.description}</small>{locked&&<small>Essential system messages cannot be turned off.</small>}</span>
+         <span className="mailSubscriptionControl"><input aria-label={c.label} type="checkbox" checked={checked} disabled={locked||paused} onChange={e=>setMailChoices(v=>({...v,[c.category_key]:e.target.checked}))}/><span aria-hidden="true" className="mailSubscriptionTrack"/></span>
+        </label>;
+      })}
+     </div>}
+     <p className="mailSubscriptionFootnote">Security alerts, billing receipts, service restrictions and deployment problems are always delivered. These settings affect optional email only, not your portal notification history.</p>
+    </section>
+   </>}
    <div className="settingsSaveBar"><span>{msg}</span><button>Save changes</button></div>
   </form>}
 
