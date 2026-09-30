@@ -172,7 +172,7 @@ export default function ReleaseChannelsAdmin(){
         <div><b>{u?customerName(u):r.external_reference||"Customer"}</b><small>{u?.email||r.license_id||""}</small>{details.use_case&&<small className="orbitRequestDetail">{details.use_case}</small>}{details.notes&&<small className="orbitRequestNote">{details.notes}</small>}</div>
         <span>{r.requested_at?new Date(r.requested_at).toLocaleDateString():"Pending"}</span>
         <span>{details.environment||"Not supplied"}</span>
-        <div className="orbitReferenceDecision"><button disabled={!!busy} onClick={()=>void mutate({action:"approve",licenseId:r.license_id,channel:r.channel,customerReference:r.external_reference},"Channel request approved.")}>Approve</button><button className="danger" disabled={!!busy} onClick={()=>void mutate({action:"reject",licenseId:r.license_id,channel:r.channel},"Channel request rejected.")}>Reject</button></div>
+        <div className="orbitReferenceDecision"><button disabled={!!busy} onClick={()=>void mutate({action:"approve",licenseId:r.license_id,channel:r.channel,customerReference:r.external_reference,userId:r.user_id},"Channel request approved.")}>Approve</button><button className="danger" disabled={!!busy} onClick={()=>void mutate({action:"reject",licenseId:r.license_id,channel:r.channel,customerReference:r.external_reference,userId:r.user_id},"Channel request rejected.")}>Reject</button></div>
        </div>})}
       </div>:<div className="orbitReferenceEmpty compact">No requests are waiting for review on this channel.</div>}
      </section>
