@@ -74,7 +74,6 @@ export default function OrbitFSUpdateReleaseSystem(){
         const body=await res.json().catch(()=>({}));
         if(!res.ok)throw Error(body.error||"Could not load your Update status.");
         setData(body);
-        if(bootstrap)void load(true,false);
       }finally{clearTimeout(timer)}
     }catch(error:any){
       setMessage(error?.name==="AbortError"?"The update status request timed out. Refresh to retry.":error?.message||"Could not load Update information.");
@@ -83,6 +82,7 @@ export default function OrbitFSUpdateReleaseSystem(){
   },[headers]);
 
   useEffect(()=>{void load(false,true)},[load]);
+  useEffect(()=>{if(data?.releaseCatalogLoading)void load(true,false)},[data?.releaseCatalogLoading,load]);
 
   const binding=(data?.bindings||[]).find((value:any)=>value.license_product_key==="orbitfs_base"||value.components?.orbitfs_base||value.components?.orbitfs_panel)||null;
   const install=(data?.installations||[]).find((value:any)=>String(value.license_binding_id)===String(binding?.id))||null;
