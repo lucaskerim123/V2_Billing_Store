@@ -81,7 +81,7 @@ export async function POST(req:Request){
   if(!lookupError&&authRecord?.user){
    // The canonical password was already verified above; bring the transport
    // credential into sync without changing the canonical account authority.
-   const {error:syncError}=await admin.auth.admin.updateUserById(user.id,{password});
+   const {error:syncError}=await admin.auth.admin.updateUserById(user.id,{password,email_confirm:!!user.email_verified_at});
    if(syncError)return Response.json({error:"Could not synchronize the browser session."},{status:500});
   }else{
    // Strictly guarded: only new customer accounts with no business history may
