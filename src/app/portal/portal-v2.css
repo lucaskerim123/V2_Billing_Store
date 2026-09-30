@@ -657,3 +657,7 @@
 .mailSubscriptionRow:hover{background:transparent}
 .mailSubscriptionControl input:focus-visible+.mailSubscriptionTrack{outline-offset:3px}
 @media(max-width:600px){.mailSettingsHeading{padding:13px}.mailSettingsPanelBody{padding:12px}.mailSubscriptionGroup>summary{padding:12px}.mailSubscriptionGroup>summary span{max-width:130px;text-align:right}}
+
+.mailSubscriptionGroup>summary{list-style:none}
+.mailSubscriptionGroup>summary::before{content:"›";display:inline-block;font-size:17px;color:var(--muted);line-height:1;flex:0 0 auto;transition:transform .16s ease}
+.mailSubscriptionGroup[open]>summary::before{transform:rotate(90deg)}
