@@ -168,7 +168,31 @@ function Delivery({rows}:{rows:any[]}){
 
 function SpamProtection({data,token,reload}:{data:any,token:()=>Promise<string>,reload:()=>Promise<void>}){
   const [type,setType]=useState('email'),[value,setValue]=useState('');
+  const [visible,setVisible]=useState(15);
   async function add(){if(!value.trim())return;const t=await token();await fetch('/api/mail/spam',{method:'POST',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify({scope:'global',rule_type:type,value:value.trim(),action:'block',reason:'Mail spam blocklist'})});setValue('');await reload()}
   async function del(id:string){const t=await token();await fetch('/api/mail/spam',{method:'DELETE',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify({id})});await reload()}
-  return <div><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><select value={type} onChange={e=>setType(e.target.value)}><option value="email">Email</option><option value="domain">Domain</option><option value="ip">IP address</option></select><input style={{...input,maxWidth:360}} value={value} onChange={e=>setValue(e.target.value)} placeholder={`Block ${type}`}/><button onClick={add}>Add block</button></div><div style={{marginTop:14}}><b>Blocked senders / domains / IPs</b>{(data.rules||[]).map((r:any)=><div key={r.id} style={{display:'flex',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid #edf0f5'}}><span>{r.rule_type}: {r.value}</span><button onClick={()=>del(r.id)}>Remove</button></div>)}</div><div style={{marginTop:16}}><b>Spam records</b>{(data.events||[]).slice(0,50).map((e:any)=><div key={e.id} style={{padding:'8px 0',borderBottom:'1px solid #edf0f5'}}><div>{e.sender_email||'Unknown sender'} {e.sender_ip?`· ${e.sender_ip}`:''}</div><div style={muted}>{e.decision} · score {e.score} · {new Date(e.created_at).toLocaleString()}</div></div>)}</div></div>
+  return <div style={{display:'grid',gap:9}}>
+    <details style={{border:'1px solid #dfe4ec',borderRadius:9,padding:'11px 13px'}}>
+      <summary style={{cursor:'pointer',fontSize:12,fontWeight:800}}>Add a sender, domain or IP block</summary>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}>
+        <select value={type} onChange={e=>setType(e.target.value)}><option value="email">Email</option><option value="domain">Domain</option><option value="ip">IP address</option></select>
+        <input style={{...input,maxWidth:360}} value={value} onChange={e=>setValue(e.target.value)} placeholder={`Block ${type}`}/>
+        <button type="button" onClick={add}>Add block</button>
+      </div>
+    </details>
+    <details style={{border:'1px solid #dfe4ec',borderRadius:9,padding:'11px 13px'}}>
+      <summary style={{cursor:'pointer',fontSize:12,fontWeight:800}}>Blocked senders and addresses ({(data.rules||[]).length})</summary>
+      {(data.rules||[]).map((r:any)=><div key={r.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:10,padding:'9px 0',borderBottom:'1px solid #edf0f5',fontSize:12}}>
+        <span style={{overflowWrap:'anywhere'}}>{r.rule_type}: {r.value}</span><button type="button" onClick={()=>del(r.id)}>Remove</button>
+      </div>)}
+    </details>
+    <details style={{border:'1px solid #dfe4ec',borderRadius:9,padding:'11px 13px'}}>
+      <summary style={{cursor:'pointer',fontSize:12,fontWeight:800}}>Spam detection history ({(data.events||[]).length})</summary>
+      {(data.events||[]).slice(0,visible).map((e:any)=><details key={e.id} style={{padding:'9px 0',borderBottom:'1px solid #edf0f5'}}>
+        <summary style={{cursor:'pointer',fontSize:12}}>{e.sender_email||'Unknown sender'} · {e.decision}</summary>
+        <p style={{...muted,margin:'7px 0 0 13px'}}>Sender IP: {e.sender_ip||'Not available'} · Score: {e.score} · {new Date(e.created_at).toLocaleString()}</p>
+      </details>)}
+      {visible<(data.events||[]).length&&<button type="button" onClick={()=>setVisible(v=>v+15)} style={{marginTop:12}}>Show 15 more</button>}
+    </details>
+  </div>;
 }
