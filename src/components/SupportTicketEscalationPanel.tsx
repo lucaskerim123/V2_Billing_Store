@@ -9,7 +9,7 @@ const LEVELS=["Support","Senior Support","Admin","Superadmin"];
 export default function SupportTicketEscalationPanel(){
   const path=usePathname(),sb=createClient(),{can}=usePermissions();
   const m=path.match(/^\/admin\/support\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i),id=m?.[1]||"";
-  const [data,setData]=useState<any>(null),[me,setMe]=useState(""),[status,setStatus]=useState(""),[reason,setReason]=useState(""),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false),[open,setOpen]=useState(false);
+  const [data,setData]=useState<any>(null),[me,setMe]=useState(""),[status,setStatus]=useState(""),[reason,setReason]=useState(""),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false),[open,setOpen]=useState(true);
 
   async function load(){
     if(!id)return;
@@ -26,13 +26,13 @@ export default function SupportTicketEscalationPanel(){
   if(!data)return msg?<div className="supportEscalationError">{msg}</div>:null;
 
   const t=data.ticket||{},current=Number(t.escalation_level||0),rank=Number(data.actor_rank||0),next=Math.min(3,current+1);
-  const canUp=can("support.escalate")&&current<3&&rank>=next;
-  const canDown=can("support.escalation.manage")&&current>0&&rank>=current+1;
+  const canUp=(can("support.escalate")||can("support.manage"))&&current<3&&rank>=next;
+  const canDown=(can("support.escalation.manage")||can("support.manage"))&&current>0&&rank>=current+1;
   const currentDepartment=(data.departments||[]).find((d:any)=>d.id===t.department_id);
   const assigned=(data.staff||[]).find((x:any)=>x.user_id===t.assigned_to);
   const claimRequired=!!t.claim_required&&!t.assigned_to;
   const targetClaimLabel=current>0?LEVELS[current]:(currentDepartment?.name||"destination department");
-  const canClaim=can("support.claim")&&(!claimRequired||(current>0?rank>=current+1:true));
+  const canClaim=(can("support.claim")||can("support.manage"))&&(!claimRequired||(current>0?rank>=current+1:true));
   const isMine=!!me&&t.assigned_to===me;
   const closed=status==="closed";
 
@@ -82,15 +82,15 @@ export default function SupportTicketEscalationPanel(){
     {claimRequired&&<div className="supportEscalationAlert compact"><b>Claim required</b><span>{targetClaimLabel} or a higher authorised support tier must claim this handoff before reassignment.</span></div>}
 
     <div className="supportCommandGrid">
-      <label><span>Department</span>{can("support.department")?<select value={t.department_id||""} onChange={e=>department(e.target.value)} disabled={busy}>{(data.departments||[]).map((d:any)=><option value={d.id} key={d.id}>{d.name}</option>)}</select>:<strong>{currentDepartment?.name||"—"}</strong>}</label>
-      <label><span>Owner</span>{claimRequired?<strong>Unassigned · awaiting claim</strong>:(can("support.assign")||can("support.transfer")?<select value={t.assigned_to||""} onChange={e=>update({assigned_to:e.target.value||null},e.target.value?(t.assigned_to?"transfer":"assign"):"unassign")} disabled={busy}><option value="">Unassigned</option>{(data.staff||[]).map((s:any)=><option value={s.user_id} key={s.user_id}>{s.display_name} · {s.rank_label}</option>)}</select>:<strong>{assigned?.display_name||"Unassigned"}</strong>)}</label>
+      <label><span>Department</span>{(can("support.department")||can("support.manage"))?<select value={t.department_id||""} onChange={e=>department(e.target.value)} disabled={busy}>{(data.departments||[]).map((d:any)=><option value={d.id} key={d.id}>{d.name}</option>)}</select>:<strong>{currentDepartment?.name||"—"}</strong>}</label>
+      <label><span>Owner</span>{claimRequired?<strong>Unassigned · awaiting claim</strong>:(can("support.assign")||can("support.transfer")||can("support.manage")?<select value={t.assigned_to||""} onChange={e=>update({assigned_to:e.target.value||null},e.target.value?(t.assigned_to?"transfer":"assign"):"unassign")} disabled={busy}><option value="">Unassigned</option>{(data.staff||[]).map((s:any)=><option value={s.user_id} key={s.user_id}>{s.display_name} · {s.rank_label}</option>)}</select>:<strong>{assigned?.display_name||"Unassigned"}</strong>)}</label>
       <div className="supportCommandMeta"><span>Escalation</span><strong>{current?LEVELS[current]:"None"}</strong><small>{t.escalated_at?new Date(t.escalated_at).toLocaleString():"Not escalated"}</small></div>
       <div className="supportCommandMeta"><span>Current owner</span><strong>{assigned?.display_name||"Unassigned"}</strong><small>{isMine?"Assigned to you":" "}</small></div>
     </div>
 
     <div className="supportCommandActions">
       {!t.assigned_to&&canClaim&&<button onClick={()=>update({assigned_to:me},"claim")} disabled={busy||!me}>Claim ticket</button>}
-      {t.assigned_to&&can("support.transfer")&&<button className="secondary" onClick={()=>update({assigned_to:null},"unassign")} disabled={busy}>{isMine?"Unclaim ticket":"Unassign ticket"}</button>}
+      {t.assigned_to&&(can("support.transfer")||can("support.manage"))&&<button className="secondary" onClick={()=>update({assigned_to:null},"unassign")} disabled={busy}>{isMine?"Unclaim ticket":"Unassign ticket"}</button>}
       {can("support.close")&&<button className={closed?"secondary":"danger"} onClick={()=>update({status:closed?"open":"closed"})} disabled={busy}>{closed?"Reopen ticket":"Close ticket"}</button>}
     </div>
 
