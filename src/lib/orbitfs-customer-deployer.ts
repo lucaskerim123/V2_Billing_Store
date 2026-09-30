@@ -382,7 +382,7 @@ async function applyBaseDatabaseMigrations(install:any,currentRelease:any,target
       skipped++;ids.push(migration.id);continue;
     }
     await query(`insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
-values (${sqlLiteral(migration.id)},${sqlLiteral(migration.sha256)},'base',${sqlLiteral(migration.file)},${sqlLiteral(currentRelease.id)},${sqlLiteral(currentRelease.version)},coalesce(${sqlLiteral(install.database_initialized_at||new Date().toISOString())}::timestamptz,now()))
+values (${sqlLiteral(migration.id)},${sqlLiteral(migration.sha256)},'shared',${sqlLiteral(migration.file)},${sqlLiteral(currentRelease.id)},${sqlLiteral(currentRelease.version)},coalesce(${sqlLiteral(install.database_initialized_at||new Date().toISOString())}::timestamptz,now()))
 on conflict (migration_id) do nothing;`);
     existing.set(migration.id,{sha256:migration.sha256,sourceFile:migration.file});seeded++;ids.push(migration.id);
   }
@@ -401,7 +401,7 @@ on conflict (migration_id) do nothing;`);
       await query(`begin;
 ${sql}
 insert into public.orbitfs_schema_migrations(migration_id,sha256,component,source_file,release_id,release_version,applied_at)
-values (${sqlLiteral(migration.id)},${sqlLiteral(migration.sha256)},'base',${sqlLiteral(migration.file)},${sqlLiteral(targetRelease.id)},${sqlLiteral(targetRelease.version)},now());
+values (${sqlLiteral(migration.id)},${sqlLiteral(migration.sha256)},'shared',${sqlLiteral(migration.file)},${sqlLiteral(targetRelease.id)},${sqlLiteral(targetRelease.version)},now());
 commit;`);
     }catch(error){
       await event(install,"base.database.migration.failed","error",`Base migration ${migration.id} failed`,{releaseId:targetRelease.id,file:migration.file,error:error instanceof Error?error.message:String(error)});
