@@ -259,7 +259,7 @@ async function applyCustomerDatabaseMigrations(install:any,release:any,bundle:Up
   alter table public.orbitfs_schema_migrations enable row level security;
   revoke all on public.orbitfs_schema_migrations from anon, authenticated;
   grant all on public.orbitfs_schema_migrations to service_role;`);
-  if(!migrations.length)return {required:0,applied:0,skipped:0,ids:[] as string[]};
+  if(!migrations.length)return {required:0,applied:0,skipped:0,ids:[] as string[],skippedByEntitlement};
   const existingRaw=await query("select migration_id,sha256 from public.orbitfs_schema_migrations order by applied_at asc;");
   const rows=managementRows(existingRaw);
   const existing=new Map(rows.filter((row:any)=>row&&row.migration_id).map((row:any)=>[String(row.migration_id),String(row.sha256||"").toLowerCase()]));
@@ -440,7 +440,7 @@ async function waitForReady(userId:string,id:string):Promise<any>{
   }
   return last;
 }
-async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBundle,panel:Package,artifactSha256:string,channel:string){
+async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBundle,panel:Package,artifactSha256:string,channel:string,executionComponents:string[]){
   const installedBase=String(install.release_version||"").trim();
   const minimumBase=String(bundle.minimumBaseVersion||(panel as any).baseVersion||"").trim();
   if(!installedBase)fail("Deploy OrbitFS Base before applying a Panel update",409);
@@ -457,7 +457,7 @@ async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBun
     target:"production",
     files:uploadedFiles,
     projectSettings:{framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(panel.projectSettings||{})},
-    meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:"update",orbitfsChannel:channel,orbitfsSourceCommit:String(bundle.sourceCommit||expectedSource(release)),orbitfsInstallationRoute:"billing_store",orbitfsUpdateTargets:bundle.components.join(",")}
+    meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:"update",orbitfsChannel:channel,orbitfsSourceCommit:String(bundle.sourceCommit||expectedSource(release)),orbitfsInstallationRoute:"billing_store",orbitfsUpdateTargets:executionComponents.join(",")}
   };
   const created=await vercelApi(install.auth_user_id,"/v13/deployments",{method:"POST",body:JSON.stringify(body)});
   if(!created?.id&&!created?.uid)fail("Vercel did not return a Panel update deployment id",502);
@@ -842,7 +842,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       const databaseResult=await applyCustomerDatabaseMigrations(install,release,bundle,components);
       await event(install,"update.database.completed","ok","Customer database migrations completed",{releaseId:release.id,releaseVersion:release.version,migrationCount:applicableMigrations.length,skippedComponents});
       if(wantsPanel&&panel)await event(install,"update.panel.started","info","Deploying the verified Panel update payload",{releaseId:release.id,releaseVersion:release.version});
-      panelResult=wantsPanel&&panel?await deployPanelUpdatePayload(install,release,bundle,panel,parsed.artifactSha256,requestedChannel):null;
+      panelResult=wantsPanel&&panel?await deployPanelUpdatePayload(install,release,bundle,panel,parsed.artifactSha256,requestedChannel,components):null;
       if(wantsPanel&&panel)await event(install,"update.panel.completed","ok","Panel update deployment completed",{releaseId:release.id,releaseVersion:release.version});
       const engineBaseUrl=String(panelResult?.deploymentUrl||install.production_url||install.deployment_url||"").trim();
       if(wantsEngine&&!engineBaseUrl)fail("Installed OrbitFS Base URL is unavailable for the Engine update",409);
@@ -869,7 +869,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       };
       const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
       if(error)throw error;
-      const history=await licenseDb().from("orbitfs_installation_releases").insert({installation_id:install.id,auth_user_id:install.auth_user_id,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,source_commit:bundle.sourceCommit||expectedSource(release)||null,vercel_deployment_id:panelResult?.deploymentId||null,deployment_url:panelResult?.deploymentUrl||null,action:"update",status:"ready",ready_at:appliedAt});
+      const history=await licenseDb().from("orbitfs_installation_releases").insert({installation_id:install.id,auth_user_id:install.auth_user_id,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,source_commit:bundle.sourceCommit||expectedSource(release)||null,vercel_deployment_id:panelResult?.deploymentId||null,deployment_url:panelResult?.deploymentUrl||null,action:"update",release_type:"update",components,status:"ready",ready_at:appliedAt});
       if(history.error)throw history.error;
       const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
       const customer=customerResult.data||null;
