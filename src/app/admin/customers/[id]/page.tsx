@@ -21,7 +21,7 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
  const {id}=use(params),sb=createClient();
  const {can,role}=usePermissions();
  const [tab,setTab]=useState("general"),[p,setP]=useState<any>(),[b,setB]=useState<any>();
- const [orders,setOrders]=useState<any[]>([]),[invoices,setInvoices]=useState<any[]>([]),[tickets,setTickets]=useState<any[]>([]),[ledger,setLedger]=useState<any[]>([]),[activity,setActivity]=useState<any[]>([]),[ipSummary,setIpSummary]=useState<any[]>([]),[audit,setAudit]=useState<any[]>([]);
+ const [orders,setOrders]=useState<any[]>([]),[invoices,setInvoices]=useState<any[]>([]),[tickets,setTickets]=useState<any[]>([]),[ledger,setLedger]=useState<any[]>([]),[activity,setActivity]=useState<any[]>([]),[ipSummary,setIpSummary]=useState<any[]>([]),[audit,setAudit]=useState<any[]>([]),[installedProducts,setInstalledProducts]=useState<any[]>([]);
  const [mail,setMail]=useState<any>({email:"",templates:[],logs:[]}),[mailMode,setMailMode]=useState("custom"),[mailTemplate,setMailTemplate]=useState(""),[mailSubject,setMailSubject]=useState(""),[mailBody,setMailBody]=useState(""),[mailVars,setMailVars]=useState<Record<string,string>>({}),[mailBusy,setMailBusy]=useState(false);
  const [amount,setAmount]=useState(""),[msg,setMsg]=useState("");
  const [enforcementEdit,setEnforcementEdit]=useState<any>(null),[enforcementBusy,setEnforcementBusy]=useState(false);
@@ -42,7 +42,7 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
   const detail=await response.json().catch(()=>({}));
   if(!response.ok){setMsg(detail.error||"Could not load customer profile.");return false;}
   const profile=detail.profile,customer=detail.customer;
-  setP({...customer,...profile,id,customer_id:customer.id,name:customer.name,email:customer.email,username:customer.username,customer_number:customer.customer_number||profile.customer_number,status:customer.status||profile.status,email_verified_at:customer.email_verified_at||profile.email_verified_at});setB(c.data);setOrders(o.data||[]);setInvoices(i.data||[]);setTickets(t.data||[]);setLedger(l.data||[]);setActivity(ac.data?.events||[]);setIpSummary(ac.data?.ips||[]);setAudit(au.data||[]);
+  setP({...customer,...profile,id,customer_id:customer.id,name:customer.name,email:customer.email,username:customer.username,customer_number:customer.customer_number||profile.customer_number,status:customer.status||profile.status,email_verified_at:customer.email_verified_at||profile.email_verified_at});setB(c.data);setOrders(o.data||[]);setInvoices(i.data||[]);setTickets(t.data||[]);setLedger(l.data||[]);setActivity(ac.data?.events||[]);setIpSummary(ac.data?.ips||[]);setAudit(au.data||[]);setInstalledProducts(detail.installations||[]);
   return true;
  }
 
@@ -153,13 +153,53 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
  }
 
  if(!p)return <main className="adminShell">Loading customer…</main>;
- const banned=!!p.banned_at,tabs=[["general","General info / settings"],["orders","Orders"],["invoices","Invoices"],["support","Support tickets"],["notes","Notes"],["emails","Emails"],["history","History / IP details"]];
+ const banned=!!p.banned_at,tabs=[["general","General info / settings"],["installed","Installed product"],["orders","Orders"],["invoices","Invoices"],["support","Support tickets"],["notes","Notes"],["emails","Emails"],["history","History / IP details"]];
 
  return <main className="adminShell">
   <header className="adminTop"><div><p className="eyebrow">CUSTOMER CONTROL</p><h1>{[p.first_name,p.last_name].map((name:string|undefined)=>String(name||"").trim()).filter(Boolean).join(" ")||p.display_name||p.name||p.username||"Customer"}</h1><p className="muted">{p.customer_number||"Customer"} · {p.email||"No email"}{p.username?` · @${p.username}`:""} · {p.email_verified_at?"verified":"unverified"} · {banned?"banned":p.status}</p></div></header>
   <nav className="recordTabs">{tabs.map(([k,l])=><button className={tab===k?"active":""} onClick={()=>setTab(k)} key={k}>{l}</button>)}</nav>
 
   {tab==="general"&&<><section className="stats four"><article><small>Balance</small><strong>${((b?.available_cents||0)/100).toFixed(2)}</strong></article><article><small>Orders</small><strong>{orders.length}</strong></article><article><small>Account</small><strong>{banned?"Banned":p.status}</strong></article></section><div className="adminGrid"><section className="panel"><h2>Customer profile</h2><form className="form" onSubmit={save}><div className="two"><input value={p.first_name||""} onChange={e=>setP({...p,first_name:e.target.value})} placeholder="First name"/><input value={p.last_name||""} onChange={e=>setP({...p,last_name:e.target.value})} placeholder="Last name"/></div><input value={p.display_name||""} onChange={e=>setP({...p,display_name:e.target.value})} placeholder="Display name"/><input value={p.company_name||""} onChange={e=>setP({...p,company_name:e.target.value})} placeholder="Company"/><input value={p.phone||""} onChange={e=>setP({...p,phone:e.target.value})} placeholder="Phone"/><input value={p.address_line1||""} onChange={e=>setP({...p,address_line1:e.target.value})} placeholder="Address line 1"/><input value={p.address_line2||""} onChange={e=>setP({...p,address_line2:e.target.value})} placeholder="Address line 2"/><div className="two"><input value={p.city||""} onChange={e=>setP({...p,city:e.target.value})} placeholder="City"/><input value={p.state_region||""} onChange={e=>setP({...p,state_region:e.target.value})} placeholder="State / region"/></div><div className="two"><input value={p.postal_code||""} onChange={e=>setP({...p,postal_code:e.target.value})} placeholder="Postcode"/><input value={p.country_code||""} onChange={e=>setP({...p,country_code:e.target.value.toUpperCase()})} placeholder="Country"/></div><div className="two"><input value={p.timezone||""} onChange={e=>setP({...p,timezone:e.target.value})} placeholder="Timezone"/><input value={p.currency||""} onChange={e=>setP({...p,currency:e.target.value.toUpperCase()})} placeholder="Currency"/></div><div className="listrow"><b>Account type</b><span>Customer</span></div><textarea rows={4} value={p.admin_notes||""} onChange={e=>setP({...p,admin_notes:e.target.value})} placeholder="Private admin notes"/><textarea rows={3} value={p.enforcement_notes||""} onChange={e=>setP({...p,enforcement_notes:e.target.value})} placeholder="Enforcement notes"/>{can("customers.edit")&&<button>Save customer</button>}</form></section><section className="panel"><h2>Account enforcement</h2><p className="muted">Suspension keeps Support available but blocks purchases and licences. A ban blocks portal access and licences completely.</p>{(p.status==="suspended"||p.banned_at)&&<div className="notice"><b>{p.banned_at?"Banned":"Suspended"}</b><span>{p.banned_at?(p.ban_reason||"No reason provided."):(p.suspension_reason||"No reason provided.")}</span><span>{p.banned_at?(p.ban_expires_at?("Until "+new Date(p.ban_expires_at).toLocaleString()):"Permanent ban"):(p.suspension_expires_at?("Until "+new Date(p.suspension_expires_at).toLocaleString()):"No automatic expiry")}</span></div>}{can("customers.enforce")?<div className="actionStack"><button onClick={()=>enforce("active")} disabled={enforcementBusy}>Reactivate</button><button className="secondary" onClick={()=>enforce("suspended")} disabled={enforcementBusy}>Suspend account + licences</button><button className="danger" onClick={()=>enforce("banned")} disabled={enforcementBusy}>Ban account + licences</button></div>:<p className="muted">Your role has view-only enforcement access.</p>}<h3>Account security</h3><p className="muted">Send a secure password recovery link to the customer&apos;s registered email. Requires the customer password-reset permission.</p>{can("customers.password_reset")&&<button className="secondary" onClick={sendReset}>Send password reset link</button>}<SuperadminCustomerPasswordControl userId={id} role={role}/><h3>Balance control</h3>{can("credit.manage")?<div className="form"><input type="number" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Amount AUD"/><div className="two"><button onClick={()=>credit(1)}>Add credit</button><button className="secondary" onClick={()=>credit(-1)}>Deduct credit</button></div></div>:<p className="muted">Credit management permission required.</p>}</section></div></>}
+
+  {tab==="installed"&&<section className="panel">
+   <div className="panelTitle"><div><p className="eyebrow">INSTALLED PRODUCT</p><h2>Customer installation</h2><p className="muted">Read-only deployment identity and runtime details. Release and deployment state are sourced from License Manager; provider project details are shown from the customer deployment record.</p></div><span>{installedProducts.length} installation{installedProducts.length===1?"":"s"}</span></div>
+   {installedProducts.length?installedProducts.map((install:any)=>{
+    const authority=install.authority||{},base=authority.current_base||{},update=authority.current_update||{};
+    const siteUrl=install.production_url||base.deployment_url||install.deployment_url||authority.last_deployment_url||"";
+    const version=base.release_version||base.product_version||authority.product_version||install.release_version||"—";
+    const channel=base.release_channel||"—";
+    const state=authority.last_deployment_status||install.state||"unknown";
+    return <article className="panel" key={install.id} style={{marginTop:12}}>
+     <div className="panelTitle"><div><h3>OrbitFS Base</h3><p className="muted">{siteUrl||"No production URL recorded"}</p></div><span className={"state "+(String(state).toLowerCase()==="completed"||String(state).toLowerCase()==="ready"?"ok":"waiting")}>{String(state).replaceAll("_"," ")}</span></div>
+     <div className="stats four">
+      <article><small>Installed version</small><strong>{version==="—"?"—":String(version).startsWith("v")?version:"v"+version}</strong></article>
+      <article><small>Release channel</small><strong>{channel}</strong></article>
+      <article><small>Health</small><strong>{install.health_status||"unknown"}</strong></article>
+      <article><small>Deployments</small><strong>{authority.deployment_count??"—"}</strong></article>
+     </div>
+     <div className="adminGrid">
+      <div>
+       <div className="listrow"><b>Installation ID</b><span>{install.installation_id||"—"}</span></div>
+       <div className="listrow"><b>Licence ID</b><span>{install.master_license_id||authority.license_id||"—"}</span></div>
+       <div className="listrow"><b>Release ID</b><span>{base.release_id||install.release_id||"—"}</span></div>
+       <div className="listrow"><b>Deployment ID</b><span>{base.deployment_id||authority.last_deployment_id||install.vercel_deployment_id||"—"}</span></div>
+       <div className="listrow"><b>Vercel project</b><span>{install.vercel_project_name||base.project_name||install.vercel_project_id||base.project_id||"—"}</span></div>
+       <div className="listrow"><b>Supabase project</b><span>{install.supabase_project_name||install.supabase_project_ref||"—"}</span></div>
+      </div>
+      <div>
+       <div className="listrow"><b>Production URL</b><span>{siteUrl?<a href={siteUrl.startsWith("http")?siteUrl:`https://${siteUrl}`} target="_blank" rel="noreferrer">{siteUrl}</a>:"—"}</span></div>
+       <div className="listrow"><b>Custom / production domain</b><span>{install.production_url||"—"}</span></div>
+       <div className="listrow"><b>Last update</b><span>{update.release_version||update.product_version?(String(update.release_version||update.product_version).startsWith("v")?String(update.release_version||update.product_version):"v"+String(update.release_version||update.product_version)):"No update recorded"}</span></div>
+       <div className="listrow"><b>Last seen</b><span>{authority.last_seen_at?new Date(authority.last_seen_at).toLocaleString():"—"}</span></div>
+       <div className="listrow"><b>Region</b><span>{install.supabase_region||authority.last_region||base.region||"—"}</span></div>
+       <div className="listrow"><b>Authority</b><span>{install.authority_source||"orbitfs-license-master-v2"}</span></div>
+      </div>
+     </div>
+     {install.authority_error&&<div className="notice" style={{marginTop:12}}><b>License Manager details unavailable</b><span>{install.authority_error}</span></div>}
+     {install.last_error&&<div className="notice" style={{marginTop:12}}><b>Latest deployment error</b><span>{install.last_error}</span></div>}
+    </article>
+   }):<p className="muted">No OrbitFS installation has been created for this customer yet.</p>}
+  </section>}
 
   {tab==="orders"&&<section className="panel"><h2>Orders</h2>{orders.length?orders.map(o=><Link className="adminItem" href={`/admin/orders/${o.id}`} key={o.id}><div><b>#{o.order_number}</b><span>{o.status} · {o.payment_status} · {o.fulfillment_status}</span></div><span>${(o.total_cents/100).toFixed(2)} →</span></Link>):<p className="muted">No orders.</p>}</section>}
   {tab==="invoices"&&<section className="panel"><h2>Invoices</h2>{invoices.length?invoices.map(i=><Link className="adminItem" href={`/admin/invoices/${i.id}`} key={i.id}><div><b>{i.invoice_number}</b><span>{i.status} · due {i.due_at?new Date(i.due_at).toLocaleDateString():"—"}</span></div><span>${(i.total_cents/100).toFixed(2)} →</span></Link>):<p className="muted">No invoices.</p>}</section>}
