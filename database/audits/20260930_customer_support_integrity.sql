@@ -60,8 +60,9 @@ select
  (select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace
    where n.nspname='public' and c.relkind in ('r','p')) public_tables,
  (select count(*) from pg_constraint where contype='f' and connamespace='public'::regnamespace) public_foreign_keys,
- (select count(*) from pg_trigger t join pg_namespace n on n.oid=t.tgrelid::regclass::oid
-   where not t.tgisinternal and t.tgrelid in
-     (select c.oid from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public')) public_custom_triggers,
+ (select count(*) from pg_trigger t
+   join pg_class cl on cl.oid=t.tgrelid
+   join pg_namespace ns on ns.oid=cl.relnamespace
+   where not t.tgisinternal and ns.nspname='public') public_custom_triggers,
  (select count(*) from information_schema.columns where table_schema='public'
      and is_nullable='NO' and column_default is null and is_identity='NO') explicitly_supplied_required_columns;
