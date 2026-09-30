@@ -385,6 +385,18 @@ async function supabaseSecretKey(install:any){
 }
 export async function customerSupabaseServerKey(install:any){return supabaseSecretKey(install)}
 
+// Customer-managed OrbitFS projects must keep their production domain public.
+// Restrict this change to Vercel Authentication: never silently remove password/IP policies.
+export async function ensureStandardPanelProtection(install:any):Promise<void>{
+ const id=String(install?.vercel_project_id||"").trim();if(!id)throw new Error("Customer Vercel project is missing");
+ const project=await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(id)}`,{method:"GET"});
+ const scope=String(project?.ssoProtection?.deploymentType||"");
+ if(scope==="all"||scope==="all_except_custom_domains"){
+  await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify({ssoProtection:{deploymentType:"prod_deployment_urls_and_all_previews"}})});
+ }
+ if(project?.passwordProtection?.deploymentType==="all")throw Object.assign(new Error("Customer Vercel project has password protection on its production domain. Change its scope to Standard Protection before publishing a public panel."),{status:409});
+}
+
 export async function ensureVercelProject(install:any){
   if(install?.vercel_project_id)return install;
   const settings=await billingOrbitfsConfig();
@@ -392,7 +404,7 @@ export async function ensureVercelProject(install:any){
   const name=`${settings.panel_project_prefix}-${String(install.installation_id||install.id).slice(-8)}`.toLowerCase().replace(/[^a-z0-9-]/g,"-");
   let project:any=null;
   try{
-    project=await vercelApi(install.auth_user_id,"/v11/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit"})});
+    project=await vercelApi(install.auth_user_id,"/v11/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit",ssoProtection:{deploymentType:"prod_deployment_urls_and_all_previews"}})});
   }catch(error:any){
     const message=String(error?.message||"");
     if(!message.includes("409"))throw error;
