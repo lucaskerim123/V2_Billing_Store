@@ -27,9 +27,10 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
  const [enforcementEdit,setEnforcementEdit]=useState<any>(null),[enforcementBusy,setEnforcementBusy]=useState(false);
 
  async function load(){
-  const [a,customer,c,o,i,t,l,ac,au]=await Promise.all([
-   sb.from("user_profiles").select("*").eq("id",id).single(),
-   sb.from("customers").select("*").eq("auth_user_id",id).maybeSingle(),
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token){setMsg("Administrator session expired. Sign in again.");return;}
+  const [response,c,o,i,t,l,ac,au]=await Promise.all([
+   fetch(`/api/admin/customers/${id}/profile`,{headers:{authorization:`Bearer ${session.access_token}`},cache:"no-store"}),
    sb.from("account_balances").select("*").eq("user_id",id).single(),
    sb.from("orders").select("*").eq("auth_user_id",id).order("created_at",{ascending:false}),
    sb.from("invoices").select("*").eq("auth_user_id",id).order("created_at",{ascending:false}),
@@ -38,7 +39,10 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
    sb.rpc("admin_customer_activity_snapshot",{p_user_id:id}),
    sb.from("admin_audit_log").select("*").or(`target_id.eq.${id},actor_id.eq.${id}`).order("created_at",{ascending:false}).limit(100)
   ]);
-  setP({...a.data,...(customer.data||{}),id,customer_id:customer.data?.id,email:customer.data?.email,username:customer.data?.username,customer_number:customer.data?.customer_number||a.data?.customer_number,status:customer.data?.status||a.data?.status,email_verified_at:customer.data?.email_verified_at||a.data?.email_verified_at});setB(c.data);setOrders(o.data||[]);setInvoices(i.data||[]);setTickets(t.data||[]);setLedger(l.data||[]);setActivity(ac.data?.events||[]);setIpSummary(ac.data?.ips||[]);setAudit(au.data||[]);
+  const detail=await response.json().catch(()=>({}));
+  if(!response.ok){setMsg(detail.error||"Could not load customer profile.");return;}
+  const profile=detail.profile,customer=detail.customer;
+  setP({...customer,...profile,id,customer_id:customer.id,name:customer.name,email:customer.email,username:customer.username,customer_number:customer.customer_number||profile.customer_number,status:customer.status||profile.status,email_verified_at:customer.email_verified_at||profile.email_verified_at});setB(c.data);setOrders(o.data||[]);setInvoices(i.data||[]);setTickets(t.data||[]);setLedger(l.data||[]);setActivity(ac.data?.events||[]);setIpSummary(ac.data?.ips||[]);setAudit(au.data||[]);
  }
 
  useEffect(()=>{load();loadMail()},[id]);
@@ -120,7 +124,19 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
  }
 
  async function credit(sign:number){const x=Math.round(Number(amount||0)*100)*sign;if(!x)return;const {error}=await sb.rpc("adjust_credit",{target_user:id,amount_cents:x,reason:sign>0?"OrbitFS Master Admin Center credit":"OrbitFS Master Admin Center debit",reference_type:"admin",reference_id:null});setMsg(error?.message||"Balance updated.");setAmount("");if(!error)load()}
- async function save(e:FormEvent){e.preventDefault();const {error}=await sb.from("user_profiles").update({display_name:p.display_name,first_name:p.first_name,last_name:p.last_name,company_name:p.company_name,phone:p.phone,address_line1:p.address_line1,address_line2:p.address_line2,city:p.city,state_region:p.state_region,postal_code:p.postal_code,country_code:p.country_code,timezone:p.timezone,currency:p.currency,language:p.language,admin_notes:p.admin_notes,enforcement_notes:p.enforcement_notes}).eq("id",id);setMsg(error?.message||"Customer updated.");if(!error)load()}
+ async function save(e:FormEvent){
+  e.preventDefault();setMsg("Saving customer…");
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token){setMsg("Administrator session expired. Sign in again.");return;}
+  const changes={display_name:p.display_name,first_name:p.first_name,last_name:p.last_name,company_name:p.company_name,phone:p.phone,address_line1:p.address_line1,address_line2:p.address_line2,city:p.city,state_region:p.state_region,postal_code:p.postal_code,country_code:p.country_code,timezone:p.timezone,currency:p.currency,language:p.language,admin_notes:p.admin_notes,enforcement_notes:p.enforcement_notes};
+  try{
+   const response=await fetch(`/api/admin/customers/${id}/profile`,{method:"PATCH",headers:{"content-type":"application/json",authorization:`Bearer ${session.access_token}`},body:JSON.stringify(changes)});
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok||!result.ok){setMsg(result.error||"Customer update failed.");return;}
+   await load();
+   setMsg("Customer updated and verified.");
+  }catch(e:any){setMsg(e?.message||"Customer update failed.");}
+ }
  async function sendReset(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token){setMsg("Authentication required.");return}const r=await fetch("/api/admin/customers/password-reset",{method:"POST",headers:{"content-type":"application/json",authorization:`Bearer ${session.access_token}`},body:JSON.stringify({userId:id})});const j=await r.json().catch(()=>({}));setMsg(r.ok?(j.message||"Password reset sent."):(j.error||"Could not send password reset."))}
  async function enforce(state:string){
   if(state==="active"){if(!confirm("Reactivate this account and restore licences suspended by account enforcement?"))return;setEnforcementBusy(true);const {error}=await sb.rpc("admin_set_account_enforcement_v2",{target_user:id,new_state:"active",why:null,expires_at:null});setEnforcementBusy(false);setMsg(error?.message||"Account reactivated.");if(!error){setEnforcementEdit(null);load()}return}
