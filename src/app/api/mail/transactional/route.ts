@@ -2,6 +2,7 @@ import {createClient} from "@supabase/supabase-js";
 import {wrapOrbitFsHtml,wrapOrbitFsText} from "@/lib/mail-branding";
 import {loadMailRuntimeConfig,resolveMailDeliveryIdentity} from "@/lib/mail-config-server";
 import {orbitfsStoreOrigin} from "@/lib/site-origin";
+import {customerAllowsMail} from "@/lib/mail-subscriptions-server";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const pub=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -16,6 +17,8 @@ export async function POST(req:Request){
  if(!templateKey&&eventKey){const {data:a,error:ae}=await ctx.db.rpc('mail_get_automation',{p_event_key:eventKey});if(ae)return Response.json({error:ae.message},{status:500});if(!a||!a.template_key)return Response.json({ok:true,skipped:true,eventKey});templateKey=String(a.template_key)}
  if(!templateKey||!recipient)return Response.json({error:'eventKey/templateKey and recipient are required.'},{status:400});
  const {data:t,error}=await ctx.db.rpc('mail_get_template',{p_template_key:templateKey});if(error||!t)return Response.json({error:'Mail template is disabled or missing.'},{status:404});
+ const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY||"";if(!serviceKey)return Response.json({error:"Mail subscription verification unavailable."},{status:503});
+ try{const mailDb=createClient(url,serviceKey,{auth:{persistSession:false}});if(!(await customerAllowsMail(mailDb,recipient,eventKey||templateKey,templateKey)))return Response.json({ok:true,skipped:true,reason:"unsubscribed"});}catch{return Response.json({error:"Mail subscription verification failed."},{status:503});}
  const vars:Record<string,string>={};for(const [k,v] of Object.entries(body.vars||{}))vars[k]=String(v??'');const siteUrl=await orbitfsStoreOrigin(req.url);vars.site_url=siteUrl;
  const relatedType=String(body.relatedType||'').toLowerCase(),relatedId=body.relatedId?String(body.relatedId):'';if(relatedType==='invoice'&&relatedId)vars.invoice_url=`${siteUrl}/portal/invoices/${encodeURIComponent(relatedId)}`;
  let senderAccount=String(t.from_account||config.outbound.default_from);
