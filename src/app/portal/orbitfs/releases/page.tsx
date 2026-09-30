@@ -84,7 +84,8 @@ export default function OrbitFSUpdateReleaseSystem(){
   useEffect(()=>{void load(false,true)},[load]);
   useEffect(()=>{if(data?.releaseCatalogLoading)void load(true,false)},[data?.releaseCatalogLoading,load]);
 
-  const binding=(data?.bindings||[]).find((value:any)=>value.license_product_key==="orbitfs_base"||value.components?.orbitfs_base||value.components?.orbitfs_panel)||null;
+  const baseBindings=(data?.bindings||[]).filter((value:any)=>value.license_product_key==="orbitfs_base"||value.components?.orbitfs_base||value.components?.orbitfs_panel);
+  const binding=baseBindings.find((value:any)=>(data?.installations||[]).some((row:any)=>String(row.license_binding_id)===String(value.id)))||baseBindings[0]||null;
   const install=(data?.installations||[]).find((value:any)=>String(value.license_binding_id)===String(binding?.id))||null;
   const settings=data?.settings||{};
   const allowedChannels:string[]=Array.isArray(settings.release_channels)&&settings.release_channels.length
@@ -222,6 +223,30 @@ export default function OrbitFSUpdateReleaseSystem(){
       setStage(4);
     }
   },[progress?.installationId,progress?.events?.[0]?.id,install?.id,stage,progressTarget]);
+
+  async function verifyBaseDeployment(){
+    if(!install?.id||busy)return;
+    setBusy("verify-base");setMessage("");
+    try{
+      // Explicit verification uses the existing deployment sync endpoint. It checks
+      // Vercel and successful Base deployment history before restoring ready state.
+      const res=await fetch("/api/orbitfs/installations/"+encodeURIComponent(String(install.id))+"/status",{
+        headers:await headers(),cache:"no-store"
+      });
+      const body=await res.json().catch(()=>({}));
+      if(!res.ok)throw Error(body.error||"Could not verify the installed Base.");
+      const verified=body.installation;
+      await load(true,false);
+      if(["ready","active","deployed"].includes(String(verified?.state||"").toLowerCase())){
+        setMessage(verified?.health_status==="healthy"
+          ?"Base deployment and public health verified."
+          :"Base deployment verified in Vercel; public runtime health still needs attention.");
+      }else{
+        setMessage("Base is not verified as ready. "+String(verified?.last_error||"Check the Base control panel and deployment history."));
+      }
+    }catch(error:any){setMessage(error?.message||"Base verification failed.");}
+    finally{setBusy("")}
+  }
 
   async function beginInstall(){
     if(!canInstall||!selected||!install)return;
@@ -431,7 +456,7 @@ export default function OrbitFSUpdateReleaseSystem(){
           {selected.customer_notes&&<><p className="eyebrow">CUSTOMER NOTES</p><p className="orbitV5UpdateNotes">{selected.customer_notes}</p></>}
         </div>
         <div className="orbitV5UpdateChecks"><p className="eyebrow">PRE-DEPLOYMENT CHECK</p>
-          <div><span className={baseReady?"ok":"blocked"}>{baseReady?"✓":"!"}</span><p>{!hasBase?"Installed Base required":baseReady?"Installed Base ready":`Installed Base status is ${String(install?.state||"unknown")}; verify Base deployment is ready before updating`}</p></div>
+          <div><span className={baseReady?"ok":"blocked"}>{baseReady?"✓":"!"}</span><p>{!hasBase?"Installed Base required":baseReady?"Installed Base ready":`Installed Base status is ${String(install?.state||"unknown")}; verify Base deployment is ready before updating`}{!baseReady&&install?.last_error?<small className="muted" style={{display:"block",marginTop:6}}>{String(install.last_error)}</small>:null}{hasBase&&!baseReady?<button type="button" className="secondary" style={{marginTop:8}} disabled={!!busy} onClick={()=>void verifyBaseDeployment()}>{busy==="verify-base"?"Verifying…":"Verify Base deployment"}</button>:null}</p></div>
           <div><span className={licenceReady?"ok":"blocked"}>{licenceReady?"✓":"!"}</span><p>Installation licence {licenceReady?"registered":"required"}</p></div>
           <div><span className={compatible?"ok":"blocked"}>{compatible?"✓":"!"}</span><p>{requiredBase?"Requires Base v"+requiredBase: "No minimum Base version specified"}{!compatible?" · incompatible":""}</p></div>
           <div><span className={!updateUnavailable?"ok":"blocked"}>{!updateUnavailable?"✓":"!"}</span><p>{updateUnavailable?"Update execution currently disabled":"Update authority available"}</p></div>
