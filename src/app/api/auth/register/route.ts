@@ -11,6 +11,9 @@ export async function POST(req:Request){
  if(!url||!serviceKey)return Response.json({error:"Billing Store database is not configured."},{status:503});
  const body=await req.json().catch(()=>({}));
  const email=String(body.email||"").trim().toLowerCase(),password=String(body.password||""),username=String(body.username||"").trim();
+ const firstName=String(body.first_name||"").trim(),lastName=String(body.last_name||"").trim();
+ if(!firstName||!lastName||firstName.length>100||lastName.length>100)return Response.json({error:"First and last name are required (up to 100 characters each)."},{status:400});
+ const fullName=`${firstName} ${lastName}`;
  if(!validUsername(username))return Response.json({error:"Username must be 3–32 characters using letters, numbers, dots, underscores or hyphens."},{status:400});
  if(!email||!email.includes("@")||password.length<8)return Response.json({error:"Enter a valid email and a password with at least 8 characters."},{status:400});
  const client=db(),now=new Date().toISOString();
@@ -25,8 +28,8 @@ export async function POST(req:Request){
   const {data:credential}=await client.from("customer_credentials").select("user_id").eq("user_id",existing.id).maybeSingle();
   if(!credential)return Response.json({error:"This email already belongs to an OrbitFS staff account. Sign in with the existing account or have a staff administrator enable its customer profile."},{status:409});
   const {data:createdCustomer,error}=await client.from("customers").insert({
-   user_id:existing.id,email,name:existing.display_name||existing.first_name||username,
-   username:existing.username||username,display_name:existing.display_name||existing.first_name||username,status:"active",
+   user_id:existing.id,auth_user_id:existing.id,email,name:fullName,
+   first_name:firstName,last_name:lastName,username:existing.username||username,display_name:existing.display_name||fullName,status:"active",
    email_verified_at:existing.email_verified_at,metadata:{registration_source:"public_existing_user"},updated_at:now
   }).select("id").single();
   if(error||!createdCustomer)return Response.json({error:error?.message||"Could not attach the customer profile."},{status:500});
@@ -36,11 +39,11 @@ export async function POST(req:Request){
  // Supabase Auth is the JWT transport used by the customer portal. Create
  // its user first so the authoritative public.users identity shares that UUID.
  const {data:browserIdentity,error:browserError}=await client.auth.admin.createUser({
-  email,password,email_confirm:!requireVerification,user_metadata:{username}
+  email,password,email_confirm:!requireVerification,user_metadata:{username,first_name:firstName,last_name:lastName,display_name:fullName}
  });
  if(browserError||!browserIdentity.user)return Response.json({error:browserError?.message||"Could not create your login identity."},{status:500});
  const {data:user,error:userError}=await client.from("users").insert({
-  id:browserIdentity.user.id,email,username,display_name:username,status:"pending",updated_at:now
+  id:browserIdentity.user.id,email,username,display_name:fullName,first_name:firstName,last_name:lastName,status:"pending",updated_at:now
  }).select("id").single();
  if(userError||!user){
   await client.auth.admin.deleteUser(browserIdentity.user.id);
@@ -49,14 +52,14 @@ export async function POST(req:Request){
  try{
   await setOrbitPassword(user.id,password);
   const {error:customerError}=await client.from("customers").insert({
-   user_id:user.id,auth_user_id:user.id,email,name:username,username,display_name:username,status:"active",
+   user_id:user.id,auth_user_id:user.id,email,name:fullName,username,display_name:fullName,first_name:firstName,last_name:lastName,status:"active",
    email_verified_at:requireVerification?null:now,metadata:{registration_source:"public"},updated_at:now
   });
   if(customerError)throw customerError;
   await client.from("users").update({status:"active",email_verified_at:requireVerification?null:now,updated_at:now}).eq("id",user.id);
   if(requireVerification){
     const ip=(req.headers.get("x-forwarded-for")||"").split(",")[0].trim()||null;
-    await issueEmailVerification({id:user.id,email,name:username},new URL(req.url).origin,ip);
+    await issueEmailVerification({id:user.id,email,name:fullName},new URL(req.url).origin,ip);
   }
   try{await client.from("admin_audit_log").insert({actor_id:null,action:"customer.registered",target_type:"customer",target_id:user.id,detail:{email,username,verification:requireVerification?"orbitfs":"disabled_by_setting"}})}catch{}
   return Response.json({ok:true,user_id:user.id,message:requireVerification?"Account created. Check your email for the OrbitFS verification link before signing in.":"Account created. You can sign in now."});
