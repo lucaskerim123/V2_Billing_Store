@@ -33,8 +33,19 @@ export async function POST(req:Request){
   return Response.json({ok:true,user_id:existing.id,customer_id:createdCustomer.id,message:"Your existing OrbitFS account is now enabled as a customer account."});
  }
 
- const {data:user,error:userError}=await client.from("users").insert({email,username,display_name:username,status:"pending",updated_at:now}).select("id").single();
- if(userError||!user)return Response.json({error:userError?.message||"Could not create account."},{status:500});
+ // Supabase Auth is the JWT transport used by the customer portal. Create
+ // its user first so the authoritative public.users identity shares that UUID.
+ const {data:browserIdentity,error:browserError}=await client.auth.admin.createUser({
+  email,password,email_confirm:!requireVerification,user_metadata:{username}
+ });
+ if(browserError||!browserIdentity.user)return Response.json({error:browserError?.message||"Could not create your login identity."},{status:500});
+ const {data:user,error:userError}=await client.from("users").insert({
+  id:browserIdentity.user.id,email,username,display_name:username,status:"pending",updated_at:now
+ }).select("id").single();
+ if(userError||!user){
+  await client.auth.admin.deleteUser(browserIdentity.user.id);
+  return Response.json({error:userError?.message||"Could not create account."},{status:500});
+ }
  try{
   await setOrbitPassword(user.id,password);
   const {error:customerError}=await client.from("customers").insert({
@@ -54,6 +65,7 @@ export async function POST(req:Request){
   await client.from("customer_credentials").delete().eq("user_id",user.id);
   await client.from("customers").delete().eq("user_id",user.id);
   await client.from("users").delete().eq("id",user.id);
+  await client.auth.admin.deleteUser(browserIdentity.user.id);
   console.error("OrbitFS registration failed",e);
   return Response.json({error:e?.message||"Could not create OrbitFS account."},{status:500});
  }
