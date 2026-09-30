@@ -3,7 +3,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest} from "@/lib/master-api";
-import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,resolveProductionUrl,checkPublicPanelHealth,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 import {errorMessage} from "@/lib/error-message";
@@ -554,16 +554,13 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
     const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:String(install.deployment_url||"");
     if(!deploymentUrl)fail("Vercel Base update did not return a deployment URL",502,"VERCEL_DEPLOY_FAILED",true);
 
+    const productionUrl=await resolveProductionUrl(install,ready);
     const settings=await billingOrbitfsConfig();
-    try{
-      const health=await fetch(new URL(settings.health_path||"/api/health",deploymentUrl),{redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(15000)});
-      if(health.status>=500)fail(`Updated Base health check failed with HTTP ${health.status}`,502);
-    }catch(error:any){
-      if(Number(error?.status))throw error;
-      fail(`Updated Base health check could not be reached: ${error?.message||String(error)}`,502);
+    if(productionUrl&&!await checkPublicPanelHealth(productionUrl,settings.health_path||"/api/health")){
+      await event(install,"base.update.public_health","warning","Production domain is not publicly healthy; check Vercel protection and application health",{productionUrl});
     }
 
-    await configureVercel(deploymentInstall,String(release.version),deploymentUrl,requestedChannel,String(release.id),target.artifactSha256,String(target.pkg.sourceCommit||expectedSource(release)));
+    await configureVercel(deploymentInstall,String(release.version),productionUrl||undefined,requestedChannel,String(release.id),target.artifactSha256,String(target.pkg.sourceCommit||expectedSource(release)));
     const completedAt=new Date().toISOString();
     const metadata={...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),lastBaseUpdate:{fromVersion:currentVersion,toVersion:String(release.version),fromReleaseId:currentReleaseId,toReleaseId:String(release.id),databaseMigrations:migrations,completedAt}};
     const patch:any={
@@ -572,6 +569,8 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
       release_channel:requestedChannel,
       vercel_deployment_id:createdDeploymentId,
       deployment_url:deploymentUrl,
+      production_url:productionUrl,
+      health_status:"unknown",
       release_version:String(release.version),
       release_id:String(release.id),
       release_sha256:target.artifactSha256,
@@ -864,12 +863,14 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   await progress?.("verifying",{action,releaseId:String(release.id),projectId:install.vercel_project_id,deploymentId});
   const ready=await waitForReady(install.auth_user_id,deploymentId),state=String(ready?.readyState||ready?.state||"");if(state!=="READY")fail("Vercel deployment did not become ready within the deployment window",504);
   const previousVersion=install.release_version||null,deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url;
-  await configureVercel(install,String(release.version),deploymentUrl||undefined,requestedChannel,String(release.id),parsed.artifactSha256,String(parsed.pkg.sourceCommit||release.sourceCommit||""));
+  const productionUrl=await resolveProductionUrl(install,ready);
+  // Do not publish an individual protected deployment URL as the customer-facing address.
+  await configureVercel(install,String(release.version),productionUrl||undefined,requestedChannel,String(release.id),parsed.artifactSha256,String(parsed.pkg.sourceCommit||release.sourceCommit||""));
   // Billing Store owns deployment coordination only. Base owns first-time bootstrap:
   // storage preparation, licence activation, Owner creation, workspace creation and
   // runtime installation registration all happen inside the installed Base setup flow.
   const completedAt=new Date().toISOString();
-  const patch={release_channel:requestedChannel,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,release_source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,previous_release_version:previousVersion,last_deployment_at:completedAt,last_error:null,state:"ready"};
+  const patch={release_channel:requestedChannel,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,production_url:productionUrl,health_status:"unknown",release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,release_source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,previous_release_version:previousVersion,last_deployment_at:completedAt,last_error:null,state:"ready"};
   const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();if(error)throw error;
   const history=await licenseDb().from("orbitfs_installation_releases").insert({installation_id:install.id,auth_user_id:install.auth_user_id,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,action,status:"ready",ready_at:completedAt});
   if(history.error)throw history.error;
