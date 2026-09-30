@@ -1,7 +1,8 @@
 "use client";
 
 import {useCallback,useEffect,useRef,useState} from "react";
-import {useRouter} from "next/navigation";
+import {useRouter} from "next/navigation"
+import {createPortal} from "react-dom";
 import {createClient} from "@/lib/supabase";
 import styles from "./NotificationCenter.module.css";
 
@@ -43,6 +44,9 @@ function notificationKind(n:NotificationRow):AlertKind{
 export default function NotificationCenter({surface}:{surface:Surface}){
   const router=useRouter();
   const rootRef=useRef<HTMLDivElement|null>(null);
+  const panelRef=useRef<HTMLElement|null>(null);
+  const [mounted,setMounted]=useState(false);
+  useEffect(()=>{setMounted(true)},[]);
   const [sb]=useState(()=>createClient());
   const [open,setOpen]=useState(false);
   const [loading,setLoading]=useState(true);
@@ -100,7 +104,7 @@ export default function NotificationCenter({surface}:{surface:Surface}){
 
   useEffect(()=>{
     if(!open)return;
-    const close=(e:PointerEvent)=>{if(rootRef.current&&!rootRef.current.contains(e.target as Node))setOpen(false)};
+    const close=(e:PointerEvent)=>{if(!rootRef.current?.contains(e.target as Node)&&!panelRef.current?.contains(e.target as Node))setOpen(false)};
     document.addEventListener("pointerdown",close);
     return()=>document.removeEventListener("pointerdown",close);
   },[open]);
@@ -132,7 +136,7 @@ export default function NotificationCenter({surface}:{surface:Surface}){
       <span className={styles.triggerText}>Notifications</span>
       {unread>0&&<span className={styles.badge}>{unread>99?"99+":unread}</span>}
     </button>
-    {open&&<section className={styles.panel} aria-label={surface==="admin"?"Admin notifications":"Customer notifications"}>
+    {open&&mounted&&createPortal(<section ref={panelRef} data-surface={surface} className={styles.panel} aria-label={surface==="admin"?"Admin notifications":"Customer notifications"}>
       <header className={styles.header}>
         <div><small>{surface==="admin"?"ORBITFS ALERT SYSTEM":"CUSTOMER PORTAL"}</small><h2>Notifications</h2></div>
         <div className={styles.headerActions}>
@@ -158,6 +162,6 @@ export default function NotificationCenter({surface}:{surface:Surface}){
           </button>;
         })}
       </div>
-    </section>}
+    </section>,document.body)}
   </div>;
 }
