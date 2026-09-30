@@ -65,6 +65,9 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Verify OrbitFS update authority contract
+        run: npm run check:orbitfs-update-contract
+
       - name: Run complete production preflight
         run: npm run preflight
 
