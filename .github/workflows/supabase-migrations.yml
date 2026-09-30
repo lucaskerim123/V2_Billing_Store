@@ -1,9 +1,7 @@
 name: Supabase Migrations
+# Database production migrations are explicit manual operations.
+# Push CI and Vercel release workflows must not mutate production database.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'database/migrations/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -37,19 +35,6 @@ jobs:
           mkdir -p .orbitfs-supabase
           (cd .orbitfs-supabase && supabase init)
           node scripts/prepare-supabase-migrations.mjs .orbitfs-supabase/supabase/migrations
-      - name: Reject edits to existing migration history
-        if: ${{ github.event_name == 'push' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          before="${{ github.event.before }}"
-          if [ "$before" = "0000000000000000000000000000000000000000" ]; then exit 0; fi
-          changes="$(git diff --name-status "$before" "$GITHUB_SHA" -- 'database/migrations/*.sql' || true)"
-          echo "$changes"
-          if echo "$changes" | awk '$1 ~ /^(M|D|R)/ {bad=1} END {exit bad?0:1}'; then
-            echo "::error::Existing migration files are immutable. Add a new migration instead."
-            exit 1
-          fi
       - name: Detect pending migrations
         id: pending
         shell: bash
