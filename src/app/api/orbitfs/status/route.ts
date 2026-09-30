@@ -34,7 +34,7 @@ export async function GET(req:Request){
   // Customer release presentation must remain visible even before Base is deployed.
   // Execution is still blocked by the deployer until a compatible Base installation exists.
   const releaseTypes=["base","update"];
-  const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>releaseTypes.map((type:string)=>masterReleases("orbitfs_base",channel,type,"billing",true).then((value:any)=>({ok:true,value,channel,type})).catch((error:any)=>({ok:false,value:{releases:[]},channel,type,error:String(error?.message||error)})))));
+  const remoteReleaseResults=await Promise.all(allowedChannels.flatMap((channel:string)=>releaseTypes.map((type:string)=>masterReleases("orbitfs_base",channel,type,"billing",true).then((value:any)=>({ok:true,value,channel,type,error:null as string|null})).catch((error:any)=>({ok:false,value:{releases:[]},channel,type,error:String(error?.message||error)})))));
   const releaseDiscoveryAvailable=remoteReleaseResults.every((x:any)=>x.ok===true)&&masterAvailability.reachable===true&&masterAvailability.releaseAuthorityAvailable===true;
   // Update discovery is independent of Base catalog lookups. An unrelated
   // Base query failure cannot silently disable an already listed Update.
