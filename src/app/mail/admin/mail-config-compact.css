@@ -1,0 +1,5 @@
+
+.mailConfigCompact summary{list-style:none;cursor:pointer}
+.mailConfigCompact summary::-webkit-details-marker{display:none}
+.mailConfigCompact summary::before{content:"›";color:#566e89;font-size:18px;line-height:1;display:inline-block;flex:0 0 auto;margin-right:8px;transition:transform .16s ease}
+.mailConfigCompact details[open]>summary::before{transform:rotate(90deg)}

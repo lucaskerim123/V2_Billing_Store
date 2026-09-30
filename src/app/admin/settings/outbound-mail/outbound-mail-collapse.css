@@ -1,0 +1,30 @@
+/* Dense and expandable mail administration, scoped to Outbound Mail. */
+.outboundMailPage .outboundMailOverview{padding:9px 12px;border:1px solid var(--line,#354353);border-radius:10px;justify-content:flex-start}
+.outboundMailPage .outboundMailOverview>span{padding-right:12px;border-right:1px solid #415066;white-space:nowrap}
+.outboundMailPage .outboundMailOverview>span:last-child{border-right:0}
+.outboundMailPage .outboundSettingsCollapse{padding:0!important;margin-bottom:9px!important;border-radius:12px;overflow:hidden}
+.outboundMailPage .outboundSettingsCollapse>summary{padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:revert}
+.outboundMailPage .outboundSettingsCollapse>summary b{font-size:14px}
+.outboundMailPage .outboundSettingsCollapse>summary small{font-size:11px;opacity:.75;text-align:right}
+.outboundMailPage .outboundSettingsCollapse[open]>summary{border-bottom:1px solid #3b4e61}
+.outboundMailPage .outboundSettingsBody{padding:14px 16px}
+.outboundMailPage .outboundCategoryGroup{padding:0 12px;border:1px solid #35495f;border-radius:9px;margin-bottom:8px;min-width:0}
+.outboundMailPage .outboundCategoryGroup>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 2px;cursor:pointer;font-size:13px}
+.outboundMailPage .outboundCategoryGroup>summary small{font-size:11px;opacity:.72}
+.outboundMailPage .outboundCategoryGroup[open]>summary{border-bottom:1px solid #34475d}
+.outboundMailPage .outboundAutomationItem{border-bottom:1px solid #304156}
+.outboundMailPage .outboundAutomationItem:last-child{border-bottom:0}
+.outboundMailPage .outboundAutomationItem>summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 2px;cursor:pointer}
+.outboundMailPage .outboundAutomationItem>summary>span:first-child{display:grid;gap:3px;min-width:0}
+.outboundMailPage .outboundAutomationItem>summary b{font-size:12px}
+.outboundMailPage .outboundAutomationItem>summary small{font-size:10px;opacity:.65;overflow-wrap:anywhere}
+.outboundMailPage .outboundAutomationItem .mailAutomationRow{padding:11px 2px 13px}
+.outboundMailPage .outboundTemplateList{display:grid;gap:3px}
+.outboundMailPage .outboundTemplateRow{width:100%;min-width:0;text-align:left}
+.outboundMailPage .outboundTemplateRow div{min-width:0}
+@media(max-width:760px){.outboundMailPage .outboundSettingsCollapse>summary{flex-direction:column;align-items:flex-start}.outboundMailPage .outboundSettingsCollapse>summary small{text-align:left}.outboundMailPage .outboundSettingsBody{padding:10px}.outboundMailPage .outboundAutomationItem .mailAutomationRow{display:grid;gap:10px}.outboundMailPage .outboundMailOverview>span{border-right:0}}
+
+.outboundMailPage summary{list-style:none}
+.outboundMailPage summary::-webkit-details-marker{display:none}
+.outboundMailPage summary::before{content:"›";display:inline-block;color:#a5b8ce;font-size:17px;line-height:1;flex:0 0 auto;margin-right:8px;transition:transform .16s ease}
+.outboundMailPage details[open]>summary::before{transform:rotate(90deg)}
