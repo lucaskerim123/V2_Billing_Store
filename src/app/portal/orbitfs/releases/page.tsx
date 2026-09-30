@@ -292,7 +292,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     {label:"Validate artifact & authorize",start:"update.started",end:"update.database.started"},
     {label:"Database migrations",start:"update.database.started",end:"update.database.completed"},
     ...(progressComponents.includes("base")?[{label:"Deploy Panel payload",start:"update.panel.started",end:"update.panel.completed"}]:[]),
-    ...(progressComponents.some(value=>value!=="base")?[{label:"Apply Engine payload",start:"update.engine.started",end:"update.engine.completed"}]:[]),
+    ...(progressComponents.some((value:string)=>value!=="base")?[{label:"Apply Engine payload",start:"update.engine.started",end:"update.engine.completed"}]:[]),
     {label:"Record and report completion",start:"update.recording",end:"update.completed"}
   ];
   const recentActivity=(progress?.events||[]).filter(event=>isUpdateEvent(event,"update")||isUpdateEvent(event,"rollback")).slice(0,8);
