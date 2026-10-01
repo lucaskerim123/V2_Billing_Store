@@ -374,11 +374,27 @@ insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-fil
   to_regclass('public.orbitfs_license') is not null as orbitfs_license,
   to_regclass('public.orbitfs_addons') is not null as orbitfs_addons,
   to_regclass('public.orbitfs_audit_log') is not null as orbitfs_audit_log,
+  to_regclass('public.orbitfs_profile_state') is not null as orbitfs_profile_state,
+  exists(
+    select 1 from pg_constraint
+    where conrelid='public.orbitfs_profile_state'::regclass
+      and conname='orbitfs_profile_state_workspace_id_key'
+      and contype='u'
+  ) as profile_state_workspace_unique,
+  not exists(
+    select 1 from pg_constraint
+    where conrelid='public.orbitfs_profile_state'::regclass
+      and conname='orbitfs_profile_state_workspace_id_user_id_key'
+  ) as obsolete_profile_state_unique_removed,
+  not exists(
+    select workspace_id from public.orbitfs_profile_state
+    group by workspace_id having count(*) > 1
+  ) as profile_state_no_duplicate_workspaces,
   to_regclass('private.orbitfs_runtime_secret') is not null as runtime_secret,
   to_regclass('public.orbitfs_schema_migrations') is not null as schema_migrations,
   to_regprocedure('public.rls_auto_enable()') is null as legacy_rls_helper_removed;`})});
   const verificationRow=Array.isArray(verification)?verification[0]:verification?.data?.[0]||verification?.result?.[0]||verification;
-  const requiredChecks=["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log","runtime_secret","schema_migrations","legacy_rls_helper_removed"];
+  const requiredChecks=["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log","orbitfs_profile_state","profile_state_workspace_unique","obsolete_profile_state_unique_removed","profile_state_no_duplicate_workspaces","runtime_secret","schema_migrations","legacy_rls_helper_removed"];
   const failedChecks=requiredChecks.filter((key)=>verificationRow?.[key]!==true);
   if(failedChecks.length){
     const message=`OrbitFS database verification failed after schema import: ${failedChecks.join(", ")}`;
