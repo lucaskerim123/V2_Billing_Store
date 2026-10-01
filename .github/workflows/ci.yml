@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  push:
+    branches:
+      - control/full-scan
 
 permissions:
   contents: read
@@ -33,6 +36,21 @@ jobs:
           test "$(git rev-parse --is-shallow-repository)" = "false"
           test -f package-lock.json
           test -f vercel.json
+
+      - name: Verify controlled Full Scan trigger
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/control/full-scan"
+          test "${GITHUB_ACTOR}" = "lucaskerim123"
+          git fetch origin main --prune
+          main_sha="$(git rev-parse origin/main)"
+          if [ "${GITHUB_SHA}" != "$main_sha" ]; then
+            echo "::error::Control Full Scan must point at the exact current main commit. Requested ${GITHUB_SHA}; main is $main_sha."
+            exit 1
+          fi
+          echo "Controlled Full Scan authorized for main @ ${GITHUB_SHA}"
 
       - name: Use Node 22
         uses: actions/setup-node@v7
