@@ -300,6 +300,9 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   }
   const effectiveSchema=schemaAsset.schemaVersion;
   const rawSql=schemaAsset.sql;
+  if(!rawSql.includes("-- OrbitFS Base customer database snapshot"))throw Object.assign(new Error("Published Base database asset is not a generated OrbitFS customer snapshot"),{status:422,code:"BASE_SCHEMA_SNAPSHOT_INVALID"});
+  if(!rawSql.includes("20260923135040_profile_state_workspace_scope.sql"))throw Object.assign(new Error("Published Base database snapshot is missing the canonical workspace-scoped profile-state migration"),{status:422,code:"BASE_SCHEMA_PROFILE_SCOPE_MISSING"});
+  if(/\bcreate\s+(?:unique\s+)?index\s+concurrently\b/i.test(rawSql)||/\b(?:vacuum|reindex)\b/i.test(rawSql))throw Object.assign(new Error("Published Base database snapshot contains a command that cannot run inside the installer transaction"),{status:422,code:"BASE_SCHEMA_TRANSACTION_UNSAFE"});
   const obsoleteProfileConflict=/on\s+conflict\s*\(\s*workspace_id\s*,\s*user_id\s*\)\s+do\s+nothing/i.test(rawSql);
   const namedUniqueAdds=[...rawSql.matchAll(/alter\s+table\s+([a-z0-9_.]+)\s+add\s+constraint\s+([a-z0-9_]+)\s+unique\s*\(([^;]+)\)\s*;/ig)].length;
   let sql=rawSql.replace(/on\s+conflict\s*\(\s*workspace_id\s*,\s*user_id\s*\)\s+do\s+nothing/ig,"on conflict do nothing");
@@ -376,25 +379,34 @@ insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-fil
   to_regclass('public.orbitfs_audit_log') is not null as orbitfs_audit_log,
   to_regclass('public.orbitfs_profile_state') is not null as orbitfs_profile_state,
   exists(
-    select 1 from pg_constraint
-    where conrelid='public.orbitfs_profile_state'::regclass
-      and conname='orbitfs_profile_state_workspace_id_key'
-      and contype='u'
+    select 1
+    from pg_constraint c
+    join pg_class t on t.oid=c.conrelid
+    join pg_namespace n on n.oid=t.relnamespace
+    where n.nspname='public'
+      and t.relname='orbitfs_profile_state'
+      and c.contype='u'
+      and pg_get_constraintdef(c.oid) ~* '^UNIQUE \\(workspace_id\\)$'
   ) as profile_state_workspace_unique,
   not exists(
-    select 1 from pg_constraint
-    where conrelid='public.orbitfs_profile_state'::regclass
-      and conname='orbitfs_profile_state_workspace_id_user_id_key'
-  ) as obsolete_profile_state_unique_removed,
-  not exists(
-    select workspace_id from public.orbitfs_profile_state
-    group by workspace_id having count(*) > 1
+    select 1
+    from public.orbitfs_profile_state
+    group by workspace_id
+    having count(*) > 1
   ) as profile_state_no_duplicate_workspaces,
+  exists(
+    select 1
+    from public.orbitfs_schema_migrations
+    where migration_id='${safe(baseMigrationId)}'
+      and sha256='${safe(schemaAsset.sha256)}'
+      and release_id='${safe(String(release.id))}'
+      and release_version='${safe(String(release.version))}'
+  ) as base_migration_recorded,
   to_regclass('private.orbitfs_runtime_secret') is not null as runtime_secret,
   to_regclass('public.orbitfs_schema_migrations') is not null as schema_migrations,
   to_regprocedure('public.rls_auto_enable()') is null as legacy_rls_helper_removed;`})});
   const verificationRow=Array.isArray(verification)?verification[0]:verification?.data?.[0]||verification?.result?.[0]||verification;
-  const requiredChecks=["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log","orbitfs_profile_state","profile_state_workspace_unique","obsolete_profile_state_unique_removed","profile_state_no_duplicate_workspaces","runtime_secret","schema_migrations","legacy_rls_helper_removed"];
+  const requiredChecks=["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log","orbitfs_profile_state","profile_state_workspace_unique","profile_state_no_duplicate_workspaces","base_migration_recorded","runtime_secret","schema_migrations","legacy_rls_helper_removed"];
   const failedChecks=requiredChecks.filter((key)=>verificationRow?.[key]!==true);
   if(failedChecks.length){
     const message=`OrbitFS database verification failed after schema import: ${failedChecks.join(", ")}`;
