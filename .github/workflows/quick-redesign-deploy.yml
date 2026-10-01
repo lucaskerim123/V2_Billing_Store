@@ -46,27 +46,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
-            test "${GITHUB_ACTOR}" = "lucaskerim123"
-            case "${GITHUB_REF_NAME}" in
-              control/quick-deploy-main) branch="main" ;;
-              control/quick-deploy-custom) branch="CustomDesign/Run" ;;
-              *)
-                echo "::error::Unsupported Quick Deploy control ref: ${GITHUB_REF_NAME}"
-                exit 1
-                ;;
-            esac
-            main_sha="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
-            test -n "$main_sha"
-            if [ "${GITHUB_SHA}" != "$main_sha" ]; then
-              echo "::error::Quick Deploy control ref must point at the exact current main commit. Requested ${GITHUB_SHA}; main is $main_sha."
-              exit 1
-            fi
-          else
-            branch="${CUSTOM_BRANCH:-}"
-            if [ -z "$branch" ]; then
-              branch="$SELECTED_BRANCH"
-            fi
+          test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
+          branch="${CUSTOM_BRANCH:-}"
+          if [ -z "$branch" ]; then
+            branch="$SELECTED_BRANCH"
           fi
           if ! printf '%s' "$branch" | grep -Eq '^[A-Za-z0-9._/-]+$'; then
             echo "::error::Branch contains unsupported characters: $branch"
