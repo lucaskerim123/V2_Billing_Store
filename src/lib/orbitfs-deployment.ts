@@ -3,7 +3,7 @@ import {errorMessage} from "@/lib/error-message";
 import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
-import {masterDownloadReleaseArtifact,masterLicenseValidate,masterReleases} from "@/lib/master-api";
+import {masterDownloadReleaseArtifact,masterRegisterInstallation,masterReleases} from "@/lib/master-api";
 import {requireLicenseMasterForDeployment,requireLicenseMasterForMutation} from "@/lib/license-master-availability";
 
 const SUPABASE_API="https://api.supabase.com/v1";
@@ -206,33 +206,27 @@ async function assertSupabaseProjectReady(install:any){
   const db=rows.find((x:any)=>String(x?.name||x?.service||"").toLowerCase()==="db")||rows[0];
   if(String(db?.status||"").toUpperCase()!=="ACTIVE_HEALTHY")throw Object.assign(new Error(`Supabase database is still starting (${db?.status||"not ready"}). Try again shortly.`),{status:409});
 }
-export async function registerInstallationLicense(install:any,licenseKey:string){
-  const key=String(licenseKey||"").trim().toUpperCase();
-  if(!/^LIC-[A-Z0-9]{10}-[A-Z0-9]{10}-[A-Z0-9]{10}$/.test(key))throw Object.assign(new Error("Invalid OrbitFS licence key format. Use LIC-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX."),{status:400,code:"LICENSE_KEY_FORMAT_INVALID"});
+export async function registerInstallationLicense(install:any){
   if(!install?.supabase_project_ref)throw Object.assign(new Error("Choose and initialize the customer Supabase project before registering the licence"),{status:409,code:"SUPABASE_PROJECT_REQUIRED"});
-  const validation=await masterLicenseValidate({action:"activate",activate:true,licenseKey:key,installationId:String(install.installation_id||""),product:"orbitfs_base",productVersion:String(install.release_version||"")||undefined,metadata:{source:"billing_store_installer"}});
-  if(validation?.valid!==true)throw Object.assign(new Error(String(validation?.code||"Licence validation failed")),{status:403,code:String(validation?.code||"LICENSE_INVALID")});
-  const runtime=validation?.runtime_policy&&typeof validation.runtime_policy==="object"?validation.runtime_policy:{};
-  const directComponents=validation?.components&&typeof validation.components==="object"&&!Array.isArray(validation.components)?validation.components:{};
-  const policyComponents=validation?.metadata?.license_policy?.components&&typeof validation.metadata.license_policy.components==="object"?validation.metadata.license_policy.components:{};
-  const componentIds=["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
-  const components=Object.fromEntries(componentIds.map((id)=>{
-    const direct=directComponents[id];
-    if(direct&&typeof direct==="object"&&!Array.isArray(direct))return [id,direct];
-    const allowed=id==="orbitfs_base"||policyComponents[id]===true;
-    return [id,allowed
-      ?{state:id==="orbitfs_base"?"active":"locked",allowed:true,lockedToThisInstallation:true,reason:null}
-      :{state:"blocked",allowed:false,lockedToThisInstallation:false,reason:"not_included"}];
-  }));
+  const bindingResult=await licenseDb().from("license_bindings").select("license_id,desired_state,remote_state,archived_at").eq("id",String(install.license_binding_id||"")).eq("auth_user_id",String(install.auth_user_id||"")).is("archived_at",null).maybeSingle();
+  if(bindingResult.error)throw bindingResult.error;
+  const authorityLicenseId=String(bindingResult.data?.license_id||"").trim();
+  if(!authorityLicenseId)throw Object.assign(new Error("This installation is not linked to an authoritative Billing licence"),{status:409,code:"LICENSE_BINDING_REQUIRED"});
+  const bindingState=String(bindingResult.data?.desired_state||bindingResult.data?.remote_state||"").toLowerCase();
+  if(["revoked","expired","suspended"].includes(bindingState))throw Object.assign(new Error("The installation's Billing licence is not active"),{status:403,code:"LICENSE_BINDING_INACTIVE"});
+  const registration=await masterRegisterInstallation({licenseId:authorityLicenseId,installationId:String(install.installation_id||""),productVersion:String(install.release_version||"")||undefined});
+  const runtimeCredential=String(registration?.runtimeCredential||"").trim();
+  if(!runtimeCredential)throw Object.assign(new Error("License Manager did not issue an installation runtime credential"),{status:502,code:"RUNTIME_CREDENTIAL_MISSING"});
+  const runtime=registration?.runtimePolicy&&typeof registration.runtimePolicy==="object"?registration.runtimePolicy:{};
   const now=new Date().toISOString();
   const metadata={
-    ...(validation?.metadata&&typeof validation.metadata==="object"?validation.metadata:{}),
     installationId:String(install.installation_id||""),
     installationIdentitySource:"deployment",
-    masterLicenseId:validation?.license_id||null,
+    masterLicenseId:authorityLicenseId,
+    runtimeCredentialType:"installation_scoped",
     lastCheckedAt:now,
     lastRevisionCheckedAt:now,
-    keyHint:"••••"+key.slice(-4),
+    keyHint:String(registration?.keyHint||("••••"+runtimeCredential.slice(-4))),
     validationTtlSeconds:Number(runtime.validation_ttl_seconds||60),
     offlineGraceSeconds:Number(runtime.offline_grace_seconds||0),
     pulsePollSeconds:Number(runtime.pulse_poll_seconds||15),
@@ -256,17 +250,16 @@ export async function registerInstallationLicense(install:any,licenseKey:string)
   const sqlSafe=(value:string)=>value.replaceAll("'","''");
   const metadataJson=sqlSafe(JSON.stringify(metadata));
   const sql=`insert into public.orbitfs_license(id,license_key,status,plan,licensed_to,expires_at,metadata,updated_at)
-values ('primary','${sqlSafe(key)}','active',null,null,${validation?.expires_at?`'${sqlSafe(String(validation.expires_at))}'::timestamptz`:"null"},'${metadataJson}'::jsonb,now())
+values ('primary','${sqlSafe(runtimeCredential)}','active',null,null,${registration?.expiresAt?`'${sqlSafe(String(registration.expiresAt))}'::timestamptz`:"null"},'${metadataJson}'::jsonb,now())
 on conflict (id) do update set license_key=excluded.license_key,status='active',expires_at=excluded.expires_at,metadata=excluded.metadata,updated_at=now();`;
   await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:sql})});
-  const registration={valid:true,keyHint:"••••"+key.slice(-4),masterLicenseId:validation?.license_id||null,installationId:String(install.installation_id||""),registeredAt:now};
-  const nextMetadata={...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),licenseRegistration:registration};
+  const registrationState={valid:true,keyHint:metadata.keyHint,masterLicenseId:authorityLicenseId,credentialType:"installation_scoped",installationId:String(install.installation_id||""),registeredAt:now};
+  const nextMetadata={...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),licenseRegistration:registrationState};
   const {data,error}=await licenseDb().from("orbitfs_installations").update({metadata:nextMetadata,last_error:null,updated_at:now}).eq("id",install.id).select().single();
   if(error)throw error;
-  await event(data,"license.registered","ok","OrbitFS licence registered to this installation",{keyHint:registration.keyHint,masterLicenseId:registration.masterLicenseId,installationId:registration.installationId});
+  await event(data,"license.registered","ok","OrbitFS installation credential registered through License Manager",{keyHint:registrationState.keyHint,masterLicenseId:registrationState.masterLicenseId,installationId:registrationState.installationId,credentialType:"installation_scoped"});
   return data;
 }
-
 export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   await requireSystem("deploy");if(!install.supabase_project_ref)throw Object.assign(new Error("Choose a customer Supabase project first"),{status:409});
   const channel=String(install.release_channel||"stable"),releaseRows=await masterReleases("orbitfs_base",channel,"base","deployer"),published=(releaseRows?.releases||[]).filter((r:any)=>String(r.status||"").toLowerCase()==="published"&&String(r.review_status||"").toLowerCase()==="approved"),release=releaseId?published.find((r:any)=>String(r.id)===releaseId):published[0];
@@ -284,7 +277,11 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
     throw error;
   }
   const effectiveSchema=schemaAsset.schemaVersion;
-  const sql=schemaAsset.sql;
+  const rawSql=schemaAsset.sql;
+  const profileStateNeedsUnique=/on\s+conflict\s*\(\s*workspace_id\s*,\s*user_id\s*\)/i.test(rawSql)&&/insert\s+into\s+public\.orbitfs_profile_state/i.test(rawSql);
+  const sql=profileStateNeedsUnique
+    ?rawSql.replace(/(insert\s+into\s+public\.orbitfs_profile_state)/i,"create unique index if not exists orbitfs_profile_state_workspace_user_uidx on public.orbitfs_profile_state(workspace_id,user_id);\n$1")
+    :rawSql;
   await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:null}).eq("id",install.id);
   await event(install,"database.initializing","info",`Initializing customer database from OrbitFS Base ${release.version} release snapshot`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseMigrationCount:schemaAsset.migrationCount,databaseLatestMigration:schemaAsset.latestMigration});
   let dbSecret=String(await installationSecret(install.id,"db_secret")||"");
@@ -359,7 +356,9 @@ insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-fil
     await event(install,"database.verify_failed","error",message,{failedChecks,releaseId:String(release.id),releaseVersion:String(release.version)});
     throw Object.assign(new Error(message),{status:502});
   }
-  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;await event(data,"database.ready","ok",`Customer database initialized and verified with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseSchemaSource:schemaAsset.source,databaseMigrationCount:"migrationCount" in schemaAsset?schemaAsset.migrationCount:null,databaseLatestMigration:"latestMigration" in schemaAsset?schemaAsset.latestMigration:null,baseMigrationId});return data;
+  const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;
+  await event(data,"database.ready","ok",`Customer database initialized and verified with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseSchemaSource:schemaAsset.source,databaseMigrationCount:"migrationCount" in schemaAsset?schemaAsset.migrationCount:null,databaseLatestMigration:"latestMigration" in schemaAsset?schemaAsset.latestMigration:null,baseMigrationId,profileStateUniqueCompatibilityApplied:profileStateNeedsUnique});
+  return await registerInstallationLicense(data);
 }
 
 async function supabaseProjectKeys(install:any){
