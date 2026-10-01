@@ -49,6 +49,21 @@ function validateDeployableBaseFiles(files:Array<{file:string;data:string;sha256
   if(!Number.isInteger(Number(lock?.lockfileVersion))||Number(lock.lockfileVersion)<2)fail("Base release package-lock.json is not a supported npm lockfile",422);
   if(![...byPath.keys()].some(path=>path.startsWith("src/")))fail("Base release is missing application source files",422);
   if(!byPath.has("supabase/customer-schema.sql"))fail("Base release is missing the customer database snapshot",422);
+  for(const required of [
+    "src/lib/server/vercel-engine-provision.ts",
+    "src/lib/server/engine-host.ts",
+    "src/lib/server/engine-release-client.ts",
+    "src/lib/server/engine-update-planner.ts",
+    "src/lib/server/license.ts",
+    "src/lib/server/runtime-secrets.ts",
+    "src/routes/api/engine-host/+server.ts",
+    "src/routes/api/engine-host/[action]/+server.ts",
+    "src/routes/api/engine-host/launch/+server.ts",
+    "src/routes/api/engine-license/+server.ts",
+    "src/routes/api/license/activate/+server.ts",
+    "src/routes/api/license/status/+server.ts",
+    "src/routes/api/store/update-engine/+server.ts"
+  ])if(!byPath.has(required))fail(`Base release is missing required runtime/deployer file: ${required}`,422);
   baseVercelDeploymentFiles(files);
 }
 async function uploadVercelDeploymentFiles(userId:string,files:Array<{file:string;data:string;sha256:string;size:number}>){
