@@ -300,10 +300,18 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   }
   const effectiveSchema=schemaAsset.schemaVersion;
   const rawSql=schemaAsset.sql;
-  const profileStateNeedsUnique=/on\s+conflict\s*\(\s*workspace_id\s*,\s*user_id\s*\)/i.test(rawSql)&&/insert\s+into\s+public\.orbitfs_profile_state/i.test(rawSql);
-  const sql=profileStateNeedsUnique
-    ?rawSql.replace(/(insert\s+into\s+public\.orbitfs_profile_state)/i,"create unique index if not exists orbitfs_profile_state_workspace_user_uidx on public.orbitfs_profile_state(workspace_id,user_id);\n$1")
-    :rawSql;
+  const obsoleteProfileConflict=/on\s+conflict\s*\(\s*workspace_id\s*,\s*user_id\s*\)\s+do\s+nothing/i.test(rawSql);
+  const namedUniqueAdds=[...rawSql.matchAll(/alter\s+table\s+([a-z0-9_.]+)\s+add\s+constraint\s+([a-z0-9_]+)\s+unique\s*\(([^;]+)\)\s*;/ig)].length;
+  let sql=rawSql.replace(/on\s+conflict\s*\(\s*workspace_id\s*,\s*user_id\s*\)\s+do\s+nothing/ig,"on conflict do nothing");
+  sql=sql.replace(/alter\s+table\s+([a-z0-9_.]+)\s+add\s+constraint\s+([a-z0-9_]+)\s+unique\s*\(([^;]+)\)\s*;/ig,(_match,tableName,constraintName,columns)=>{
+    const parts=String(tableName).split(".");
+    const schemaName=parts.length>1?parts[0]:"public";
+    return [
+      `alter table ${tableName} drop constraint if exists ${constraintName};`,
+      `drop index if exists ${schemaName}.${constraintName};`,
+      `alter table ${tableName} add constraint ${constraintName} unique (${String(columns).trim()});`
+    ].join("\n");
+  });
   await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:null}).eq("id",install.id);
   await event(install,"database.initializing","info",`Initializing customer database from OrbitFS Base ${release.version} release snapshot`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseMigrationCount:schemaAsset.migrationCount,databaseLatestMigration:schemaAsset.latestMigration});
   let dbSecret=String(await installationSecret(install.id,"db_secret")||"");
@@ -379,7 +387,7 @@ insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-fil
     throw Object.assign(new Error(message),{status:502});
   }
   const {data,error}=await licenseDb().from("orbitfs_installations").update({schema_version:effectiveSchema,database_initialized_at:new Date().toISOString(),state:"awaiting_vercel",last_error:null,release_id:String(release.id),release_version:String(release.version),release_sha256:String(release.sha256||release.checksum||""),release_source_commit:release.source_sha||release.source_commit||release.manifest?.sourceCommit||null,release_channel:channel}).eq("id",install.id).select().single();if(error)throw error;
-  await event(data,"database.ready","ok",`Customer database initialized and verified with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseSchemaSource:schemaAsset.source,databaseMigrationCount:"migrationCount" in schemaAsset?schemaAsset.migrationCount:null,databaseLatestMigration:"latestMigration" in schemaAsset?schemaAsset.latestMigration:null,baseMigrationId,profileStateUniqueCompatibilityApplied:profileStateNeedsUnique});
+  await event(data,"database.ready","ok",`Customer database initialized and verified with OrbitFS database schema ${effectiveSchema}`,{releaseId:release.id,releaseVersion:release.version,databaseSchemaVersion:effectiveSchema,databaseSchemaSha256:schemaAsset.sha256,databaseSchemaSource:schemaAsset.source,databaseMigrationCount:"migrationCount" in schemaAsset?schemaAsset.migrationCount:null,databaseLatestMigration:"latestMigration" in schemaAsset?schemaAsset.latestMigration:null,baseMigrationId,profileStateConflictCompatibilityApplied:obsoleteProfileConflict,namedUniqueConstraintCompatibilityCount:namedUniqueAdds});
   return await registerInstallationLicense(data);
 }
 
