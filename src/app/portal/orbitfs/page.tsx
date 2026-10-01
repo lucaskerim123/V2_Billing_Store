@@ -34,6 +34,7 @@ export default function MyOrbitFS(){
   const [licenseKey,setLicenseKey]=useState("");
   const [uninstallOptions,setUninstallOptions]=useState({removeDatabase:false,removeStorage:false,releaseLicense:false});
   const [lifecyclePlan,setLifecyclePlan]=useState<any>(null);
+  const [liveCheckedAt,setLiveCheckedAt]=useState("");
 
   async function authHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{} }
   async function load(background=false,bootstrap=false){
@@ -119,8 +120,8 @@ export default function MyOrbitFS(){
   useEffect(()=>{if(vercelConnection?.team_id!==undefined&&vercelConnection?.team_id!==null&&!vercelTeamId)setVercelTeamId(String(vercelConnection.team_id))},[vercelConnection?.team_id]);
   useEffect(()=>{
     if(!install||!working){pollCount.current=0;return}
-    if(pollCount.current>=180)return;
-    const timer=setTimeout(()=>{pollCount.current+=1;void load(true)},5000);
+    if(pollCount.current>=300)return;
+    const timer=setTimeout(()=>{pollCount.current+=1;void refreshLiveBase()},3000);
     return()=>clearTimeout(timer);
   },[install?.id,install?.state,install?.vercel_deployment_id,activeOperation?.id,activeOperation?.state,activeOperation?.heartbeat_at]);
   useEffect(()=>{
@@ -238,6 +239,20 @@ export default function MyOrbitFS(){
   async function rollbackUpdate(){if(!install||!appliedUpdateVersion)return;const reason=prompt(`Why are you rolling back Update ${appliedUpdateVersion}?`,"")?.trim()||"";if(!reason)return;if(!confirm(`Roll back OrbitFS Update ${appliedUpdateVersion}? Inner Engine targets will restore their pre-update checkpoint first. Forward-compatible database migrations remain applied.`))return;setBusy("rollback-update");const r=await fetch(`/api/orbitfs/installations/${install.id}/rollback-update`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({reason})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?`OrbitFS Update ${appliedUpdateVersion} rolled back.`:apiError(j,"Update rollback failed."));if(r.ok){pollCount.current=0;await load()}}
 
   async function sync(auto=false){if(!install)return;const r=await fetch(`/api/orbitfs/installations/${install.id}/status`,{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok){if(!auto)setMsg(apiError(j,"Could not refresh Panel status."));return}const updated=j.installation;if(updated)setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===updated.id?updated:x)}):current);if(updated&&!workingStates.has(String(updated.state)))await load()}
+  async function refreshLiveBase(){
+    if(!install?.id)return;
+    try{
+      const r=await fetch(`/api/orbitfs/installations/${install.id}/status`,{headers:await authHeaders(),cache:"no-store"});
+      const j=await r.json().catch(()=>({}));
+      if(r.ok&&j.installation){
+        const updated=j.installation;
+        setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===updated.id?updated:x)}):current);
+      }
+      await load(true);
+    }finally{
+      setLiveCheckedAt(new Date().toISOString());
+    }
+  }
   async function repairPublicUrl(){if(!install)return;setBusy("public-url-repair");try{const r=await fetch(`/api/orbitfs/installations/${install.id}/status`,{method:"POST",headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not repair public Panel access."));await load();setMsg(j.installation?.health_status==="healthy"?"Public Panel URL repaired and verified.":"Production domain refreshed, but public health is unverified. Check the Vercel project protection settings and Panel health.")}catch(e:any){setMsg(e?.message||"Public URL repair failed.")}finally{setBusy("")}}
   async function lifecyclePlanFor(action:"undeploy"|"uninstall"){if(!install)return;setBusy("lifecycle-plan");try{const options=action==="uninstall"?uninstallOptions:{removeDatabase:false,removeStorage:false,releaseLicense:false};const r=await fetch(`/api/orbitfs/installations/${install.id}/lifecycle`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"plan",mode:action,...options})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not create lifecycle plan."));setLifecyclePlan(j);return j}catch(e:any){setMsg(e?.message||"Could not create lifecycle plan.");return null}finally{setBusy("")}}
   async function executeLifecycle(action:"undeploy"|"uninstall"){if(!install)return;const planned=await lifecyclePlanFor(action);if(!planned)return;const destructive=action==="uninstall"&&[uninstallOptions.removeDatabase&&"OrbitFS database objects",uninstallOptions.removeStorage&&"OrbitFS storage bucket",uninstallOptions.releaseLicense&&"licence installation binding"].filter(Boolean);const summary=action==="undeploy"?"Undeploy OrbitFS? The Panel and Shared Engine Host will be removed. Your database, storage, licence binding and installation ID will be preserved.":`Uninstall OrbitFS? This removes the running Panel/Engine resources.${destructive&&destructive.length?` It will also permanently remove: ${destructive.join(", ")}.`:" Database, storage and licence binding will be preserved."} The Supabase project itself is never deleted.`;if(!confirm(summary))return;setBusy(action);try{const r=await fetch(`/api/orbitfs/installations/${install.id}/lifecycle`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action,jobId:planned?.job?.id,...(action==="uninstall"?uninstallOptions:{})})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,`${action} failed.`));setLifecyclePlan(j);await trackCustomerActivity(action==="undeploy"?"orbitfs.installation.undeploy":"orbitfs.installation.uninstall",{entityType:"license",entityId:binding?.id,detail:{installation_id:install.installation_id,job_id:j?.job?.id,options:action==="uninstall"?uninstallOptions:{}}});setMsg(action==="undeploy"?"OrbitFS undeployed. Database, storage, licence and installation ID were preserved.":"OrbitFS uninstall completed with the selected cleanup options.");await load()}catch(e:any){setMsg(e?.message||`${action} failed.`)}finally{setBusy("")}}
@@ -359,7 +374,7 @@ export default function MyOrbitFS(){
 
 
     {panelReady&&install&&(activeOperation||latestOperation)&&<section className="panel orbitV5OperationPanel orbitV5InstalledProgress" style={{marginBottom:14}}>
-      <div className="panelTitle"><div><p className="eyebrow">DEPLOYMENT STATUS</p><h2>{activeOperation?label(activeOperation.action)+" · "+label(activeOperation.state):latestOperation?.state==="failed"?"Last deployment attempt failed":"Recent deployment activity"}</h2><p className="muted">{activeOperation?"Live Base operation. This page refreshes every 5 seconds until it finishes.":"Latest Base deployment operation recorded by Billing Store."}</p></div><span className={"state "+(activeOperation?"current":latestOperation?.state==="completed"?"ready":"waiting")}>{String(activeOperation?.state||latestOperation?.state||"status").replaceAll("_"," ").toUpperCase()}</span></div>
+      <div className="panelTitle"><div><p className="eyebrow">DEPLOYMENT STATUS</p><h2>{activeOperation?label(activeOperation.action)+" · "+label(activeOperation.state):latestOperation?.state==="failed"?"Last deployment attempt failed":"Recent deployment activity"}</h2><p className="muted">{activeOperation?`Live Base operation. Status, events and Vercel readiness refresh automatically every 3 seconds${liveCheckedAt?" · last checked "+new Date(liveCheckedAt).toLocaleTimeString():""}.`:"Latest Base deployment operation recorded by Billing Store."}</p></div><span className={"state "+(activeOperation?"current":latestOperation?.state==="completed"?"ready":"waiting")}>{String(activeOperation?.state||latestOperation?.state||"status").replaceAll("_"," ").toUpperCase()}</span></div>
       {activeOperation&&<div className="portalOverviewStats" style={{marginTop:10}}>
         <div className="portalStatCard"><div><small>ACTION</small><strong>{label(activeOperation.action)}</strong><span>{activeOperation.detail?.version||activeOperation.requested_release_id||"Current release"}</span></div></div>
         <div className="portalStatCard"><div><small>STAGE</small><strong>{label(activeOperation.state)}</strong><span>{activeOperation.heartbeat_at?"Updated "+new Date(activeOperation.heartbeat_at).toLocaleTimeString():"Waiting for progress"}</span></div></div>
