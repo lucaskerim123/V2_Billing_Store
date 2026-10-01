@@ -50,7 +50,7 @@ async function snapshot(identity:string){
   db.from("orders").select("*").eq("auth_user_id",userId).order("created_at",{ascending:false}).limit(50),
   db.from("license_bindings").select("*").eq("auth_user_id",userId).is("archived_at",null).order("created_at",{ascending:false}),
   db.from("orbitfs_installations").select("*").eq("auth_user_id",userId).order("created_at",{ascending:false}),
-  db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata,created_at,updated_at").eq("auth_user_id",userId).order("updated_at",{ascending:false})
+  db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",userId).order("refreshed_at",{ascending:false})
  ]);
  for(const row of [profile,orders,bindings,installations,providerConnections])if(row.error)throw row.error;
  const orderRows=orders.data||[],orderIds=orderRows.map((x:any)=>x.id).filter(Boolean);
