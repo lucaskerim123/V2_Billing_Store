@@ -19,9 +19,11 @@ async function findCustomer(identity:string){
 async function findInstallation(body:any){
  const db=licenseDb();
  const wanted=String(body.installation_id||body.installationId||"").trim();
- let query=db.from("orbitfs_installations").select("*");
  if(wanted){
-  const byId=await query.or("id.eq."+wanted+",installation_id.eq."+wanted).limit(2);
+  const isUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(wanted);
+  const byId=isUuid
+   ?await db.from("orbitfs_installations").select("*").or("id.eq."+wanted+",installation_id.eq."+wanted).limit(2)
+   :await db.from("orbitfs_installations").select("*").eq("installation_id",wanted).limit(2);
   if(byId.error)throw byId.error;if(byId.data?.length)return byId.data[0];
  }
  const identity=String(body.identity||body.email||body.customer||"").trim();
