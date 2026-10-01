@@ -33,6 +33,7 @@ export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){
     });
     const applied=install.metadata?.appliedUpdate||null;
     return Response.json({
+      lastCheckedAt:new Date().toISOString(),
       installationId:install.id,
       installationState:install.state||null,
       lastError:install.last_error||null,
