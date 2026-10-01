@@ -25,7 +25,9 @@ permissions:
 
 concurrency:
   group: v2-billing-quick
-  cancel-in-progress: true
+  # Never cancel a deployment after Vercel may already have accepted it. A cancelled
+  # run still consumes a deployment, and the replacement run would create another.
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -116,6 +118,45 @@ jobs:
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
           echo "Quick Deploy source: $TARGET_BRANCH @ $commit"
 
+      - name: Reuse an existing production deployment for this commit
+        id: existing
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&target=production&limit=100&teamId=$VERCEL_ORG_ID")"
+          if [ "$status" != "200" ]; then
+            echo "::error::Could not inspect existing Vercel production deployments (HTTP $status)."
+            cat "$response_file"
+            exit 1
+          fi
+          existing_url="$(node - "$response_file" "$SOURCE_COMMIT" <<'NODE'
+          const fs=require('fs');
+          const [file,sha]=process.argv.slice(2);
+          const body=JSON.parse(fs.readFileSync(file,'utf8'));
+          const rows=Array.isArray(body.deployments)?body.deployments:[];
+          const match=rows.find((row)=>{
+            const meta=row&&row.meta&&typeof row.meta==='object'?row.meta:{};
+            const state=String(row?.readyState||row?.state||'').toUpperCase();
+            return state==='READY' && String(meta.githubCommitSha||'')===sha && row?.url;
+          });
+          if(match)process.stdout.write(String(match.url).startsWith('http')?String(match.url):'https://'+String(match.url));
+          NODE
+          )"
+          if [ -n "$existing_url" ]; then
+            echo "reuse=true" >> "$GITHUB_OUTPUT"
+            echo "url=$existing_url" >> "$GITHUB_OUTPUT"
+            echo "Existing READY production deployment already represents $SOURCE_COMMIT: $existing_url"
+          else
+            echo "reuse=false" >> "$GITHUB_OUTPUT"
+            echo "No READY production deployment found for $SOURCE_COMMIT; a new deployment is required."
+          fi
+
       - name: Install pinned Vercel CLI
         run: |
           npm install --global "vercel@$VERCEL_CLI_VERSION"
@@ -123,10 +164,17 @@ jobs:
 
       - name: Quick deploy selected branch to production
         id: deploy
+        if: ${{ steps.existing.outputs.reuse != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
-          deployment_url="$(vercel deploy --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID")"
+          deployment_url="$(vercel deploy --prod --yes \
+            --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_ORG_ID" \
+            --meta "githubCommitSha=${{ steps.source.outputs.commit }}" \
+            --meta "githubCommitRef=${{ steps.source.outputs.branch }}" \
+            --meta "githubOrg=lucaskerim123" \
+            --meta "githubRepo=V2_Billing_Store")"
           case "$deployment_url" in
             https://*) ;;
             *)
@@ -137,11 +185,19 @@ jobs:
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
 
       - name: Verify deployment exists
-        run: vercel inspect "${{ steps.deploy.outputs.url }}" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+        env:
+          DEPLOYMENT_URL: ${{ steps.existing.outputs.reuse == 'true' && steps.existing.outputs.url || steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYMENT_URL"
+          vercel inspect "$DEPLOYMENT_URL" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
 
       - name: Report quick deployment
+        env:
+          DEPLOYMENT_URL: ${{ steps.existing.outputs.reuse == 'true' && steps.existing.outputs.url || steps.deploy.outputs.url }}
         run: |
           echo "Quick deployment completed."
           echo "Branch: ${{ steps.source.outputs.branch }}"
           echo "Commit: ${{ steps.source.outputs.commit }}"
-          echo "Deployment: ${{ steps.deploy.outputs.url }}"
+          echo "Deployment: $DEPLOYMENT_URL"
+          echo "Reused existing deployment: ${{ steps.existing.outputs.reuse }}"
