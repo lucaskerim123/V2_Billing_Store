@@ -23,9 +23,19 @@ function decodedReleaseFile(file:{file:string;data:string;sha256?:string;size?:n
   if(file.sha256&&String(file.sha256).toLowerCase()!==checksum(bytes))fail(`Release file checksum mismatch before Vercel upload: ${file.file}`,422);
   return bytes;
 }
+function isDatabaseOnlyBaseFile(path:string){
+  const value=String(path||"").replaceAll("\\","/");
+  return value==="supabase/customer-schema.sql"||value.startsWith("supabase/migrations/");
+}
+function baseVercelDeploymentFiles(files:Array<{file:string;data:string;sha256:string;size:number}>){
+  const deploymentFiles=files.filter(file=>!isDatabaseOnlyBaseFile(file.file));
+  if(!deploymentFiles.length)fail("Base release contains no deployable application files",422);
+  if(deploymentFiles.some(file=>/\.sql$/i.test(file.file)))fail("Base Vercel payload contains a database SQL asset",422);
+  return deploymentFiles;
+}
 function validateDeployableBaseFiles(files:Array<{file:string;data:string;sha256:string;size:number}>){
   const byPath=new Map(files.map(file=>[file.file,file]));
-  for(const required of ["package.json","package-lock.json","svelte.config.js","vite.config.ts"]){
+  for(const required of ["package.json","package-lock.json","svelte.config.js","vite.config.ts","tools/prepare-license-runtime.mjs","deployment/base-environment.json"]){
     if(!byPath.has(required))fail(`Base release is missing required Vercel build file: ${required}`,422);
   }
   for(const jsonPath of ["package.json","package-lock.json"]){
@@ -37,6 +47,9 @@ function validateDeployableBaseFiles(files:Array<{file:string;data:string;sha256
   if(!pkg?.dependencies?.["@sveltejs/adapter-vercel"])fail("Base release is missing @sveltejs/adapter-vercel",422);
   const lock=JSON.parse(decodedReleaseFile(byPath.get("package-lock.json")!).toString("utf8"));
   if(!Number.isInteger(Number(lock?.lockfileVersion))||Number(lock.lockfileVersion)<2)fail("Base release package-lock.json is not a supported npm lockfile",422);
+  if(![...byPath.keys()].some(path=>path.startsWith("src/")))fail("Base release is missing application source files",422);
+  if(!byPath.has("supabase/customer-schema.sql"))fail("Base release is missing the customer database snapshot",422);
+  baseVercelDeploymentFiles(files);
 }
 async function uploadVercelDeploymentFiles(userId:string,files:Array<{file:string;data:string;sha256:string;size:number}>){
   const {token,teamId}=await customerVercelCredentials(userId);
@@ -538,7 +551,7 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
     const deploymentInstall={...install,schema_version:targetSchemaVersion};
     await configureVercel(deploymentInstall,String(release.version),undefined,requestedChannel,String(release.id),target.artifactSha256,String(target.pkg.sourceCommit||expectedSource(release)));
 
-    const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),target.files);
+    const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),baseVercelDeploymentFiles(target.files));
     const body:any={
       name:install.vercel_project_name||`orbitfs-${String(install.installation_id||"").slice(-8)}`.toLowerCase(),
       project:projectId,
@@ -620,7 +633,8 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
       const previousPackage=await readBasePackage(currentRelease);
       await configureVercel(install,currentVersion,restoredDeploymentUrl||undefined,requestedChannel,currentReleaseId,previousPackage.artifactSha256,String(previousPackage.pkg.sourceCommit||expectedSource(currentRelease)));
       recovery.environmentRestored=true;
-      const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),previousPackage.files);
+      const recoveryDeploymentFiles=baseVercelDeploymentFiles(previousPackage.files);
+      const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),recoveryDeploymentFiles);
       const recoveryBody:any={
         name:install.vercel_project_name||`orbitfs-${String(install.installation_id||"").slice(-8)}`.toLowerCase(),
         project:projectId,
@@ -904,9 +918,10 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const requireExactDatabaseSchema=release?.manifest?.compatibility?.databaseSchema?.required===true||release?.manifest?.requireDatabaseSchemaMatch===true;
   if(requireExactDatabaseSchema&&packageDatabaseSchema&&installedDatabaseSchema&&packageDatabaseSchema!==installedDatabaseSchema)fail(`Base release ${release.version} explicitly requires database schema ${packageDatabaseSchema}, but this installation is initialized with schema ${installedDatabaseSchema}.`,409);
   const projectSettings={framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(parsed.pkg.projectSettings||{})};
-  await progress?.("deploying",{action,releaseId:String(release.id),projectId:install.vercel_project_id,fileCount:parsed.files.length});
-  await event(install,"deployment.uploading","info",`Uploading ${parsed.files.length} verified Base files to Vercel`,{action,releaseId:release.id,fileCount:parsed.files.length});
-  const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),parsed.files);
+  const deploymentFiles=baseVercelDeploymentFiles(parsed.files);
+  await progress?.("deploying",{action,releaseId:String(release.id),projectId:install.vercel_project_id,fileCount:deploymentFiles.length,artifactFileCount:parsed.files.length});
+  await event(install,"deployment.uploading","info",`Uploading ${deploymentFiles.length} verified Base application files to Vercel`,{action,releaseId:release.id,fileCount:deploymentFiles.length,artifactFileCount:parsed.files.length,databaseAssetsExcluded:parsed.files.length-deploymentFiles.length});
+  const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),deploymentFiles);
   const body:any={name:install.vercel_project_name||`orbitfs-${install.installation_id.slice(-8)}`.toLowerCase(),project:install.vercel_project_id,target:"production",files:uploadedFiles,projectSettings,meta:{orbitfsReleaseId:String(release.id),orbitfsVersion:String(release.version),orbitfsAction:action,orbitfsChannel:requestedChannel,orbitfsSourceCommit:String(parsed.pkg.sourceCommit||release.sourceCommit||""),orbitfsInstallationRoute:"billing_store"}};
   await event(install,"deployment.started","info",`Deploying ${release.version}`,{action,releaseId:release.id,fileCount:parsed.files.length,checksum:parsed.artifactSha256});
   const created=await vercelApi(install.auth_user_id,"/v13/deployments",{method:"POST",body:JSON.stringify(body)});if(!created?.id&&!created?.uid)fail("Vercel did not return a deployment id",502);
