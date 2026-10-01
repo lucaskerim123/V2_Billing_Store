@@ -2,6 +2,9 @@ name: Production Deploy
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - control/production-deploy
 
 permissions:
   contents: read
@@ -13,7 +16,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/control/production-deploy' && github.actor == 'lucaskerim123') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
@@ -34,8 +37,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
-          test "${GITHUB_REF}" = "refs/heads/main"
+          case "${GITHUB_EVENT_NAME}:${GITHUB_REF}" in
+            workflow_dispatch:refs/heads/main) ;;
+            push:refs/heads/control/production-deploy)
+              test "${GITHUB_ACTOR}" = "lucaskerim123"
+              ;;
+            *)
+              echo "::error::Unsupported Production Deploy trigger: ${GITHUB_EVENT_NAME} on ${GITHUB_REF}"
+              exit 1
+              ;;
+          esac
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test "$(git rev-parse --is-shallow-repository)" = "false"
           git fetch origin main --prune
@@ -56,8 +67,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          runs="$(gh api -H "Accept: application/vnd.github+json" "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?branch=main&event=workflow_dispatch&per_page=50")"
-          scan="$(printf '%s' "$runs" | jq -c --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | reverse | .[0] // empty')"
+          runs="$(gh api -H "Accept: application/vnd.github+json" "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?per_page=100")"
+          scan="$(printf '%s' "$runs" | jq -c --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $sha and ((.event == "workflow_dispatch" and .head_branch == "main") or (.event == "push" and .head_branch == "control/full-scan")))] | sort_by(.created_at) | reverse | .[0] // empty')"
           if [ -z "$scan" ]; then
             echo "::error::Deploy blocked: no Full Scan workflow_dispatch run exists for exact commit $GITHUB_SHA."
             exit 1
