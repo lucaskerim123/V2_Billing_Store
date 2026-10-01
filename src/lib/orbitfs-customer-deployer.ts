@@ -2,7 +2,7 @@ import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
-import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest} from "@/lib/master-api";
+import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest,type MasterDeploymentResult} from "@/lib/master-api";
 import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,resolveProductionUrl,checkPublicPanelHealth,ensureStandardPanelProtection,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
@@ -776,7 +776,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   // Authorization must succeed before touching the customer's deployment.
   // Persist the authoritative rejection code so a refresh explains the failed
   // preflight instead of leaving an ambiguous, apparently running Update.
-  let deploymentAuthorization:any=null;
+  let deploymentAuthorization:MasterDeploymentResult|null=null;
   try{
     deploymentAuthorization=await masterExecuteDeployment({action,releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:install.release_version||null,projectId:install.vercel_project_id||null,projectName:install.vercel_project_name||null});
   }catch(error:any){
@@ -802,10 +802,10 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(!bundleComponents.length||bundleComponents.some(value=>!["base","apex","mcp","studio"].includes(value)))fail("Update Bundle targets are invalid",422);
     const releaseComponents=(Array.isArray(release?.manifest?.components)?release.manifest.components:[]).map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean).sort();
     if(releaseComponents.length&&releaseComponents.join(",")!==bundleComponents.slice().sort().join(","))fail("Update Bundle targets do not match License Master",422);
-    const authoritativeComponents=Array.isArray(deploymentAuthorization?.componentPlan?.executionComponents)
-      ?deploymentAuthorization.componentPlan.executionComponents.map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean)
+    const authoritativeComponents:string[]=Array.isArray(deploymentAuthorization?.componentPlan?.executionComponents)
+      ?deploymentAuthorization.componentPlan.executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(Boolean)
       :[];
-    const components=[...new Set(authoritativeComponents.filter((value:string)=>bundleComponents.includes(value)))];
+    const components:string[]=[...new Set<string>(authoritativeComponents.filter(value=>bundleComponents.includes(value)))];
     const skippedComponents=bundleComponents.filter(component=>!components.includes(component));
     if(deploymentAuthorization?.notApplicable===true||!components.length){
       await event(install,"update.skipped","ok",`OrbitFS Update ${release.version} has no components applicable to this licence`,{releaseId:release.id,releaseComponents:bundleComponents,skippedComponents,componentPlan:deploymentAuthorization?.componentPlan||null});
