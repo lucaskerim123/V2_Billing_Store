@@ -15,10 +15,6 @@ on:
         description: Optional custom branch name (overrides selector)
         required: false
         type: string
-  push:
-    branches:
-      - control/quick-deploy-main
-      - control/quick-deploy-custom
 
 permissions:
   contents: read
@@ -31,7 +27,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.actor == 'lucaskerim123') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
