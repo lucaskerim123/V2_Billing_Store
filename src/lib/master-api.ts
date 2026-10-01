@@ -44,7 +44,26 @@ export async function masterPromoteRelease(id:string,targetChannel:string){retur
 export async function masterValidateRelease(id:string){return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}/validate`,{method:"POST"},"billing");}
 export async function masterControlRelease(id:string,status:string){const action=status==="paused"?"disable":status==="withdrawn"?"withdraw":status;return masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action})},"billing");}
 export async function masterDownloadReleaseArtifact(id:string){const base=await configuredMasterApiBase();const response=await fetchWithTimeout(`${base}${masterPath(`/api/v1/releases/${encodeURIComponent(id)}/artifact`)}`,{method:"GET",cache:"no-store"},"deployer");if(!response.ok){const text=await response.text();let data:any={};try{data=text?JSON.parse(text):{};}catch{}const code=String(data?.code||"ARTIFACT_DOWNLOAD_FAILED"),detail=errorMessage(data?.message??data?.detail??data?.error??text,"").trim();throw Object.assign(new Error(`License Master artifact download failed for release ${id} (${response.status}, ${code})${detail&&detail!==code?`: ${detail}`:""}`),{status:response.status,code});}return{bytes:Buffer.from(await response.arrayBuffer()),contentType:response.headers.get("content-type")||"application/octet-stream",contentDisposition:response.headers.get("content-disposition")||null};}
-export async function masterExecuteDeployment(input:any){return masterRequest("/api/v1/deployer",{method:"POST",body:JSON.stringify({...input,phase:input.phase||"authorize"})},"deployer");}
+export type MasterDeploymentComponentPlan={
+  releaseComponents:string[];
+  entitledComponents:string[];
+  executionComponents:string[];
+  skippedComponents:string[];
+};
+export type MasterDeploymentResult={
+  ok?:boolean;
+  authorized?:boolean;
+  recorded?:boolean;
+  authority?:string;
+  notApplicable?:boolean;
+  code?:string;
+  componentPlan?:MasterDeploymentComponentPlan;
+  release?:{id?:string;version?:string;releaseType?:string;product?:string;artifactSha256?:string;sourceRepo?:string;sourceRef?:string};
+  execution?:string;
+};
+export async function masterExecuteDeployment(input:any):Promise<MasterDeploymentResult>{
+  return await masterRequest("/api/v1/deployer",{method:"POST",body:JSON.stringify({...input,phase:input.phase||"authorize"})},"deployer") as MasterDeploymentResult;
+}
 export async function masterInstallationDetails(installationId:string,licenseId?:string|null){const qs=new URLSearchParams({installation_id:String(installationId||"").trim()});if(licenseId)qs.set("license_id",String(licenseId).trim());return masterRequest(`/api/v1/deployer?${qs.toString()}`,{method:"GET",cache:"no-store"},"deployer");}
 export async function masterInstallationLifecycle(input:any){return masterRequest("/api/v1/installations/lifecycle",{method:"POST",body:JSON.stringify(input)},"deployer");}
 export const licensingAuthority="orbitfs-license-master-v2";
