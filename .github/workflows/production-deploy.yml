@@ -2,9 +2,6 @@ name: Production Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - control/production-deploy
 
 permissions:
   contents: read
@@ -16,7 +13,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/control/production-deploy' && github.actor == 'lucaskerim123') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
@@ -37,16 +34,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          case "${GITHUB_EVENT_NAME}:${GITHUB_REF}" in
-            workflow_dispatch:refs/heads/main) ;;
-            push:refs/heads/control/production-deploy)
-              test "${GITHUB_ACTOR}" = "lucaskerim123"
-              ;;
-            *)
-              echo "::error::Unsupported Production Deploy trigger: ${GITHUB_EVENT_NAME} on ${GITHUB_REF}"
-              exit 1
-              ;;
-          esac
+          test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
+          test "${GITHUB_REF}" = "refs/heads/main"
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           test "$(git rev-parse --is-shallow-repository)" = "false"
           git fetch origin main --prune
