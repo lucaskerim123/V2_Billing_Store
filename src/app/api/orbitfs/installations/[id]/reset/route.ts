@@ -57,7 +57,9 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       production_url:null,
       release_id:null,
       release_version:null,
-      release_channel:null,
+      // release_channel is NOT NULL in the installation schema. A full setup
+      // reset returns the installer to its default channel instead of writing null.
+      release_channel:"stable",
       release_sha256:null,
       release_source_commit:null,
       previous_release_version:null,
@@ -78,7 +80,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).eq("auth_user_id",user.id).select().single();
     if(error)throw error;
 
-    await event(data,"setup.reset_to_stage_1","warning","OrbitFS setup reset to Stage 1. Provider connections and installer selections were cleared; customer cloud projects, data, installation ID and licence binding were preserved.",{
+    await event(data,"setup.reset_to_stage_1","warning","OrbitFS setup reset to Stage 1. Provider connections and installer selections were cleared, the release channel returned to stable, and customer cloud projects, data, installation ID and licence binding were preserved.",{
       preservedInstallationId:String(install.installation_id||""),
       preservedLicenseBinding:true,
       runtimeLicenseRegistrationCleared:Boolean(discardedLicenseRegistration),
