@@ -440,6 +440,7 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     SUPABASE_SECRET_KEY:supabaseServerKey,
     ORBITFS_DB_SECRET:secret,
     ORBITFS_INSTALLATION_ID:String(install.installation_id||"").trim(),
+    ORBITFS_INSTALLATION_ROUTE:"billing_store",
     ORBITFS_PANEL_URL:panelUrl||"https://panel.incendiarynetworks.cc",
     ORBITFS_LICENSE_API_URL:ORBITFS_LICENSE_API_URL,
     ORBITFS_APP_VERSION:version||"unknown",
