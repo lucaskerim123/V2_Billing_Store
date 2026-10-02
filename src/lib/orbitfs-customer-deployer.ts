@@ -14,6 +14,7 @@ type ReleaseFile={file:string;data:string;encoding?:string;sha256?:string;size?:
 type Package={format?:string;schemaVersion?:number;version:string;releaseId?:string;sourceCommit?:string;components?:string[];projectSettings?:Record<string,unknown>;files:ReleaseFile[];[key:string]:any};
 type UpdateBundle={format:"orbitfs-update-bundle-v3";schemaVersion:number;version:string;sourceCommit?:string;components:string[];minimumBaseVersion?:string;minimumEngineDeployerProtocol?:number;checkpointRequired?:boolean;payloads:{panel:Package|null;engine:Package|null};[key:string]:any};
 type ParsedArtifact={root:Package|UpdateBundle;artifactSha256:string};
+const CUSTOMER_ENGINE_DEPLOYER_PROTOCOL=1;
 const fail=(message:string,status=400,code="ORBITFS_DEPLOYMENT_FAILED",retryable=status>=500):never=>{throw Object.assign(new Error(message),{status,code,retryable})};
 const checksum=(buf:Buffer)=>createHash("sha256").update(buf).digest("hex");
 const sha1=(buf:Buffer)=>createHash("sha1").update(buf).digest("hex");
@@ -856,6 +857,14 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(requiredBase&&(baseComparison===null||baseComparison<0))fail(`Update ${release.version} requires Base ${requiredBase} or newer; this installation is Base ${installedBase}.`,409);
     const bundleWantsPanel=bundleComponents.includes("base"),bundleWantsEngine=bundleComponents.some(component=>component!=="base");
     const wantsPanel=components.includes("base"),wantsEngine=components.some(component=>component!=="base");
+    const requiredEngineProtocol=Number(bundle.minimumEngineDeployerProtocol??release?.manifest?.minimumEngineDeployerProtocol??0);
+    const releaseEngineProtocol=Number(release?.manifest?.minimumEngineDeployerProtocol??requiredEngineProtocol);
+    if(wantsEngine){
+      if(!Number.isInteger(requiredEngineProtocol)||requiredEngineProtocol<1)fail("Update Bundle is missing a valid minimum Engine deployer protocol",422);
+      if(Number.isFinite(releaseEngineProtocol)&&releaseEngineProtocol!==requiredEngineProtocol)fail("Update Bundle Engine deployer protocol does not match License Manager",422);
+      if(requiredEngineProtocol>CUSTOMER_ENGINE_DEPLOYER_PROTOCOL)fail(`Update ${release.version} requires Engine deployer protocol ${requiredEngineProtocol}, but this customer deployer supports protocol ${CUSTOMER_ENGINE_DEPLOYER_PROTOCOL}.`,409,"ENGINE_DEPLOYER_PROTOCOL_UNSUPPORTED");
+      if(bundle.checkpointRequired!==true||release?.manifest?.checkpointRequired===false)fail("Engine update requires a mandatory rollback checkpoint",422,"ENGINE_CHECKPOINT_REQUIRED");
+    }
     const panel=bundle.payloads?.panel||null,engine=bundle.payloads?.engine||null;
     if(bundleWantsPanel&&!panel)fail("Update Bundle targets Base but has no Panel payload",422);
     if(!bundleWantsPanel&&panel)fail("Update Bundle contains a Panel payload without the Base target",422);
@@ -867,11 +876,15 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     let enginePreflight:any=null;
     if(wantsEngine){
       if(!currentBaseUrl)fail("Installed OrbitFS Base URL is unavailable for Engine update preflight",409);
+      await ensureCustomerDatabaseRuntimeAccess(install,"inner-deployer-preflight");
       const planned=await engineUpdateRequest(currentBaseUrl,install,release,requestedChannel,"plan",components.filter(component=>component!=="base"));
       enginePreflight=planned.body?.plan||null;
       if(planned.body?.release?.checkpointRequired!==true)fail("Installed Base rejected the Engine update checkpoint contract",409);
+      const reportedProtocol=Number(planned.body?.engineDeployerProtocol??planned.body?.deployerProtocol??planned.body?.plan?.engineDeployerProtocol??planned.body?.plan?.deployerProtocol??CUSTOMER_ENGINE_DEPLOYER_PROTOCOL);
+      if(!Number.isInteger(reportedProtocol)||reportedProtocol<requiredEngineProtocol)fail(`Installed Base Engine deployer protocol ${reportedProtocol||"unknown"} does not satisfy required protocol ${requiredEngineProtocol}.`,409,"ENGINE_DEPLOYER_PROTOCOL_UNSUPPORTED");
+      await event(install,"update.engine.preflight","ok","Installed Base Engine deployer preflight passed",{releaseId:release.id,releaseVersion:release.version,requiredEngineProtocol,reportedProtocol,checkpointRequired:true,components:components.filter(component=>component!=="base"),plan:enginePreflight});
     }
-    await event(install,"update.started","info",`Applying OrbitFS Update ${release.version}`,{releaseId:release.id,components,checksum:parsed.artifactSha256,databaseMigrationCount:applicableMigrations.length,skippedComponents,enginePreflight});
+    await event(install,"update.started","info",`Applying OrbitFS Update ${release.version}`,{releaseId:release.id,components,checksum:parsed.artifactSha256,databaseMigrationCount:applicableMigrations.length,skippedComponents,enginePreflight,requiredEngineProtocol:wantsEngine?requiredEngineProtocol:null,engineDeployerProtocol:CUSTOMER_ENGINE_DEPLOYER_PROTOCOL});
     let panelResult:any=null;
     let engineResult:any=null;
     let engineAttempted=false;
