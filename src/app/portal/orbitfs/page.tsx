@@ -65,7 +65,18 @@ export default function MyOrbitFS(){
   const baseHistory=history.filter((x:any)=>x.action!=="update"&&x.status==="ready").sort((a:any,b:any)=>new Date(b.ready_at||b.created_at||0).getTime()-new Date(a.ready_at||a.created_at||0).getTime());
   const distinctBaseHistory=baseHistory.filter((row:any,index:number,rows:any[])=>rows.findIndex((candidate:any)=>String(candidate.release_id||"")===String(row.release_id||""))===index);
   const visibleBaseHistory=distinctBaseHistory.slice(0,2),olderBaseHistory=distinctBaseHistory.slice(2),previousBaseDeployment=visibleBaseHistory.find((x:any)=>String(x.release_id||"")!==String(install?.release_id||""))||null;
-  const operations=Array.isArray(d?.operations)?d.operations:[],activeOperation=d?.activeOperation||null,latestOperation=operations[0]||null;
+  const operations=Array.isArray(d?.operations)?d.operations:[];
+  const setupResetAtRaw=String(install?.metadata?.setupResetAt||"").trim();
+  const setupResetAt=setupResetAtRaw?Date.parse(setupResetAtRaw):0;
+  const operationBelongsToCurrentSetup=(operation:any)=>{
+    if(!operation)return false;
+    if(!setupResetAt||!Number.isFinite(setupResetAt))return true;
+    const createdAt=Date.parse(String(operation.created_at||""));
+    return Number.isFinite(createdAt)&&createdAt>=setupResetAt;
+  };
+  const currentSetupOperations=operations.filter(operationBelongsToCurrentSetup);
+  const activeOperation=operationBelongsToCurrentSetup(d?.activeOperation)?d.activeOperation:null;
+  const latestOperation=currentSetupOperations[0]||null;
     const baseInstalled=!!(install?.release_version&&install?.release_id&&install?.vercel_project_id&&(install?.vercel_deployment_id||install?.production_url));
     const operationWorking=!!activeOperation;
     const supabaseConnectionReady=!!supabase,supabaseReady=supabaseConnectionReady&&!!install?.supabase_project_ref,databaseReady=supabaseReady&&!!install?.database_initialized_at,infrastructureReady=supabaseConnectionReady&&databaseReady&&vercelApiReady,deploymentReady=!!(install?.release_version&&install?.vercel_project_id&&install?.state==="ready"),validationReady=deploymentReady&&String(install?.health_status||"")==="healthy",panelReady=baseInstalled,working=!!install&&(workingStates.has(String(install.state))||operationWorking),reviewReady=infrastructureReady;
