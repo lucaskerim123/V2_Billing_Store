@@ -25,7 +25,10 @@ function decodedReleaseFile(file:{file:string;data:string;sha256?:string;size?:n
 }
 function isDatabaseOnlyBaseFile(path:string){
   const value=String(path||"").replaceAll("\\","/");
-  return /^supabase\/.*\.sql$/i.test(value);
+  // SQL assets belong to the Supabase/database phase, never the Vercel app payload.
+  // Filter by file type rather than directory so release packages can safely move
+  // database helper files without causing a customer Vercel deployment failure.
+  return /\.sql$/i.test(value);
 }
 function baseVercelDeploymentFiles(files:Array<{file:string;data:string;sha256:string;size:number}>){
   const deploymentFiles=files.filter(file=>!isDatabaseOnlyBaseFile(file.file));
