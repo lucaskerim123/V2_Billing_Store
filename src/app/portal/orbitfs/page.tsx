@@ -337,7 +337,7 @@ export default function MyOrbitFS(){
     {!panelReady&&<header className="orbitV5Hero">
       <div><p className="eyebrow">DEPLOYMENT CENTER</p>
         <h1>{deploymentNeedsAttention?"Deployment needs attention":activeOperation?"Deployment progress":activeSiteStep===5?"Review deployment":"Base System Deployer"}</h1>
-        <p className="orbitV5Lead">{deploymentNeedsAttention?"A deployment step needs attention. Review the recorded error and continue from the relevant stage.":activeOperation?"Your Base operation is running. Progress and recent activity below use your actual deployment records.":activeSiteStep===5?"Confirm the selected release, customer infrastructure and licence before deploying.":"Deploy and manage your own OrbitFS Base instance with a guided setup."}</p>
+        <p className="orbitV5Lead">{deploymentNeedsAttention?"A deployment step needs attention. Review the recorded error and continue from the relevant stage.":activeOperation?"Your Base operation is running. Progress and recent activity below use your actual deployment records.":activeSiteStep===5?"Confirm the selected release and customer infrastructure before deploying.":"Deploy and manage your own OrbitFS Base instance with a guided setup."}</p>
         <p className="orbitV5Note">Follow each step, review the exact published Base release, monitor progress and manage your installation in one place.</p>
       </div>
       <div className="orbitV5HeroState"><span className={"state "+(deploymentNeedsAttention?"waiting":activeOperation?"current":binding?"ready":"waiting")}>{deploymentNeedsAttention?"ATTENTION":activeOperation?"IN PROGRESS":binding?"ENTITLEMENT ATTACHED":"LICENCE REQUIRED"}</span>{install?.installation_id&&<small>Installation {String(install.installation_id).slice(0,13)}…</small>}</div>
@@ -424,7 +424,7 @@ export default function MyOrbitFS(){
               <div className="panelTitle"><div><p className="eyebrow">INSTALLATION</p><h2>Authority & identity</h2></div><span className="state ready">VALIDATED</span></div>
               <div className="orbitZipControlRows">
                 <div><span>Installation ID</span><b>{install.installation_id}</b></div>
-                <div><span>Licence</span><b>{licenseRegistration?.keyHint||"Registered"}</b></div>
+                <div><span>Licence activation</span><b>Managed in Base first-time setup</b></div>
                 <div><span>Release ID</span><b>{install.release_id||"Recorded"}</b></div>
                 <div><span>Runtime health</span><b>{install.health_status||"healthy"}</b></div>
               </div>
