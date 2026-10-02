@@ -106,12 +106,22 @@ function databaseRuntimeAccessContract(release:any):DatabaseRuntimeAccessContrac
   return {version:1,schema,publishableRole,authenticatedRole,serviceRole,publicReadTables,authenticatedReadTables,serverFullAccessTables,restPreflightTables,serverPreflightTables,legacyCompatibility};
 }
 function sqlIdentifier(value:string){return `"${value.replaceAll('"','""')}"`}
+function runtimeReadPolicyName(table:string){return `orbitfs_runtime_read_${table}`}
 function runtimeAccessGrantSql(contract:DatabaseRuntimeAccessContract){
   const schema=sqlIdentifier(contract.schema),publishable=sqlIdentifier(contract.publishableRole),authenticated=sqlIdentifier(contract.authenticatedRole),service=sqlIdentifier(contract.serviceRole);
+  const readTables=[...new Set([...contract.publicReadTables,...contract.authenticatedReadTables])];
+  const policySql=readTables.flatMap((table)=>{
+    const roles:string[]=[];
+    if(contract.publicReadTables.includes(table))roles.push(publishable);
+    if(contract.authenticatedReadTables.includes(table))roles.push(authenticated);
+    const policy=sqlIdentifier(runtimeReadPolicyName(table)),target=`${schema}.${sqlIdentifier(table)}`;
+    return [`drop policy if exists ${policy} on ${target};`,`create policy ${policy} on ${target} for select to ${roles.join(", ")} using (true);`];
+  });
   return [
     `grant usage on schema ${schema} to ${publishable}, ${authenticated}, ${service};`,
     ...contract.publicReadTables.map((table)=>`grant select on table ${schema}.${sqlIdentifier(table)} to ${publishable};`),
     ...contract.authenticatedReadTables.map((table)=>`grant select on table ${schema}.${sqlIdentifier(table)} to ${authenticated};`),
+    ...policySql,
     ...contract.serverFullAccessTables.map((table)=>`grant all privileges on table ${schema}.${sqlIdentifier(table)} to ${service};`),
     `grant usage, select, update on all sequences in schema ${schema} to ${service};`
   ].join("\n");
@@ -136,6 +146,7 @@ async function verifyDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
   ];
   for(const table of contract.publicReadTables)checks.push({key:`publishable_select_${table}`,expr:`has_table_privilege('${contract.publishableRole}','${contract.schema}.${table}','SELECT')`});
   for(const table of contract.authenticatedReadTables)checks.push({key:`authenticated_select_${table}`,expr:`has_table_privilege('${contract.authenticatedRole}','${contract.schema}.${table}','SELECT')`});
+  for(const table of [...new Set([...contract.publicReadTables,...contract.authenticatedReadTables])])checks.push({key:`runtime_read_policy_${table}`,expr:`exists(select 1 from pg_policies where schemaname='${contract.schema}' and tablename='${table}' and policyname='${runtimeReadPolicyName(table)}' and cmd='SELECT')`});
   for(const table of contract.serverFullAccessTables){
     for(const privilege of ["SELECT","INSERT","UPDATE","DELETE"])checks.push({key:`service_${privilege.toLowerCase()}_${table}`,expr:`has_table_privilege('${contract.serviceRole}','${contract.schema}.${table}','${privilege}')`});
   }
