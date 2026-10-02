@@ -88,6 +88,7 @@ type DatabaseRuntimeAccessContract={
   runtimeSecretExcludedTables:string[];
   runtimeSecretPreflightTables:string[];
   runtimeSecretRepairRpc:"orbitfs_repair_runtime_access";
+  runtimeSecretProbeRpc:"orbitfs_runtime_access_probe";
   legacyCompatibility:boolean;
 };
 function runtimeAccessTables(value:any,label:string){
@@ -119,11 +120,12 @@ function databaseRuntimeAccessContract(release:any):DatabaseRuntimeAccessContrac
   const runtimeSecretExcludedTables=runtimeAccessTables(source.runtimeSecretExcludedTables,"runtime-secret-excluded");
   const runtimeSecretPreflightTables=runtimeAccessTables(source.runtimeSecretPreflightTables,"runtime-secret-preflight");
   const runtimeSecretRepairRpc=String(source.runtimeSecretRepairRpc||"").trim();
+  const runtimeSecretProbeRpc=String(source.runtimeSecretProbeRpc||"").trim();
   if(restPreflightTables.some((table)=>!publicReadTables.includes(table)))throw Object.assign(new Error("Base release REST preflight tables must be included in public-read access"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
   if(serverPreflightTables.some((table)=>!serverFullAccessTables.includes(table)))throw Object.assign(new Error("Base release server preflight tables must be included in server full access"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
-  if(runtimeSecretHeader!=="x-orbitfs-secret"||runtimeSecretRepairRpc!=="orbitfs_repair_runtime_access"||!["anon","authenticated"].every((role)=>runtimeSecretRoles.includes(role)))throw Object.assign(new Error("Base release runtime-secret access contract is invalid"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
+  if(runtimeSecretHeader!=="x-orbitfs-secret"||runtimeSecretRepairRpc!=="orbitfs_repair_runtime_access"||runtimeSecretProbeRpc!=="orbitfs_runtime_access_probe"||!["anon","authenticated"].every((role)=>runtimeSecretRoles.includes(role)))throw Object.assign(new Error("Base release runtime-secret access contract is invalid"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
   if(runtimeSecretPreflightTables.some((table)=>runtimeSecretExcludedTables.includes(table)||!runtimeSecretTablePrefixes.some((prefix)=>table.startsWith(prefix))))throw Object.assign(new Error("Base release runtime-secret preflight tables are outside the permitted runtime table prefixes"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
-  return {version:1,schema,publishableRole,authenticatedRole,serviceRole,publicReadTables,authenticatedReadTables,serverFullAccessTables,restPreflightTables,serverPreflightTables,runtimeSecretHeader:"x-orbitfs-secret",runtimeSecretRoles,runtimeSecretTablePrefixes,runtimeSecretExcludedTables,runtimeSecretPreflightTables,runtimeSecretRepairRpc:"orbitfs_repair_runtime_access",legacyCompatibility};
+  return {version:1,schema,publishableRole,authenticatedRole,serviceRole,publicReadTables,authenticatedReadTables,serverFullAccessTables,restPreflightTables,serverPreflightTables,runtimeSecretHeader:"x-orbitfs-secret",runtimeSecretRoles,runtimeSecretTablePrefixes,runtimeSecretExcludedTables,runtimeSecretPreflightTables,runtimeSecretRepairRpc:"orbitfs_repair_runtime_access",runtimeSecretProbeRpc:"orbitfs_runtime_access_probe",legacyCompatibility};
 }
 function sqlIdentifier(value:string){return `"${value.replaceAll('"','""')}"`}
 function runtimeReadPolicyName(table:string){return `orbitfs_runtime_read_${table}`}
@@ -248,7 +250,7 @@ async function verifyDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
   await databaseRestPreflight(install,publishable,contract.runtimeSecretPreflightTables,"publishable-key + runtime-secret",{[contract.runtimeSecretHeader]:dbSecret});
   const server=await supabaseSecretKey(install);
   await databaseRestPreflight(install,server,contract.serverPreflightTables,"server-secret");
-  await event(install,"database.runtime_access_verified","ok","Customer Supabase runtime access verified",{source,contractVersion:contract.version,legacyCompatibility:contract.legacyCompatibility,publicReadTables:contract.publicReadTables,authenticatedReadTables:contract.authenticatedReadTables,serverFullAccessTables:contract.serverFullAccessTables,restPreflightTables:contract.restPreflightTables,serverPreflightTables:contract.serverPreflightTables,runtimeSecretTablePrefixes:contract.runtimeSecretTablePrefixes,runtimeSecretExcludedTables:contract.runtimeSecretExcludedTables,runtimeSecretPreflightTables:contract.runtimeSecretPreflightTables});
+  await event(install,"database.runtime_access_verified","ok","Customer Supabase runtime access verified",{source,contractVersion:contract.version,legacyCompatibility:contract.legacyCompatibility,publicReadTables:contract.publicReadTables,authenticatedReadTables:contract.authenticatedReadTables,serverFullAccessTables:contract.serverFullAccessTables,restPreflightTables:contract.restPreflightTables,serverPreflightTables:contract.serverPreflightTables,runtimeSecretTablePrefixes:contract.runtimeSecretTablePrefixes,runtimeSecretExcludedTables:contract.runtimeSecretExcludedTables,runtimeSecretPreflightTables:contract.runtimeSecretPreflightTables,runtimeSecretProbeRpc:contract.runtimeSecretProbeRpc});
 }
 async function repairDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeAccessContract,source:string){
   await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:runtimeAccessGrantSql(contract)})});
@@ -663,7 +665,8 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
       runtimeSecretTablePrefixes:accessContract.runtimeSecretTablePrefixes,
       runtimeSecretExcludedTables:accessContract.runtimeSecretExcludedTables,
       runtimeSecretPreflightTables:accessContract.runtimeSecretPreflightTables,
-      runtimeSecretRepairRpc:accessContract.runtimeSecretRepairRpc
+      runtimeSecretRepairRpc:accessContract.runtimeSecretRepairRpc,
+      runtimeSecretProbeRpc:accessContract.runtimeSecretProbeRpc
     }),
     ORBITFS_INSTALLATION_ID:String(install.installation_id||"").trim(),
     ORBITFS_INSTALLATION_ROUTE:"billing_store",
