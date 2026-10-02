@@ -159,7 +159,14 @@ export async function GET(req:Request){
   const baseComparison=install?.release_version&&latestBase?.version?compareOrbitReleaseVersions(latestBase.version,install.release_version):null;
   const baseUpdateAvailable=Boolean(baseReleaseDiscoveryByChannel[selectedChannel]?.available===true&&install?.vercel_project_id&&install?.release_id&&latestBase?.id&&String(latestBase.id)!==String(install.release_id)&&baseComparison!==null&&baseComparison>0);
   const baseUpdateStatus=baseReleaseDiscoveryByChannel[selectedChannel]?.available!==true?"authority_unavailable":!install?.release_version?"not_installed":!latestBase?"no_published_release":baseUpdateAvailable?"update_available":"current";
-  const activeOperation=(operationRows.data||[]).find((row:any)=>["requested","authorising","validated","deploying","migrating","verifying","promoting"].includes(String(row.state||"")))||null;
+  const setupResetAtRaw=String(install?.metadata?.setupResetAt||"").trim();
+  const setupResetAt=setupResetAtRaw?Date.parse(setupResetAtRaw):0;
+  const operationBelongsToCurrentSetup=(row:any)=>{
+    if(!setupResetAt||!Number.isFinite(setupResetAt))return true;
+    const createdAt=Date.parse(String(row?.created_at||""));
+    return Number.isFinite(createdAt)&&createdAt>=setupResetAt;
+  };
+  const activeOperation=(operationRows.data||[]).filter(operationBelongsToCurrentSetup).find((row:any)=>["requested","authorising","validated","deploying","migrating","verifying","promoting"].includes(String(row.state||"")))||null;
   const settingsChannels=allowedChannels;
   const s=settings.data||{},authority=masterAvailability.authority||{};
   const billingEnabled=s.enabled!==false,billingMaintenance=s.maintenance_mode===true;
