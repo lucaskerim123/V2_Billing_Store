@@ -173,6 +173,11 @@ async function installationDatabaseRuntimeAccessContract(install:any){
   const release=(releaseRows?.releases||[]).find((item:any)=>String(item?.id||"")===releaseId)||null;
   return databaseRuntimeAccessContract(release);
 }
+export async function ensureCustomerDatabaseRuntimeAccess(install:any,source="runtime"){
+  const accessContract=await installationDatabaseRuntimeAccessContract(install);
+  await repairDatabaseRuntimeAccess(install,accessContract,source);
+}
+
 
 const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
 export async function createOAuthState(userId:string,provider:"supabase"|"vercel",installationId:string|null,returnPath="/portal/orbitfs"){
@@ -536,8 +541,7 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
   if(!install?.supabase_project_ref)throw new Error("Customer Supabase project is not configured");
   if(!install?.vercel_project_id)throw new Error("Customer Vercel project is not configured");
   try{
-    const accessContract=await installationDatabaseRuntimeAccessContract(install);
-    await repairDatabaseRuntimeAccess(install,accessContract,"vercel-configure");
+    await ensureCustomerDatabaseRuntimeAccess(install,"vercel-configure");
   }catch(e:any){
     const message=String(e?.message||"Customer Supabase runtime-access repair failed");
     await licenseDb().from("orbitfs_installations").update({last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id);
