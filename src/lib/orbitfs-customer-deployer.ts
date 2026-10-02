@@ -3,7 +3,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest,type MasterDeploymentResult} from "@/lib/master-api";
-import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,resolveProductionUrl,checkPublicPanelHealth,ensureStandardPanelProtection,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {billingOrbitfsConfig,configureVercel,configureVercelUpdateIdentity,resolveProductionUrl,checkPublicPanelHealth,ensureStandardPanelProtection,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,ensureCustomerDatabaseRuntimeAccess,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 import {errorMessage} from "@/lib/error-message";
@@ -878,7 +878,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     try{
       await event(install,"update.database.started","info","Checking and applying approved customer database migrations",{releaseId:release.id,releaseVersion:release.version,migrationCount:applicableMigrations.length,skippedComponents});
       const databaseResult=await applyCustomerDatabaseMigrations(install,release,bundle,components);
-      await event(install,"update.database.completed","ok","Customer database migrations completed",{releaseId:release.id,releaseVersion:release.version,migrationCount:applicableMigrations.length,skippedComponents});
+      await ensureCustomerDatabaseRuntimeAccess(install,"update-migrations");
+      await event(install,"update.database.completed","ok","Customer database migrations completed and runtime access verified",{releaseId:release.id,releaseVersion:release.version,migrationCount:applicableMigrations.length,skippedComponents});
       if(wantsPanel&&panel)await event(install,"update.panel.started","info","Deploying the verified Panel update payload",{releaseId:release.id,releaseVersion:release.version});
       panelResult=wantsPanel&&panel?await deployPanelUpdatePayload(install,release,bundle,panel,parsed.artifactSha256,requestedChannel,components):null;
       if(wantsPanel&&panel)await event(install,"update.panel.completed","ok","Panel update deployment completed",{releaseId:release.id,releaseVersion:release.version});
