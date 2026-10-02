@@ -73,6 +73,22 @@ function validateDeployableBaseFiles(files:Array<{file:string;data:string;sha256
     "src/routes/api/setup/owner/+server.ts",
     "src/routes/api/store/update-engine/+server.ts"
   ])if(!byPath.has(required))fail(`Base release is missing required runtime/deployer file: ${required}`,422);
+  const environment=JSON.parse(decodedReleaseFile(byPath.get("deployment/base-environment.json")!).toString("utf8"));
+  const environmentNames=new Set((Array.isArray(environment?.variables)?environment.variables:[]).map((item:any)=>String(item?.name||"")));
+  for(const requiredEnvironment of ["SUPABASE_URL","SUPABASE_PUBLISHABLE_KEY","SUPABASE_SECRET_KEY","ORBITFS_SUPABASE_CONNECTION_ATTESTATION","ORBITFS_DB_SECRET"]){
+    if(!environmentNames.has(requiredEnvironment))fail(`Base release environment contract is missing ${requiredEnvironment}`,422);
+  }
+  const innerSource=decodedReleaseFile(byPath.get("src/lib/server/vercel-engine-provision.ts")!).toString("utf8");
+  for(const marker of [
+    "ORBITFS_SUPABASE_CONNECTION_ATTESTATION",
+    "ENGINE_SUPABASE_PROJECT_MISMATCH",
+    "ENGINE_SUPABASE_PUBLISHABLE_KEY_MISMATCH",
+    "ENGINE_SUPABASE_SERVER_KEY_MISMATCH",
+    "ENGINE_DATABASE_PUBLISHABLE_KEY_REJECTED",
+    "ENGINE_DATABASE_SERVER_KEY_REJECTED"
+  ]){
+    if(!innerSource.includes(marker))fail(`Base release Inner Engine deployer is missing Supabase safeguard: ${marker}`,422);
+  }
   baseVercelDeploymentFiles(files);
 }
 async function uploadVercelDeploymentFiles(userId:string,files:Array<{file:string;data:string;sha256:string;size:number}>){
