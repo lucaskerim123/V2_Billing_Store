@@ -482,13 +482,17 @@ export async function resolveProductionUrl(install:any,deployment?:any):Promise<
  const normalize=(v:any)=>String(v||"").trim().replace(/^https?:\/\//,"").replace(/\/$/,"").toLowerCase();
  const projectDomain=`${String(install.vercel_project_name||"").trim().toLowerCase()}.vercel.app`;
  const deploymentHost=normalize(deployment?.url);
- const aliases=Array.isArray(deployment?.alias)?deployment.alias.map(normalize):[];
- if(aliases.includes(projectDomain)&&projectDomain!==deploymentHost)return `https://${projectDomain}`;
+ const aliases=Array.isArray(deployment?.alias)?deployment.alias.map(normalize).filter(Boolean):[];
  const result=await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(String(install.vercel_project_id))}/domains`,{method:"GET"});
  const domains=Array.isArray(result?.domains)?result.domains:[];
  const candidates=domains.filter((d:any)=>d?.verified!==false&&normalize(d?.name)&&normalize(d?.name)!==deploymentHost);
- const chosen=candidates.find((d:any)=>normalize(d.name)===projectDomain)||candidates.find((d:any)=>!d.redirect&&normalize(d.name).endsWith(".vercel.app"))||candidates.find((d:any)=>!d.redirect)||candidates[0];
- const name=normalize(chosen?.name);
+ const custom=candidates.find((d:any)=>!d.redirect&&!normalize(d.name).endsWith(".vercel.app"))
+  ||candidates.find((d:any)=>!normalize(d.name).endsWith(".vercel.app"));
+ const customAlias=aliases.find((host:string)=>host!==deploymentHost&&!host.endsWith(".vercel.app"));
+ const project=candidates.find((d:any)=>normalize(d.name)===projectDomain);
+ const vercel=candidates.find((d:any)=>!d.redirect&&normalize(d.name).endsWith(".vercel.app"))
+  ||candidates.find((d:any)=>normalize(d.name).endsWith(".vercel.app"));
+ const name=normalize(custom?.name)||customAlias||normalize(project?.name)||(aliases.includes(projectDomain)&&projectDomain!==deploymentHost?projectDomain:"")||normalize(vercel?.name)||normalize(candidates[0]?.name);
  return name?`https://${name}`:null;
 }
 export async function checkPublicPanelHealth(url:string,path:string):Promise<boolean>{
@@ -520,9 +524,16 @@ export async function syncDeployment(install:any){
   const url=await resolveProductionUrl(install,result);
   const settings=await billingOrbitfsConfig();
   const healthy=url?await checkPublicPanelHealth(url,settings.health_path||"/api/health"):false;
-  const patch={state:"ready",health_status:healthy?"healthy":"degraded",last_health_at:new Date().toISOString(),production_url:url,deployment_url:resultUrl||install.deployment_url||history.data.deployment_url||null,last_error:healthy?null:!url?"Production domain is not assigned":"Production Panel public health check failed; inspect Vercel protection and runtime"};
+  const nextHealth=healthy?"healthy":"degraded";
+  const patch={state:"ready",health_status:nextHealth,last_health_at:new Date().toISOString(),production_url:url,deployment_url:resultUrl||install.deployment_url||history.data.deployment_url||null,last_error:healthy?null:!url?"Production domain is not assigned":"Production Panel public health check failed; inspect Vercel protection and runtime"};
   const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();
   if(error)throw error;
-  await event(data,"panel.ready",healthy?"ok":"warning",healthy?"OrbitFS Panel is ready in the customer Vercel account":"Panel deployed; health check is degraded",{url});
+  const previousUrl=String(install.production_url||"").replace(/\/$/,"");
+  const nextUrl=String(url||"").replace(/\/$/,"");
+  const domainChanged=previousUrl!==nextUrl;
+  const healthChanged=String(install.health_status||"")!==nextHealth;
+  const stateChanged=String(install.state||"")!=="ready";
+  if(domainChanged)await event(data,previousUrl?"panel.domain_changed":"panel.domain_detected",healthy?"ok":"warning",nextUrl?(previousUrl?`Production domain changed to ${nextUrl}`:`Production domain detected: ${nextUrl}`):"Production domain is no longer assigned",{previousUrl:previousUrl||null,url:nextUrl||null});
+  if(healthChanged||stateChanged)await event(data,"panel.ready",healthy?"ok":"warning",healthy?"OrbitFS Panel is ready in the customer Vercel account":"Panel deployed; health check is degraded",{url});
   return data;
 }
