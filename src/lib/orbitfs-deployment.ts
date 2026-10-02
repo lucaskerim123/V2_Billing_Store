@@ -216,11 +216,18 @@ async function repairDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
   await verifyDatabaseRuntimeAccess(install,contract,source);
 }
 async function installationDatabaseRuntimeAccessContract(install:any){
-  const channel=String(install.release_channel||"stable").trim().toLowerCase()||"stable",releaseId=String(install.release_id||"").trim();
-  if(!releaseId)throw Object.assign(new Error("Installation is missing its authoritative Base release id"),{status:409,code:"BASE_RELEASE_ID_MISSING"});
-  const releaseRows=await masterReleases("orbitfs_base",channel,"base","deployer",true,true);
-  const release=(releaseRows?.releases||[]).find((item:any)=>String(item?.id||"")===releaseId)||null;
-  if(!release)throw Object.assign(new Error("License Manager could not resolve the installation Base release for runtime-access repair"),{status:409,code:"BASE_RELEASE_NOT_FOUND"});
+  const channel=String(install.release_channel||"stable").trim().toLowerCase()||"stable";
+  // Runtime-access policy is current technical authority, not historical installation identity.
+  // License Manager publishes exactly one current Base per channel; old release ids are retained
+  // only for deployment history/rollback and must never block repair of a live installation.
+  const releaseRows=await masterReleases("orbitfs_base",channel,"base","deployer",true,false);
+  const releases=Array.isArray(releaseRows?.releases)?releaseRows.releases:Array.isArray(releaseRows)?releaseRows:[];
+  const release=releases.find((item:any)=>
+    String(item?.status||"").toLowerCase()==="published"
+    &&String(item?.review_status||"").toLowerCase()==="approved"
+    &&!item?.archived_at
+  )||null;
+  if(!release)throw Object.assign(new Error(`License Manager has no current published Base release in ${channel} for runtime-access repair`),{status:409,code:"BASE_CURRENT_RELEASE_NOT_FOUND"});
   return databaseRuntimeAccessContract(release);
 }
 export async function ensureCustomerDatabaseRuntimeAccess(install:any,source="runtime"){
