@@ -84,18 +84,6 @@ type DatabaseRuntimeAccessContract={
   serverPreflightTables:string[];
   legacyCompatibility:boolean;
 };
-const LEGACY_DATABASE_RUNTIME_ACCESS_CONTRACT={
-  version:1,
-  schema:"public",
-  publishableRole:"anon",
-  authenticatedRole:"authenticated",
-  serviceRole:"service_role",
-  publicReadTables:["orbitfs_addons"],
-  authenticatedReadTables:["orbitfs_addons"],
-  serverFullAccessTables:["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log","orbitfs_profile_state","orbitfs_schema_migrations"],
-  restPreflightTables:["orbitfs_addons"],
-  serverPreflightTables:["orbitfs_schema_migrations"]
-};
 function runtimeAccessTables(value:any,label:string){
   const tables=(Array.isArray(value)?value:[]).map((item:any)=>String(item||"").trim()).filter(Boolean);
   if(!tables.length||tables.some((table:string)=>!/^[a-z_][a-z0-9_]*$/.test(table)))throw Object.assign(new Error(`Base release has an invalid ${label} runtime-access table list`),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
@@ -103,8 +91,9 @@ function runtimeAccessTables(value:any,label:string){
 }
 function databaseRuntimeAccessContract(release:any):DatabaseRuntimeAccessContract{
   const raw=release?.manifest?.databaseRuntimeAccess;
-  const legacyCompatibility=!(raw&&typeof raw==="object"&&!Array.isArray(raw));
-  const source=legacyCompatibility?LEGACY_DATABASE_RUNTIME_ACCESS_CONTRACT:raw;
+  if(!(raw&&typeof raw==="object"&&!Array.isArray(raw)))throw Object.assign(new Error("License Manager did not provide the authoritative Base database runtime-access contract"),{status:502,code:"BASE_DATABASE_RUNTIME_ACCESS_MISSING"});
+  const legacyCompatibility=false;
+  const source=raw;
   const schema=String(source.schema||"").trim(),publishableRole=String(source.publishableRole||"").trim(),authenticatedRole=String(source.authenticatedRole||"").trim(),serviceRole=String(source.serviceRole||"").trim();
   if(Number(source.version)!==1||schema!=="public"||publishableRole!=="anon"||authenticatedRole!=="authenticated"||serviceRole!=="service_role")throw Object.assign(new Error("Base release runtime-access contract is invalid"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
   const publicReadTables=runtimeAccessTables(source.publicReadTables,"public-read");
@@ -168,7 +157,7 @@ async function repairDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
 }
 async function installationDatabaseRuntimeAccessContract(install:any){
   const channel=String(install.release_channel||"stable").trim().toLowerCase()||"stable",releaseId=String(install.release_id||"").trim();
-  if(!releaseId)return databaseRuntimeAccessContract(null);
+  if(!releaseId)throw Object.assign(new Error("Installation is missing its authoritative Base release id"),{status:409,code:"BASE_RELEASE_ID_MISSING"});
   const releaseRows=await masterReleases("orbitfs_base",channel,"base","deployer");
   const release=(releaseRows?.releases||[]).find((item:any)=>String(item?.id||"")===releaseId)||null;
   return databaseRuntimeAccessContract(release);
