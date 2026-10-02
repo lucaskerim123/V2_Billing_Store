@@ -25,7 +25,7 @@ function decodedReleaseFile(file:{file:string;data:string;sha256?:string;size?:n
 }
 function isDatabaseOnlyBaseFile(path:string){
   const value=String(path||"").replaceAll("\\","/");
-  return value==="supabase/customer-schema.sql"||value.startsWith("supabase/migrations/");
+  return /^supabase\/.*\.sql$/i.test(value);
 }
 function baseVercelDeploymentFiles(files:Array<{file:string;data:string;sha256:string;size:number}>){
   const deploymentFiles=files.filter(file=>!isDatabaseOnlyBaseFile(file.file));
@@ -468,6 +468,22 @@ async function waitForReady(userId:string,id:string):Promise<any>{
   }
   return last;
 }
+async function registerInstalledBaseRoute(baseUrl:string,install:any,deploymentId:string){
+  const secret=await customerInstallationDbSecret(String(install.id));
+  const target=String(baseUrl||"").trim().replace(/\/+$/,"");
+  if(!target)fail("Deployed Base URL is unavailable for first-time setup registration",502,"BASE_SETUP_ROUTE_UNAVAILABLE",true);
+  const response=await fetch(`${target}/api/setup/register-installation`,{
+    method:"POST",
+    headers:{"content-type":"application/json","x-orbitfs-db-secret":secret,"x-orbitfs-installation-id":String(install.installation_id||"")},
+    body:JSON.stringify({installationRoute:"billing_store",registeredBy:"billing_store",deploymentId,projectId:String(install.vercel_project_id||"")}),
+    cache:"no-store",
+    signal:AbortSignal.timeout(30000)
+  });
+  const body:any=await response.json().catch(()=>({}));
+  if(!response.ok)fail(errorMessage(body?.error??body?.message??body,`Deployed Base setup registration returned ${response.status}`),response.status<500?response.status:502,"BASE_SETUP_ROUTE_REGISTRATION_FAILED",response.status>=500);
+  if(body?.installation?.route!=="billing_store")fail("Deployed Base did not confirm the Billing Store installation route",502,"BASE_SETUP_ROUTE_REGISTRATION_FAILED",true);
+  return body;
+}
 async function deployPanelUpdatePayload(install:any,release:any,bundle:UpdateBundle,panel:Package,artifactSha256:string,channel:string,executionComponents:string[]){
   const installedBase=String(install.release_version||"").trim();
   const minimumBase=String(bundle.minimumBaseVersion||(panel as any).baseVersion||"").trim();
@@ -704,19 +720,10 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
   const components:string[]=[...new Set<string>((Array.isArray(applied?.components)?applied.components:[]).map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean))];
   if(!components.length)fail("Applied Update component history is incomplete",409);
   const channel=String(applied?.channel||install.release_channel||"stable").trim().toLowerCase();
-  const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
-  if(registration?.valid!==true||String(registration?.installationId||"")!==String(install.installation_id||""))fail("Register an OrbitFS runtime licence key for this installation before deployment",409);
   const bindingResult=await licenseDb().from("license_bindings").select("license_id,desired_state,remote_state").eq("id",String(install.license_binding_id||"")).eq("auth_user_id",String(install.auth_user_id||"")).is("archived_at",null).maybeSingle();
   if(bindingResult.error)throw bindingResult.error;
   const authorityLicenseId=String(bindingResult.data?.license_id||"").trim();
   if(!authorityLicenseId)fail("This installation is not linked to an authoritative Billing licence",409,"LICENSE_BINDING_REQUIRED");
-  // Runtime registration and the Billing entitlement must identify the same
-  // authoritative licence. Never submit a different Billing licence ID for
-  // a customer's registered installation.
-  const registeredLicenseId=String(registration?.masterLicenseId||"").trim();
-  if(registeredLicenseId&&registeredLicenseId!==authorityLicenseId){
-    fail("The licence registered on this installation does not match its Billing entitlement. Register the licence assigned to this installation before applying an Update.",409,"INSTALLATION_LICENSE_BINDING_MISMATCH");
-  }
   if(["revoked","expired"].includes(String(bindingResult.data?.desired_state||bindingResult.data?.remote_state||"").toLowerCase()))fail("The installation's Billing licence is not active",403,"LICENSE_BINDING_INACTIVE");
   const wantsPanel=components.includes("base"),wantsEngine=components.some((component:string)=>component!=="base");
   const baseUrl=String(install.production_url||install.deployment_url||"").trim();
@@ -768,17 +775,10 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const allowedChannels=await customerReleaseChannels(String(install.auth_user_id),install.license_binding_id||null);
   if(!allowedChannels.includes(requestedChannel))fail(`Release channel "${requestedChannel}" is not available for this installation's licence`,403);
   await requireSystem(action==="rollback"?"rollback":action==="base_update"?"base_update":action==="update"?"update":"deploy");
-  const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
-  if(registration?.valid!==true||String(registration?.installationId||"")!==String(install.installation_id||""))fail("Register an OrbitFS runtime licence key for this installation before deployment",409);
   const bindingResult=await licenseDb().from("license_bindings").select("license_id,desired_state,remote_state").eq("id",String(install.license_binding_id||"")).eq("auth_user_id",String(install.auth_user_id||"")).is("archived_at",null).maybeSingle();
   if(bindingResult.error)throw bindingResult.error;
   const authorityLicenseId=String(bindingResult.data?.license_id||"").trim();
   if(!authorityLicenseId)fail("This installation is not linked to an authoritative Billing licence",409,"LICENSE_BINDING_REQUIRED");
-  // Do not ask License Manager to authorize a different licence from the one
-  // activated for this exact customer installation.
-  const registeredMasterLicenseId=String(registration?.masterLicenseId||"").trim();
-  if(!registeredMasterLicenseId)fail("Registered installation licence identity is missing. Re-register the assigned licence before deploying.",409,"REGISTERED_LICENSE_ID_MISSING");
-  if(registeredMasterLicenseId!==authorityLicenseId)fail("The registered runtime licence differs from this installation's Billing entitlement. Resolve the binding before retrying.",409,"INSTALLATION_LICENSE_BINDING_MISMATCH");
   if(["revoked","expired"].includes(String(bindingResult.data?.desired_state||bindingResult.data?.remote_state||"").toLowerCase()))fail("The installation's Billing licence is not active",403,"LICENSE_BINDING_INACTIVE");
 
   let rollbackTarget:any=null;
@@ -947,6 +947,9 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const ready=await waitForReady(install.auth_user_id,deploymentId),state=String(ready?.readyState||ready?.state||"");if(state!=="READY")fail("Vercel deployment did not become ready within the deployment window",504);
   const previousVersion=install.release_version||null,deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url;
   const productionUrl=await resolveProductionUrl(install,ready);
+  // Register the deployed Base as Billing-managed before the customer opens its
+  // first-time installer. Licence activation itself happens later inside Base.
+  await registerInstalledBaseRoute(productionUrl||deploymentUrl,install,deploymentId);
   // Do not publish an individual protected deployment URL as the customer-facing address.
   await configureVercel(install,String(release.version),productionUrl||undefined,requestedChannel,String(release.id),parsed.artifactSha256,String(parsed.pkg.sourceCommit||release.sourceCommit||""));
   // Billing Store owns deployment coordination only. Base owns first-time bootstrap:
