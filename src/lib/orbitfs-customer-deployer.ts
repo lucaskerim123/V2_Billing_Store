@@ -62,6 +62,12 @@ function validateDeployableBaseFiles(files:Array<{file:string;data:string;sha256
     "src/routes/api/engine-license/+server.ts",
     "src/routes/api/license/activate/+server.ts",
     "src/routes/api/license/status/+server.ts",
+    "src/hooks.server.ts",
+    "src/routes/setup/+page.svelte",
+    "src/routes/setup/owner/+page.svelte",
+    "src/routes/api/setup/[...rest]/+server.ts",
+    "src/routes/api/setup/status/+server.ts",
+    "src/routes/api/setup/owner/+server.ts",
     "src/routes/api/store/update-engine/+server.ts"
   ])if(!byPath.has(required))fail(`Base release is missing required runtime/deployer file: ${required}`,422);
   baseVercelDeploymentFiles(files);
