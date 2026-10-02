@@ -169,8 +169,9 @@ async function repairDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
 async function installationDatabaseRuntimeAccessContract(install:any){
   const channel=String(install.release_channel||"stable").trim().toLowerCase()||"stable",releaseId=String(install.release_id||"").trim();
   if(!releaseId)throw Object.assign(new Error("Installation is missing its authoritative Base release id"),{status:409,code:"BASE_RELEASE_ID_MISSING"});
-  const releaseRows=await masterReleases("orbitfs_base",channel,"base","deployer");
+  const releaseRows=await masterReleases("orbitfs_base",channel,"base","deployer",true,true);
   const release=(releaseRows?.releases||[]).find((item:any)=>String(item?.id||"")===releaseId)||null;
+  if(!release)throw Object.assign(new Error("License Manager could not resolve the installation Base release for runtime-access repair"),{status:409,code:"BASE_RELEASE_NOT_FOUND"});
   return databaseRuntimeAccessContract(release);
 }
 export async function ensureCustomerDatabaseRuntimeAccess(install:any,source="runtime"){
