@@ -660,6 +660,7 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     ORBITFS_DATABASE_RUNTIME_ACCESS_CONTRACT:JSON.stringify({
       version:accessContract.version,
       schema:accessContract.schema,
+      publicReadTables:accessContract.publicReadTables,
       runtimeSecretHeader:accessContract.runtimeSecretHeader,
       runtimeSecretRoles:accessContract.runtimeSecretRoles,
       runtimeSecretTablePrefixes:accessContract.runtimeSecretTablePrefixes,
