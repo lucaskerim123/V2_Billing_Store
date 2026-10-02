@@ -61,9 +61,6 @@ export type MasterDeploymentResult={
   release?:{id?:string;version?:string;releaseType?:string;product?:string;artifactSha256?:string;sourceRepo?:string;sourceRef?:string};
   execution?:string;
 };
-export async function masterRegisterInstallation(input:any){
-  return masterRequest("/api/v1/deployer",{method:"POST",body:JSON.stringify({...input,action:"register_runtime"})},"deployer");
-}
 export async function masterExecuteDeployment(input:any):Promise<MasterDeploymentResult>{
   return await masterRequest("/api/v1/deployer",{method:"POST",body:JSON.stringify({...input,phase:input.phase||"authorize"})},"deployer") as MasterDeploymentResult;
 }
