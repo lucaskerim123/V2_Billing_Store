@@ -62,11 +62,6 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const allowedChannels=await customerReleaseChannels(String(user.id),install.license_binding_id||null);
     if(!allowedChannels.includes(channel))throw Object.assign(new Error(`Release channel "${channel}" is not available for this installation's licence`),{status:403,code:"RELEASE_CHANNEL_ACCESS_DENIED"});
 
-    const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
-    if(registration?.valid!==true||String(registration?.installationId||"")!==String(install.installation_id||"")){
-      throw Object.assign(new Error("Register an OrbitFS runtime licence key for this installation before forcing a Base reinstall"),{status:409,code:"LICENSE_REGISTRATION_REQUIRED"});
-    }
-
     const bindingResult=await licenseDb().from("license_bindings").select("license_id,desired_state,remote_state,license_key_last4").eq("id",String(install.license_binding_id||"")).eq("auth_user_id",String(user.id)).is("archived_at",null).maybeSingle();
     if(bindingResult.error)throw bindingResult.error;
     if(!bindingResult.data?.license_id)throw Object.assign(new Error("This installation is not linked to an authoritative Billing licence"),{status:409,code:"LICENSE_BINDING_REQUIRED"});
@@ -85,7 +80,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     if(active.data)throw Object.assign(new Error(`A Base lifecycle operation is already ${String(active.data.state).replaceAll("_"," ")}. Wait for it to finish before forcing a reinstall.`),{status:409,code:"OPERATION_IN_PROGRESS",operationId:active.data.id,retryable:true});
 
     const previousProjectId=String(install.vercel_project_id||"").trim()||null;
-    const previousKeyHint=String(registration?.keyHint||"").trim()||null;
+    const previousKeyHint=String(bindingResult.data.license_key_last4||"").trim()?`••••${String(bindingResult.data.license_key_last4).trim()}`:null;
 
     const authorityStart=await masterInstallationLifecycle({
       action:"base_reinstall",
@@ -192,7 +187,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
         result:{previousProjectId,activationReleased:true,runtimeLicenceCleared:true},
       });
 
-      await event(install,"base.force_reinstall.waiting_license","warning",`Base project removed and licence activation released. Rotate the licence key, then register the new key to continue with published Base ${release.version}.`,{
+      await event(install,"base.force_reinstall.waiting_license","warning",`Base project removed and licence activation released. Rotate the licence key, then continue the reinstall. The replacement key is entered inside the deployed Base.`,{
         previousProjectId,
         targetReleaseId:String(release.id),
         targetVersion:String(release.version),
@@ -207,7 +202,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
         previousProjectId,
         targetRelease:{id:String(release.id),version:String(release.version),channel},
         installation:install,
-        message:`Base was removed and the licence was released. Rotate your licence key, then enter the new key in Base Deployment. OrbitFS will automatically reinstall published Base ${release.version} after the new key is registered.`,
+        message:`Base was removed and the licence was released. Rotate your licence key, then continue the reinstall from Base Deployment. Enter the new key only after the new Base site is live.`,
       },{headers:{"cache-control":"no-store"}});
     }catch(error:any){
       const message=error?.message||"Base force reinstall failed";
