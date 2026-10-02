@@ -152,7 +152,10 @@ async function databaseRestPreflight(install:any,key:string,tables:string[],cred
     const response=await fetch(url,{headers:{apikey:key,accept:"application/json",...extraHeaders},cache:"no-store"});
     if(!response.ok){
       const detail=(await response.text()).slice(0,500);
-      throw Object.assign(new Error(`Customer Supabase ${credential} preflight failed for ${table} (HTTP ${response.status}): ${detail}`),{status:502,code:"CUSTOMER_DATABASE_RUNTIME_ACCESS_FAILED"});
+      const code=response.status===401||response.status===403
+        ?(credential.includes("publishable")?"CUSTOMER_SUPABASE_PUBLISHABLE_KEY_REJECTED":"CUSTOMER_SUPABASE_SERVER_KEY_REJECTED")
+        :"CUSTOMER_DATABASE_RUNTIME_ACCESS_FAILED";
+      throw Object.assign(new Error(`Customer Supabase ${credential} preflight failed for ${table} (HTTP ${response.status}): ${detail}`),{status:502,code});
     }
   }
 }
@@ -513,25 +516,84 @@ async function supabaseProjectKeys(install:any){
   const keys=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/api-keys?reveal=true`) as any[];
   return Array.isArray(keys)?keys:[];
 }
+function supabaseApiKeyValue(key:any){return String(key?.api_key||key?.key||key?.value||"").trim()}
+function supabaseApiKeyDisabled(key:any){
+  const state=String(key?.status||key?.state||"").trim().toLowerCase();
+  return key?.disabled===true||["disabled","revoked","inactive","deleted"].includes(state);
+}
+function supabaseApiKeyFormat(value:string){
+  if(value.startsWith("sb_publishable_"))return "publishable";
+  if(value.startsWith("sb_secret_"))return "secret";
+  if(value.startsWith("eyJ")&&value.split(".").length===3)return "legacy-jwt";
+  return "unknown";
+}
+function supabaseApiKeyFingerprint(value:string){return createHash("sha256").update(value).digest("hex")}
+function supabaseKeyRequestHeaders(value:string){
+  const headers:Record<string,string>={apikey:value,accept:"application/json","user-agent":"OrbitFS-Billing-Deployer/1.0"};
+  if(value.startsWith("eyJ")&&value.split(".").length===3)headers.authorization=`Bearer ${value}`;
+  return headers;
+}
+const wait=(ms:number)=>new Promise<void>((resolve)=>setTimeout(resolve,ms));
+async function probeSupabaseApiKey(install:any,value:string,kind:"publishable"|"server"){
+  const ref=String(install?.supabase_project_ref||"").trim();
+  assertCustomerSupabaseRef(ref);
+  if(!value||supabaseApiKeyFormat(value)==="unknown")return false;
+  const url=`https://${ref}.supabase.co/auth/v1/settings`;
+  let response:Response;
+  try{
+    response=await fetch(url,{headers:supabaseKeyRequestHeaders(value),cache:"no-store",signal:AbortSignal.timeout(10000)});
+  }catch(error:any){
+    throw Object.assign(new Error(`Could not reach customer Supabase while validating the ${kind} API key: ${String(error?.message||error)}`),{status:502,code:"CUSTOMER_SUPABASE_KEY_PROBE_FAILED"});
+  }
+  if(response.ok)return true;
+  if(response.status===401||response.status===403)return false;
+  const detail=(await response.text().catch(()=>"")).slice(0,500);
+  throw Object.assign(new Error(`Customer Supabase ${kind} API-key validation failed unexpectedly (HTTP ${response.status})${detail?`: ${detail}`:""}`),{status:502,code:"CUSTOMER_SUPABASE_KEY_PROBE_FAILED"});
+}
+async function firstWorkingSupabaseKey(install:any,keys:any[],kind:"publishable"|"server"){
+  const seen=new Set<string>();
+  for(const key of keys){
+    if(supabaseApiKeyDisabled(key))continue;
+    const value=supabaseApiKeyValue(key);
+    if(!value||seen.has(value))continue;
+    seen.add(value);
+    if(await probeSupabaseApiKey(install,value,kind))return value;
+  }
+  return "";
+}
+async function createAndValidateSupabaseKey(install:any,type:"publishable"|"secret",kind:"publishable"|"server"){
+  const created=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/api-keys?reveal=true`,{
+    method:"POST",
+    body:JSON.stringify({type,name:`orbitfs-${kind}-${Date.now().toString(36)}`})
+  });
+  const value=supabaseApiKeyValue(created);
+  if(!value)throw Object.assign(new Error(`Supabase created a ${kind} API key but did not return its value`),{status:502,code:"CUSTOMER_SUPABASE_KEY_CREATE_FAILED"});
+  for(const delay of [0,250,750,1500,3000]){
+    if(delay)await wait(delay);
+    if(await probeSupabaseApiKey(install,value,kind))return value;
+  }
+  throw Object.assign(new Error(`New customer Supabase ${kind} API key was created but did not become usable`),{status:502,code:"CUSTOMER_SUPABASE_KEY_NOT_ACTIVE"});
+}
 async function publishableKey(install:any){
   const keys=await supabaseProjectKeys(install);
-  let key=keys.find((x:any)=>x.type==="publishable")||keys.find((x:any)=>x.name==="anon"||x.type==="anon");
-  if(!key){
-    const created=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/api-keys?reveal=true`,{method:"POST",body:JSON.stringify({type:"publishable",name:"default"})});
-    key=created;
-  }
-  const value=key?.api_key||key?.key||key?.value;
-  if(!value)throw new Error("Could not retrieve or create a Supabase publishable key from the customer's project");
-  return String(value);
+  const candidates=[
+    ...keys.filter((x:any)=>x.type==="publishable"),
+    ...keys.filter((x:any)=>x.name==="anon"||x.type==="anon"||x.type==="legacy")
+  ];
+  const live=await firstWorkingSupabaseKey(install,candidates,"publishable");
+  if(live)return live;
+  return createAndValidateSupabaseKey(install,"publishable","publishable");
 }
 async function supabaseSecretKey(install:any){
   const keys=await supabaseProjectKeys(install);
-  const key=keys.find((x:any)=>x.type==="secret")
-    ||keys.find((x:any)=>x.name==="service_role"||x.type==="service_role")
-    ||keys.find((x:any)=>String(x.name||"").toLowerCase().includes("secret"));
-  const value=key?.api_key||key?.key||key?.value;
-  if(!value)throw new Error("Could not retrieve the required Supabase server secret key from the customer's project");
-  return String(value);
+  const candidates=[
+    ...keys.filter((x:any)=>x.type==="secret"),
+    ...keys.filter((x:any)=>x.name==="service_role"||x.type==="service_role"),
+    ...keys.filter((x:any)=>String(x.name||"").toLowerCase().includes("secret"))
+  ];
+  const live=await firstWorkingSupabaseKey(install,candidates,"server");
+  if(live)return live;
+  return createAndValidateSupabaseKey(install,"secret","server");
 }
 export async function customerSupabaseServerKey(install:any){return supabaseSecretKey(install)}
 
@@ -612,6 +674,14 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     SUPABASE_URL:`https://${install.supabase_project_ref}.supabase.co`,
     SUPABASE_PUBLISHABLE_KEY:key,
     SUPABASE_SECRET_KEY:supabaseServerKey,
+    ORBITFS_SUPABASE_CONNECTION_ATTESTATION:JSON.stringify({
+      version:1,
+      projectRef:String(install.supabase_project_ref||"").trim(),
+      publishableKeySha256:supabaseApiKeyFingerprint(key),
+      publishableKeyFormat:supabaseApiKeyFormat(key),
+      serverKeySha256:supabaseApiKeyFingerprint(supabaseServerKey),
+      serverKeyFormat:supabaseApiKeyFormat(supabaseServerKey)
+    }),
     ORBITFS_DB_SECRET:secret,
     ORBITFS_DATABASE_RUNTIME_ACCESS_CONTRACT:JSON.stringify({
       version:accessContract.version,
@@ -647,6 +717,13 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     ORBITFS_RELEASE_SOURCE_COMMIT:sourceCommit
   };
   for(const [name,value] of Object.entries(vars)){if(value)await upsertVercelEnv(install,name,value)}
+  await event(install,"supabase.runtime_credentials_attested","ok","Validated customer Supabase credentials were written to the Base deployment",{
+    projectRef:String(install.supabase_project_ref||"").trim(),
+    publishableKeyFingerprint:supabaseApiKeyFingerprint(key).slice(0,16),
+    publishableKeyFormat:supabaseApiKeyFormat(key),
+    serverKeyFingerprint:supabaseApiKeyFingerprint(supabaseServerKey).slice(0,16),
+    serverKeyFormat:supabaseApiKeyFormat(supabaseServerKey)
+  });
 }
 export async function configureVercelUpdateIdentity(install:any,input:{version:string;releaseId:string;sha256:string;sourceCommit?:string|null;channel:string;components?:string[]}){
   if(!install?.vercel_project_id)throw new Error("Customer Vercel project is not configured");
