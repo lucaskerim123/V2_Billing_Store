@@ -132,7 +132,7 @@ async function databaseRestPreflight(install:any,key:string,tables:string[],cred
     const url=new URL(`https://${install.supabase_project_ref}.supabase.co/rest/v1/${table}`);
     url.searchParams.set("select","*");
     url.searchParams.set("limit","1");
-    const response=await fetch(url,{headers:{apikey:key,authorization:`Bearer ${key}`,accept:"application/json"},cache:"no-store"});
+    const response=await fetch(url,{headers:{apikey:key,accept:"application/json"},cache:"no-store"});
     if(!response.ok){
       const detail=(await response.text()).slice(0,500);
       throw Object.assign(new Error(`Customer Supabase ${credential} preflight failed for ${table} (HTTP ${response.status}): ${detail}`),{status:502,code:"CUSTOMER_DATABASE_RUNTIME_ACCESS_FAILED"});
