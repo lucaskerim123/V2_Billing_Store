@@ -38,6 +38,12 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     let releaseId=body.releaseId?String(body.releaseId).trim():undefined;
     if(version?.startsWith("release:")&&!releaseId){releaseId=version.slice(8).trim()||undefined;version=undefined}
     if(version?.startsWith("update:"))version=version.slice(7).trim()||undefined;
+    if(action==="redeploy"){
+      // Current published Base is the only redeploy authority. Ignore stale callers
+      // that still send a historical installation release id/version.
+      releaseId=undefined;
+      version=undefined;
+    }
     const channel=String(body.channel||install.release_channel||"stable").trim().toLowerCase();
     if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw Object.assign(new Error("Invalid release channel"),{status:400});
     const reason=body.reason?String(body.reason).trim():undefined;
