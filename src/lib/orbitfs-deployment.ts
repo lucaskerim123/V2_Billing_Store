@@ -82,6 +82,12 @@ type DatabaseRuntimeAccessContract={
   serverFullAccessTables:string[];
   restPreflightTables:string[];
   serverPreflightTables:string[];
+  runtimeSecretHeader:"x-orbitfs-secret";
+  runtimeSecretRoles:string[];
+  runtimeSecretTablePrefixes:string[];
+  runtimeSecretExcludedTables:string[];
+  runtimeSecretPreflightTables:string[];
+  runtimeSecretRepairRpc:"orbitfs_repair_runtime_access";
   legacyCompatibility:boolean;
 };
 function runtimeAccessTables(value:any,label:string){
@@ -89,6 +95,12 @@ function runtimeAccessTables(value:any,label:string){
   if(!tables.length||tables.some((table:string)=>!/^[a-z_][a-z0-9_]*$/.test(table)))throw Object.assign(new Error(`Base release has an invalid ${label} runtime-access table list`),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
   return [...new Set(tables)];
 }
+function runtimeAccessPrefixes(value:any,label:string){
+  const prefixes=(Array.isArray(value)?value:[]).map((item:any)=>String(item||"").trim()).filter(Boolean);
+  if(!prefixes.length||prefixes.some((prefix:string)=>!/^[a-z_][a-z0-9_]*$/.test(prefix)))throw Object.assign(new Error(`Base release has an invalid ${label} runtime-access prefix list`),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
+  return [...new Set(prefixes)];
+}
+function sqlLiteral(value:string){return "'"+value.replaceAll("'","''")+"'"}
 function databaseRuntimeAccessContract(release:any):DatabaseRuntimeAccessContract{
   const raw=release?.manifest?.databaseRuntimeAccess;
   if(!(raw&&typeof raw==="object"&&!Array.isArray(raw)))throw Object.assign(new Error("License Manager did not provide the authoritative Base database runtime-access contract"),{status:502,code:"BASE_DATABASE_RUNTIME_ACCESS_MISSING"});
@@ -101,9 +113,17 @@ function databaseRuntimeAccessContract(release:any):DatabaseRuntimeAccessContrac
   const serverFullAccessTables=runtimeAccessTables(source.serverFullAccessTables,"server-full-access");
   const restPreflightTables=runtimeAccessTables(source.restPreflightTables,"REST-preflight");
   const serverPreflightTables=runtimeAccessTables(source.serverPreflightTables,"server-REST-preflight");
+  const runtimeSecretHeader=String(source.runtimeSecretHeader||"").trim();
+  const runtimeSecretRoles=runtimeAccessTables(source.runtimeSecretRoles,"runtime-secret-role");
+  const runtimeSecretTablePrefixes=runtimeAccessPrefixes(source.runtimeSecretTablePrefixes,"runtime-secret-table");
+  const runtimeSecretExcludedTables=runtimeAccessTables(source.runtimeSecretExcludedTables,"runtime-secret-excluded");
+  const runtimeSecretPreflightTables=runtimeAccessTables(source.runtimeSecretPreflightTables,"runtime-secret-preflight");
+  const runtimeSecretRepairRpc=String(source.runtimeSecretRepairRpc||"").trim();
   if(restPreflightTables.some((table)=>!publicReadTables.includes(table)))throw Object.assign(new Error("Base release REST preflight tables must be included in public-read access"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
   if(serverPreflightTables.some((table)=>!serverFullAccessTables.includes(table)))throw Object.assign(new Error("Base release server preflight tables must be included in server full access"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
-  return {version:1,schema,publishableRole,authenticatedRole,serviceRole,publicReadTables,authenticatedReadTables,serverFullAccessTables,restPreflightTables,serverPreflightTables,legacyCompatibility};
+  if(runtimeSecretHeader!=="x-orbitfs-secret"||runtimeSecretRepairRpc!=="orbitfs_repair_runtime_access"||!["anon","authenticated"].every((role)=>runtimeSecretRoles.includes(role)))throw Object.assign(new Error("Base release runtime-secret access contract is invalid"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
+  if(runtimeSecretPreflightTables.some((table)=>runtimeSecretExcludedTables.includes(table)||!runtimeSecretTablePrefixes.some((prefix)=>table.startsWith(prefix))))throw Object.assign(new Error("Base release runtime-secret preflight tables are outside the permitted runtime table prefixes"),{status:422,code:"BASE_DATABASE_RUNTIME_ACCESS_INVALID"});
+  return {version:1,schema,publishableRole,authenticatedRole,serviceRole,publicReadTables,authenticatedReadTables,serverFullAccessTables,restPreflightTables,serverPreflightTables,runtimeSecretHeader:"x-orbitfs-secret",runtimeSecretRoles,runtimeSecretTablePrefixes,runtimeSecretExcludedTables,runtimeSecretPreflightTables,runtimeSecretRepairRpc:"orbitfs_repair_runtime_access",legacyCompatibility};
 }
 function sqlIdentifier(value:string){return `"${value.replaceAll('"','""')}"`}
 function runtimeReadPolicyName(table:string){return `orbitfs_runtime_read_${table}`}
@@ -117,21 +137,81 @@ function runtimeAccessGrantSql(contract:DatabaseRuntimeAccessContract){
     const policy=sqlIdentifier(runtimeReadPolicyName(table)),target=`${schema}.${sqlIdentifier(table)}`;
     return [`drop policy if exists ${policy} on ${target};`,`create policy ${policy} on ${target} for select to ${roles.join(", ")} using (true);`];
   });
+  const prefixes=contract.runtimeSecretTablePrefixes.map(sqlLiteral).join(",");
+  const excluded=contract.runtimeSecretExcludedTables.map(sqlLiteral).join(",");
+  const publicSelectExempt=[...new Set(contract.publicReadTables.filter((table)=>contract.authenticatedReadTables.includes(table)))].map(sqlLiteral).join(",");
+  const runtimeSecretSql=`do $orbitfs_runtime_access$
+declare
+  table_name text;
+  sequence_name text;
+begin
+  if to_regprocedure('private.orbitfs_server_secret_valid()') is null then
+    raise exception 'OrbitFS runtime secret validator is missing';
+  end if;
+  for table_name in
+    select c.relname
+    from pg_class c
+    join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname=${sqlLiteral(contract.schema)}
+      and c.relkind in ('r','p')
+      and exists(select 1 from unnest(array[${prefixes}]::text[]) p(prefix) where c.relname like p.prefix || '%')
+      and not (c.relname = any(array[${excluded}]::text[]))
+    order by c.relname
+  loop
+    execute format('alter table %I.%I enable row level security',${sqlLiteral(contract.schema)},table_name);
+    execute format('drop policy if exists "orbitfs runtime secret access" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+    execute format('create policy "orbitfs runtime secret access" on %I.%I as permissive for all to anon, authenticated using (private.orbitfs_server_secret_valid()) with check (private.orbitfs_server_secret_valid())',${sqlLiteral(contract.schema)},table_name);
+    if table_name = any(array[${publicSelectExempt}]::text[]) then
+      execute format('drop policy if exists "orbitfs runtime secret required" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+      execute format('drop policy if exists "orbitfs runtime secret required insert" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+      execute format('drop policy if exists "orbitfs runtime secret required update" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+      execute format('drop policy if exists "orbitfs runtime secret required delete" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+      execute format('create policy "orbitfs runtime secret required insert" on %I.%I as restrictive for insert to anon, authenticated with check (private.orbitfs_server_secret_valid())',${sqlLiteral(contract.schema)},table_name);
+      execute format('create policy "orbitfs runtime secret required update" on %I.%I as restrictive for update to anon, authenticated using (private.orbitfs_server_secret_valid()) with check (private.orbitfs_server_secret_valid())',${sqlLiteral(contract.schema)},table_name);
+      execute format('create policy "orbitfs runtime secret required delete" on %I.%I as restrictive for delete to anon, authenticated using (private.orbitfs_server_secret_valid())',${sqlLiteral(contract.schema)},table_name);
+    else
+      execute format('drop policy if exists "orbitfs runtime secret required insert" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+      execute format('drop policy if exists "orbitfs runtime secret required update" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+      execute format('drop policy if exists "orbitfs runtime secret required delete" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+      execute format('drop policy if exists "orbitfs runtime secret required" on %I.%I',${sqlLiteral(contract.schema)},table_name);
+      execute format('create policy "orbitfs runtime secret required" on %I.%I as restrictive for all to anon, authenticated using (private.orbitfs_server_secret_valid()) with check (private.orbitfs_server_secret_valid())',${sqlLiteral(contract.schema)},table_name);
+    end if;
+    execute format('grant select, insert, update, delete on table %I.%I to anon, authenticated',${sqlLiteral(contract.schema)},table_name);
+    execute format('grant all privileges on table %I.%I to service_role',${sqlLiteral(contract.schema)},table_name);
+  end loop;
+  for sequence_name in
+    select distinct seq.relname
+    from pg_class seq
+    join pg_namespace sn on sn.oid=seq.relnamespace
+    join pg_depend d on d.objid=seq.oid and d.deptype in ('a','i')
+    join pg_class tbl on tbl.oid=d.refobjid
+    join pg_namespace tn on tn.oid=tbl.relnamespace
+    where sn.nspname=${sqlLiteral(contract.schema)}
+      and tn.nspname=${sqlLiteral(contract.schema)}
+      and seq.relkind='S'
+      and exists(select 1 from unnest(array[${prefixes}]::text[]) p(prefix) where tbl.relname like p.prefix || '%')
+      and not (tbl.relname = any(array[${excluded}]::text[]))
+  loop
+    execute format('grant usage, select, update on sequence %I.%I to anon, authenticated, service_role',${sqlLiteral(contract.schema)},sequence_name);
+  end loop;
+end
+$orbitfs_runtime_access$;`;
   return [
     `grant usage on schema ${schema} to ${publishable}, ${authenticated}, ${service};`,
     ...contract.publicReadTables.map((table)=>`grant select on table ${schema}.${sqlIdentifier(table)} to ${publishable};`),
     ...contract.authenticatedReadTables.map((table)=>`grant select on table ${schema}.${sqlIdentifier(table)} to ${authenticated};`),
     ...policySql,
     ...contract.serverFullAccessTables.map((table)=>`grant all privileges on table ${schema}.${sqlIdentifier(table)} to ${service};`),
-    `grant usage, select, update on all sequences in schema ${schema} to ${service};`
+    `grant usage, select, update on all sequences in schema ${schema} to ${service};`,
+    runtimeSecretSql
   ].join("\n");
 }
-async function databaseRestPreflight(install:any,key:string,tables:string[],credential:string){
+async function databaseRestPreflight(install:any,key:string,tables:string[],credential:string,extraHeaders:Record<string,string>={}){
   for(const table of tables){
     const url=new URL(`https://${install.supabase_project_ref}.supabase.co/rest/v1/${table}`);
     url.searchParams.set("select","*");
     url.searchParams.set("limit","1");
-    const response=await fetch(url,{headers:{apikey:key,accept:"application/json"},cache:"no-store"});
+    const response=await fetch(url,{headers:{apikey:key,accept:"application/json",...extraHeaders},cache:"no-store"});
     if(!response.ok){
       const detail=(await response.text()).slice(0,500);
       throw Object.assign(new Error(`Customer Supabase ${credential} preflight failed for ${table} (HTTP ${response.status}): ${detail}`),{status:502,code:"CUSTOMER_DATABASE_RUNTIME_ACCESS_FAILED"});
@@ -146,6 +226,11 @@ async function verifyDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
   ];
   for(const table of contract.publicReadTables)checks.push({key:`publishable_select_${table}`,expr:`has_table_privilege('${contract.publishableRole}','${contract.schema}.${table}','SELECT')`});
   for(const table of contract.authenticatedReadTables)checks.push({key:`authenticated_select_${table}`,expr:`has_table_privilege('${contract.authenticatedRole}','${contract.schema}.${table}','SELECT')`});
+  for(const table of contract.runtimeSecretPreflightTables){
+    for(const role of contract.runtimeSecretRoles)for(const privilege of ["SELECT","INSERT","UPDATE","DELETE"])checks.push({key:`runtime_${role}_${privilege.toLowerCase()}_${table}`,expr:`has_table_privilege('${role}','${contract.schema}.${table}','${privilege}')`});
+    checks.push({key:`runtime_rls_${table}`,expr:`exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='${contract.schema}' and c.relname='${table}' and c.relrowsecurity)`});
+    checks.push({key:`runtime_secret_policy_${table}`,expr:`exists(select 1 from pg_policies where schemaname='${contract.schema}' and tablename='${table}' and policyname='orbitfs runtime secret access')`});
+  }
   for(const table of [...new Set([...contract.publicReadTables,...contract.authenticatedReadTables])])checks.push({key:`runtime_read_policy_${table}`,expr:`exists(select 1 from pg_policies where schemaname='${contract.schema}' and tablename='${table}' and policyname='${runtimeReadPolicyName(table)}' and cmd='SELECT')`});
   for(const table of contract.serverFullAccessTables){
     for(const privilege of ["SELECT","INSERT","UPDATE","DELETE"])checks.push({key:`service_${privilege.toLowerCase()}_${table}`,expr:`has_table_privilege('${contract.serviceRole}','${contract.schema}.${table}','${privilege}')`});
@@ -158,9 +243,12 @@ async function verifyDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
   if(failed.length)throw Object.assign(new Error(`Customer Supabase runtime-access verification failed: ${failed.join(", ")}`),{status:502,code:"CUSTOMER_DATABASE_RUNTIME_ACCESS_FAILED"});
   const publishable=await publishableKey(install);
   await databaseRestPreflight(install,publishable,contract.restPreflightTables,"publishable-key");
+  const dbSecret=String(await installationSecret(install.id,"db_secret")||"").trim();
+  if(!dbSecret)throw Object.assign(new Error("OrbitFS database secret is missing for runtime-secret preflight"),{status:409,code:"CUSTOMER_DATABASE_RUNTIME_SECRET_MISSING"});
+  await databaseRestPreflight(install,publishable,contract.runtimeSecretPreflightTables,"publishable-key + runtime-secret",{[contract.runtimeSecretHeader]:dbSecret});
   const server=await supabaseSecretKey(install);
   await databaseRestPreflight(install,server,contract.serverPreflightTables,"server-secret");
-  await event(install,"database.runtime_access_verified","ok","Customer Supabase runtime access verified",{source,contractVersion:contract.version,legacyCompatibility:contract.legacyCompatibility,publicReadTables:contract.publicReadTables,authenticatedReadTables:contract.authenticatedReadTables,serverFullAccessTables:contract.serverFullAccessTables,restPreflightTables:contract.restPreflightTables,serverPreflightTables:contract.serverPreflightTables});
+  await event(install,"database.runtime_access_verified","ok","Customer Supabase runtime access verified",{source,contractVersion:contract.version,legacyCompatibility:contract.legacyCompatibility,publicReadTables:contract.publicReadTables,authenticatedReadTables:contract.authenticatedReadTables,serverFullAccessTables:contract.serverFullAccessTables,restPreflightTables:contract.restPreflightTables,serverPreflightTables:contract.serverPreflightTables,runtimeSecretTablePrefixes:contract.runtimeSecretTablePrefixes,runtimeSecretExcludedTables:contract.runtimeSecretExcludedTables,runtimeSecretPreflightTables:contract.runtimeSecretPreflightTables});
 }
 async function repairDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeAccessContract,source:string){
   await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:runtimeAccessGrantSql(contract)})});
@@ -177,6 +265,7 @@ async function installationDatabaseRuntimeAccessContract(install:any){
 export async function ensureCustomerDatabaseRuntimeAccess(install:any,source="runtime"){
   const accessContract=await installationDatabaseRuntimeAccessContract(install);
   await repairDatabaseRuntimeAccess(install,accessContract,source);
+  return accessContract;
 }
 
 
@@ -541,8 +630,9 @@ const ORBITFS_LICENSE_TIMEOUT_MS="8000";
 export async function configureVercel(install:any,releaseVersion?:string,panelUrl?:string,releaseChannel?:string,releaseId?:string,releaseSha256?:string,releaseSourceCommit?:string){
   if(!install?.supabase_project_ref)throw new Error("Customer Supabase project is not configured");
   if(!install?.vercel_project_id)throw new Error("Customer Vercel project is not configured");
+  let accessContract:DatabaseRuntimeAccessContract;
   try{
-    await ensureCustomerDatabaseRuntimeAccess(install,"vercel-configure");
+    accessContract=await ensureCustomerDatabaseRuntimeAccess(install,"vercel-configure");
   }catch(e:any){
     const message=String(e?.message||"Customer Supabase runtime-access repair failed");
     await licenseDb().from("orbitfs_installations").update({last_error:message,updated_at:new Date().toISOString()}).eq("id",install.id);
@@ -565,6 +655,16 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     SUPABASE_PUBLISHABLE_KEY:key,
     SUPABASE_SECRET_KEY:supabaseServerKey,
     ORBITFS_DB_SECRET:secret,
+    ORBITFS_DATABASE_RUNTIME_ACCESS_CONTRACT:JSON.stringify({
+      version:accessContract.version,
+      schema:accessContract.schema,
+      runtimeSecretHeader:accessContract.runtimeSecretHeader,
+      runtimeSecretRoles:accessContract.runtimeSecretRoles,
+      runtimeSecretTablePrefixes:accessContract.runtimeSecretTablePrefixes,
+      runtimeSecretExcludedTables:accessContract.runtimeSecretExcludedTables,
+      runtimeSecretPreflightTables:accessContract.runtimeSecretPreflightTables,
+      runtimeSecretRepairRpc:accessContract.runtimeSecretRepairRpc
+    }),
     ORBITFS_INSTALLATION_ID:String(install.installation_id||"").trim(),
     ORBITFS_INSTALLATION_ROUTE:"billing_store",
     ORBITFS_PANEL_URL:panelUrl||"https://panel.incendiarynetworks.cc",
