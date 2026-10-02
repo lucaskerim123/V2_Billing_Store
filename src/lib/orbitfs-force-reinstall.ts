@@ -31,12 +31,7 @@ function idempotencyKey(install:any,pending:any,attempt:number){
 export async function completePendingBaseForceReinstall(install:any){
   const pending=pendingBaseForceReinstall(install);
   if(!pending)return null;
-  const registration=install?.metadata?.licenseRegistration&&typeof install.metadata.licenseRegistration==="object"?install.metadata.licenseRegistration:null;
-  if(registration?.valid!==true||String(registration?.installationId||"")!==String(install.installation_id||"")){
-    throw Object.assign(new Error("Enter and register the new rotated licence key before continuing the Base reinstall."),{status:409,code:"NEW_LICENSE_KEY_REQUIRED"});
-  }
-
-  const licenseId=String(registration.masterLicenseId||pending.licenseId||"").trim();
+  const licenseId=String(pending.licenseId||"").trim();
   if(!licenseId)throw Object.assign(new Error("Pending Base reinstall licence identity is incomplete. Start the force reinstall again."),{status:409,code:"BASE_REINSTALL_STATE_INCOMPLETE"});
 
   const authority=await masterInstallationLifecycle({
@@ -58,7 +53,7 @@ export async function completePendingBaseForceReinstall(install:any){
 
   const attempt=Math.max(0,Number(pending.attempts||0))+1;
   const startedAt=new Date().toISOString();
-  const rotationCompletedAt=String(authorityState.rotationCompletedAt||pending.rotationCompletedAt||registration.registeredAt||startedAt);
+  const rotationCompletedAt=String(authorityState.rotationCompletedAt||pending.rotationCompletedAt||startedAt);
   const nextPending={...pending,status:"deploying",rotationCompletedAt,targetReleaseId:releaseId,targetVersion:version,channel,authorityState:String(authorityState.state||""),attempts:attempt,lastAttemptAt:startedAt,lastError:null};
   install=await patchPending(install,nextPending);
 
