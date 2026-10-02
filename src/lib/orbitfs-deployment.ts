@@ -578,7 +578,7 @@ async function publishableKey(install:any){
   const keys=await supabaseProjectKeys(install);
   const candidates=[
     ...keys.filter((x:any)=>x.type==="publishable"),
-    ...keys.filter((x:any)=>x.name==="anon"||x.type==="anon"||x.type==="legacy")
+    ...keys.filter((x:any)=>String(x.name||"").toLowerCase()==="anon"||String(x.type||"").toLowerCase()==="anon"||String(x.role||"").toLowerCase()==="anon")
   ];
   const live=await firstWorkingSupabaseKey(install,candidates,"publishable");
   if(live)return live;
@@ -588,8 +588,8 @@ async function supabaseSecretKey(install:any){
   const keys=await supabaseProjectKeys(install);
   const candidates=[
     ...keys.filter((x:any)=>x.type==="secret"),
-    ...keys.filter((x:any)=>x.name==="service_role"||x.type==="service_role"),
-    ...keys.filter((x:any)=>String(x.name||"").toLowerCase().includes("secret"))
+    ...keys.filter((x:any)=>String(x.name||"").toLowerCase()==="service_role"||String(x.type||"").toLowerCase()==="service_role"||String(x.role||"").toLowerCase()==="service_role"),
+    ...keys.filter((x:any)=>String(x.name||"").toLowerCase().includes("secret")&&String(x.name||"").toLowerCase()!=="anon")
   ];
   const live=await firstWorkingSupabaseKey(install,candidates,"server");
   if(live)return live;
