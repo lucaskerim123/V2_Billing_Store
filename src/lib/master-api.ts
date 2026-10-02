@@ -18,7 +18,7 @@ export async function masterProducts(role:MasterRole="billing"){
 export async function masterLicenses(role:MasterRole="billing"){
   return masterRequest("/api/v1/license",{method:"GET",cache:"no-store"},role);
 }
-export async function masterReleases(product="orbitfs_base",channel="all",releaseType="all",role:MasterRole="billing",fresh=false){
+export async function masterReleases(product="orbitfs_base",channel="all",releaseType="all",role:MasterRole="billing",fresh=false,includeArchived=false){
   const qs=new URLSearchParams();
   const p=String(product||"").trim().toLowerCase();
   const c=String(channel||"").trim().toLowerCase();
@@ -26,6 +26,7 @@ export async function masterReleases(product="orbitfs_base",channel="all",releas
   if(p&&p!=="all")qs.set("product",p);
   if(c&&c!=="all")qs.set("channel",c);
   if(t&&t!=="all")qs.set("type",t);
+  if(includeArchived)qs.set("include_archived","true");
   const query=qs.toString();
   return masterRequest("/api/v1/releases"+(query?"?"+query:""),{method:"GET",...(fresh?{cache:"no-store" as RequestCache}:{})},role);
 }
