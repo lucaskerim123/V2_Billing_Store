@@ -26,9 +26,11 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string;actio
     if(action==="base_update"&&!releaseId)throw Object.assign(new Error("Base update requires an explicit published release ID."),{status:400,code:"BASE_UPDATE_RELEASE_REQUIRED"});
     if(action==="deploy"&&!releaseId)throw Object.assign(new Error("Base install requires an explicit published release ID."),{status:400,code:"BASE_INSTALL_RELEASE_REQUIRED"});
     if(action==="redeploy"){
-      releaseId=String(install.release_id||"").trim()||undefined;
-      version=String(install.release_version||"").trim()||undefined;
-      if(!releaseId)throw Object.assign(new Error("The installation does not have a current Base release to redeploy."),{status:409,code:"BASE_CURRENT_RELEASE_MISSING"});
+      // Redeploy means "deploy the current published Base for this channel".
+      // Historical installation release ids are audit/rollback metadata only.
+      releaseId=undefined;
+      version=undefined;
+      if(!install.vercel_project_id)throw Object.assign(new Error("The installation does not have an existing Base project to redeploy."),{status:409,code:"BASE_PROJECT_MISSING"});
     }
     if(action==="rollback"&&!reason)throw Object.assign(new Error("A rollback reason is required."),{status:400,code:"ROLLBACK_REASON_REQUIRED"});
 
