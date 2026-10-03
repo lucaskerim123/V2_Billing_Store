@@ -142,8 +142,8 @@ export default function MyOrbitFS(){
   useEffect(()=>{if(vercelConnection?.team_id!==undefined&&vercelConnection?.team_id!==null&&!vercelTeamId)setVercelTeamId(String(vercelConnection.team_id))},[vercelConnection?.team_id]);
   useEffect(()=>{
     if(!install||(!working&&!deploymentRequestActive)){pollCount.current=0;return}
-    if(pollCount.current>=300)return;
-    const timer=setTimeout(()=>{pollCount.current+=1;void refreshLiveBase()},3000);
+    if(pollCount.current>=90)return;
+    const timer=setTimeout(()=>{pollCount.current+=1;void refreshLiveBase()},10000);
     return()=>clearTimeout(timer);
   },[install?.id,install?.state,install?.vercel_deployment_id,activeOperation?.id,activeOperation?.state,activeOperation?.heartbeat_at,deploymentRequestActive]);
   useEffect(()=>{
@@ -293,8 +293,9 @@ export default function MyOrbitFS(){
       if(r.ok&&j.installation){
         const updated=j.installation;
         setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===updated.id?updated:x)}):current);
+        const terminal=!workingStates.has(String(updated.state||""));
+        if(terminal||pollCount.current%6===0)await load(true);
       }
-      await load(true);
     }finally{
       setLiveCheckedAt(new Date().toISOString());
     }
