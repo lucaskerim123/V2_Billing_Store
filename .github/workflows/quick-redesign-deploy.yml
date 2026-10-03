@@ -26,7 +26,26 @@ jobs:
       VERCEL_CLI_VERSION: 59.6.2
 
     steps:
+      - name: Check active GitHub profile
+        id: profile
+        shell: bash
+        env:
+          EXPECTED_GITHUB_PROFILE: primary
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 https://dev.incendiarynetworks.cc/api/github-profile)"
+          active="$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(String(x.profile||""))' "$response")"
+          echo "Active GitHub profile: $active"
+          echo "Expected for this repository: $EXPECTED_GITHUB_PROFILE"
+          if [ "$active" != "$EXPECTED_GITHUB_PROFILE" ]; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Inactive GitHub profile. This workflow will not access source, scan, build or deploy production."
+            exit 0
+          fi
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+
       - name: Resolve main branch
+        if: steps.profile.outputs.deploy == 'true'
         id: branch
         shell: bash
         run: |
@@ -37,12 +56,14 @@ jobs:
           echo "Quick Deploy source is fixed to main."
 
       - name: Checkout selected branch
+        if: steps.profile.outputs.deploy == 'true'
         uses: actions/checkout@v6
         with:
           ref: refs/heads/${{ steps.branch.outputs.name }}
           fetch-depth: 1
 
       - name: Verify quick-deploy source
+        if: steps.profile.outputs.deploy == 'true'
         id: source
         shell: bash
         run: |
@@ -65,6 +86,7 @@ jobs:
           echo "Quick Deploy source: $TARGET_BRANCH @ $commit"
 
       - name: Reuse an existing production deployment for this commit
+        if: steps.profile.outputs.deploy == 'true'
         id: existing
         shell: bash
         env:
@@ -104,13 +126,14 @@ jobs:
           fi
 
       - name: Install pinned Vercel CLI
+        if: steps.profile.outputs.deploy == 'true'
         run: |
           npm install --global "vercel@$VERCEL_CLI_VERSION"
           vercel --version
 
       - name: Quick deploy selected branch to production
         id: deploy
-        if: ${{ steps.existing.outputs.reuse != 'true' }}
+        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -131,6 +154,7 @@ jobs:
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
 
       - name: Verify deployment exists
+        if: steps.profile.outputs.deploy == 'true'
         env:
           DEPLOYMENT_URL: ${{ steps.existing.outputs.reuse == 'true' && steps.existing.outputs.url || steps.deploy.outputs.url }}
         run: |
@@ -139,6 +163,7 @@ jobs:
           vercel inspect "$DEPLOYMENT_URL" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
 
       - name: Report quick deployment
+        if: steps.profile.outputs.deploy == 'true'
         env:
           DEPLOYMENT_URL: ${{ steps.existing.outputs.reuse == 'true' && steps.existing.outputs.url || steps.deploy.outputs.url }}
         run: |
