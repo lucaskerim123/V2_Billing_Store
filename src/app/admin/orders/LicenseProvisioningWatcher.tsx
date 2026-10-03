@@ -26,7 +26,7 @@ export default function LicenseProvisioningWatcher(){
       }catch{}
     };
     void run();
-    const timer=setInterval(()=>void run(),5000);
+    const timer=setInterval(()=>{if(document.visibilityState==="visible")void run()},15000);
     return()=>{stopped=true;clearInterval(timer)};
   },[pathname]);
   return null;
