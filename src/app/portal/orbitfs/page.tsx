@@ -236,13 +236,32 @@ export default function MyOrbitFS(){
     const actionLabel=action==="base_update"?"Update Base":action==="redeploy"?"Redeploy published Base":action==="update"?"Install normal update":action==="rollback"?"Rollback Base":"Install Base";
     if(!confirm(actionLabel+(version?" to "+version:"")+"?"))return;
     if(action==="deploy")setSiteStep(5);
+    const isBase=action!=="update";
+    const baseAction=action==="deploy"?"install":action==="base_update"?"update":action;
+    const endpoint=isBase
+      ?`/api/orbitfs/installations/${install.id}/base/${baseAction}`
+      :`/api/orbitfs/installations/${install.id}/deploy`;
+    const channel=String(install.release_channel||d?.settings?.release_channels?.[0]||"stable");
+    const headers:Record<string,string>={...(await authHeaders()),"content-type":"application/json"};
+    if(isBase)headers["Idempotency-Key"]=crypto.randomUUID();
+    const payload=isBase
+      ?{version,releaseId,reason:reason||undefined,channel}
+      :{action,version,releaseId,reason:reason||undefined,channel};
     setBusy(action);
-    const r=await fetch("/api/orbitfs/installations/"+install.id+"/deploy",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action,version,releaseId,reason:reason||undefined,channel:String(install.release_channel||d?.settings?.release_channels?.[0]||"stable")})});
-    const j=await r.json().catch(()=>({}));
-    setBusy("");
-    if(r.ok){setMsg(action==="base_update"?"Base update to "+(version||"the latest release")+" completed in the existing Vercel project.":action==="redeploy"?"Published Base "+(latestBase||"release")+" redeployed in the existing Vercel project.":"OrbitFS "+actionLabel.toLowerCase()+" completed.");pollCount.current=0;await load();return}
-    setMsg(apiError(j,actionLabel+" failed."));
-    if(j.operationId||j.code==="OPERATION_IN_PROGRESS"){pollCount.current=0;await load(true)}
+    try{
+      const r=await fetch(endpoint,{method:"POST",headers,body:JSON.stringify(payload)});
+      const j=await r.json().catch(()=>({}));
+      if(r.ok){
+        setMsg(action==="base_update"?"Base update to "+(version||"the latest release")+" completed in the existing Vercel project.":action==="redeploy"?"Published Base "+(latestBase||"release")+" redeployed in the existing Vercel project.":"OrbitFS "+actionLabel.toLowerCase()+" completed.");
+        pollCount.current=0;
+        await load();
+        return;
+      }
+      setMsg(apiError(j,actionLabel+" failed."));
+      if(j.operationId||j.code==="OPERATION_IN_PROGRESS"){pollCount.current=0;await load(true)}
+    }finally{
+      setBusy("");
+    }
   }
   async function forceReinstallBase(){
     if(!install)return;
