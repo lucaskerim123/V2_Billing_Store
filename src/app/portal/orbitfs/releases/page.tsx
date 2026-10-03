@@ -205,7 +205,7 @@ export default function OrbitFSUpdateReleaseSystem(){
       }
     };
     void tick();
-    const timer=setInterval(()=>{void tick()},3000);
+    const timer=setInterval(()=>{if(document.visibilityState==="visible")void tick()},10000);
     return()=>{active=false;clearInterval(timer)};
   },[stage,install?.id,progressTarget,progressMode,attemptStartedAt,refreshProgress,load]);
 
