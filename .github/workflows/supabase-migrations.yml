@@ -16,19 +16,41 @@ jobs:
       SUPABASE_PROJECT_ID: bealqgenrcytjzjoikmk
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
+      - name: Check active GitHub profile
+        id: profile
+        shell: bash
+        env:
+          EXPECTED_GITHUB_PROFILE: primary
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 https://dev.incendiarynetworks.cc/api/github-profile)"
+          active="$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(String(x.profile||""))' "$response")"
+          echo "Active GitHub profile: $active"
+          echo "Expected for this repository: $EXPECTED_GITHUB_PROFILE"
+          if [ "$active" != "$EXPECTED_GITHUB_PROFILE" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Inactive GitHub profile. Remaining workflow steps are disabled."
+            exit 0
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
       - name: Checkout complete migration history
+        if: steps.profile.outputs.run == 'true'
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Use Node 22
+        if: steps.profile.outputs.run == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Install Supabase CLI
+        if: steps.profile.outputs.run == 'true'
         uses: supabase/setup-cli@v1
         with:
           version: latest
       - name: Prepare immutable migration set
+        if: steps.profile.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -36,6 +58,7 @@ jobs:
           (cd .orbitfs-supabase && supabase init)
           node scripts/prepare-supabase-migrations.mjs .orbitfs-supabase/supabase/migrations
       - name: Detect pending migrations
+        if: steps.profile.outputs.run == 'true'
         id: pending
         shell: bash
         run: |
@@ -43,7 +66,7 @@ jobs:
           echo "count=$count" >> "$GITHUB_OUTPUT"
           echo "Pending migrations: $count"
       - name: Verify exact production credentials
-        if: ${{ steps.pending.outputs.count != '0' }}
+        if: ${{ steps.profile.outputs.run == 'true' && (steps.pending.outputs.count != '0') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -51,14 +74,14 @@ jobs:
           test "$SUPABASE_PROJECT_ID" = "bealqgenrcytjzjoikmk"
 
       - name: Apply pending migrations through Supabase Management API
-        if: ${{ steps.pending.outputs.count != '0' }}
+        if: ${{ steps.profile.outputs.run == 'true' && (steps.pending.outputs.count != '0') }}
         shell: bash
         run: |
           set -euo pipefail
           node scripts/apply-supabase-migrations-api.mjs .orbitfs-supabase/report.json
 
       - name: Verify migration history through Supabase Management API
-        if: ${{ steps.pending.outputs.count != '0' }}
+        if: ${{ steps.profile.outputs.run == 'true' && (steps.pending.outputs.count != '0') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -75,5 +98,5 @@ jobs:
           console.log(`Remote migration count: ${rows.length}`);
           NODE
       - name: No database changes required
-        if: ${{ steps.pending.outputs.count == '0' }}
+        if: ${{ steps.profile.outputs.run == 'true' && (steps.pending.outputs.count == '0') }}
         run: echo "No pending database migrations."
