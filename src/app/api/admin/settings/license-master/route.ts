@@ -1,7 +1,7 @@
 import {masterProducts,masterRequest,masterPulseState} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 import {requireOrbitDeploymentAdmin} from "@/lib/orbitfs-deployment-auth";
-import {getMasterApiUrl,getOfficialMasterApiConnections,requireOfficialMasterApiUrl} from "@/lib/license-master-config";
+import {clearMasterApiCache,getMasterApiUrl,getOfficialMasterApiConnections,requireOfficialMasterApiUrl} from "@/lib/license-master-config";
 const canonicalProducts=["orbitfs_base","orbitfs_mcp","orbitfs_apex","orbitfs_studio"];
 const cleanError=(e:any)=>String(e?.message||"License Master connection test failed").slice(0,1000);
 
@@ -32,6 +32,7 @@ export async function POST(req:Request){
    const masterUrl=await requireOfficialMasterApiUrl(requested);
    const now=new Date().toISOString(),{data:row}=await db.from("license_master_connection").select("id").order("updated_at",{ascending:false}).limit(1).maybeSingle();
    if(row)await db.from("license_master_connection").update({master_url:masterUrl,enabled:true,updated_at:now,last_error:null}).eq("id",row.id);else await db.from("license_master_connection").insert({master_url:masterUrl,enabled:true,last_error:null});
+   clearMasterApiCache();
    return Response.json({ok:true,configuredUrl:masterUrl},{headers:{"cache-control":"no-store"}});
   }
   if(action==="pulse"||action==="configure"){

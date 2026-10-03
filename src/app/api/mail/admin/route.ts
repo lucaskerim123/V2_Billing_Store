@@ -1,5 +1,6 @@
 import {isMailAdmin,requireMailUser} from "@/lib/mail-auth";
 import {loadMailRuntimeConfig} from "@/lib/mail-config-server";
+import {drainMailOutbox} from "@/lib/mail-queue-worker";
 
 export async function GET(req:Request){
   const ctx:any=await requireMailUser(req);if(ctx.error)return ctx.error;
@@ -81,6 +82,11 @@ export async function PUT(req:Request){
       p_category_key:String(b.categoryKey||'')
     });
     return error?Response.json({error:error.message},{status:403}):Response.json(data||{ok:true});
+  }
+  if(b.action==='process_queue_now'){
+    if(!isMailAdmin(ctx,'mail.queue.manage'))return Response.json({error:'Mail queue manage permission required.'},{status:403});
+    try{return Response.json({ok:true,queue:await drainMailOutbox()})}
+    catch(e:any){return Response.json({error:e?.message||'Mail queue processing failed.'},{status:500})}
   }
   if(b.action==='queue'){
     if(!isMailAdmin(ctx,'mail.queue.manage'))return Response.json({error:'Mail queue manage permission required.'},{status:403});

@@ -68,7 +68,6 @@ export default function NotificationCenter({surface}:{surface:Surface}){
   },[sb,surface]);
 
   useEffect(()=>{
-    let channel:any;
     let cancelled=false;
     (async()=>{
       const {data:{user}}=await sb.auth.getUser();
@@ -92,25 +91,9 @@ export default function NotificationCenter({surface}:{surface:Surface}){
       if(cancelled)return;
       setConfigReady(true);
 
-      if(cfg?.realtime_enabled!==false){
-        const refresh=(payload:any)=>{if(payload?.new?.surface===surface||payload?.old?.surface===surface)void load(limit)};
-        channel=sb.channel(`orbitfs-notifications-${surface}-${user.id}`)
-          .on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:`recipient_user_id=eq.${user.id}`},refresh)
-          .on("postgres_changes",{event:"UPDATE",schema:"public",table:"notifications",filter:`recipient_user_id=eq.${user.id}`},refresh)
-          .subscribe();
-      }
     })();
-    return()=>{cancelled=true;if(channel)void sb.removeChannel(channel)};
+    return()=>{cancelled=true};
   },[sb,surface,load]);
-
-  // Reconcile the unread count if a browser pauses or loses its websocket.
-  useEffect(()=>{
-    if(!configReady||!systemEnabled)return;
-    const interval=window.setInterval(()=>{
-      if(document.visibilityState==="visible")void load(feedLimit);
-    },60000);
-    return()=>window.clearInterval(interval);
-  },[configReady,systemEnabled,load,feedLimit]);
 
   useEffect(()=>{
     if(!open)return;
@@ -152,6 +135,7 @@ export default function NotificationCenter({surface}:{surface:Surface}){
         <div><small>{surface==="admin"?"ORBITFS ALERT SYSTEM":"CUSTOMER PORTAL"}</small><h2>Notifications</h2></div>
         <div className={styles.headerActions}>
           {surface==="admin"&&canSend&&<button className={styles.headerButton} type="button" onClick={()=>{setOpen(false);router.push("/admin/alerts")}}>Alert System</button>}
+          <button className={styles.headerButton} type="button" onClick={()=>void load(feedLimit)}>Refresh</button>
           <button className={styles.markAll} type="button" onClick={markAllRead} disabled={unread===0}>Mark all read</button>
         </div>
       </header>

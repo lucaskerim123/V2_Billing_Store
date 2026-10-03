@@ -64,7 +64,7 @@ export async function getOfficialMasterApiConnections(force=false){
     settings:{bootstrap:true}
   }];
   connections.sort((a,b)=>Number(a.priority||100)-Number(b.priority||100));
-  registryCache={expires:Date.now()+30_000,connections};
+  registryCache={expires:Date.now()+86_400_000,connections};
   return connections;
 }
 
@@ -81,11 +81,11 @@ let cachedAt = 0;
 
 export async function getMasterApiUrl() {
   const now = Date.now();
-  if (now - cachedAt < 30_000) return cachedUrl;
+  if (now - cachedAt < 5_400_000) return cachedUrl;
 
   const official=await getOfficialMasterApiConnections();
   const allowed=new Set(official.map(row=>row.base_url));
-  let resolved=allowed.has(TRUSTED_MASTER_BOOTSTRAP_URL)?TRUSTED_MASTER_BOOTSTRAP_URL:official[0]?.base_url||TRUSTED_MASTER_BOOTSTRAP_URL;
+  let resolved=TRUSTED_MASTER_BOOTSTRAP_URL;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -108,4 +108,9 @@ export async function getMasterApiUrl() {
   cachedUrl=resolved;
   cachedAt=now;
   return cachedUrl;
+}
+
+export function clearMasterApiCache(){
+  registryCache=null;
+  cachedAt=0;
 }

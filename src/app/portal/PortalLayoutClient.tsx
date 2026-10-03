@@ -41,12 +41,12 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    setD({user,p,id,staff});
   }
   async function refreshEnforcement(force=false){
-   if(!force&&Date.now()-lastEnforcementCheck.current<120000)return;
+   if(!force&&Date.now()-lastEnforcementCheck.current<5400000)return;
    const {data:enf,error}=await sb.rpc("account_enforcement_status");if(error||!alive)return;
    lastEnforcementCheck.current=Date.now();await applyEnforcement(enf);
   }
   void loadInitial();
-  const timer=setInterval(()=>void refreshEnforcement(),300000),onFocus=()=>void refreshEnforcement(true);
+  const timer=setInterval(()=>void refreshEnforcement(),5400000),onFocus=()=>void refreshEnforcement(false);
   window.addEventListener("focus",onFocus);
   return()=>{alive=false;clearInterval(timer);window.removeEventListener("focus",onFocus)};
  },[sb]);
@@ -57,11 +57,11 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    try{
     const r=await fetch("/api/orbitfs/license-pulse",{cache:"no-store"});if(!r.ok)throw new Error("pulse unavailable");
     const j=await r.json();if(!alive)return;
-    const revision=Number(j?.pulse_revision||0),poll=Math.min(3600,Math.max(5,Number(j?.runtime_policy?.pulse_poll_seconds||15)));
+    const revision=Number(j?.pulse_revision||0),poll=Math.min(86400,Math.max(60,Number(j?.runtime_policy?.pulse_poll_seconds||5400)));
     if(lastPulseRevision.current===null)lastPulseRevision.current=revision;
     else if(revision>0&&revision!==lastPulseRevision.current){lastPulseRevision.current=revision;location.reload();return}
     timer=setTimeout(()=>void checkPulse(),poll*1000);
-   }catch{if(alive)timer=setTimeout(()=>void checkPulse(),30000)}
+   }catch{if(alive)timer=setTimeout(()=>void checkPulse(),86400000)}
   }
   void checkPulse();return()=>{alive=false;if(timer)clearTimeout(timer)};
  },[]);

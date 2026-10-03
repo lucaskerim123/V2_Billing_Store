@@ -1,5 +1,7 @@
--- The mail outbox retries rows on a five-minute cadence, so a one-minute
--- scheduler only creates empty cron work. Match the scheduler to the retry window.
+-- Fallback Billing mail outbox should remain idle most of the time.
+-- Run scheduled dispatch twice per day; operators can use the Mail Queue
+-- "Process queue now" button for immediate manual processing.
+
 do $$
 declare
   existing_job bigint;
@@ -15,7 +17,7 @@ begin
 
   perform cron.schedule(
     'orbitfs-mail-outbox-dispatch',
-    '*/5 * * * *',
+    '0 */12 * * *',
     'select public.dispatch_mail_event_outbox();'
   );
 end $$;

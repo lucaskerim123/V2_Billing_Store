@@ -1,8 +1,9 @@
 import {masterRequest} from "@/lib/master-api";
+import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
-const allowed=new Set(["publish","withdraw","archive","restore","revert","promote","revise"]);
+const allowed=new Set(["publish","withdraw","archive","restore","revert","promote","revise","return_to_dev","delete_return_to_dev"]);
 export async function POST(req:Request){
   try{
     await requireOrbitAdmin(req);
@@ -12,12 +13,56 @@ export async function POST(req:Request){
     if(!id)throw Object.assign(new Error("Release ID is required"),{status:400});
     if(!allowed.has(action))throw Object.assign(new Error("Unsupported release control"),{status:400});
     const current=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"GET"},"billing");
-    const releaseType=String(current?.release?.release_type||"").toLowerCase();
+    const release=current?.release;
+    const releaseType=String(release?.release_type||"").toLowerCase();
     if(!["base","update"].includes(releaseType))throw Object.assign(new Error("Unsupported OrbitFS release type"),{status:403});
+
+    if(action==="return_to_dev"||action==="delete_return_to_dev"){
+      const reason=String(body.reason||"").trim();
+      if(!reason)throw Object.assign(new Error("A reason is required before returning a release to Dev Panel"),{status:400});
+      if(String(release.status||"").toLowerCase()==="published"){
+        await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"withdraw"})},"billing");
+      }
+      const returned=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{
+        method:"POST",
+        body:JSON.stringify({action:"reject",reason})
+      },"billing");
+      const returnedRelease=returned?.release||null;
+      let billingPresentationDeleted=0;
+      if(action==="delete_return_to_dev"){
+        const ids=[id,String(returnedRelease?.id||"")].filter(Boolean);
+        const deleted=await licenseDb().from("orbitfs_release_presentation_overrides").delete().in("release_id",ids).select("release_id");
+        if(deleted.error)throw deleted.error;
+        billingPresentationDeleted=(deleted.data||[]).length;
+      }
+      const occurredAt=new Date().toISOString();
+      const panelReport=await reportDevPanelReleaseEvent({
+        eventId:`${releaseType}-returned-to-dev:${id}:${occurredAt}`,
+        eventType:"returned_to_dev",
+        releaseId:String(returnedRelease?.id||id),
+        targetReleaseId:id,
+        releaseVersion:String(release.version||""),
+        releaseType,
+        channel:String(release.channel||"stable"),
+        reason,
+        archived:true,
+        status:"completed",
+        occurredAt,
+        sourceSystem:"billing_store",
+        metadata:{billingPresentationDeleted,sourceReleaseId:id,handbackReleaseId:returnedRelease?.id||null}
+      }).catch((error:any)=>({ok:false,error:error?.message||"Dev Panel event report failed"}));
+      return Response.json({
+        ...returned,
+        returnedToDev:true,
+        billingPresentationDeleted,
+        devPanelRecorded:panelReport?.ok===true,
+        devPanelWarning:panelReport?.ok===true?null:(panelReport?.error||panelReport?.reason||"Dev Panel event history was not recorded")
+      },{headers:{"cache-control":"no-store"}});
+    }
+
     if(action==="revert"||action==="archive"){
       const reason=String(body.reason||"").trim();
       if(!reason)throw Object.assign(new Error("A reason is required"),{status:400});
-      const release=current.release;
       if(action==="revert"&&release.status==="published")await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"withdraw"})},"billing");
       const archived=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify({action:"archive"})},"billing");
       const occurredAt=new Date().toISOString();

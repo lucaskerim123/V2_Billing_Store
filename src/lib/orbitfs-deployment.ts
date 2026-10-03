@@ -191,7 +191,26 @@ end
 $orbitfs_runtime_repair$;`,
     ...contract.publicReadTables.map((table)=>`grant select on table ${schema}.${sqlIdentifier(table)} to ${publishable}, ${authenticated};`),
     ...contract.serverFullAccessTables.map((table)=>`grant all privileges on table ${schema}.${sqlIdentifier(table)} to ${service};`),
-    `grant usage, select, update on all sequences in schema ${schema} to ${service};`
+    `do $orbitfs_sequence_grants$
+declare r record;
+begin
+  for r in
+    select distinct seq.relname as sequence_name
+    from pg_class seq
+    join pg_namespace sn on sn.oid=seq.relnamespace
+    join pg_depend d on d.objid=seq.oid and d.deptype in ('a','i')
+    join pg_class tbl on tbl.oid=d.refobjid
+    join pg_namespace tn on tn.oid=tbl.relnamespace
+    where sn.nspname=${sqlLiteral(contract.schema)}
+      and tn.nspname=${sqlLiteral(contract.schema)}
+      and seq.relkind='S'
+      and exists (select 1 from unnest(${prefixes}) p(prefix) where tbl.relname like p.prefix || '%')
+      and not (tbl.relname = any(${excluded}))
+  loop
+    execute format('grant usage, select, update on sequence %I.%I to ${contract.serviceRole}', ${sqlLiteral(contract.schema)}, r.sequence_name);
+  end loop;
+end
+$orbitfs_sequence_grants$;`
   ].join("\n");
 }
 async function databaseRestPreflight(install:any,key:string,tables:string[],credential:string,extraHeaders:Record<string,string>={}){
@@ -245,7 +264,24 @@ async function verifyDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
   for(const table of contract.serverFullAccessTables){
     for(const privilege of ["SELECT","INSERT","UPDATE","DELETE"])checks.push({key:`service_${privilege.toLowerCase()}_${table}`,expr:`has_table_privilege('${contract.serviceRole}','${contract.schema}.${table}','${privilege}')`});
   }
-  checks.push({key:"service_sequence_usage",expr:`not exists(select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='${contract.schema}' and c.relkind='S' and not has_sequence_privilege('${contract.serviceRole}',c.oid,'USAGE'))`});
+  checks.push({key:"service_sequence_usage",expr:`not exists(
+    select 1
+    from pg_class seq
+    join pg_namespace sn on sn.oid=seq.relnamespace
+    join pg_depend d on d.objid=seq.oid and d.deptype in ('a','i')
+    join pg_class tbl on tbl.oid=d.refobjid
+    join pg_namespace tn on tn.oid=tbl.relnamespace
+    where sn.nspname='${contract.schema}'
+      and tn.nspname='${contract.schema}'
+      and seq.relkind='S'
+      and exists (
+        select 1
+        from unnest(array[${contract.runtimeSecretTablePrefixes.map(sqlLiteral).join(",")}]::text[]) p(prefix)
+        where tbl.relname like p.prefix || '%'
+      )
+      and not (tbl.relname = any(array[${contract.runtimeSecretExcludedTables.map(sqlLiteral).join(",")}]::text[]))
+      and not has_sequence_privilege('${contract.serviceRole}',format('%I.%I',sn.nspname,seq.relname),'USAGE')
+  )`});
   const query=`select ${checks.map((check)=>`${check.expr} as ${sqlIdentifier(check.key)}`).join(",\n")};`;
   const verification=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query})});
   const row=Array.isArray(verification)?verification[0]:verification?.data?.[0]||verification?.result?.[0]||verification;
