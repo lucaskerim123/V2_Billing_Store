@@ -232,8 +232,18 @@ async function installationDatabaseRuntimeAccessContract(install:any){
 }
 export async function ensureCustomerDatabaseRuntimeAccess(install:any,source="runtime"){
   const accessContract=await installationDatabaseRuntimeAccessContract(install);
-  await repairDatabaseRuntimeAccess(install,accessContract,source);
-  return accessContract;
+  try{
+    await verifyDatabaseRuntimeAccess(install,accessContract,`${source}-preflight`);
+    return accessContract;
+  }catch(preflightError:any){
+    try{
+      await repairDatabaseRuntimeAccess(install,accessContract,source);
+      return accessContract;
+    }catch(repairError:any){
+      if(repairError&&typeof repairError==="object"&&!repairError.cause)repairError.cause=preflightError;
+      throw repairError;
+    }
+  }
 }
 
 
