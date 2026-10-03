@@ -377,6 +377,10 @@ function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:st
   if(normalized.at(-1)?.id!==latest)fail("Base release latest migration does not match its migration chain",422);
   return normalized;
 }
+function baseDatabaseSnapshotHash(release:any){
+  const manifest=release?.manifest&&typeof release.manifest==="object"?release.manifest:{};
+  return String(manifest.databaseSchemaSha256||manifest.releaseInfo?.databaseSchemaSha256||"").trim().toLowerCase();
+}
 async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigration[]){
   const source=currentRelease?.manifest&&typeof currentRelease.manifest==="object"?currentRelease.manifest:{};
   let count=Number(source.databaseMigrationCount??source.releaseInfo?.databaseMigrationCount??0);
@@ -410,6 +414,16 @@ async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigrat
 }
 async function applyBaseDatabaseMigrations(install:any,currentRelease:any,targetRelease:any,pkg:Package,files:Array<{file:string;data:string;sha256:string;size:number}>){
   if(!install.supabase_project_ref)fail("Customer Supabase project is not configured for Base migrations",409);
+  const currentSchemaHash=baseDatabaseSnapshotHash(currentRelease);
+  const targetSchemaHash=baseDatabaseSnapshotHash(targetRelease);
+  if(/^[a-f0-9]{64}$/.test(currentSchemaHash)&&currentSchemaHash===targetSchemaHash){
+    await event(install,"base.database.migration.skipped","ok","Base database schema snapshot is unchanged; no forward migration is required.",{
+      fromReleaseId:String(currentRelease.id),
+      toReleaseId:String(targetRelease.id),
+      databaseSchemaSha256:targetSchemaHash
+    });
+    return {baseline:null,target:null,required:0,seeded:0,applied:0,skipped:0,ids:[] as string[],mode:"schema_unchanged"};
+  }
   const chain=validateBaseMigrationChain(pkg,files);
   const baseline=await currentBaseMigrationBaseline(currentRelease,chain);
   const project=String(install.supabase_project_ref);
