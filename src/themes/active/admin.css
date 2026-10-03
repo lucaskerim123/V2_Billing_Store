@@ -20,3 +20,16 @@ html[data-admin-theme="v3"] .adminCollapsibleItems a:hover{color:#fff!important;
 html[data-admin-theme="v3"] .adminCollapsibleItems a.active{color:#fff!important;background:color-mix(in srgb,var(--page-accent) 13%,#101720)!important}
 @media(max-width:1250px){html[data-admin-theme="v3"] .adminCollapsibleNav{gap:2px}html[data-admin-theme="v3"] .adminCollapsibleNav>details>summary{padding-left:7px;padding-right:7px;font-size:10px}}
 @media(max-width:1100px){html[data-admin-theme="v3"] .adminCollapsibleNav{display:none}}
+
+
+/* Active GitHub source indicator; value comes from the persisted Dev Panel profile. */
+html[data-admin-theme="v3"] .adminV3SystemSource{display:grid;gap:1px;min-width:86px;padding:5px 8px;border:1px solid #283241;border-radius:7px;background:#0b1017;line-height:1.1}
+html[data-admin-theme="v3"] .adminV3SystemSource span{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#778395}
+html[data-admin-theme="v3"] .adminV3SystemSource strong{font-size:9.5px;color:#e5e7eb;white-space:nowrap}
+html[data-admin-theme="v3"] .adminV3SystemSource-fallback{border-color:#6e5622;background:#17130a}
+html[data-admin-theme="v3"] .adminV3SystemSource-fallback strong{color:#f3c969}
+html[data-admin-theme="v3"] .adminV3SystemSource-primary{border-color:#373a72;background:#101129}
+html[data-admin-theme="v3"] .adminV3SystemSource-primary strong{color:#b9bbff}
+html[data-admin-theme="v3"] .adminV3SystemSource-unknown{border-color:#68343a;background:#1b0e10}
+html[data-admin-theme="v3"] .adminV3SystemSource-unknown strong{color:#f1a7af}
+@media(max-width:1100px){html[data-admin-theme="v3"] .adminV3SystemSource{display:none}}
