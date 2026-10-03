@@ -251,6 +251,13 @@ async function readCurrentBasePackageForRedeploy(release:any):Promise<{pkg:Packa
 }
 type DatabaseMigration={id:string;file:string;component?:string;encoding:"base64";data:string;size:number;sha256:string};
 function sqlLiteral(value:unknown){return "'"+String(value??"").replaceAll("'","''")+"'";}
+function invalidSqlSequenceTargets(sql:string){
+  const constraintNames=new Set([...String(sql||"").matchAll(/\b(?:add\s+constraint|constraint)\s+"?([a-z0-9_]+)"?\s+(?:primary\s+key|unique)\b/ig)].map(match=>String(match[1]||"").toLowerCase()));
+  return [...new Set([...String(sql||"").matchAll(/\b(?:pg_catalog\.)?setval\s*\(\s*'([^']+)'\s*(?:::regclass)?/ig)].map(match=>String(match[1]||"").replaceAll('"',"")).filter(target=>{
+    const relation=target.split(".").at(-1)?.toLowerCase()||"";
+    return relation.endsWith("_pkey")||constraintNames.has(relation);
+  }))];
+}
 function managementRows(value:any):any[]{
   if(Array.isArray(value)){
     if(value.length===1&&value[0]&&typeof value[0]==="object"){
@@ -285,6 +292,8 @@ function validateDatabaseContract(bundle:UpdateBundle){
     const sqlText=sql.toString("utf8");
     if(/\b(?:begin|commit|rollback)\s*;/i.test(sqlText))fail(`Database migration contains unsupported explicit transaction control: ${file}`,422);
     if(/\b(?:drop\s+table|drop\s+schema|truncate\s+(?:table\s+)?|alter\s+table[\s\S]{0,300}?drop\s+column)\b/i.test(sqlText))fail(`Destructive customer database migration is not permitted in an Update release: ${file}`,422);
+    const invalidSequenceTargets=invalidSqlSequenceTargets(sqlText);
+    if(invalidSequenceTargets.length)fail(`Update migration ${file} contains invalid setval() sequence target(s): ${invalidSequenceTargets.join(", ")}. Rebuild and republish the Update package.`,422,"UPDATE_MIGRATION_SEQUENCE_TARGET_INVALID",false);
     return {id,file,component:String(migration.component||"shared").trim().toLowerCase()||"shared",encoding:"base64" as const,data:migration.data,size:sql.byteLength,sha256:sha};
   });
   const engine=(bundle as any)?.payloads?.engine;
@@ -371,6 +380,9 @@ function validateBaseMigrationChain(pkg:Package,files:Array<{file:string;data:st
     const sha=String(migration?.sha256||packagedFile.sha256||"").trim().toLowerCase();
     const size=Number(migration?.size??packagedFile.size);
     if(!/^[a-f0-9]{64}$/.test(sha)||sha!==packagedFile.sha256||size!==packagedFile.size)fail(`Base migration checksum mismatch: ${file}`,422);
+    const sqlText=Buffer.from(packagedFile.data,"base64").toString("utf8");
+    const invalidSequenceTargets=invalidSqlSequenceTargets(sqlText);
+    if(invalidSequenceTargets.length)fail(`Base migration ${file} contains invalid setval() sequence target(s): ${invalidSequenceTargets.join(", ")}. Rebuild and republish the Base package.`,422,"BASE_MIGRATION_SEQUENCE_TARGET_INVALID",false);
     if(index>0&&id<=String(source[index-1]?.id||""))fail("Base migration ids must be strictly increasing",422);
     return {id,file,size:packagedFile.size,sha256:sha,data:packagedFile.data};
   });
