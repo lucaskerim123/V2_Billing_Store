@@ -455,6 +455,12 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   if(!rawSql.includes("-- OrbitFS Base customer database snapshot"))throw Object.assign(new Error("Published Base database asset is not a generated OrbitFS customer snapshot"),{status:422,code:"BASE_SCHEMA_SNAPSHOT_INVALID"});
   if(!rawSql.includes("20260923135040_profile_state_workspace_scope.sql"))throw Object.assign(new Error("Published Base database snapshot is missing the canonical workspace-scoped profile-state migration"),{status:422,code:"BASE_SCHEMA_PROFILE_SCOPE_MISSING"});
   if(/\bcreate\s+(?:unique\s+)?index\s+concurrently\b/i.test(rawSql)||/\b(?:vacuum|reindex)\b/i.test(rawSql))throw Object.assign(new Error("Published Base database snapshot contains a command that cannot run inside the installer transaction"),{status:422,code:"BASE_SCHEMA_TRANSACTION_UNSAFE"});
+  const snapshotConstraintNames=new Set([...rawSql.matchAll(/\badd\s+constraint\s+"?([a-z0-9_]+)"?\s+(?:primary\s+key|unique)\b/ig)].map(match=>String(match[1]||"").toLowerCase()));
+  const invalidSequenceTargets=[...new Set([...rawSql.matchAll(/\b(?:pg_catalog\.)?setval\s*\(\s*'([^']+)'\s*(?:::regclass)?/ig)].map(match=>String(match[1]||"").replaceAll('"',"")).filter(target=>{
+    const relation=target.split(".").at(-1)?.toLowerCase()||"";
+    return relation.endsWith("_pkey")||snapshotConstraintNames.has(relation);
+  }))];
+  if(invalidSequenceTargets.length)throw Object.assign(new Error(`Published Base database snapshot contains invalid sequence reset target(s): ${invalidSequenceTargets.join(", ")}. Rebuild and republish the Base package; the deployer will not rewrite an immutable release snapshot.`),{status:422,code:"BASE_SCHEMA_SEQUENCE_TARGET_INVALID",invalidSequenceTargets});
   const obsoleteProfileConflict=/on\s+conflict\s*\(\s*workspace_id\s*,\s*user_id\s*\)\s+do\s+nothing/i.test(rawSql);
   const namedUniqueAdds=[...rawSql.matchAll(/alter\s+table\s+([a-z0-9_.]+)\s+add\s+constraint\s+([a-z0-9_]+)\s+unique\s*\(([^;]+)\)\s*;/ig)].length;
   let sql=rawSql.replace(/on\s+conflict\s*\(\s*workspace_id\s*,\s*user_id\s*\)\s+do\s+nothing/ig,"on conflict do nothing");
