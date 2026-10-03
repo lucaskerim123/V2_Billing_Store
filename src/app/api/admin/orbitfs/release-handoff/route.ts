@@ -28,7 +28,7 @@ export async function GET(req:Request){
     const u=new URL(req.url),action=u.searchParams.get("action")||"review",type=u.searchParams.get("type")||"update",product=u.searchParams.get("product")||"orbitfs_base",channel=u.searchParams.get("channel")||"";
     const qs=new URLSearchParams({product});if(type&&type!=="all")qs.set("type",type);if(channel)qs.set("channel",channel);
     const [result,channelResult]=await Promise.all([
-      masterRequest("/api/v1/releases?"+qs.toString(),{method:"GET"},"billing"),
+      masterRequest("/api/v1/releases?"+qs.toString(),{method:"GET",cache:"no-store"},"billing"),
       masterRequest("/api/v1/release-channels?include_disabled=true",{method:"GET"},"billing")
     ]);
     const rows=Array.isArray(result)?result:(Array.isArray(result?.releases)?result.releases:[]);
