@@ -2,19 +2,6 @@ name: Quick Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: Select branch to deploy
-        required: true
-        default: main
-        type: choice
-        options:
-          - main
-          - CustomDesign/Run
-      custom_branch:
-        description: Optional custom branch name (overrides selector)
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -33,37 +20,21 @@ jobs:
       name: production
 
     env:
-      SELECTED_BRANCH: ${{ inputs.branch }}
-      CUSTOM_BRANCH: ${{ inputs.custom_branch }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: team_W3fS0X03YCjNkD2BoqRj6Uld
       VERCEL_PROJECT_ID: prj_3ARdg4cRikU2OiMeZjZDvQ3JuEZd
       VERCEL_CLI_VERSION: 59.6.2
 
     steps:
-      - name: Resolve selected branch
+      - name: Resolve main branch
         id: branch
         shell: bash
         run: |
           set -euo pipefail
           test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
-          branch="${CUSTOM_BRANCH:-}"
-          if [ -z "$branch" ]; then
-            branch="$SELECTED_BRANCH"
-          fi
-          if ! printf '%s' "$branch" | grep -Eq '^[A-Za-z0-9._/-]+$'; then
-            echo "::error::Branch contains unsupported characters: $branch"
-            exit 1
-          fi
-          case "$branch" in
-            -*|*..*|*//*|*/.|*/..|.|..)
-              echo "::error::Invalid branch name: $branch"
-              exit 1
-              ;;
-          esac
-          echo "name=$branch" >> "$GITHUB_OUTPUT"
-          echo "TARGET_BRANCH=$branch" >> "$GITHUB_ENV"
-          echo "Selected branch: $branch"
+          echo "name=main" >> "$GITHUB_OUTPUT"
+          echo "TARGET_BRANCH=main" >> "$GITHUB_ENV"
+          echo "Quick Deploy source is fixed to main."
 
       - name: Checkout selected branch
         uses: actions/checkout@v6
@@ -76,10 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          case "${GITHUB_EVENT_NAME}" in
-            workflow_dispatch|push) ;;
-            *) echo "::error::Unsupported Quick Deploy event: ${GITHUB_EVENT_NAME}"; exit 1 ;;
-          esac
+          test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
           test -n "$VERCEL_TOKEN"
           test -n "$VERCEL_ORG_ID"
           test -n "$VERCEL_PROJECT_ID"
