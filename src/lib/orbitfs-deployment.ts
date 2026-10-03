@@ -137,11 +137,19 @@ function runtimeAccessGrantSql(contract:DatabaseRuntimeAccessContract){
   const publishable=sqlIdentifier(contract.publishableRole),authenticated=sqlIdentifier(contract.authenticatedRole);
   const prefixes=`array[${contract.runtimeSecretTablePrefixes.map(sqlLiteral).join(",")}]::text[]`;
   const excluded=`array[${contract.runtimeSecretExcludedTables.map(sqlLiteral).join(",")}]::text[]`;
+  const publicRead=`array[${contract.publicReadTables.map(sqlLiteral).join(",")}]::text[]`;
+  const secretPredicate="private.orbitfs_server_secret_valid()";
   return [
     `grant usage on schema ${schema} to ${publishable}, ${authenticated}, ${service};`,
-    `do $orbitfs_runtime_grants$
+    `do $orbitfs_runtime_repair$
 declare r record;
+declare is_public_read boolean;
 begin
+  if to_regprocedure('${contract.schema}.${contract.runtimeSecretRepairRpc}(text[],text[],text[])') is not null then
+    revoke execute on function ${schema}.${sqlIdentifier(contract.runtimeSecretRepairRpc)}(text[],text[],text[]) from public, ${publishable}, ${authenticated};
+    grant execute on function ${schema}.${sqlIdentifier(contract.runtimeSecretRepairRpc)}(text[],text[],text[]) to ${service};
+  end if;
+
   for r in
     select tablename
     from pg_tables
@@ -149,21 +157,42 @@ begin
       and exists (select 1 from unnest(${prefixes}) p(prefix) where tablename like p.prefix || '%')
       and not (tablename = any(${excluded}))
   loop
+    is_public_read := r.tablename = any(${publicRead});
+
+    execute format('alter table %I.%I enable row level security', ${sqlLiteral(contract.schema)}, r.tablename);
     execute format('grant select, insert, update, delete on table %I.%I to ${contract.publishableRole}, ${contract.authenticatedRole}', ${sqlLiteral(contract.schema)}, r.tablename);
+
+    if is_public_read then
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime public read', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as permissive for select to ${contract.publishableRole}, ${contract.authenticatedRole} using (true)', 'orbitfs runtime public read', ${sqlLiteral(contract.schema)}, r.tablename);
+
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime secret access insert', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime secret required insert', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as permissive for insert to ${contract.publishableRole}, ${contract.authenticatedRole} with check (${secretPredicate})', 'orbitfs runtime secret access insert', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as restrictive for insert to ${contract.publishableRole}, ${contract.authenticatedRole} with check (${secretPredicate})', 'orbitfs runtime secret required insert', ${sqlLiteral(contract.schema)}, r.tablename);
+
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime secret access update', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime secret required update', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as permissive for update to ${contract.publishableRole}, ${contract.authenticatedRole} using (${secretPredicate}) with check (${secretPredicate})', 'orbitfs runtime secret access update', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as restrictive for update to ${contract.publishableRole}, ${contract.authenticatedRole} using (${secretPredicate}) with check (${secretPredicate})', 'orbitfs runtime secret required update', ${sqlLiteral(contract.schema)}, r.tablename);
+
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime secret access delete', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime secret required delete', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as permissive for delete to ${contract.publishableRole}, ${contract.authenticatedRole} using (${secretPredicate})', 'orbitfs runtime secret access delete', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as restrictive for delete to ${contract.publishableRole}, ${contract.authenticatedRole} using (${secretPredicate})', 'orbitfs runtime secret required delete', ${sqlLiteral(contract.schema)}, r.tablename);
+    else
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime secret access', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('drop policy if exists %I on %I.%I', 'orbitfs runtime secret required', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as permissive for all to ${contract.publishableRole}, ${contract.authenticatedRole} using (${secretPredicate}) with check (${secretPredicate})', 'orbitfs runtime secret access', ${sqlLiteral(contract.schema)}, r.tablename);
+      execute format('create policy %I on %I.%I as restrictive for all to ${contract.publishableRole}, ${contract.authenticatedRole} using (${secretPredicate}) with check (${secretPredicate})', 'orbitfs runtime secret required', ${sqlLiteral(contract.schema)}, r.tablename);
+    end if;
   end loop;
 end
-$orbitfs_runtime_grants$;`,
+$orbitfs_runtime_repair$;`,
     ...contract.publicReadTables.map((table)=>`grant select on table ${schema}.${sqlIdentifier(table)} to ${publishable}, ${authenticated};`),
     ...contract.serverFullAccessTables.map((table)=>`grant all privileges on table ${schema}.${sqlIdentifier(table)} to ${service};`),
     `grant usage, select, update on all sequences in schema ${schema} to ${service};`
   ].join("\n");
-}
-function runtimeAccessLegacyRepairSql(contract:DatabaseRuntimeAccessContract){
-  const schema=sqlIdentifier(contract.schema);
-  const prefixes=`array[${contract.runtimeSecretTablePrefixes.map(sqlLiteral).join(",")}]::text[]`;
-  const excluded=`array[${contract.runtimeSecretExcludedTables.map(sqlLiteral).join(",")}]::text[]`;
-  const publicRead=`array[${contract.publicReadTables.map(sqlLiteral).join(",")}]::text[]`;
-  return `select ${schema}.${sqlIdentifier(contract.runtimeSecretRepairRpc)}(${prefixes},${excluded},${publicRead});`;
 }
 async function databaseRestPreflight(install:any,key:string,tables:string[],credential:string,extraHeaders:Record<string,string>={}){
   for(const table of tables){
@@ -234,18 +263,7 @@ async function verifyDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
 }
 async function repairDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeAccessContract,source:string){
   await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:runtimeAccessGrantSql(contract)})});
-  try{
-    await verifyDatabaseRuntimeAccess(install,contract,`${source}-direct-repair`);
-    return;
-  }catch(directRepairError:any){
-    try{
-      await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:runtimeAccessLegacyRepairSql(contract)})});
-    }catch(legacyRepairError:any){
-      if(legacyRepairError&&typeof legacyRepairError==="object"&&!legacyRepairError.cause)legacyRepairError.cause=directRepairError;
-      throw legacyRepairError;
-    }
-    await verifyDatabaseRuntimeAccess(install,contract,source);
-  }
+  await verifyDatabaseRuntimeAccess(install,contract,`${source}-direct-repair`);
 }
 async function installationDatabaseRuntimeAccessContract(install:any){
   const channel=String(install.release_channel||"stable").trim().toLowerCase()||"stable";
