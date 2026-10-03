@@ -1,5 +1,6 @@
 import {httpError,loadInstallation,requireOrbitUser} from "@/lib/orbitfs-deployment";
 import {baseIdempotencyKey,runBaseLifecycleOperation,type BaseLifecycleAction} from "@/lib/orbitfs-base-operations";
+import {completePendingBaseForceReinstall,pendingBaseForceReinstall} from "@/lib/orbitfs-force-reinstall";
 
 const ACTIONS:Record<string,BaseLifecycleAction>={
   install:"deploy",
@@ -16,6 +17,10 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string;actio
     if(!action)throw Object.assign(new Error("Unsupported Base lifecycle action"),{status:400,code:"BASE_ACTION_UNSUPPORTED"});
     const body=await req.json().catch(()=>({}));
     const install=await loadInstallation(id,user.id);
+    if(action==="deploy"&&pendingBaseForceReinstall(install)){
+      const completion=await completePendingBaseForceReinstall(install);
+      return Response.json({ok:true,...completion},{headers:{"cache-control":"no-store"}});
+    }
     const idempotencyKey=baseIdempotencyKey(req,body,true);
     const channel=String(body.channel||install.release_channel||"stable").trim().toLowerCase();
     if(!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(channel))throw Object.assign(new Error("Invalid release channel"),{status:400,code:"RELEASE_CHANNEL_INVALID"});
