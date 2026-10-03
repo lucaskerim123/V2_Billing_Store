@@ -134,15 +134,36 @@ function databaseRuntimeAccessContract(release:any):DatabaseRuntimeAccessContrac
 function sqlIdentifier(value:string){return `"${value.replaceAll('"','""')}"`}
 function runtimeAccessGrantSql(contract:DatabaseRuntimeAccessContract){
   const schema=sqlIdentifier(contract.schema),service=sqlIdentifier(contract.serviceRole);
+  const publishable=sqlIdentifier(contract.publishableRole),authenticated=sqlIdentifier(contract.authenticatedRole);
   const prefixes=`array[${contract.runtimeSecretTablePrefixes.map(sqlLiteral).join(",")}]::text[]`;
   const excluded=`array[${contract.runtimeSecretExcludedTables.map(sqlLiteral).join(",")}]::text[]`;
-  const publicRead=`array[${contract.publicReadTables.map(sqlLiteral).join(",")}]::text[]`;
   return [
-    `grant usage on schema ${schema} to ${sqlIdentifier(contract.publishableRole)}, ${sqlIdentifier(contract.authenticatedRole)}, ${service};`,
-    `select ${schema}.${sqlIdentifier(contract.runtimeSecretRepairRpc)}(${prefixes},${excluded},${publicRead});`,
+    `grant usage on schema ${schema} to ${publishable}, ${authenticated}, ${service};`,
+    `do $orbitfs_runtime_grants$
+declare r record;
+begin
+  for r in
+    select tablename
+    from pg_tables
+    where schemaname=${sqlLiteral(contract.schema)}
+      and exists (select 1 from unnest(${prefixes}) p(prefix) where tablename like p.prefix || '%')
+      and not (tablename = any(${excluded}))
+  loop
+    execute format('grant select, insert, update, delete on table %I.%I to ${contract.publishableRole}, ${contract.authenticatedRole}', ${sqlLiteral(contract.schema)}, r.tablename);
+  end loop;
+end
+$orbitfs_runtime_grants$;`,
+    ...contract.publicReadTables.map((table)=>`grant select on table ${schema}.${sqlIdentifier(table)} to ${publishable}, ${authenticated};`),
     ...contract.serverFullAccessTables.map((table)=>`grant all privileges on table ${schema}.${sqlIdentifier(table)} to ${service};`),
     `grant usage, select, update on all sequences in schema ${schema} to ${service};`
   ].join("\n");
+}
+function runtimeAccessLegacyRepairSql(contract:DatabaseRuntimeAccessContract){
+  const schema=sqlIdentifier(contract.schema);
+  const prefixes=`array[${contract.runtimeSecretTablePrefixes.map(sqlLiteral).join(",")}]::text[]`;
+  const excluded=`array[${contract.runtimeSecretExcludedTables.map(sqlLiteral).join(",")}]::text[]`;
+  const publicRead=`array[${contract.publicReadTables.map(sqlLiteral).join(",")}]::text[]`;
+  return `select ${schema}.${sqlIdentifier(contract.runtimeSecretRepairRpc)}(${prefixes},${excluded},${publicRead});`;
 }
 async function databaseRestPreflight(install:any,key:string,tables:string[],credential:string,extraHeaders:Record<string,string>={}){
   for(const table of tables){
@@ -213,7 +234,18 @@ async function verifyDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeA
 }
 async function repairDatabaseRuntimeAccess(install:any,contract:DatabaseRuntimeAccessContract,source:string){
   await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:runtimeAccessGrantSql(contract)})});
-  await verifyDatabaseRuntimeAccess(install,contract,source);
+  try{
+    await verifyDatabaseRuntimeAccess(install,contract,`${source}-direct-repair`);
+    return;
+  }catch(directRepairError:any){
+    try{
+      await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:runtimeAccessLegacyRepairSql(contract)})});
+    }catch(legacyRepairError:any){
+      if(legacyRepairError&&typeof legacyRepairError==="object"&&!legacyRepairError.cause)legacyRepairError.cause=directRepairError;
+      throw legacyRepairError;
+    }
+    await verifyDatabaseRuntimeAccess(install,contract,source);
+  }
 }
 async function installationDatabaseRuntimeAccessContract(install:any){
   const channel=String(install.release_channel||"stable").trim().toLowerCase()||"stable";
