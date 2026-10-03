@@ -571,7 +571,7 @@ async function applyEngineUpdatePayload(install:any,release:any,channel:string,b
   let result=await engineUpdateRequest(baseUrl,install,release,channel,"apply",components);
   const deadline=Date.now()+120000;
   while((result.status===202||result.body?.waiting===true)&&Date.now()<deadline){
-    await new Promise(resolve=>setTimeout(resolve,3000));
+    await new Promise(resolve=>setTimeout(resolve,10000));
     result=await engineUpdateRequest(baseUrl,install,release,channel,"refresh",components);
   }
   if(result.status===202||result.body?.waiting===true)fail("Engine Host update did not become ready within the deployment window",504);
@@ -584,7 +584,7 @@ async function rollbackEngineUpdatePayload(install:any,release:any,channel:strin
   const componentVersions=result.body?.componentVersions&&typeof result.body.componentVersions==="object"?result.body.componentVersions:{};
   const deadline=Date.now()+120000;
   while((result.status===202||result.body?.waiting===true)&&Date.now()<deadline){
-    await new Promise(resolve=>setTimeout(resolve,3000));
+    await new Promise(resolve=>setTimeout(resolve,10000));
     result=await engineUpdateRequest(baseUrl,install,release,channel,"refresh",components);
   }
   if(result.status===202||result.body?.waiting===true)fail("Engine Host rollback did not become ready within the deployment window",504);
