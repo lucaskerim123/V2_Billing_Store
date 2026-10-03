@@ -57,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           runs="$(gh api -H "Accept: application/vnd.github+json" "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?per_page=100")"
-          scan="$(printf '%s' "$runs" | jq -c --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $sha and ((.event == "workflow_dispatch" and .head_branch == "main") or (.event == "push" and .head_branch == "control/full-scan")))] | sort_by(.created_at) | reverse | .[0] // empty')"
+          scan="$(printf '%s' "$runs" | jq -c --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .event == "workflow_dispatch" and .head_branch == "main")] | sort_by(.created_at) | reverse | .[0] // empty')"
           if [ -z "$scan" ]; then
             echo "::error::Deploy blocked: no Full Scan workflow_dispatch run exists for exact commit $GITHUB_SHA."
             exit 1
