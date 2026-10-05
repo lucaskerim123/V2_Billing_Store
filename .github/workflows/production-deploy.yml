@@ -23,6 +23,8 @@ jobs:
       VERCEL_ORG_ID: team_W3fS0X03YCjNkD2BoqRj6Uld
       VERCEL_PROJECT_ID: prj_3ARdg4cRikU2OiMeZjZDvQ3JuEZd
       VERCEL_CLI_VERSION: 59.6.2
+      SUPABASE_PROJECT_ID: bealqgenrcytjzjoikmk
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
       - name: Check active GitHub profile
         id: profile
@@ -31,7 +33,7 @@ jobs:
           EXPECTED_GITHUB_PROFILE: primary
         run: |
           set -euo pipefail
-          response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 https://dev.incendiarynetworks.cc/api/github-profile)"
+          response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 https://incendiarynetworks.cc/api/v1/github-profile)"
           active="$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(String(x.profile||""))' "$response")"
           echo "Active GitHub profile: $active"
           echo "Expected for this repository: $EXPECTED_GITHUB_PROFILE"
@@ -184,6 +186,45 @@ jobs:
       - name: Pull production configuration without deploying
         if: steps.profile.outputs.deploy == 'true'
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+
+      - name: Resolve authoritative Supabase public build configuration
+        if: steps.profile.outputs.deploy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing SUPABASE_ACCESS_TOKEN repository secret"; exit 1; }
+          test "$SUPABASE_PROJECT_ID" = "bealqgenrcytjzjoikmk"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
+            --header "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            --header "Accept: application/json" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/api-keys")"
+          if [ "$status" != "200" ]; then
+            echo "::error::Could not read API keys for the confirmed Billing Store Supabase project (HTTP $status)."
+            exit 1
+          fi
+
+          public_key="$(node - "$response_file" <<'NODE'
+          const fs=require('fs');
+          const rows=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          if(!Array.isArray(rows)) throw new Error('Unexpected Supabase API-key response');
+          const row=rows.find(x=>String(x?.name||'').toLowerCase()==='anon')
+            || rows.find(x=>String(x?.type||'').toLowerCase()==='publishable')
+            || rows.find(x=>String(x?.name||'').toLowerCase().includes('publishable'));
+          const key=String(row?.api_key||row?.key||'').trim();
+          if(!key) throw new Error('No public/anon API key found for Billing Store Supabase project');
+          process.stdout.write(key);
+          NODE
+          )"
+
+          echo "::add-mask::$public_key"
+          echo "NEXT_PUBLIC_SUPABASE_URL=https://$SUPABASE_PROJECT_ID.supabase.co" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$public_key" >> "$GITHUB_ENV"
+
+          node -e 'const u=new URL(process.argv[1]); if(u.protocol!=="https:") process.exit(1)' "https://$SUPABASE_PROJECT_ID.supabase.co"
+          echo "Resolved public build configuration from confirmed Supabase project $SUPABASE_PROJECT_ID."
 
       - name: Verify pulled production project identity
         if: steps.profile.outputs.deploy == 'true'
