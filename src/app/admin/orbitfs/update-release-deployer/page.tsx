@@ -49,11 +49,6 @@ export default function OrbitFSUpdateReleaseDeployer(){
 
  const selected=releases.find(r=>r.id===selectedId)||releases[0]||null;
  useEffect(()=>{setTargetChannel(selected?.channel||"stable")},[selected?.id,selected?.channel]);
- useEffect(()=>{
-  if(!selected||selected.status==="published"||busy)return;
-  const timer=setInterval(()=>{if(document.visibilityState==="visible")void load({silent:true,preserveMessage:true})},30000);
-  return()=>clearInterval(timer);
- },[selected?.id,selected?.status,busy]);
  const pending=useMemo(()=>releases.filter(r=>r.status!=="published"&&!r.publishedAt),[releases]);
  const published=useMemo(()=>releases.filter(r=>r.status==="published"),[releases]);
  const validationStatus=String(selected?.validation?.status||"");
