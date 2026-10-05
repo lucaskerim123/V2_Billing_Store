@@ -43,7 +43,9 @@ export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){
         version:String(applied.version||""),
         channel:String(applied.channel||""),
         components:Array.isArray(applied.components)?applied.components:[],
-        appliedAt:applied.appliedAt||null
+        appliedAt:applied.appliedAt||null,
+        sha256:String(applied.sha256||""),
+        sourceCommit:String(applied.sourceCommit||"")
       }:null,
       events
     },{headers:{"cache-control":"no-store"}});
