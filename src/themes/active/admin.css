@@ -1,5 +1,4 @@
-/* Active OrbitFS admin theme bundle.
-   V3A is the stable baseline; V5A is selected through ThemeRuntime as an overlay. */
+/* OrbitFS admin theme bundle. V3A/V5A remain compatibility themes; V6A owns the current V6 visual layer and does not inherit V5A styling. */
 @import "../V3A/theme.css";
 @import "../V5A/theme.css";
 @import "../V6A/theme.css";
