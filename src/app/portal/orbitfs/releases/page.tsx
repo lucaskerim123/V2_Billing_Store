@@ -444,8 +444,16 @@ export default function OrbitFSUpdateReleaseSystem(){
         {releases.map(release=>{
           const rid=idOf(release);
           const compare=appliedVersion?compareOrbitReleaseVersions(versionOf(release),appliedVersion):null;
-          const installed=Boolean(appliedId&&appliedId===rid||appliedVersion&&appliedVersion===versionOf(release)&&String(applied?.channel||channel)===channel);
-          const older=Boolean(appliedVersion&&compare!==null&&compare<=0&&!installed);
+          const releaseChecksum=String(release.checksum||release.sha256||"").trim().toLowerCase();
+          const releaseSourceCommit=String(release.source_sha||release.sourceSha||"").trim().toLowerCase();
+          const installed=Boolean(
+            releaseChecksum&&appliedChecksum
+              ?releaseChecksum===appliedChecksum
+              :releaseSourceCommit&&appliedSourceCommit
+                ?releaseSourceCommit===appliedSourceCommit
+                :!releaseChecksum&&!releaseSourceCommit&&appliedId&&appliedId===rid
+          );
+          const older=Boolean(appliedVersion&&compare!==null&&compare<0);
           const minBase=String(release.minimum_version||release.minimumVersion||"");
           const cmpBase=minBase&&baseVersion?compareOrbitReleaseVersions(baseVersion,minBase):null;
           const compatibleRelease=!minBase||cmpBase!==null&&cmpBase>=0;
