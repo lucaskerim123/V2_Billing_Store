@@ -43,11 +43,6 @@ export default function BaseDeploymentAdmin(){
  }
  useEffect(()=>{void load()},[]);
  const selected=releases.find(r=>r.id===selectedId)||releases[0]||null;
- useEffect(()=>{
-  if(!selected||selected.status==="published"||busy)return;
-  const timer=setInterval(()=>{if(document.visibilityState==="visible")void load({silent:true,preserveMessage:true})},30000);
-  return()=>clearInterval(timer);
- },[selected?.id,selected?.status,busy]);
  const queue=useMemo(()=>releases.filter(r=>r.status!=="published"&&!r.publishedAt),[releases]);
  const published=useMemo(()=>releases.filter(r=>Boolean(r.publishedAt)),[releases]);
 
