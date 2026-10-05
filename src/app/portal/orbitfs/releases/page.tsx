@@ -137,9 +137,11 @@ export default function OrbitFSUpdateReleaseSystem(){
   const selectedSourceCommit=String(selected?.source_sha||selected?.sourceSha||"").trim().toLowerCase();
   const appliedSourceCommit=String(applied?.sourceCommit||"").trim().toLowerCase();
   const alreadyInstalled=Boolean(selected&&(
-    (appliedId&&appliedId===idOf(selected))||
-    (!appliedId&&appliedChecksum&&selectedChecksum&&appliedChecksum===selectedChecksum)||
-    (!appliedId&&!appliedChecksum&&appliedSourceCommit&&selectedSourceCommit&&appliedSourceCommit===selectedSourceCommit)
+    (selectedChecksum&&appliedChecksum
+      ?selectedChecksum===appliedChecksum
+      :selectedSourceCommit&&appliedSourceCommit
+        ?selectedSourceCommit===appliedSourceCommit
+        :!selectedChecksum&&!selectedSourceCommit&&appliedId&&appliedId===idOf(selected))
   ));
   const isPrevious=Boolean(selected&&appliedVersion&&selectedComparison!==null&&selectedComparison<0);
   const requiredBase=String(selected?.minimum_version||selected?.minimumVersion||"");
