@@ -17,10 +17,11 @@ export async function GET(req:Request){
     const [localRows,customerRows,authority]=await Promise.all([
       db.from("orbitfs_installations")
         .select("id,auth_user_id,installation_id,component_key,state,supabase_project_ref,supabase_project_name,supabase_region,schema_version,vercel_team_id,vercel_project_id,vercel_project_name,vercel_deployment_id,deployment_url,production_url,release_version,release_id,health_status,last_health_at,last_error,metadata,created_at,updated_at")
-        .order("created_at",{ascending:false}),
+        .neq("state","uninstalled")
+        .order("updated_at",{ascending:false}),
       db.from("customers")
         .select("id,auth_user_id,user_id,customer_number,name,email,status"),
-      masterInstallations(500),
+      masterInstallations(100,true),
     ]);
     if(localRows.error)throw localRows.error;
     if(customerRows.error)throw customerRows.error;
@@ -43,7 +44,7 @@ export async function GET(req:Request){
       if(id)localByInstallation.set(id,install);
     }
 
-    const authorityRows=Array.isArray(authority?.installations)?authority.installations:[];
+    const authorityRows=(Array.isArray(authority?.installations)?authority.installations:[]).filter((row:any)=>String(row?.status||"").toLowerCase()==="active");
     const seen=new Set<string>();
     const merged:any[]=[];
 
@@ -116,6 +117,7 @@ export async function GET(req:Request){
         },
         authority:"orbitfs-license-master-v2",
         authority_only:!local,
+        deployment_source:local?"deployer":"external",
       });
     }
 
@@ -176,8 +178,9 @@ export async function GET(req:Request){
         },
         deployment_lock:{locked:false,reason:null,changed_at:null,changed_by:null,authority:"orbitfs-license-master-v2"},
         authority:"orbitfs-license-master-v2",
-        authority_error:"Installation exists in Billing but is not currently returned by License Manager.",
+        authority_error:"Current Billing installation is not currently returned as an active License Manager binding.",
         authority_only:false,
+        deployment_source:"deployer",
       });
     }
 
@@ -186,6 +189,7 @@ export async function GET(req:Request){
       authority:"orbitfs-license-master-v2",
       fetched_at:new Date().toISOString(),
       installations:merged,
+      scope:"current",
     },{headers:{"cache-control":"no-store"}});
   }catch(error){return httpError(error)}
 }
