@@ -328,3 +328,27 @@
   border:2px solid #020b14!important;
   font-size:7px!important;
 }
+
+/* Notification portal hardening 2026-10-06 */
+.panel{
+  --line:#263d55;
+  --text:#e8f2fb;
+  --muted:#7891a8;
+  color:var(--text)!important;
+  pointer-events:auto!important;
+  isolation:isolate!important;
+}
+.panel[data-surface="admin"]{
+  z-index:100000!important;
+  background:#041522!important;
+  border-color:#244761!important;
+}
+.panel[data-surface="portal"]{
+  z-index:100000!important;
+}
+.root[data-surface="admin"],
+.root[data-surface="admin"] .trigger{
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+/* End notification portal hardening 2026-10-06 */
