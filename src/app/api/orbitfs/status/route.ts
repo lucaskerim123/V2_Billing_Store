@@ -64,8 +64,7 @@ export async function GET(req:Request){
   const updateReleaseDiscoveryAvailable=Object.values(updateReleaseDiscoveryByChannel).every((x:any)=>x.available===true);
   const updateReleaseDiscoveryError=remoteReleaseResults.filter((x:any)=>x.type==="update"&&!x.ok).map((x:any)=>`${x.channel}: ${x.error}`).join("; ")||null;
   const masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.value?.releases||[]);
-  const customerNumber=String(customer?.customer_number||"").trim();
-  const customerMasterLicenses=customerNumber?masterLicensesRows.filter((x:any)=>String(x.customer_external_id||"").trim()===customerNumber).filter((x:any)=>!["revoked","expired"].includes(String(x.status||"").toLowerCase())):[];
+  const customerMasterLicenses=masterLicensesRows.filter((x:any)=>!["revoked","expired"].includes(String(x.status||"").toLowerCase()));
   let connectionRows=(connections.data||[]).map((x:any)=>({...x,metadata:{...(x.metadata||{})}}));
   const enrichedBindings=bindingRows.flatMap((b:any)=>{
     const remote=customerMasterLicenses.find((x:any)=>String(x.id)===String(b.license_id));
