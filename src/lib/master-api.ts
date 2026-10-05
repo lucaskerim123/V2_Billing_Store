@@ -15,8 +15,12 @@ export async function masterRequest(path:string,init:RequestInit={},role:MasterR
 export async function masterProducts(role:MasterRole="billing"){
   return masterRequest("/api/v1/products",{method:"GET"},role);
 }
-export async function masterLicenses(role:MasterRole="billing"){
-  return masterRequest("/api/v1/license",{method:"GET",cache:"no-store"},role);
+export async function masterLicenses(role:MasterRole="billing",customerExternalId?:string){
+  const qs=new URLSearchParams();
+  const customer=String(customerExternalId||"").trim();
+  if(customer)qs.set("customer_external_id",customer);
+  const query=qs.toString();
+  return masterRequest("/api/v1/license"+(query?"?"+query:""),{method:"GET",cache:"no-store"},role);
 }
 export async function masterReleases(product="orbitfs_base",channel="all",releaseType="all",role:MasterRole="billing",fresh=false,includeArchived=false){
   const qs=new URLSearchParams();
