@@ -641,16 +641,68 @@ function verifiedInnerDeployment(deployment:any,installationId:string){
     String(meta.installationRoute||"").trim().length>0 &&
     String(meta.orbitfsDistribution||"").trim().length>0;
 }
+function normalizedHttpsOrigin(value:any){
+  try{
+    const url=new URL(String(value||"").trim());
+    if(url.protocol!=="https:"||url.username||url.password||url.pathname!=="/"||url.search||url.hash)return null;
+    return url.origin;
+  }catch{return null}
+}
+async function selectedEngineHostState(install:any){
+  if(!install?.supabase_project_ref||!install?.database_initialized_at)return null;
+  try{
+    const result=await supabaseApi(String(install.auth_user_id),`/projects/${encodeURIComponent(String(install.supabase_project_ref))}/database/query`,{
+      method:"POST",
+      body:JSON.stringify({query:"select value from public.orbitfs_settings where scope_type='global' and scope_id='' and key='engine_host.shared' limit 1;"})
+    });
+    const row=managementRows(result)[0]||null;
+    const state=row?.value&&typeof row.value==="object"&&!Array.isArray(row.value)?row.value:null;
+    if(!state)return null;
+    if(String(state.installationId||"").trim()!==String(install.installation_id||"").trim())return null;
+    return state;
+  }catch{return null}
+}
+async function verifiedSelectedEngineHostUrl(install:any,state:any,projectId:string,projectName:string,deploymentId:string|null){
+  const selected=normalizedHttpsOrigin(state?.hostUrl);
+  if(!selected)return null;
+  if(state?.projectId&&String(state.projectId)!==projectId)return null;
+  if(state?.projectName&&String(state.projectName)!==projectName)return null;
+  const host=new URL(selected).hostname.toLowerCase();
+  const allowed=new Set<string>([`${projectName.toLowerCase()}.vercel.app`]);
+  let project:any=null;
+  try{project=await vercelApi(String(install.auth_user_id),"/v9/projects/"+encodeURIComponent(projectId))}catch{}
+  for(const alias of Array.isArray(project?.alias)?project.alias:[])allowed.add(String(alias||"").replace(/^https?:\/\//i,"").replace(/\/$/,"").toLowerCase());
+  if(deploymentId){
+    try{
+      const deployment=await vercelApi(String(install.auth_user_id),"/v13/deployments/"+encodeURIComponent(deploymentId));
+      for(const alias of Array.isArray(deployment?.alias)?deployment.alias:[])allowed.add(String(alias||"").replace(/^https?:\/\//i,"").replace(/\/$/,"").toLowerCase());
+    }catch{}
+  }
+  try{
+    const result=await vercelApi(String(install.auth_user_id),"/v9/projects/"+encodeURIComponent(projectId)+"/domains");
+    for(const domain of Array.isArray(result?.domains)?result.domains:[]){
+      if(domain?.verified===false||domain?.misconfigured===true)continue;
+      const name=String(domain?.name||"").trim().toLowerCase();
+      if(name)allowed.add(name);
+    }
+  }catch{}
+  return allowed.has(host)?selected:null;
+}
 async function updaterConnection(install:any){
   const metadata=install?.metadata&&typeof install.metadata==="object"?install.metadata:{};
   const existing=metadata.updaterConnection&&typeof metadata.updaterConnection==="object"?metadata.updaterConnection:{};
+  const selectedState=await selectedEngineHostState(install);
   if(existing.linked===true&&existing.autoVerified===true&&existing.provenance==="inner-deployer-v1"&&existing.engineProjectId&&existing.engineProjectName&&/^https:\/\//i.test(String(existing.engineHostUrl||""))){
-    return {
-      engineProjectId:String(existing.engineProjectId),
-      engineProjectName:String(existing.engineProjectName),
-      engineHostUrl:String(existing.engineHostUrl).replace(/\/$/,""),
-      engineDeploymentId:String(existing.engineDeploymentId||"").trim()||null
-    };
+    const engineProjectId=String(existing.engineProjectId),engineProjectName=String(existing.engineProjectName);
+    const currentDeploymentId=String(selectedState?.deploymentId||existing.engineDeploymentId||"").trim()||null;
+    const selectedHost=await verifiedSelectedEngineHostUrl(install,selectedState,engineProjectId,engineProjectName,currentDeploymentId);
+    const engineHostUrl=selectedHost||String(existing.engineHostUrl).replace(/\/$/,"");
+    if(engineHostUrl!==String(existing.engineHostUrl).replace(/\/$/,"")||currentDeploymentId!==String(existing.engineDeploymentId||"").trim()){
+      const now=new Date().toISOString();
+      const connection={...existing,engineHostUrl,engineDeploymentId:currentDeploymentId,domainMode:selectedState?.domainMode||existing.domainMode||null,domainName:selectedState?.domainName||existing.domainName||null,domainVerified:selectedState?.domainVerified!==false,updatedAt:now,verifiedAt:now};
+      await licenseDb().from("orbitfs_installations").update({metadata:{...metadata,updaterConnection:connection},updated_at:now}).eq("id",install.id).eq("auth_user_id",install.auth_user_id);
+    }
+    return {engineProjectId,engineProjectName,engineHostUrl,engineDeploymentId:currentDeploymentId};
   }
 
   const installationId=String(install?.installation_id||"").trim();
@@ -678,19 +730,22 @@ async function updaterConnection(install:any){
   }
   if(!verified)fail("The Shared Engine Host was not created by the Inner Deployer, so this installation cannot use the OrbitFS Updater.",409,"UPDATER_INNER_DEPLOYER_REQUIRED");
   const aliases=Array.isArray(verified.alias)?verified.alias:[];
-  const engineHostUrl="https://"+String(aliases[0]||project.alias?.[0]||name+".vercel.app").replace(/^https?:\/\//i,"").replace(/\/$/,"");
+  const engineDeploymentId=String(selectedState?.deploymentId||verified.uid||verified.id||"").trim()||null;
+  const selectedHost=await verifiedSelectedEngineHostUrl(install,selectedState,String(project.id),name,engineDeploymentId);
+  const engineHostUrl=selectedHost||"https://"+String(aliases[0]||project.alias?.[0]||name+".vercel.app").replace(/^https?:\/\//i,"").replace(/\/$/,"");
   const now=new Date().toISOString();
   const connection={
     ...existing,
     linked:true,autoVerified:true,provenance:"inner-deployer-v1",
     engineProjectId:String(project.id),engineProjectName:name,engineHostUrl,
-    engineDeploymentId:String(verified.uid||verified.id||"")||null,
+    engineDeploymentId,
+    domainMode:selectedState?.domainMode||null,domainName:selectedState?.domainName||null,domainVerified:selectedState?.domainVerified!==false,
     verifiedAt:now,linkedAt:existing.linkedAt||now,updatedAt:now
   };
   await licenseDb().from("orbitfs_installations").update({
     metadata:{...metadata,updaterConnection:connection},updated_at:now
   }).eq("id",install.id).eq("auth_user_id",install.auth_user_id);
-  return {engineProjectId:String(project.id),engineProjectName:name,engineHostUrl,engineDeploymentId:connection.engineDeploymentId};
+  return {engineProjectId:String(project.id),engineProjectName:name,engineHostUrl,engineDeploymentId};
 }
 
 async function sharedEngineHostHealthy(hostUrl:string){
