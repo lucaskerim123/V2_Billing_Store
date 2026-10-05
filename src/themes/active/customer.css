@@ -1,5 +1,4 @@
-/* Active OrbitFS customer theme bundle.
-   V3C is the stable baseline; V5C and V6C are selected through ThemeRuntime as overlays. */
+/* OrbitFS customer theme bundle. V3C/V5C remain compatibility themes; standalone V6C is isolated by ThemeRuntime when active. */
 @import "../V3C/theme.css";
 @import "../V5C/theme.css";
 @import "../V6C/theme.css";
