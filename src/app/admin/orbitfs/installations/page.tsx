@@ -3,6 +3,7 @@
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase";
+import {usePermissions} from "@/lib/usePermissions";
 
 type Installation=any;
 
@@ -29,6 +30,7 @@ function domainOf(value:any){
 
 export default function InstallationsPage(){
   const sb=useMemo(()=>createClient(),[]);
+  const {can}=usePermissions();
   const [items,setItems]=useState<Installation[]>([]);
   const [loading,setLoading]=useState(true);
   const [checking,setChecking]=useState(false);
@@ -215,11 +217,13 @@ export default function InstallationsPage(){
               {item.customer?.auth_user_id&&<Link className="buttonlink secondary" href={`/admin/customers/${item.customer.auth_user_id}`}>Open customer</Link>}
               {panelUrl&&<a className="buttonlink secondary" href={panelUrl} target="_blank" rel="noreferrer">Open Panel</a>}
               {engineUrl&&<a className="buttonlink secondary" href={engineUrl} target="_blank" rel="noreferrer">Open Engine</a>}
-              {!item.license_id
-                ?<button className="secondary" disabled title="License Manager has not returned an authoritative activation for this installation">Lock unavailable until authority links</button>
-                :locked
-                  ?<button onClick={()=>void setLock(item,"unlock")} disabled={busyId===item.installation_id}>{busyId===item.installation_id?"Unlocking…":"Unlock deployment"}</button>
-                  :<button className="danger" onClick={()=>{setLockTarget(item);setLockReason("")}} disabled={busyId===item.installation_id}>Lock deployment</button>}
+              {!can("licenses.manage")
+                ?<button className="secondary" disabled>View-only deployment control</button>
+                :!item.license_id
+                  ?<button className="secondary" disabled title="License Manager has not returned an authoritative activation for this installation">Lock unavailable until authority links</button>
+                  :locked
+                    ?<button onClick={()=>void setLock(item,"unlock")} disabled={busyId===item.installation_id}>{busyId===item.installation_id?"Unlocking…":"Unlock deployment"}</button>
+                    :<button className="danger" onClick={()=>{setLockTarget(item);setLockReason("")}} disabled={busyId===item.installation_id}>Lock deployment</button>}
             </div>
           </div>
         </div>
