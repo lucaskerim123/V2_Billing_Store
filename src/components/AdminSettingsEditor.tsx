@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {FormEvent,useEffect,useMemo,useState} from "react";
+import {FormEvent,useCallback,useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import {settingMeta} from "@/lib/settings-meta";
 import "../app/admin/settings-system-v2.css";
@@ -56,24 +56,34 @@ function typeName(type?:string,key?:string){
 }
 
 export default function AdminSettingsEditor({category,title,description}:{category:string;title:string;description:string}){
- const sb=createClient();
+ const sb=useMemo(()=>createClient(),[]);
  const [rows,setRows]=useState<any[]>([]);
  const [initial,setInitial]=useState<Record<string,string>>({});
  const [msg,setMsg]=useState("");
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [query,setQuery]=useState("");
+ const [saving,setSaving]=useState(false);
+ const [lastLoadedAt,setLastLoadedAt]=useState<Date|null>(null);
 
- useEffect(()=>{
-  setLoading(true);
-  sb.from("app_settings").select("*").eq("category",category).order("key").then(({data,error})=>{
-   const loaded=data||[];
-   setRows(loaded);
-   setInitial(Object.fromEntries(loaded.map((r:any)=>[r.key,JSON.stringify({value:r.value,public_read:r.public_read})])));
-   setError(error?.message||"");
-   setLoading(false);
-  });
- },[category]);
+ const load=useCallback(async({quiet=false}:{quiet?:boolean}={})=>{
+  if(!quiet)setLoading(true);
+  setError("");
+  const {data,error}=await sb.from("app_settings").select("*").eq("category",category).order("key");
+  if(error){
+   setError(error.message);
+   if(!quiet)setLoading(false);
+   return;
+  }
+  const loaded=data||[];
+  setRows(loaded);
+  setInitial(Object.fromEntries(loaded.map((r:any)=>[r.key,JSON.stringify({value:r.value,public_read:r.public_read})])));
+  setLastLoadedAt(new Date());
+  setMsg(quiet?"Live settings reloaded.":"");
+  if(!quiet)setLoading(false);
+ },[sb,category]);
+
+ useEffect(()=>{void load()},[load]);
 
  const groups=useMemo(()=>{
   const grouped:Record<string,{row:any;index:number}[]>={};
@@ -115,18 +125,32 @@ export default function AdminSettingsEditor({category,title,description}:{catego
   setMsg("");
  }
 
+ function resetUnsaved(){
+  setRows(current=>current.map(row=>{
+   const encoded=initial[row.key];
+   if(!encoded)return row;
+   const parsed=JSON.parse(encoded);
+   return {...row,value:parsed.value,public_read:parsed.public_read};
+  }));
+  setMsg("Unsaved changes reset.");
+ }
+
  async function save(e:FormEvent){
   e.preventDefault();
+  if(saving||dirtyCount===0)return;
+  setSaving(true);
   setMsg("Saving changes…");
   for(const r of rows){
    const before=initial[r.key];
    const now=JSON.stringify({value:r.value,public_read:r.public_read});
    if(before===now)continue;
    const {error}=await sb.from("app_settings").update({value:r.value,public_read:r.public_read,updated_at:new Date().toISOString()}).eq("key",r.key);
-   if(error){setMsg(error.message);return;}
+   if(error){setMsg(error.message);setSaving(false);return;}
   }
   setInitial(Object.fromEntries(rows.map((r:any)=>[r.key,JSON.stringify({value:r.value,public_read:r.public_read})])));
-  setMsg("Settings saved and applied.");
+  setLastLoadedAt(new Date());
+  setMsg("Settings saved and applied live.");
+  setSaving(false);
  }
 
  if(loading)return <main className="adminShell"><section className="panel">Loading settings…</section></main>;
@@ -142,20 +166,27 @@ export default function AdminSettingsEditor({category,title,description}:{catego
     <article><small>Public</small><strong>{publicCount}</strong></article>
     <article><small>High-impact</small><strong>{dangerCount}</strong></article>
    </div>
-   <div className="settingsToolsV3"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`Search ${title.toLowerCase()}…`}/><span>{visibleRows}/{rows.length}</span></div>
+   <div className="settingsLiveBarV3">
+    <div className="settingsLiveStateV3"><span className="settingsLiveDot" aria-hidden="true"/><div><b>Live configuration</b><small>{lastLoadedAt?`Last refreshed ${lastLoadedAt.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`:"Loading live state"}</small></div></div>
+    <div className="settingsLiveActionsV3"><button type="button" className="secondary" onClick={()=>void load({quiet:true})} disabled={saving}>Reload live</button>{dirtyCount>0&&<button type="button" className="secondary" onClick={resetUnsaved} disabled={saving}>Reset unsaved</button>}</div>
+   </div>
+   <div className="settingsToolsV3"><div className="settingsSearchWrap"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={`Search ${title.toLowerCase()}…`} aria-label={`Search ${title}`}/>{query&&<button type="button" onClick={()=>setQuery("")} aria-label="Clear settings search">×</button>}</div><span>{visibleRows}/{rows.length}</span></div>
   </div>
 
-  <form onSubmit={save}>
-   <div className="settingsGroupStack">{groupEntries.map(([group,list],groupIndex)=><details className="settingsGroupV3" key={group} open={query.trim()?true:groupIndex===0}>
-    <summary className="settingsGroupHeadV3"><div><h2>{group}</h2><p>{GROUP_HELP[group]||GROUP_HELP["Other settings"]}</p></div><span>{list.length}</span><i>⌄</i></summary>
+  <form onSubmit={save} noValidate>
+   <div className="settingsGroupStack">{groupEntries.map(([group,list],groupIndex)=>{
+    const changedInGroup=list.filter(({row:r})=>initial[r.key]!==JSON.stringify({value:r.value,public_read:r.public_read})).length;
+    return <details className="settingsGroupV3" key={group} open={query.trim()?true:groupIndex===0}>
+    <summary className="settingsGroupHeadV3"><div><h2>{group}</h2><p>{GROUP_HELP[group]||GROUP_HELP["Other settings"]}</p></div><span>{changedInGroup?changedInGroup+" changed":list.length+" settings"}</span><i>⌄</i></summary>
     <div className="settingsListV3">
      {list.map(({row:r,index:i})=>{
       const m=settingMeta(r.key,r.value);
       const unit=r.key.endsWith("_cents")?"AUD":m.unit;
       const type=typeName(m.type,r.key);
-      return <article className={`settingV3 ${m.danger?"danger":""}`} key={r.key}>
+      const changed=initial[r.key]!==JSON.stringify({value:r.value,public_read:r.public_read});
+      return <article className={`settingV3 ${m.danger?"danger":""} ${changed?"changed":""}`} key={r.key}>
        <div className="settingInfoV3">
-        <div className="settingTitleV3"><b>{m.label}</b><span className="settingTypeBadge">{type}</span>{m.danger&&<span className="settingDangerBadge">High impact</span>}</div>
+        <div className="settingTitleV3"><b>{m.label}</b><span className="settingTypeBadge">{type}</span>{changed&&<span className="settingChangedBadge">Unsaved</span>}{m.danger&&<span className="settingDangerBadge">High impact</span>}</div>
         <p>{m.description}</p>
         <div className="settingKeyV3"><code>{r.key}</code><span className="settingVisibilityState">{r.public_read?"Public read":"Internal"}</span></div>
        </div>
@@ -170,9 +201,9 @@ export default function AdminSettingsEditor({category,title,description}:{catego
       </article>;
      })}
     </div>
-   </details>)}</div>
+   </details>})}</div>
    {visibleRows===0&&<div className="settingsNoResults">No settings match “{query}”.</div>}
-   <div className="settingsSaveV3"><div><b>{dirtyCount?`${dirtyCount} unsaved change${dirtyCount===1?"":"s"}`:"No unsaved changes"}</b><span>{msg||"Most changes apply immediately from Supabase."}</span></div><button type="submit" disabled={dirtyCount===0}>Save changes</button></div>
+   <div className="settingsSaveV3"><div><b>{saving?"Saving live configuration…":dirtyCount?`${dirtyCount} unsaved change${dirtyCount===1?"":"s"}`:"Live configuration is saved"}</b><span role="status">{msg||"Changes write directly to the authoritative Billing configuration."}</span></div><div className="settingsSaveActionsV3">{dirtyCount>0&&<button type="button" className="secondary" onClick={resetUnsaved} disabled={saving}>Reset</button>}<button type="submit" aria-busy={saving} disabled={dirtyCount===0||saving}>{saving?"Saving…":"Save changes"}</button></div></div>
   </form>
  </main>;
 }

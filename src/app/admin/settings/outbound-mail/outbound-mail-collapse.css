@@ -28,3 +28,52 @@
 .outboundMailPage summary::-webkit-details-marker{display:none}
 .outboundMailPage summary::before{content:"›";display:inline-block;color:#a5b8ce;font-size:17px;line-height:1;flex:0 0 auto;margin-right:8px;transition:transform .16s ease}
 .outboundMailPage details[open]>summary::before{transform:rotate(90deg)}
+
+
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundMailOverview{
+  margin:8px 0 10px!important;
+  padding:7px 9px!important;
+  gap:8px!important;
+  border-color:#173a55!important;
+  border-radius:7px!important;
+  background:#051827!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundMailOverview>span{
+  padding-right:8px!important;
+  border-color:#173a55!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundSettingsCollapse{
+  margin-bottom:7px!important;
+  border-radius:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundSettingsCollapse>summary{
+  min-height:42px!important;
+  padding:9px 10px!important;
+  border-color:#12334b!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundSettingsCollapse>summary b{font-size:9px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundSettingsCollapse>summary small{font-size:6.5px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundSettingsBody{padding:9px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundCategoryGroup{
+  padding:0 8px!important;
+  margin-bottom:6px!important;
+  border-color:#173a55!important;
+  border-radius:7px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundCategoryGroup>summary{
+  min-height:36px!important;
+  padding:7px 0!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundCategoryGroup>summary small{font-size:6.5px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundAutomationItem>summary{
+  min-height:38px!important;
+  padding:7px 0!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundAutomationItem>summary b{font-size:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundAutomationItem>summary small{font-size:6px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .outboundMailPage .outboundAutomationItem .mailAutomationRow{
+  padding:8px 0 9px!important;
+}

@@ -58,6 +58,7 @@ export default function OrbitFSAlertSystemPage(){
   const [previewing,setPreviewing]=useState(false);
   const [sending,setSending]=useState(false);
   const [status,setStatus]=useState("");
+  const [confirmSend,setConfirmSend]=useState(false);
 
   const loadRecipients=useCallback(async(q="")=>{
     setRecipientLoading(true);
@@ -96,9 +97,9 @@ export default function OrbitFSAlertSystemPage(){
   const manualEnabled=options?.settings?.manual_send_enabled!==false;
   const linksEnabled=options?.settings?.action_links_enabled!==false;
 
-  function changeKind(next:AlertKind){setKind(next);setSeverity(severityDefaults[next]);setPreview(null);setStatus("")}
-  function updateCondition<K extends keyof Conditions>(key:K,value:Conditions[K]){setConditions(v=>({...v,[key]:value}));setPreview(null);setStatus("")}
-  function toggleRecipient(id:string){setSelected(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);setPreview(null);setStatus("")}
+  function changeKind(next:AlertKind){setKind(next);setSeverity(severityDefaults[next]);setPreview(null);setConfirmSend(false);setStatus("")}
+  function updateCondition<K extends keyof Conditions>(key:K,value:Conditions[K]){setConditions(v=>({...v,[key]:value}));setPreview(null);setConfirmSend(false);setStatus("")}
+  function toggleRecipient(id:string){setSelected(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);setPreview(null);setConfirmSend(false);setStatus("")}
 
   async function getPreview(){
     if(audience==="selected"&&selected.length===0){setStatus("Select at least one recipient first.");return null}
@@ -110,7 +111,7 @@ export default function OrbitFSAlertSystemPage(){
     });
     setPreviewing(false);
     if(error){setStatus(error.message);return null}
-    const p=data as Preview;setPreview(p);return p;
+    const p=data as Preview;setPreview(p);setConfirmSend(false);return p;
   }
 
   async function sendAlert(){
@@ -120,7 +121,11 @@ export default function OrbitFSAlertSystemPage(){
     if(!p||p.count===0){if(p)setStatus("No recipients match this audience and its conditions.");return}
     const threshold=Number(options?.settings?.confirmation_threshold||25);
     const needsConfirm=p.count>=threshold||audience!=="selected";
-    if(needsConfirm&&!confirm(`Send this ${kind} to ${p.count} matching recipient${p.count===1?"":"s"}?`))return;
+    if(needsConfirm&&!confirmSend){
+      setConfirmSend(true);
+      setStatus(`Review complete. Confirm sending this ${kind} to ${p.count} matching recipient${p.count===1?"":"s"}.`);
+      return;
+    }
     setSending(true);setStatus("");
     const {data,error}=await sb.rpc("orbitfs_alert_send",{
       p_audience:audience,
@@ -136,7 +141,7 @@ export default function OrbitFSAlertSystemPage(){
     if(error){setStatus(error.message);return}
     const sent=Number(data?.sent||0);
     setStatus(`Sent to ${sent} recipient${sent===1?"":"s"}.`);
-    setTitle("");setMessage("");setActionUrl("");setPreview(null);
+    setTitle("");setMessage("");setActionUrl("");setPreview(null);setConfirmSend(false);
   }
 
   if(loading)return <main className={styles.shell}><section className={styles.card}>Loading OrbitFS Alert System…</section></main>;
@@ -163,7 +168,7 @@ export default function OrbitFSAlertSystemPage(){
         <div className={styles.typeGrid}>{enabledKinds.map(k=><button type="button" key={k.value} onClick={()=>changeKind(k.value)} className={kind===k.value?styles.activeType:""}><b>{k.label}</b><span>{k.help}</span></button>)}</div>
         <div className={styles.twoCols}>
           <label><span>Severity</span><select value={severity} onChange={e=>setSeverity(e.target.value as Severity)}><option value="info">Info</option><option value="success">Success</option><option value="warning">Warning</option><option value="error">Critical / error</option></select></label>
-          <label><span>Audience</span><select value={audience} onChange={e=>{setAudience(e.target.value as Audience);setPreview(null);setStatus("")}}><option value="selected">Selected people</option><option value="customers">Customers</option><option value="staff">Active staff</option><option value="everyone">Everyone</option></select></label>
+          <label><span>Audience</span><select value={audience} onChange={e=>{setAudience(e.target.value as Audience);setPreview(null);setConfirmSend(false);setStatus("")}}><option value="selected">Selected people</option><option value="customers">Customers</option><option value="staff">Active staff</option><option value="everyone">Everyone</option></select></label>
         </div>
         <label><span>Title</span><input maxLength={160} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Alert title"/></label>
         <label><span>Message <em>{message.length}/{maxMessage}</em></span><textarea rows={6} maxLength={maxMessage} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Message shown to matching recipients"/></label>
@@ -177,7 +182,7 @@ export default function OrbitFSAlertSystemPage(){
           <div className={styles.recipientList}>{recipientLoading?<p>Loading recipients…</p>:recipients.length===0?<p>No matching recipients.</p>:recipients.map(r=><button type="button" key={r.id} onClick={()=>toggleRecipient(r.id)} className={selected.includes(r.id)?styles.selectedRecipient:""}><span><b>{r.label}</b><small>{[r.email,r.customer_number].filter(Boolean).join(" · ")||r.id}</small></span><em>{r.kind}</em></button>)}</div>
         </div>}
 
-        <div className={styles.conditionsHead}><div><h3>Conditions</h3><p>Leave every field blank to target the full audience. Multiple conditions are combined with AND logic.</p></div>{conditionCount>0&&<button type="button" onClick={()=>{setConditions(blankConditions);setPreview(null)}}>Clear {conditionCount}</button>}</div>
+        <div className={styles.conditionsHead}><div><h3>Conditions</h3><p>Leave every field blank to target the full audience. Multiple conditions are combined with AND logic.</p></div>{conditionCount>0&&<button type="button" onClick={()=>{setConditions(blankConditions);setPreview(null);setConfirmSend(false)}}>Clear {conditionCount}</button>}</div>
         <div className={styles.conditionGrid}>
           <label><span>Customer status</span><select value={conditions.customer_status} onChange={e=>updateCondition("customer_status",e.target.value)}><option value="">Any status</option>{options.customer_statuses.map(v=><option key={v} value={v}>{pretty(v)}</option>)}</select></label>
           <label><span>Country</span><select value={conditions.country_code} onChange={e=>updateCondition("country_code",e.target.value)}><option value="">Any country</option>{options.countries.map(v=><option key={v} value={v}>{v}</option>)}</select></label>
@@ -193,7 +198,7 @@ export default function OrbitFSAlertSystemPage(){
     </div>
 
     <section className={styles.dispatchCard}>
-      <div className={styles.dispatchTop}><div><p className={styles.eyebrow}>03 · VERIFY & SEND</p><h2>Dispatch</h2><p>Preview the effective audience before sending. The final count is calculated by Supabase using the same rules as the dispatch.</p></div><div className={styles.dispatchButtons}><button type="button" className={styles.previewButton} onClick={()=>void getPreview()} disabled={previewing||(audience==="selected"&&selected.length===0)}>{previewing?"Checking…":"Preview recipients"}</button><button type="button" className={styles.sendButton} onClick={()=>void sendAlert()} disabled={sending||!systemEnabled||!manualEnabled||!title.trim()||(audience==="selected"&&selected.length===0)}>{sending?"Sending…":`Send ${pretty(kind)}`}</button></div></div>
+      <div className={styles.dispatchTop}><div><p className={styles.eyebrow}>03 · VERIFY & SEND</p><h2>Dispatch</h2><p>Preview the effective audience before sending. The final count is calculated by Supabase using the same rules as the dispatch.</p></div><div className={styles.dispatchButtons}><button type="button" className={styles.previewButton} onClick={()=>void getPreview()} disabled={previewing||(audience==="selected"&&selected.length===0)}>{previewing?"Checking…":"Preview recipients"}</button><button type="button" className={styles.sendButton} onClick={()=>void sendAlert()} disabled={sending||!systemEnabled||!manualEnabled||!title.trim()||(audience==="selected"&&selected.length===0)}>{sending?"Sending…":confirmSend&&preview?`Confirm send to ${preview.count}`:`Send ${pretty(kind)}`}</button></div></div>
       {preview&&<div className={styles.previewBox}><div className={styles.previewCount}><strong>{preview.count}</strong><span>matching recipient{preview.count===1?"":"s"}</span></div><div className={styles.previewSample}>{preview.sample.length===0?<p>No matches.</p>:preview.sample.map(r=><span key={r.user_id}><b>{r.label}</b><small>{r.email||r.surface}</small></span>)}</div></div>}
       {status&&<p className={styles.statusMessage}>{status}</p>}
     </section>

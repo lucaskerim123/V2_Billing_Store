@@ -13,12 +13,12 @@ function isoValue(value:string){return value?new Date(value).toISOString():null}
 
 export default function NewsAdmin(){
   const sb=createClient();
-  const [rows,setRows]=useState<any[]>([]),[edit,setEdit]=useState<any>(blank()),[mode,setMode]=useState<Mode>("draft"),[search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[msg,setMsg]=useState(""),[preview,setPreview]=useState(false),[saving,setSaving]=useState(false);
+  const [rows,setRows]=useState<any[]>([]),[edit,setEdit]=useState<any>(blank()),[mode,setMode]=useState<Mode>("draft"),[search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[msg,setMsg]=useState(""),[preview,setPreview]=useState(false),[saving,setSaving]=useState(false),[deleteArmed,setDeleteArmed]=useState(false);
 
   async function load(){const {data,error}=await sb.from("news_posts").select("*").order("created_at",{ascending:false});if(error)setMsg(error.message);setRows(data||[])}
   useEffect(()=>{load()},[]);
-  function select(post:any){setEdit({...post});const state=newsPublishState(post);setMode(state==="scheduled"?"schedule":state==="published"?"publish":"draft");setMsg("");setPreview(false)}
-  function fresh(){setEdit(blank());setMode("draft");setMsg("");setPreview(false)}
+  function select(post:any){setEdit({...post});const state=newsPublishState(post);setMode(state==="scheduled"?"schedule":state==="published"?"publish":"draft");setMsg("");setPreview(false);setDeleteArmed(false)}
+  function fresh(){setEdit(blank());setMode("draft");setMsg("");setPreview(false);setDeleteArmed(false)}
   function changeTitle(title:string){const oldAuto=slugifyNews(edit.title||"");setEdit({...edit,title,slug:(!edit.slug||edit.slug===oldAuto)?slugifyNews(title):edit.slug})}
   function changeCategory(category:string){setEdit({...edit,category,show_on_homepage:category==="product_updates"?(edit.category==="product_updates"?!!edit.show_on_homepage:true):false})}
   function addFormat(kind:"h2"|"h3"|"bullet"|"quote"){const sample=kind==="h2"?"## Section heading":kind==="h3"?"### Subheading":kind==="bullet"?"- List item":"> Highlighted note";setEdit({...edit,body:`${edit.body||""}${edit.body?"\n\n":""}${sample}`})}
@@ -27,8 +27,14 @@ export default function NewsAdmin(){
     const payload={slug,title:edit.title.trim(),excerpt:edit.excerpt?.trim()||null,body:edit.body?.trim()||null,category:edit.category||"general_news",published:mode!=="draft",pinned:!!edit.pinned,featured:!!edit.featured,show_on_homepage:edit.category==="product_updates"&&!!edit.show_on_homepage,published_at:mode==="draft"?null:mode==="publish"?new Date().toISOString():isoValue(edit.published_at),unpublish_at:isoValue(edit.unpublish_at||""),author_name:edit.author_name?.trim()||null,cta_label:edit.cta_label?.trim()||null,cta_url:edit.cta_url?.trim()||null,seo_title:edit.seo_title?.trim()||null,seo_description:edit.seo_description?.trim()||null,updated_at:new Date().toISOString()};
     const q=edit.id?sb.from("news_posts").update(payload).eq("id",edit.id).select().single():sb.from("news_posts").insert(payload).select().single();const {data,error}=await q;setSaving(false);if(error){setMsg(error.message);return}setMsg(mode==="draft"?"Draft saved.":mode==="schedule"?"Post scheduled.":"Post published.");if(data)select(data);await load()
   }
-  async function remove(){if(!edit.id||!confirm(`Delete “${edit.title}”? This cannot be undone.`))return;const {error}=await sb.from("news_posts").delete().eq("id",edit.id);if(error){setMsg(error.message);return}fresh();setMsg("Post deleted.");await load()}
-  function duplicate(){const title=`${edit.title||"Untitled"} copy`;setEdit({...edit,id:undefined,title,slug:slugifyNews(title),published:false,published_at:null,unpublish_at:null,pinned:false,featured:false,created_at:undefined,updated_at:undefined});setMode("draft");setMsg("Duplicated into a new draft. Save when ready.")}
+  async function remove(){
+    if(!edit.id)return;
+    if(!deleteArmed){setDeleteArmed(true);setMsg(`Delete “${edit.title}”? Click Confirm delete to permanently remove it.`);return}
+    const {error}=await sb.from("news_posts").delete().eq("id",edit.id);
+    if(error){setMsg(error.message);return}
+    fresh();setMsg("Post deleted.");await load()
+  }
+  function duplicate(){setDeleteArmed(false);const title=`${edit.title||"Untitled"} copy`;setEdit({...edit,id:undefined,title,slug:slugifyNews(title),published:false,published_at:null,unpublish_at:null,pinned:false,featured:false,created_at:undefined,updated_at:undefined});setMode("draft");setMsg("Duplicated into a new draft. Save when ready.")}
 
   const visible=useMemo(()=>rows.filter(r=>{const state=newsPublishState(r);const matchesFilter=filter==="all"||filter===state||filter===r.category;const q=search.trim().toLowerCase();return matchesFilter&&(!q||`${r.title} ${r.slug} ${newsCategoryLabel(r.category)}`.toLowerCase().includes(q))}),[rows,search,filter]);
   const stats=useMemo(()=>({total:rows.length,published:rows.filter(x=>newsPublishState(x)==="published").length,draft:rows.filter(x=>newsPublishState(x)==="draft").length,scheduled:rows.filter(x=>newsPublishState(x)==="scheduled").length}),[rows]);
@@ -53,7 +59,7 @@ export default function NewsAdmin(){
 
           <section className={styles.section}><div className={styles.sectionHead}><h3>Search & sharing</h3><span>Optional metadata</span></div><div className={styles.grid2}><div className={styles.field}><label>SEO title</label><input value={edit.seo_title||""} onChange={e=>setEdit({...edit,seo_title:e.target.value})} placeholder={edit.title||"Search title"}/></div><div className={styles.field}><label>SEO description</label><input value={edit.seo_description||""} onChange={e=>setEdit({...edit,seo_description:e.target.value})} placeholder={edit.excerpt||"Short search description"}/></div></div></section>
 
-          <div className={styles.footerActions}><div>{edit.id&&<button type="button" className={styles.buttonDanger} onClick={remove}>Delete</button>}{edit.id&&<button type="button" className={styles.button} onClick={duplicate}>Duplicate</button>}<button type="button" className={styles.button} onClick={()=>setPreview(!preview)}>{preview?"Hide preview":"Preview"}</button></div><div><span className={styles.message}>{msg}</span><button className={styles.buttonPrimary} disabled={saving}>{saving?"Saving…":mode==="draft"?"Save draft":mode==="schedule"?"Schedule post":"Publish post"}</button></div></div>
+          <div className={styles.footerActions}><div>{edit.id&&<button type="button" className={styles.buttonDanger} onClick={remove}>{deleteArmed?"Confirm delete":"Delete"}</button>}{edit.id&&<button type="button" className={styles.button} onClick={duplicate}>Duplicate</button>}<button type="button" className={styles.button} onClick={()=>setPreview(!preview)}>{preview?"Hide preview":"Preview"}</button></div><div><span className={styles.message}>{msg}</span><button className={styles.buttonPrimary} disabled={saving}>{saving?"Saving…":mode==="draft"?"Save draft":mode==="schedule"?"Schedule post":"Publish post"}</button></div></div>
         </form>
 
         {preview&&<section className={styles.preview}><span className={styles.previewBadge}>{newsCategoryLabel(edit.category)}</span><h2>{edit.title||"Untitled news post"}</h2><p className={styles.previewLead}>{edit.excerpt||"Your excerpt will appear here."}</p><div className={styles.previewBody}>{edit.body||"Your article content will appear here."}</div></section>}

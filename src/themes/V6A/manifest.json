@@ -1,0 +1,10 @@
+{
+  "id": "V6A",
+  "name": "OrbitFS V6 Admin",
+  "version": "6.0.0",
+  "surface": "admin",
+  "entry": "theme.css",
+  "family": "V6",
+  "extends": "V5A",
+  "description": "OrbitFS V6 Admin starter theme. V6 visual foundation layered over the existing V5A admin functionality."
+}

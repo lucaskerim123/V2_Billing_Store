@@ -6,6 +6,7 @@ import {usePathname,useRouter} from "next/navigation";
 import {createClient} from "@/lib/supabase";
 import {trackCustomerActivity} from "@/lib/customer-activity";
 import NotificationCenter from "@/components/NotificationCenter";
+import PortalGlobalBanner,{type PortalBannerConfig} from "@/components/PortalGlobalBanner";
 import ThemeRuntime from "@/components/ThemeRuntime";
 import themeDefaults from "@/themes/active/defaults.json";
 import V6CDesignShell from "@/themes/V6C/V6CDesignShell";
@@ -14,7 +15,7 @@ type NavItem={label:string;href:string;short:string};
 
 export default function PortalLayoutClient({children}:{children:React.ReactNode}){
  const sb=useMemo(()=>createClient(),[]),path=usePathname(),router=useRouter();
- const [d,setD]=useState<any>(),[enforcement,setEnforcement]=useState<any>({state:"active"}),[loggingOut,setLoggingOut]=useState(false),[mobileMenuOpen,setMobileMenuOpen]=useState(false),[activeTheme,setActiveTheme]=useState(String(themeDefaults.customer));
+ const [d,setD]=useState<any>(),[enforcement,setEnforcement]=useState<any>({state:"active"}),[loggingOut,setLoggingOut]=useState(false),[mobileMenuOpen,setMobileMenuOpen]=useState(false),[activeTheme,setActiveTheme]=useState(String(themeDefaults.customer)),[portalBanner,setPortalBanner]=useState<PortalBannerConfig|null>(null);
  const lastEnforcementCheck=useRef(0),lastPulseRevision=useRef<number|null>(null),billingMenuRef=useRef<HTMLDetailsElement|null>(null),orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
 
  useEffect(()=>{
@@ -31,14 +32,25 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   }
   async function loadInitial(){
    const {data:{user}}=await sb.auth.getUser();if(!user){location.href="/login";return}
-   const [{data:p},{data:s},{data:staff},{data:enf}]=await Promise.all([
+   const [{data:p},{data:s},{data:staff},{data:enf},{data:bannerRows}]=await Promise.all([
     sb.from("user_profiles").select("display_name,first_name").eq("id",user.id).single(),
     sb.from("app_settings").select("key,value").eq("category","identity"),
     sb.rpc("get_my_staff_access"),
-    sb.rpc("account_enforcement_status")
+    sb.rpc("account_enforcement_status"),
+    sb.from("app_settings").select("key,value,updated_at").eq("category","portal_banner").eq("public_read",true)
    ]);
    lastEnforcementCheck.current=Date.now();if(!alive||!(await applyEnforcement(enf)))return;
    const id=Object.fromEntries((s||[]).map((x:any)=>[x.key.split(".").pop(),x.value]));
+   const bannerMap=Object.fromEntries((bannerRows||[]).map((x:any)=>[x.key.split(".").pop(),x.value]));
+   const bannerUpdated=(bannerRows||[]).reduce((latest:string,row:any)=>String(row.updated_at||"")>latest?String(row.updated_at||""):latest,"");
+   setPortalBanner({
+    enabled:bannerMap.enabled===true,
+    level:["info","warning","alert"].includes(String(bannerMap.level))?bannerMap.level:"info",
+    title:String(bannerMap.title||""),
+    message:String(bannerMap.message||""),
+    dismissible:bannerMap.dismissible!==false,
+    revision:String(bannerMap.revision||bannerUpdated||"1")
+   });
    setD({user,p,id,staff});
   }
   async function refreshEnforcement(force=false){
@@ -139,6 +151,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
     loggingOut={loggingOut}
     onLogout={()=>void logout()}
     tools={<NotificationCenter surface="portal" compact/>}
+    banner={<PortalGlobalBanner config={portalBanner}/>}
     accountName={d.p?.display_name||d.p?.first_name||"OrbitFS Customer"}
     accountEmail={d.user?.email||""}
   >{portalBody}</V6CDesignShell>:<>
@@ -178,7 +191,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    </div>
   </header>
 
-  <main className="portalMain">{portalBody}</main>
+  <main className="portalMain"><PortalGlobalBanner config={portalBanner}/>{portalBody}</main>
   </>}
  </div>;
 }

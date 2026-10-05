@@ -1,0 +1,1273 @@
+/* OrbitFS V6A — compact admin system.
+   Presentation only. Existing V5A data, permissions and backend actions remain authoritative.
+   Base Deployment and Update Release System are deliberately exempt via data-admin-v6a-exempt. */
+
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]){
+  --v6a-bg:#020b14;
+  --v6a-shell:#031522;
+  --v6a-panel:#061a2a;
+  --v6a-panel-raised:#082238;
+  --v6a-panel-soft:#041623;
+  --v6a-line:#173a55;
+  --v6a-line-strong:#24546f;
+  --v6a-text:#edf6ff;
+  --v6a-text-2:#bfd1df;
+  --v6a-muted:#7894aa;
+  --v6a-muted-2:#58778f;
+  --v6a-purple:#6840e8;
+  --v6a-purple-2:#3e4df2;
+  --v6a-cyan:#51caef;
+  --v6a-teal:#4ed7c7;
+  --v6a-success:#5eddb2;
+  --v6a-warning:#e5bd65;
+  --v6a-danger:#ef91a5;
+  --v6a-radius:8px;
+  min-height:100vh;
+  background:
+    radial-gradient(720px 310px at 74% -8%,rgba(72,52,210,.10),transparent 68%),
+    #020b14!important;
+  color:var(--v6a-text)!important;
+  font-size:13px;
+}
+
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) *{
+  scrollbar-color:#31526a #03111d;
+  scrollbar-width:thin;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) *::-webkit-scrollbar{width:9px;height:9px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) *::-webkit-scrollbar-track{background:#03111d}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) *::-webkit-scrollbar-thumb{background:#31526a;border:2px solid #03111d;border-radius:999px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) *::-webkit-scrollbar-thumb:hover{background:#426c88}
+
+/* Shell */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Topbar{
+  height:58px!important;
+  min-height:58px!important;
+  padding:0 14px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:11px!important;
+  border-bottom:1px solid #14344d!important;
+  background:rgba(3,19,32,.97)!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(16px);
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Brand{
+  min-width:150px!important;
+  gap:7px!important;
+  color:#f4f8ff!important;
+  font-size:11px!important;
+  font-weight:750!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3BrandMark{
+  width:30px!important;
+  height:30px!important;
+  border:1px solid #694bd0!important;
+  border-radius:7px!important;
+  background:linear-gradient(145deg,#7928df,#265adf)!important;
+  box-shadow:0 0 18px rgba(94,52,224,.24)!important;
+  color:#fff!important;
+  font-size:12px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Brand small{
+  padding:2px 5px!important;
+  border:1px solid #27445d!important;
+  border-radius:4px!important;
+  background:#071b2a!important;
+  color:#7695ad!important;
+  font-size:6px!important;
+  letter-spacing:.08em!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Primary{
+  min-width:0!important;
+  height:58px!important;
+  gap:2px!important;
+  flex:1 1 auto!important;
+  align-items:center!important;
+  overflow-x:auto!important;
+  scrollbar-width:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Primary::-webkit-scrollbar{display:none}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Primary>a{
+  height:32px!important;
+  min-height:32px!important;
+  padding:0 9px!important;
+  display:flex!important;
+  align-items:center!important;
+  border:1px solid transparent!important;
+  border-radius:6px!important;
+  background:transparent!important;
+  color:#8fa8bc!important;
+  font-size:8px!important;
+  font-weight:680!important;
+  white-space:nowrap!important;
+  text-decoration:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Primary>a:hover{
+  background:#071f32!important;
+  color:#e9f6ff!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Primary>a.active{
+  border-color:#583db6!important;
+  background:linear-gradient(180deg,#1d2051,#422091)!important;
+  color:#fff!important;
+  box-shadow:0 0 14px rgba(85,51,198,.15)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Primary>a.active::after{display:none!important}
+
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Tools{
+  margin-left:auto!important;
+  padding:0!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Tool,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Create>summary{
+  min-height:30px!important;
+  height:30px!important;
+  padding:0 8px!important;
+  display:flex!important;
+  align-items:center!important;
+  border:1px solid #1d405a!important;
+  border-radius:6px!important;
+  background:#061a29!important;
+  color:#9db7ca!important;
+  font-size:7px!important;
+  font-weight:650!important;
+  box-shadow:none!important;
+  cursor:pointer!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Tool:hover,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Create>summary:hover{
+  border-color:#315d78!important;
+  background:#09243a!important;
+  color:#eef8ff!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3SystemSource{
+  min-height:30px!important;
+  padding:0 8px!important;
+  border:1px solid #1d405a!important;
+  border-radius:6px!important;
+  background:#061a29!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3SystemSource span{font-size:5.5px!important;color:#587991!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3SystemSource strong{font-size:6.5px!important;color:#9db8cb!important}
+
+/* V6A account + logout */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Account{
+  position:relative;
+  display:block!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Account>summary{
+  list-style:none;
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border:1px solid #5a46bc;
+  border-radius:50%;
+  background:linear-gradient(145deg,#5b2ac1,#234fbd);
+  color:#fff;
+  font-size:7px;
+  font-weight:800;
+  cursor:pointer;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Account>summary::-webkit-details-marker{display:none}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6AccountMenu{
+  position:absolute;
+  top:37px;
+  right:0;
+  z-index:160;
+  width:210px;
+  padding:6px;
+  border:1px solid #244761;
+  border-radius:8px;
+  background:#051724;
+  box-shadow:0 20px 44px rgba(0,0,0,.42);
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Identity{
+  padding:9px 9px 8px;
+  border-bottom:1px solid #16364f;
+  margin-bottom:5px;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Identity :where(b,small,em){display:block}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Identity b{font-size:8px;color:#eef7ff}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Identity small{margin-top:3px;color:#708ca2;font-size:6.5px;overflow-wrap:anywhere}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Identity em{margin-top:5px;color:#7b65e5;font-size:6px;font-style:normal;text-transform:uppercase;letter-spacing:.08em}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6AccountMenu>a,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6AccountMenu>button{
+  width:100%;
+  min-height:30px!important;
+  padding:0 8px!important;
+  display:flex!important;
+  align-items:center!important;
+  border:0!important;
+  border-radius:5px!important;
+  background:transparent!important;
+  color:#9bb5c8!important;
+  font-size:7px!important;
+  text-align:left!important;
+  text-decoration:none!important;
+  cursor:pointer!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6AccountMenu>a:hover,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6AccountMenu>button:hover{background:#082239!important;color:#fff!important}
+
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Subnav{
+  min-height:39px!important;
+  padding:5px 14px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:3px!important;
+  overflow-x:auto!important;
+  border-bottom:1px solid #12334b!important;
+  background:#03131f!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Subnav>a{
+  min-height:28px!important;
+  padding:0 8px!important;
+  display:flex!important;
+  align-items:center!important;
+  border:1px solid transparent!important;
+  border-radius:5px!important;
+  color:#6f8da5!important;
+  font-size:7px!important;
+  font-weight:650!important;
+  text-decoration:none!important;
+  white-space:nowrap!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Subnav>a:hover{background:#071e31!important;color:#e6f4ff!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Subnav>a.active{
+  border-color:#244f6c!important;
+  background:#08243a!important;
+  color:#dff3ff!important;
+}
+
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent{
+  min-height:calc(100vh - 97px)!important;
+  margin:0!important;
+  background:
+    radial-gradient(520px 220px at 82% 0,rgba(49,81,196,.05),transparent 70%),
+    #020b14!important;
+  color:var(--v6a-text)!important;
+}
+
+/* Page canvas */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminShell,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitAdminPage,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitfsControlPage,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferencePage{
+  width:min(1280px,100%)!important;
+  max-width:1280px!important;
+  margin:0 auto!important;
+  padding:19px 22px 60px!important;
+  box-sizing:border-box!important;
+}
+
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminTop{
+  min-height:68px!important;
+  margin:0 0 10px!important;
+  padding:0!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminTop h1,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsHubHeader h1,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffSystemHeader h1{
+  margin:3px 0 3px!important;
+  color:#f1f7ff!important;
+  font-size:23px!important;
+  line-height:1.08!important;
+  letter-spacing:-.035em!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .eyebrow{
+  margin:0!important;
+  color:#56c7eb!important;
+  font-size:6.5px!important;
+  font-weight:800!important;
+  letter-spacing:.11em!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .muted{
+  color:var(--v6a-muted)!important;
+  font-size:8px!important;
+  line-height:1.45!important;
+}
+
+/* Canonical surfaces */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.panel,.v3Section,.v3Stream,.workspaceBlock,.invoiceCustomerPrimary,.invoiceStatusBar,.invoiceDetailsCompact,.customerControlBar,.gatewayRail,.gatewayDetail,.settingsSectionV2,.staffHubCardV2,.rolePermissionCard){
+  border:1px solid var(--v6a-line)!important;
+  border-radius:var(--v6a-radius)!important;
+  background:linear-gradient(180deg,#061b2b,#041522)!important;
+  box-shadow:none!important;
+  color:var(--v6a-text)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .panel{
+  margin:0!important;
+  padding:13px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.panelTitle,.v3SectionHead,.sectionHead){
+  min-height:34px!important;
+  padding-bottom:8px!important;
+  margin-bottom:8px!important;
+  border-bottom:1px solid #12334b!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.panelTitle h2,.v3SectionHead h2,.sectionHead h2){
+  margin:0!important;
+  color:#ecf5fc!important;
+  font-size:12px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(h2){font-size:14px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(h3){font-size:11px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(p,small){line-height:1.45}
+
+/* Buttons */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(button,.buttonlink){
+  width:auto;
+  min-width:0;
+  min-height:32px!important;
+  padding:0 11px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid #5c41c1!important;
+  border-radius:6px!important;
+  background:linear-gradient(90deg,#6635df,#3a4ce8)!important;
+  color:#fff!important;
+  box-shadow:none!important;
+  font-size:7.5px!important;
+  font-weight:720!important;
+  line-height:1!important;
+  text-decoration:none!important;
+  cursor:pointer!important;
+  white-space:nowrap!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(button,.buttonlink):hover{filter:brightness(1.08)}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(button,.buttonlink):focus-visible{
+  outline:2px solid #69d6ff!important;
+  outline-offset:2px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(button,.buttonlink).secondary{
+  border-color:#28536e!important;
+  background:#07243a!important;
+  color:#cce9fa!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(button,.buttonlink).small{
+  min-height:28px!important;
+  padding:0 9px!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(button,.buttonlink).danger{
+  border-color:#6e3949!important;
+  background:#261720!important;
+  color:#f2a0b0!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(button,.buttonlink):disabled{
+  opacity:.45!important;
+  cursor:not-allowed!important;
+  filter:none!important;
+}
+
+/* Forms */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .form{display:grid!important;gap:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .two{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) label{
+  color:#98afc0!important;
+  font-size:7.5px!important;
+  font-weight:620!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(input,select,textarea){
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid #234b66!important;
+  border-radius:6px!important;
+  background:#051827!important;
+  color:#edf6ff!important;
+  box-shadow:none!important;
+  outline:none!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(input,select){
+  min-height:34px!important;
+  padding:0 9px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent textarea{
+  min-height:88px!important;
+  padding:9px!important;
+  resize:vertical;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(input,textarea)::placeholder{color:#58768d!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(input,select,textarea):focus{
+  border-color:#4b86aa!important;
+  box-shadow:0 0 0 2px rgba(64,142,191,.13)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .masterContent :where(input[type="checkbox"],input[type="radio"]){
+  width:15px!important;height:15px!important;min-height:15px!important;padding:0!important;accent-color:#6840e8;
+}
+
+/* Stats / badges / notices */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .stats{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:7px!important;
+  margin:0 0 10px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .stats article{
+  min-height:66px!important;
+  padding:10px 11px!important;
+  border:1px solid var(--v6a-line)!important;
+  border-radius:7px!important;
+  background:#061a2a!important;
+  box-shadow:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .stats article small,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .stats article strong{display:block!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .stats article small{color:#5f7f97!important;font-size:6px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .stats article strong{margin-top:5px!important;color:#f0f7ff!important;font-size:15px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.statusBadge,.billingState,.invoiceStatusPill,.miniState,.setupBadge,.mailTemplateState){
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:21px!important;
+  padding:2px 7px!important;
+  border:1px solid #2d5269!important;
+  border-radius:999px!important;
+  background:#0a293d!important;
+  color:#a9c4d4!important;
+  font-size:6.5px!important;
+  font-weight:720!important;
+  text-transform:capitalize!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.notice,.inlineStatus,.supportEscalationAlert,.cancellationAlertBanner){
+  padding:9px 10px!important;
+  border:1px solid #295268!important;
+  border-radius:7px!important;
+  background:#092234!important;
+  color:#afc7d7!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.notice,.inlineStatus) b{color:#edf6ff!important}
+
+/* Common data controls */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.filterBar,.customerControlBar,.inlineActions){
+  display:flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  flex-wrap:wrap!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.filterBar,.customerControlBar){
+  padding:8px!important;
+  margin:0 0 8px!important;
+  border:1px solid var(--v6a-line)!important;
+  border-radius:7px!important;
+  background:#041724!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .searchInput{
+  flex:1 1 230px!important;
+  min-width:180px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.billingRecordList,.customerRecordList){
+  display:grid!important;
+  gap:5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.billingRecord,.customerRecord,.adminItem){
+  min-height:48px!important;
+  padding:8px 10px!important;
+  border:1px solid #14364f!important;
+  border-radius:6px!important;
+  background:#051827!important;
+  color:#b6cad8!important;
+  box-shadow:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.billingRecord,.customerRecord,.adminItem):hover{
+  border-color:#265872!important;
+  background:#082238!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .listrow{
+  min-height:36px!important;
+  padding:6px 0!important;
+  border-bottom:1px solid #103048!important;
+  color:#9fb7c8!important;
+  font-size:8px!important;
+}
+
+/* Dashboard */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .adminDashboard{display:none!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3Dashboard{display:grid!important;gap:9px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3QuickActions{
+  display:flex!important;gap:6px!important;flex-wrap:wrap!important;margin:0!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3MetricStrip{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3Metric{
+  min-height:74px!important;
+  padding:10px 11px!important;
+  border:1px solid var(--v6a-line)!important;
+  border-radius:7px!important;
+  background:linear-gradient(180deg,#071d2e,#041624)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3Metric :where(small,strong,span){display:block!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3Metric small{font-size:6px!important;color:#5f8199!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3Metric strong{margin-top:5px!important;font-size:16px!important;color:#fff!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3Metric span{margin-top:3px!important;font-size:6px!important;color:#587991!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3Section{
+  padding:12px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3TableHead,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3AttentionRow{
+  min-height:34px!important;
+  padding:6px 8px!important;
+  border-bottom:1px solid #103048!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3DashboardColumns{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr)!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3Stream{padding:11px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3StreamRow{
+  min-height:38px!important;padding:6px 0!important;border-bottom:1px solid #103048!important;
+}
+
+/* Customer / order / invoice / support detail workspaces */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.adminGrid,.workspaceGrid,.invoiceOverviewGrid){
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.orderSummaryStrip,.invoiceSummaryGrid,.supportDeskSummary){
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:7px!important;
+  margin:0 0 9px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.orderSummaryStrip>*,.invoiceSummaryGrid>*,.supportDeskSummary>*){
+  min-height:62px!important;
+  padding:9px 10px!important;
+  border:1px solid var(--v6a-line)!important;
+  border-radius:7px!important;
+  background:#061a2a!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.recordTabs,.orderWorkspaceTabs,.ticketWorkspaceTabs,.queueTabs){
+  min-height:38px!important;
+  padding:5px!important;
+  display:flex!important;
+  gap:3px!important;
+  overflow-x:auto!important;
+  border:1px solid var(--v6a-line)!important;
+  border-radius:7px!important;
+  background:#031522!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.recordTabs button,.orderWorkspaceTabs button,.ticketWorkspaceTabs button,.queueTabs button){
+  min-height:27px!important;
+  padding:0 8px!important;
+  border-color:transparent!important;
+  background:transparent!important;
+  color:#7391a8!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.recordTabs button.active,.orderWorkspaceTabs button.active,.ticketWorkspaceTabs button.active,.queueTabs button.active){
+  border-color:#553db5!important;
+  background:linear-gradient(90deg,#5f32d2,#3645ca)!important;
+  color:#fff!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.orderWorkspace,.ticketWorkspace,.invoiceAdminPage){
+  display:grid!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.orderWorkspaceBody,.ticketWorkspaceBody){
+  padding:0!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .workspaceBlock{
+  padding:12px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .workspaceBlock.full{grid-column:1/-1!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.historyRow,.activityRow,.paymentAttemptRow,.supportInvoiceRow,.supportProductRow,.orderServiceRow){
+  min-height:42px!important;
+  padding:7px 0!important;
+  border-bottom:1px solid #103048!important;
+  font-size:7.5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .thread{display:grid!important;gap:6px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .message{
+  padding:9px 10px!important;
+  border:1px solid #15364e!important;
+  border-radius:7px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffMessage{border-color:#284c72!important;background:#081d31!important}
+
+/* Settings */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsHubV2,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsEditorV3{
+  display:grid!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsHubHeader,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffSystemHeader{
+  min-height:70px!important;
+  padding:0!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsLiveNote{
+  min-width:150px!important;
+  padding:8px 10px!important;
+  border:1px solid #214c66!important;
+  border-radius:7px!important;
+  background:#061b2b!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsLiveNote :where(b,span){display:block!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsLiveNote b{font-size:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsLiveNote span{margin-top:3px!important;color:#68869d!important;font-size:6.5px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAccordion{display:grid!important;gap:7px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSectionV2{
+  overflow:hidden!important;
+  border:1px solid var(--v6a-line)!important;
+  border-radius:8px!important;
+  background:#041725!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSectionSummary{
+  min-height:48px!important;
+  padding:8px 10px!important;
+  background:#061b2b!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSectionSummary h2{font-size:11px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSectionSummary p{font-size:7px!important;color:#68869d!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaGrid{
+  padding:7px!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaCard{
+  min-height:94px!important;
+  padding:9px!important;
+  border:1px solid #173850!important;
+  border-radius:6px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaTitle b{font-size:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaCopy p{font-size:6.5px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaTags span,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaBadge{
+  font-size:5.5px!important;
+  border-radius:999px!important;
+}
+
+/* Staff hub */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffHubGridV2{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffHubCardV2{min-height:110px!important;padding:11px!important}
+
+/* Payments */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .paymentWorkspace{
+  display:grid!important;
+  grid-template-columns:220px minmax(0,1fr)!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .gatewayRail{padding:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .gatewayRow{
+  min-height:44px!important;
+  padding:7px!important;
+  border:1px solid transparent!important;
+  border-radius:6px!important;
+  background:transparent!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .gatewayRow.active{
+  border-color:#4f42ad!important;
+  background:#111a3a!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .gatewayDetail{padding:12px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .gatewaySaveBar{
+  margin-top:10px!important;
+  padding:9px!important;
+  border:1px solid #244c66!important;
+  border-radius:7px!important;
+  background:#061a29!important;
+}
+
+/* Products/content */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="products"] .adminGrid{
+  grid-template-columns:minmax(250px,.65fr) minmax(0,1.35fr)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .productSection{padding:11px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .productApiCard{
+  padding:10px!important;
+  border:1px solid #1b405a!important;
+  border-radius:7px!important;
+  background:#061a29!important;
+}
+
+/* OrbitFS non-exempt admin surfaces: channels/licences/system connections */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceHero{
+  margin:0 0 9px!important;
+  padding:14px 15px!important;
+  border:1px solid var(--v6a-line)!important;
+  border-radius:8px!important;
+  background:
+    radial-gradient(280px 120px at 90% 10%,rgba(91,47,219,.12),transparent 70%),
+    linear-gradient(180deg,#071d2e,#041624)!important;
+  box-shadow:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceHero h1{font-size:21px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceHero .muted{font-size:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceSplit{
+  display:grid!important;
+  grid-template-columns:235px minmax(0,1fr)!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.orbitReferenceRail,.orbitReferenceWorkspace){
+  border-color:var(--v6a-line)!important;
+  border-radius:8px!important;
+  background:#051827!important;
+  box-shadow:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceRail{padding:9px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.orbitReferenceRailCard,.orbitReferenceCustomerCard){
+  min-height:0!important;
+  padding:8px!important;
+  border-color:#21485f!important;
+  border-radius:6px!important;
+  background:#061a29!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.orbitReferenceRailCard.active,.orbitReferenceCustomerCard.active){
+  border-color:#6046bf!important;
+  background:#15193c!important;
+  box-shadow:inset 2px 0 #7049df!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceFacts{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  border-color:#15364e!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceFacts>div{padding:9px 10px!important;border-color:#15364e!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceSection{padding:10px!important;border-color:#15364e!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceTableHead{min-height:29px!important;font-size:6px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferenceTableRow{min-height:42px!important;padding:7px 9px!important;font-size:7px!important}
+
+/* Modals */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orderModalBackdrop{
+  background:rgba(0,6,13,.76)!important;
+  backdrop-filter:blur(4px);
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orderModal{
+  width:min(640px,calc(100vw - 34px))!important;
+  max-height:calc(100vh - 40px)!important;
+  padding:14px!important;
+  overflow:auto!important;
+  border:1px solid #28516a!important;
+  border-radius:9px!important;
+  background:#061827!important;
+  box-shadow:0 22px 70px rgba(0,0,0,.48)!important;
+}
+
+/* Responsive */
+@media(max-width:1100px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3SystemSource{display:none!important}
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3MetricStrip{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:820px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Primary,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3Tools{display:none!important}
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV3MobileMenuButton{display:inline-flex!important;margin-left:auto!important}
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.adminGrid,.workspaceGrid,.invoiceOverviewGrid,.paymentWorkspace,.orbitReferenceSplit,.v3DashboardColumns,.storeFlowGrid){grid-template-columns:1fr!important}
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .stats,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.orderSummaryStrip,.invoiceSummaryGrid,.supportDeskSummary){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:620px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminShell,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitAdminPage,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitReferencePage{padding:14px 12px 48px!important}
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminTop,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsHubHeader,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffSystemHeader{align-items:flex-start!important;flex-direction:column!important}
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaGrid,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffHubGridV2,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"])[data-admin-route="dashboard"] .v3MetricStrip{grid-template-columns:1fr!important}
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .two{grid-template-columns:1fr!important}
+}
+
+
+/* Protected Base / Update workflows keep their existing V5A content layout.
+   Only the shared Admin chrome is brought into the V6A shell. */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Topbar{
+  height:58px!important;
+  min-height:58px!important;
+  padding:0 14px!important;
+  gap:11px!important;
+  border-bottom:1px solid #14344d!important;
+  background:rgba(3,19,32,.97)!important;
+  box-shadow:none!important;
+  backdrop-filter:blur(16px);
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Brand{
+  min-width:150px!important;
+  gap:7px!important;
+  color:#f4f8ff!important;
+  font-size:11px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3BrandMark{
+  width:30px!important;
+  height:30px!important;
+  border:1px solid #694bd0!important;
+  border-radius:7px!important;
+  background:linear-gradient(145deg,#7928df,#265adf)!important;
+  color:#fff!important;
+  font-size:12px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Primary{
+  height:58px!important;
+  gap:2px!important;
+  flex:1 1 auto!important;
+  align-items:center!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Primary>a{
+  height:32px!important;
+  min-height:32px!important;
+  padding:0 9px!important;
+  display:flex!important;
+  align-items:center!important;
+  border:1px solid transparent!important;
+  border-radius:6px!important;
+  background:transparent!important;
+  color:#8fa8bc!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Primary>a.active{
+  border-color:#583db6!important;
+  background:linear-gradient(180deg,#1d2051,#422091)!important;
+  color:#fff!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Primary>a.active::after{display:none!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Tools{
+  margin-left:auto!important;
+  padding:0!important;
+  gap:5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Tool,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Create>summary{
+  min-height:30px!important;
+  height:30px!important;
+  padding:0 8px!important;
+  border:1px solid #1d405a!important;
+  border-radius:6px!important;
+  background:#061a29!important;
+  color:#9db7ca!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Account{display:block!important;position:relative}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Account>summary{
+  list-style:none;width:30px;height:30px;display:grid;place-items:center;border:1px solid #5a46bc;border-radius:50%;
+  background:linear-gradient(145deg,#5b2ac1,#234fbd);color:#fff;font-size:7px;font-weight:800;cursor:pointer
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6AccountMenu{
+  position:absolute;top:37px;right:0;z-index:160;width:210px;padding:6px;border:1px solid #244761;border-radius:8px;
+  background:#051724;box-shadow:0 20px 44px rgba(0,0,0,.42)
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Identity{padding:9px;border-bottom:1px solid #16364f;margin-bottom:5px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Identity :where(b,small,em){display:block}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Identity b{font-size:8px;color:#eef7ff}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Identity small{margin-top:3px;color:#708ca2;font-size:6.5px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Identity em{margin-top:5px;color:#7b65e5;font-size:6px;font-style:normal;text-transform:uppercase}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6AccountMenu>a,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6AccountMenu>button{
+  width:100%;min-height:30px!important;padding:0 8px!important;display:flex!important;align-items:center!important;border:0!important;
+  border-radius:5px!important;background:transparent!important;color:#9bb5c8!important;font-size:7px!important;text-decoration:none!important;cursor:pointer!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Subnav{
+  min-height:39px!important;padding:5px 14px!important;gap:3px!important;border-bottom:1px solid #12334b!important;background:#03131f!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Subnav>a{
+  min-height:28px!important;padding:0 8px!important;display:flex!important;align-items:center!important;border:1px solid transparent!important;
+  border-radius:5px!important;color:#6f8da5!important;font-size:7px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Subnav>a.active{
+  border-color:#244f6c!important;background:#08243a!important;color:#dff3ff!important
+}
+
+
+/* V6A Settings — compact operational configuration workspace. */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsHubV2,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsEditorV3{
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsRuntimeStrip{
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsRuntimeStrip article{
+  min-height:60px!important;
+  padding:8px 9px!important;
+  border-color:#173a55!important;
+  border-radius:7px!important;
+  background:#061a2a!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsRuntimeStrip small{font-size:6px!important;color:#5d7d95!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsRuntimeStrip strong{font-size:14px!important;color:#f0f7ff!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsRuntimeStrip span{font-size:6.5px!important;color:#69859a!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsQuickActions{
+  grid-template-columns:190px minmax(0,1fr)!important;
+  gap:6px!important;
+  padding:7px!important;
+  border-color:#173a55!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsQuickActionGrid{
+  gap:5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsQuickActionGrid>a{
+  min-height:58px!important;
+  padding:7px 8px!important;
+  border-color:#183c55!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsQuickActionGrid>a:hover{
+  border-color:#5a44bc!important;
+  background:#101732!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSectionV2{
+  border-color:#173a55!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSectionSummary{
+  min-height:46px!important;
+  padding:7px 9px!important;
+  background:#061a2a!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSectionSummary:hover{background:#082238!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaGrid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  padding:6px!important;
+  gap:5px!important;
+  border-color:#12334b!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaCard{
+  min-height:84px!important;
+  padding:8px!important;
+  border-color:#17384f!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaCard:hover{
+  border-color:#5944b8!important;
+  background:#10162f!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaTitle b{font-size:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaCopy p{font-size:6.5px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsAreaGo{font-size:6.5px!important;color:#86d6f6!important}
+
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsEditorBreadcrumbs{
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsEditorHeader h1{
+  font-size:23px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSummaryV3{
+  gap:5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSummaryV3 article{
+  min-height:42px!important;
+  padding:6px 8px!important;
+  border-color:#173a55!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsLiveBarV3,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsToolsV3{
+  border-color:#173a55!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsGroupV3{
+  border-color:#173a55!important;
+  border-radius:7px!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsGroupHeadV3{
+  min-height:44px!important;
+  padding:7px 9px!important;
+  background:#061a2a!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsGroupHeadV3:hover{background:#082238!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingV3{
+  grid-template-columns:minmax(0,1.05fr) minmax(260px,.95fr)!important;
+  gap:10px!important;
+  padding:8px 9px!important;
+  border-color:#103048!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingV3:hover{background:#071d30!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingV3.changed{
+  background:#0e1933!important;
+  box-shadow:inset 2px 0 #6949dd!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingTitleV3 b{font-size:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingInfoV3 p{font-size:6.8px!important;color:#6f8da3!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingKeyV3 code{font-size:5.8px!important;color:#57758c!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingControlV3 input:not([type=checkbox]):not([type=color]),
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingControlV3 select{
+  min-height:32px!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingControlV3 textarea{
+  min-height:68px!important;
+  font-size:8px!important;
+  resize:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .settingsSaveV3{
+  bottom:8px!important;
+  padding:7px 8px!important;
+  border-color:#3b4d78!important;
+  background:rgba(5,18,31,.96)!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.34)!important;
+}
+
+/* V6A shell-only treatment for Base/Update routes.
+   Their release/deployment page structure stays unchanged. */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Topbar{
+  height:58px!important;
+  min-height:58px!important;
+  padding:0 14px!important;
+  gap:10px!important;
+  border-bottom:1px solid #14344d!important;
+  background:#031522!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Primary>a{
+  min-height:30px!important;
+  padding:0 8px!important;
+  border-radius:6px!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV3Subnav{
+  min-height:38px!important;
+  padding:5px 14px!important;
+  border-color:#12334b!important;
+  background:#03131f!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Account{
+  position:relative;
+  display:block!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Account>summary{
+  list-style:none;
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border:1px solid #5a46bc;
+  border-radius:50%;
+  background:linear-gradient(145deg,#5b2ac1,#234fbd);
+  color:#fff;
+  font-size:7px;
+  font-weight:800;
+  cursor:pointer;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6AccountMenu{
+  position:absolute;
+  top:37px;
+  right:0;
+  z-index:160;
+  width:210px;
+  padding:6px;
+  border:1px solid #244761;
+  border-radius:8px;
+  background:#051724;
+  box-shadow:0 20px 44px rgba(0,0,0,.42);
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Identity{
+  padding:9px;
+  border-bottom:1px solid #16364f;
+  margin-bottom:5px;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6Identity :where(b,small,em){display:block}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6AccountMenu>a,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6AccountMenu>button{
+  width:100%;
+  min-height:30px!important;
+  padding:0 8px!important;
+  display:flex!important;
+  align-items:center!important;
+  border:0!important;
+  border-radius:5px!important;
+  background:transparent!important;
+  color:#9bb5c8!important;
+  font-size:7px!important;
+  text-decoration:none!important;
+  cursor:pointer!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6AccountMenu>a:hover,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout[data-admin-v6a-exempt="true"] .adminV6AccountMenu>button:hover{background:#082239!important;color:#fff!important}
+
+
+/* V6A specialised Admin workspaces. */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(
+  .cancellationRequestRow,.fulfillmentLineList,.billingCreateCard,.setupProviderRail,.setupProviderBody,
+  .staffCreateCard,.staffMemberPanel,.staffGroupRailV2,.staffGroupEditorV2,.supportKbRail,.supportKbEditor,
+  .supportKbCategories,.supportDepartmentCard,.supportTemplateCard,.supportDepartmentEditor,.supportCreateGrid>.panel,
+  .lmCard
+){
+  border:1px solid #173a55!important;
+  border-radius:8px!important;
+  background:linear-gradient(180deg,#061b2b,#041522)!important;
+  box-shadow:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(
+  .cancellationRequestRow,.billingCreateCard,.setupProviderRail,.setupProviderBody,
+  .staffCreateCard,.staffMemberPanel,.staffGroupEditorV2,.supportKbRail,.supportKbEditor,
+  .supportKbCategories,.supportDepartmentCard,.supportTemplateCard,.supportDepartmentEditor,.lmCard
+){padding:11px!important}
+
+/* Cancellations / fulfilment */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .cancellationRequestRow{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:10px!important;
+  min-height:62px!important;
+  margin-bottom:6px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .cancellationMeta{
+  display:flex!important;gap:6px!important;flex-wrap:wrap!important;color:#6e8aa0!important;font-size:7px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .cancellationRequestActions{
+  display:flex!important;align-items:center!important;gap:5px!important;flex-wrap:wrap!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .fulfillmentLineList{
+  padding:8px!important;display:grid!important;gap:5px!important
+}
+
+/* Billing create */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .billingSetupGrid{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .billingSectionHead{
+  min-height:34px!important;padding-bottom:7px!important;margin-bottom:8px!important;border-bottom:1px solid #12334b!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .billingLines{display:grid!important;gap:5px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .billingLine{
+  min-height:48px!important;padding:7px 8px!important;display:grid!important;
+  grid-template-columns:minmax(150px,1.3fr) minmax(120px,1fr) 70px 110px 90px auto!important;
+  gap:6px!important;align-items:center!important;border:1px solid #15364e!important;border-radius:6px!important;background:#051827!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.billingProduct,.billingDescription,.billingQty,.billingPrice,.billingLineTotal){
+  font-size:7px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .billingCreateFooter{
+  margin-top:9px!important;padding-top:9px!important;border-top:1px solid #12334b!important;
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important
+}
+
+/* Payment setup */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .gatewaySetupWorkspace{
+  display:grid!important;grid-template-columns:220px minmax(0,1fr)!important;gap:8px!important;align-items:start!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .setupProviderRail{padding:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .setupProviderRow{
+  min-height:44px!important;padding:7px!important;border:1px solid transparent!important;border-radius:6px!important;background:transparent!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .setupProviderRow.active{
+  border-color:#5b43ba!important;background:#15183a!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .setupHero{
+  min-height:70px!important;padding:10px 11px!important;border-bottom:1px solid #12334b!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .setupSection{
+  padding:10px 0!important;border-bottom:1px solid #12334b!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.secretGrid,.currencyPicker){
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .secretField{
+  padding:8px!important;border:1px solid #16364f!important;border-radius:6px!important;background:#051827!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .webhookCard,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .setupChecklist{
+  padding:9px!important;border:1px solid #16364f!important;border-radius:6px!important;background:#051827!important
+}
+
+/* Staff */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffSystemStats{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;margin:0 0 8px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffSystemStats>*{
+  min-height:58px!important;padding:8px 9px!important;border:1px solid #173a55!important;border-radius:7px!important;background:#061a2a!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffWorkspace{
+  display:grid!important;grid-template-columns:minmax(260px,.65fr) minmax(0,1.35fr)!important;gap:8px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffToolbar{
+  display:flex!important;gap:6px!important;align-items:center!important;flex-wrap:wrap!important;margin-bottom:7px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffMemberRows{display:grid!important;gap:5px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffMemberRow{
+  min-height:52px!important;padding:8px 9px!important;display:grid!important;
+  grid-template-columns:minmax(0,1.3fr) minmax(110px,.6fr) minmax(120px,.7fr) auto!important;
+  gap:8px!important;align-items:center!important;border:1px solid #15364e!important;border-radius:6px!important;background:#051827!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffGroupWorkspaceV2{
+  display:grid!important;grid-template-columns:240px minmax(0,1fr)!important;gap:8px!important;align-items:start!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffGroupRailV2{padding:8px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffPermissionGridV2{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffPermissionItemV2{
+  min-height:46px!important;padding:7px 8px!important;border:1px solid #16364f!important;border-radius:6px!important;background:#051827!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffPermissionItemV2.on{
+  border-color:#5543af!important;background:#131735!important
+}
+
+/* Support operations */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .supportKbGrid{
+  display:grid!important;grid-template-columns:230px minmax(0,1fr) 230px!important;gap:8px!important;align-items:start!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.supportKbRail,.supportKbEditor,.supportKbCategories){padding:10px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .supportKbArticleList{display:grid!important;gap:4px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .supportHierarchy{display:grid!important;gap:7px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .supportDepartmentCard{
+  display:grid!important;grid-template-columns:minmax(0,1fr) 320px!important;gap:10px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .supportDepartmentList,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .supportMemberGrid{
+  display:grid!important;gap:5px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .supportCreateGrid{
+  display:grid!important;grid-template-columns:260px minmax(0,1fr)!important;gap:8px!important;align-items:start!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .supportCustomerPicker{
+  max-height:420px!important;overflow:auto!important
+}
+
+/* Licensing runtime */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .lmPage{
+  width:min(1180px,100%)!important;max-width:1180px!important;margin:0 auto!important;padding:19px 22px 60px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .lmHero{
+  min-height:80px!important;padding:13px 14px!important;border:1px solid #173a55!important;border-radius:8px!important;
+  background:radial-gradient(260px 120px at 90% 10%,rgba(88,49,220,.12),transparent 70%),#061a2a!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .lmKicker{font-size:6.5px!important;color:#55c8ed!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .lmKV{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .lmRuntimeList{display:grid!important;gap:5px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .lmRuntimeList>div{
+  min-height:42px!important;padding:7px 8px!important;border:1px solid #15364e!important;border-radius:6px!important;background:#051827!important
+}
+
+@media(max-width:1050px){
+ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) :where(.billingSetupGrid,.gatewaySetupWorkspace,.staffWorkspace,.staffGroupWorkspaceV2,.supportKbGrid,.supportDepartmentCard,.supportCreateGrid){grid-template-columns:1fr!important}
+ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .staffPermissionGridV2{grid-template-columns:1fr!important}
+}

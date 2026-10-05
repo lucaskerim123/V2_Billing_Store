@@ -2,6 +2,7 @@
    V3A is the stable baseline; V5A is selected through ThemeRuntime as an overlay. */
 @import "../V3A/theme.css";
 @import "../V5A/theme.css";
+@import "../V6A/theme.css";
 
 /* OrbitFS control-plane navigation: three primary systems plus the normal store/admin areas. */
 html[data-admin-theme="v3"] .adminCollapsibleNav{display:flex;align-items:center;gap:5px;min-width:0;flex:1}

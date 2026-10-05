@@ -55,6 +55,10 @@ export default function ThemeRuntime({surface,fallback,onResolved}:{surface:Surf
       live=false;
       window.removeEventListener("orbitfs-theme-changed",onChanged as EventListener);
       channel?.close();
+      if(document.documentElement.dataset.orbitfsThemeSurface===surface){
+        delete document.documentElement.dataset.orbitfsTheme;
+        delete document.documentElement.dataset.orbitfsThemeSurface;
+      }
     };
   },[surface,fallback,onResolved]);
 

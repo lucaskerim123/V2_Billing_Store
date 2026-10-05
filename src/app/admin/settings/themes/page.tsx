@@ -183,12 +183,11 @@ export default function ThemeManagerPage(){
           <h2>{surfaceLabel(surface)}</h2>
           <p className="muted">{surface==="admin"?"Every Admin theme ID ends in A.":"Every Customer Portal theme ID ends in C."}</p>
         </div>
-        <label className={styles.quickSwitch}>
-          <span>Active theme</span>
-          <select value={activeId} onChange={e=>void apply(e.target.value)} disabled={!!busy}>
-            {themesForSurface.map(t=><option key={t.id} value={t.id}>{t.name} · {t.id}</option>)}
-          </select>
-        </label>
+        <div className={styles.activeSummary}>
+          <span>Active</span>
+          <b>{themesForSurface.find(t=>t.id===activeId)?.name||activeId}</b>
+          <small>{activeId}</small>
+        </div>
       </div>
       <div className={styles.grid}>{themesForSurface.map(t=>{
         const active=t.id===activeId;
@@ -212,7 +211,7 @@ export default function ThemeManagerPage(){
       <div>
         <p className="eyebrow">SYSTEM · THEMES</p>
         <h1>OrbitFS Theme Manager</h1>
-        <p className="muted">Switch the Admin Panel and Customer Portal independently. A = Admin. C = Customer. V3 stays available as the stable baseline while V5 can be changed separately.</p>
+        <p className="muted">Switch the Admin Panel and Customer Portal independently. A = Admin. C = Customer. Select a theme tile and apply it when ready.</p>
       </div>
       <div className={styles.legend}><span>A · Admin</span><span>C · Customer</span></div>
     </header>

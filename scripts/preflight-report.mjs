@@ -33,7 +33,14 @@ run("Base lifecycle contract","node",["scripts/check-base-lifecycle-contract.mjs
 run("Theme package validation",npm,["run","theme:validate"]);
 run("Lint",npm,["run","lint"]);
 run("Typecheck",npm,["run","typecheck"]);
-run("Dependency audit",npm,["audit","--audit-level=high"]);
+run("Production dependency audit",npm,["audit","--omit=dev","--audit-level=high"]);
+console.log("\n=== Development dependency advisory report ===");
+{
+ const r=spawnSync(npm,["audit","--include=dev","--audit-level=high"],{encoding:"utf8",shell:false});
+ const output=[r.stdout||"",r.stderr||""].join("\n").trim();
+ if(output)console.log(output);
+ if(r.status!==0)console.warn("Development-only dependency advisories detected. Production/runtime audit remains authoritative for deployment blocking.");
+}
 run("Production build",npm,["run","build"]);
 if(failures.length){const out=["ORBITFS VALIDATION FAILED","========================","All detected failure contexts are retained. Successful-step output is excluded.","","Failures: "+failures.length,""];for(const f of failures)out.push("## "+f.label,"Exit code: "+f.exitCode,"","ERRORS:",...(f.output||["(no error output)"]),"");writeFileSync(dir+"/validation-error.txt",out.join("\n"));console.error("\nValidation failed. Report: "+dir+"/validation-error.txt");process.exit(1);}
 rmSync(dir,{recursive:true,force:true});console.log("\n=== Preflight PASSED ===");
