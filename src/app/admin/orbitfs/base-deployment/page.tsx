@@ -5,7 +5,7 @@ import {createClient} from "@/lib/supabase";
 type Release={
  id:string;version:string;revision?:number;attempt?:number;channel?:string;status?:string;reviewStatus?:string;releaseType?:string;
  title?:string;description?:string;changelog?:string;customerNotes?:string;sourceCommit?:string;sourceRepo?:string;sourceRef?:string;
- artifactName?:string;artifactRunId?:number|null;checksum?:string;publishedAt?:string|null;updatedAt?:string|null;
+ artifactName?:string;artifactRunId?:number|null;checksum?:string;publishedAt?:string|null;updatedAt?:string|null;billingPresentation?:boolean;
  validation?:{status?:string;checks?:Array<{key?:string;ok?:boolean;message?:string}>}|null;
 };
 type ReleaseChannel={id?:string;channel:string;label?:string;enabled?:boolean;customer_visible?:boolean};
@@ -64,12 +64,13 @@ export default function BaseDeploymentAdmin(){
  const portalPublished=selected?.status==="published";
  const publicationWorking=busy==="channel"||busy==="publish"||busy==="edit"||workingStatus(selected?.status);
  const canPublish=Boolean(selected&&!selected.publishedAt&&validationPassed&&reviewApproved&&artifactReady&&presentationReady);
+ const canRepublish=Boolean(selected?.status==="withdrawn"&&selected.publishedAt&&validationPassed&&reviewApproved&&artifactReady&&presentationReady);
  const customerChannels=channels.filter(ch=>ch.enabled!==false&&ch.customer_visible!==false);
  const stageClass=(state:"done"|"active"|"working"|"error"|"idle")=>"orbitStage "+(state==="idle"?"":state);
  const intakeStage=selected?"done":"active";
  const validationStage=pipelineError===2||validationFailed?"error":validationWorking?"working":validationPassed?"done":selected?"active":"idle";
  const reviewStage=pipelineError===3||reviewFailed?"error":reviewWorking?"working":reviewApproved?"done":validationPassed?"active":"idle";
- const publicationStage=pipelineError===4?"error":portalPublished?"done":publicationWorking?"working":canPublish?"active":"idle";
+ const publicationStage=pipelineError===4?"error":portalPublished?"done":publicationWorking?"working":(canPublish||canRepublish)?"active":"idle";
 
  function beginEdit(r:Release){setSelectedId(r.id);setPipelineError(null);setDraft({title:r.title||"",description:r.description||"",changelog:r.changelog||"",customer_notes:r.customerNotes||""});setEditing(true)}
  async function changeChannel(){
@@ -111,22 +112,45 @@ export default function BaseDeploymentAdmin(){
    const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:r.id})});
    const j=await res.json().catch(()=>({}));
    if(!res.ok)throw Error(j.error||"Could not unpublish Base release");
-   setMessage("Base release unpublished. You can now return it to Dev Panel.");
+   setMessage("Base release unpublished. You can republish the same release, delete its Billing presentation, or return it to Dev Panel.");
    await load({silent:true,preserveMessage:true});
   }catch(e:any){setMessage(e?.message||"Could not unpublish Base release")}finally{setBusy("")}
  }
 
- async function returnToDev(r:Release,deleteBillingCopy=false){
-  const reason=prompt(deleteBillingCopy?"Reason for deleting the Billing copy and returning this Base release to Dev Panel:":"Reason for returning this Base release to Dev Panel:","")||"";
-  if(!reason.trim())return;
-  if(deleteBillingCopy&&!confirm("Delete Billing-owned presentation data for Base v"+r.version+" and return it to Dev Panel? License Manager publication/audit history will be retained."))return;
-  const key=(deleteBillingCopy?"delete-return:":"return:")+r.id;
-  setBusy(key);setMessage("");
+ async function republishBase(r:Release){
+  if(!confirm("Republish Base v"+r.version+" to the "+(r.channel||"stable")+" customer channel? This reuses the same License Manager release record and does not create another entry."))return;
+  setBusy("republish:"+r.id);setMessage("");setPipelineError(null);
   try{
-   const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:deleteBillingCopy?"delete_return_to_dev":"return_to_dev",releaseId:r.id,reason})});
+   const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"republish",releaseId:r.id})});
+   const j=await res.json().catch(()=>({}));
+   if(!res.ok)throw Error(j.error||"Could not republish Base release");
+   setMessage("Base release republished. No duplicate release entry was created.");
+   await load({silent:true,preserveMessage:true});
+   setSelectedId(r.id);
+  }catch(e:any){setPipelineError(4);setMessage(e?.message||"Could not republish Base release")}finally{setBusy("")}
+ }
+
+ async function deleteBillingCopy(r:Release){
+  if(!confirm("Delete the Billing-owned customer presentation for Base v"+r.version+"? This will not create, reject, withdraw or return any License Manager release."))return;
+  setBusy("delete-copy:"+r.id);setMessage("");
+  try{
+   const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"delete_billing_copy",releaseId:r.id})});
+   const j=await res.json().catch(()=>({}));
+   if(!res.ok)throw Error(j.error||"Could not delete Billing copy");
+   setMessage("Billing presentation copy deleted. License Manager release history was left unchanged.");
+   await load({silent:true,preserveMessage:true});
+  }catch(e:any){setMessage(e?.message||"Could not delete Billing copy")}finally{setBusy("")}
+ }
+
+ async function returnToDev(r:Release){
+  const reason=prompt("Reason for returning this Base release to Dev Panel:","")||"";
+  if(!reason.trim())return;
+  setBusy("return:"+r.id);setMessage("");
+  try{
+   const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"return_to_dev",releaseId:r.id,reason})});
    const j=await res.json().catch(()=>({}));
    if(!res.ok)throw Error(j.error||"Could not return Base release to Dev Panel");
-   setMessage(deleteBillingCopy?"Billing copy deleted and Base release returned to Dev Panel.":"Base release returned to Dev Panel for Stage 1 rework.");
+   setMessage("Base release returned to Dev Panel for Stage 1 rework.");
    await load({silent:true,preserveMessage:true});
   }catch(e:any){setMessage(e?.message||"Could not return Base release to Dev Panel")}finally{setBusy("")}
  }
@@ -189,9 +213,10 @@ export default function BaseDeploymentAdmin(){
         <button className={"orbitAction "+(canPublish?"orbitActionPrimary":"orbitActionSecondary")} type="button" disabled={busy!==""||!canPublish} onClick={()=>void publishBase()}>{busy==="publish"?"Publishing…":"Publish to Customer Portal"}</button>
        </>}
        {selected.status==="withdrawn"&&Boolean(selected.publishedAt)&&<>
-        <button className="orbitAction orbitActionDanger" type="button" disabled={busy!==""} onClick={()=>void returnToDev(selected,false)}>{busy==="return:"+selected.id?"Returning…":"Reject & return to Dev"}</button>
-        <button className="orbitAction orbitActionDanger" type="button" disabled={busy!==""} onClick={()=>void returnToDev(selected,true)}>{busy==="delete-return:"+selected.id?"Deleting…":"Delete Billing copy & return to Dev"}</button>
-        <span className="muted">Published License Manager history is retained for audit and rollback; Dev Panel receives a rejected handback revision.</span>
+        <button className="orbitAction orbitActionPrimary" type="button" disabled={busy!==""||!canRepublish} onClick={()=>void republishBase(selected)}>{busy==="republish:"+selected.id?"Republishing…":"Republish to Customer Portal"}</button>
+        {selected.billingPresentation&&<button className="orbitAction orbitActionDanger" type="button" disabled={busy!==""} onClick={()=>void deleteBillingCopy(selected)}>{busy==="delete-copy:"+selected.id?"Deleting…":"Delete Billing copy"}</button>}
+        <button className="orbitAction orbitActionDanger" type="button" disabled={busy!==""} onClick={()=>void returnToDev(selected)}>{busy==="return:"+selected.id?"Returning…":"Reject & return to Dev"}</button>
+        <span className="muted">Republish reuses this same release ID. Delete Billing copy only removes Billing-owned presentation data. Return to Dev is the only action that creates a technical handback revision.</span>
        </>}
        {portalPublished&&<span className="state ready">Available to customers</span>}
       </div>
@@ -208,7 +233,7 @@ export default function BaseDeploymentAdmin(){
      <div><b>v{r.version}</b><span>{r.title||"Base release"}</span></div>
      <span>{r.channel||"stable"}</span>
      <span>{r.publishedAt?new Date(r.publishedAt).toLocaleString():"Published"}</span>
-     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>{setSelectedId(r.id);setPipelineError(null)}}>View</button>{r.status==="published"&&<button className="orbitAction orbitActionDanger" disabled={busy==="unpublish:"+r.id} onClick={()=>void unpublishBase(r)}>{busy==="unpublish:"+r.id?"Unpublishing…":"Unpublish"}</button>}{r.status==="withdrawn"&&<><button className="orbitAction orbitActionDanger" disabled={busy!==""} onClick={()=>void returnToDev(r,false)}>Return to Dev</button><button className="orbitAction orbitActionDanger" disabled={busy!==""} onClick={()=>void returnToDev(r,true)}>Delete Billing copy</button></>}</div>
+     <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>{setSelectedId(r.id);setPipelineError(null)}}>View</button>{r.status==="published"&&<button className="orbitAction orbitActionDanger" disabled={busy==="unpublish:"+r.id} onClick={()=>void unpublishBase(r)}>{busy==="unpublish:"+r.id?"Unpublishing…":"Unpublish"}</button>}{r.status==="withdrawn"&&<><button className="orbitAction orbitActionPrimary" disabled={busy!==""} onClick={()=>void republishBase(r)}>Republish</button>{r.billingPresentation&&<button className="orbitAction orbitActionDanger" disabled={busy!==""} onClick={()=>void deleteBillingCopy(r)}>Delete Billing copy</button>}<button className="orbitAction orbitActionDanger" disabled={busy!==""} onClick={()=>void returnToDev(r)}>Return to Dev</button></>}</div>
     </div>)}
     {!published.length&&<div className="orbitEmptyCompact">No published Base release history yet.</div>}
    </div>
