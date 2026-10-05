@@ -41,23 +41,13 @@ export async function billingOrbitfsConfig(){
 }
 export async function requireSystem(capability:"deploy"|"base_update"|"update"|"rollback"="deploy"){
   const config=await billingOrbitfsConfig();
-  if(config.enabled===false)throw Object.assign(new Error("Billing Store customer deployment control is disabled"),{status:503});
-  if(config.maintenance_mode===true)throw Object.assign(new Error(config.maintenance_message||"OrbitFS deployment maintenance is active"),{status:503});
-  const allowed=capability==="base_update"
-    ?config.customer_deploy_enabled!==false&&config.customer_updates_enabled!==false
-    :capability==="update"
-      ?config.customer_updates_enabled!==false
-      :capability==="rollback"
-        ?config.customer_rollbacks_enabled!==false
-        :config.customer_deploy_enabled!==false;
-  if(!allowed)throw Object.assign(new Error(`Billing Store has disabled customer ${capability.replace("_"," ")} operations`),{status:503});
+  // Billing keeps provider/execution configuration only. License Manager is the
+  // sole authority for whether Base, Update or rollback execution is allowed.
   await requireLicenseMasterForDeployment(capability==="base_update"?"deploy":capability);
   return config;
 }
 export async function requireSetupSystem(){
   const config=await billingOrbitfsConfig();
-  if(config.enabled===false)throw Object.assign(new Error("Billing Store OrbitFS system is disabled"),{status:503});
-  if(config.maintenance_mode===true)throw Object.assign(new Error(config.maintenance_message||"OrbitFS deployment maintenance is active"),{status:503});
   await requireLicenseMasterForMutation();
   return config;
 }
