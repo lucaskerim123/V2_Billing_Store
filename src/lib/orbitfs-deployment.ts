@@ -15,6 +15,7 @@ export type DeployAction="deploy"|"base_update"|"update"|"rollback"|"redeploy";
 export function bearer(req:Request){return String(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim()}
 export async function requireOrbitUser(req:Request){const token=bearer(req);if(!token)throw Object.assign(new Error("Authentication required"),{status:401});const user=await userFromToken(token);return {token,user}}
 export async function requireOrbitAdmin(req:Request){const auth=await requireOrbitUser(req);const ok=await userRpc(auth.token,"has_permission",{p_permission:"licenses.view"});if(ok!==true)throw Object.assign(new Error("Permission denied"),{status:403});return auth}
+export async function requireOrbitAdminManage(req:Request){const auth=await requireOrbitUser(req);const ok=await userRpc(auth.token,"has_permission",{p_permission:"licenses.manage"});if(ok!==true)throw Object.assign(new Error("Permission denied"),{status:403});return auth}
 export function httpError(error:any){const status=Number(error?.status)||500,message=errorMessage(error?.message??error,"Request failed"),code=String(error?.code||(status===401?"UNAUTHENTICATED":status===403?"FORBIDDEN":status===404?"NOT_FOUND":status===409?"CONFLICT":status>=500?"SERVICE_UNAVAILABLE":"REQUEST_FAILED"));return Response.json({error:message,code,operationId:error?.operationId||null,retryable:Boolean(error?.retryable??status>=500)},{status})}
 
 function storeSupabaseRef(){
