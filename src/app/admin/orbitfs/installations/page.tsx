@@ -53,7 +53,7 @@ export default function InstallationsPage(){
       if(!response.ok)throw new Error(data?.error||"Could not load installations.");
       setItems(Array.isArray(data.installations)?data.installations:[]);
       setFetchedAt(data.fetched_at||new Date().toISOString());
-      if(kind==="manual")setMessage(`Check complete. ${Array.isArray(data.installations)?data.installations.length:0} installation${data.installations?.length===1?"":"s"} loaded from Billing + License Manager authority.`);
+      if(kind==="manual")setMessage(`Check complete. ${Array.isArray(data.installations)?data.installations.length:0} current installation${data.installations?.length===1?"":"s"} found.`);
     }catch(error:any){
       setMessage(error?.message||"Could not load installations.");
     }finally{
@@ -116,7 +116,8 @@ export default function InstallationsPage(){
   });
 
   const lockedCount=items.filter(item=>item.deployment_lock?.locked).length;
-  const attentionCount=items.filter(item=>item.authority_error||item.runtime?.last_error||String(item.runtime?.health||"").toLowerCase()==="unhealthy").length;
+  const deployerCount=items.filter(item=>item.deployment_source==="deployer").length;
+  const externalCount=items.filter(item=>item.deployment_source==="external").length;
 
   if(loading)return <main className="adminShell"><header className="adminTop"><div><p className="eyebrow">ORBITFS CONTROL</p><h1>Installations</h1><p className="muted">Loading installation authority view…</p></div></header></main>;
 
@@ -125,7 +126,7 @@ export default function InstallationsPage(){
       <div>
         <p className="eyebrow">ORBITFS CONTROL · LICENSE MANAGER AUTHORITY</p>
         <h1>Installations</h1>
-        <p className="muted">Customer installation identity, running versions, domains, provider links and deployment controls. Billing presents the data; License Manager remains authoritative for deployment authorization and lock state.</p>
+        <p className="muted">Current OrbitFS installations only. Released, uninstalled and historical deployment records stay in history and are not listed here. Billing presents the view; License Manager remains authoritative for deployment authorization and lock state.</p>
       </div>
       <div className="adminTopActions">
         <button onClick={()=>void load("manual")} disabled={checking}>{checking?"Checking…":"Check for new installations"}</button>
@@ -133,21 +134,21 @@ export default function InstallationsPage(){
     </header>
 
     <section className="stats four">
-      <article><small>Installations</small><strong>{items.length}</strong><span>Billing + authority projection</span></article>
+      <article><small>Current installations</small><strong>{items.length}</strong><span>Active/current only</span></article>
+      <article><small>Deployer managed</small><strong>{deployerCount}</strong><span>Billing deployer installations</span></article>
+      <article><small>External / manual</small><strong>{externalCount}</strong><span>Active authority binding outside deployer</span></article>
       <article><small>Deploy locked</small><strong>{lockedCount}</strong><span>License Manager enforced</span></article>
-      <article><small>Need attention</small><strong>{attentionCount}</strong><span>Health / authority errors</span></article>
-      <article><small>Last checked</small><strong>{fetchedAt?new Date(fetchedAt).toLocaleTimeString():"—"}</strong><span>No background polling</span></article>
     </section>
 
     <section className="panel">
       <div className="panelTitle">
-        <div><h2>Installation registry</h2><p className="muted">Search by customer, installation ID, licence ID, IP, hostname, project or domain.</p></div>
+        <div><h2>Current installations</h2><p className="muted">One row per current installation. Old deployments, released bindings and uninstalled records are kept as history, not separate rows.</p></div>
         <span>{filtered.length} shown</span>
       </div>
       <div className="form">
         <div className="two">
           <label>Search<input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Customer, ID, IP, domain, project…"/></label>
-          <label>View<select value={filter} onChange={event=>setFilter(event.target.value as any)}><option value="all">All installations</option><option value="locked">Deploy locked</option><option value="attention">Needs attention</option></select></label>
+          <label>View<select value={filter} onChange={event=>setFilter(event.target.value as any)}><option value="all">Current installations</option><option value="locked">Deploy locked</option><option value="attention">Needs attention</option></select></label>
         </div>
       </div>
     </section>
@@ -162,7 +163,7 @@ export default function InstallationsPage(){
       return <section className="panel" key={item.installation_id} style={{marginTop:14}}>
         <div className="panelTitle">
           <div>
-            <p className="eyebrow">INSTALLATION · {item.authority_only?"AUTHORITY ONLY":"BILLING LINKED"}</p>
+            <p className="eyebrow">CURRENT INSTALLATION · {item.deployment_source==="external"?"EXTERNAL / MANUAL":"DEPLOYER MANAGED"}</p>
             <h2>{customerName}</h2>
             <p className="muted">{item.customer?.customer_number||"No customer number"} · {item.installation_id}</p>
           </div>
@@ -203,6 +204,7 @@ export default function InstallationsPage(){
           <div className="panel">
             <h3>Deployment authority</h3>
             <div className="listrow"><b>Authority</b><span>License Manager</span></div>
+            <div className="listrow"><b>Deployment source</b><span>{item.deployment_source==="external"?"External / manual":"Billing deployer"}</span></div>
             <div className="listrow"><b>Deploy state</b><span>{locked?"Locked":"Unlocked"}</span></div>
             <div className="listrow"><b>Last operation</b><span>{item.runtime?.last_operation||"—"}</span></div>
             <div className="listrow"><b>Deployment count</b><span>{item.runtime?.deployment_count??"—"}</span></div>
