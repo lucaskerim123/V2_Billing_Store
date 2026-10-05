@@ -212,12 +212,14 @@ export default function InstallationsPage(){
             <h3>Controls</h3>
             <p className="muted">These controls do not create Billing-owned technical state. Lock/unlock is written to License Manager and enforced during deployment authorization.</p>
             <div className="actionStack">
-              {item.customer?.auth_user_id&&<Link className="button secondary" href={`/admin/customers/${item.customer.auth_user_id}`}>Open customer</Link>}
-              {panelUrl&&<a className="button secondary" href={panelUrl} target="_blank" rel="noreferrer">Open Panel</a>}
-              {engineUrl&&<a className="button secondary" href={engineUrl} target="_blank" rel="noreferrer">Open Engine</a>}
-              {locked
-                ?<button onClick={()=>void setLock(item,"unlock")} disabled={busyId===item.installation_id}>{busyId===item.installation_id?"Unlocking…":"Unlock deployment"}</button>
-                :<button className="danger" onClick={()=>{setLockTarget(item);setLockReason("")}} disabled={busyId===item.installation_id}>Lock deployment</button>}
+              {item.customer?.auth_user_id&&<Link className="buttonlink secondary" href={`/admin/customers/${item.customer.auth_user_id}`}>Open customer</Link>}
+              {panelUrl&&<a className="buttonlink secondary" href={panelUrl} target="_blank" rel="noreferrer">Open Panel</a>}
+              {engineUrl&&<a className="buttonlink secondary" href={engineUrl} target="_blank" rel="noreferrer">Open Engine</a>}
+              {!item.license_id
+                ?<button className="secondary" disabled title="License Manager has not returned an authoritative activation for this installation">Lock unavailable until authority links</button>
+                :locked
+                  ?<button onClick={()=>void setLock(item,"unlock")} disabled={busyId===item.installation_id}>{busyId===item.installation_id?"Unlocking…":"Unlock deployment"}</button>
+                  :<button className="danger" onClick={()=>{setLockTarget(item);setLockReason("")}} disabled={busyId===item.installation_id}>Lock deployment</button>}
             </div>
           </div>
         </div>
