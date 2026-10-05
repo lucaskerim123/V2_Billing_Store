@@ -640,7 +640,7 @@ html[data-customer-theme="V3C"] .portalLayout a{
 }
 
 
-/* 2026-09 customer portal phone hardening.
+html[data-customer-theme="V3C"] /* 2026-09 customer portal phone hardening.
    This file is loaded last and is the mobile authority for V3C. */
 @media(max-width:700px){
   html[data-customer-theme="V3C"] body{
@@ -984,9 +984,9 @@ html[data-customer-theme="V3C"] .portalLayout a{
 }
 
 
-/* Customer portal adaptive phone shell. Desktop is intentionally untouched. */
+html[data-customer-theme="V3C"] /* Customer portal adaptive phone shell. Desktop is intentionally untouched. */
 .portalMobileMenuButton,
-.portalMobileOnly{display:none!important}
+html[data-customer-theme="V3C"] .portalMobileOnly{display:none!important}
 
 @media(max-width:700px){
   html[data-customer-theme="V3C"] .portalTopbar{
@@ -1176,7 +1176,7 @@ html[data-customer-theme="V3C"] .portalLayout a{
 }
 
 
-/* V3C customer portal mobile refinement — compact dropdown shell + dense content.
+html[data-customer-theme="V3C"] /* V3C customer portal mobile refinement — compact dropdown shell + dense content.
    MOBILE ONLY. Desktop layout is intentionally untouched. */
 @media(max-width:700px){
   /* Remove legacy mobile spacer from portal.css. Sticky V3C header lives in normal flow. */
@@ -1309,7 +1309,7 @@ html[data-customer-theme="V3C"] .portalLayout a{
     font-size:9px!important;
   }
 
-  /* Global mobile density: smaller panels, headers and rows across customer portal. */
+  html[data-customer-theme="V3C"] /* Global mobile density: smaller panels, headers and rows across customer portal. */
   html[data-customer-theme="V3C"] .portalMain{
     padding-top:8px!important;
   }
@@ -1418,7 +1418,7 @@ html[data-customer-theme="V3C"] .portalLayout a{
     font-size:8.5px!important;
   }
 
-  /* Inputs remain usable, but not comically tall. */
+  html[data-customer-theme="V3C"] /* Inputs remain usable, but not comically tall. */
   html[data-customer-theme="V3C"] .portalLayout input,
   html[data-customer-theme="V3C"] .portalLayout select{
     min-height:40px!important;
@@ -1456,7 +1456,7 @@ html[data-customer-theme="V3C"] .portalLayout a{
 }
 
 
-/* Compact invoice/order summary strip on phones. */
+html[data-customer-theme="V3C"] /* Compact invoice/order summary strip on phones. */
 @media(max-width:700px){
   html[data-customer-theme="V3C"] .invoicePresentation .recordSummaryGrid{
     display:grid!important;
@@ -1515,7 +1515,7 @@ html[data-customer-theme="V3C"] .portalLayout a{
 }
 
 
-/* Order detail summary uses the same dense phone strip as invoices. */
+html[data-customer-theme="V3C"] /* Order detail summary uses the same dense phone strip as invoices. */
 @media(max-width:700px){
   html[data-customer-theme="V3C"] .recordDetailPage:not(.invoicePresentation) .recordSummaryGrid{
     display:grid!important;
@@ -1634,7 +1634,7 @@ html[data-customer-theme="V3C"] .portalLayout a{
 }
 
 
-/* Separate records visually without turning them into full standalone cards. */
+html[data-customer-theme="V3C"] /* Separate records visually without turning them into full standalone cards. */
 @media(max-width:700px){
   html[data-customer-theme="V3C"] .recordsPage .recordsCompactList{
     display:grid!important;
@@ -1671,7 +1671,7 @@ html[data-customer-theme="V3C"] .portalLayout a{
     border-top-width:1px!important;
   }
 
-  /* Keep Orders and Invoices as grouped panels, but clearly distinguish their records. */
+  html[data-customer-theme="V3C"] /* Keep Orders and Invoices as grouped panels, but clearly distinguish their records. */
   html[data-customer-theme="V3C"] .recordsPage .recordsSection{
     overflow:hidden!important;
   }
