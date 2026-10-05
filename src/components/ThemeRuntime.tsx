@@ -4,7 +4,7 @@ import {useEffect,useState} from "react";
 import {createClient} from "@/lib/supabase";
 
 type Surface="admin"|"customer";
-type ActiveTheme={id:string;name:string;surface:Surface;version:string;is_builtin:boolean;css_text?:string|null};
+type ActiveTheme={id:string;name:string;surface:Surface;version:string;is_builtin:boolean;css_text?:string|null;manifest?:{standalone?:boolean}|null};
 type ThemeChangedDetail={surface:Surface;id?:string};
 
 const suffixFor=(surface:Surface)=>surface==="admin"?"A":"C";
@@ -17,6 +17,8 @@ export default function ThemeRuntime({surface,fallback,onResolved}:{surface:Surf
     const sb=createClient();
     let live=true;
     let channel:BroadcastChannel|null=null;
+    const legacyAttribute=surface==="admin"?"data-admin-theme":"data-customer-theme";
+    const legacyTheme=document.documentElement.getAttribute(legacyAttribute);
 
     const fallbackTheme:ActiveTheme={id:fallback,name:fallback,surface,version:"1.0.0",is_builtin:true};
 
@@ -27,6 +29,10 @@ export default function ThemeRuntime({surface,fallback,onResolved}:{surface:Surf
       onResolved?.(next);
       document.documentElement.dataset.orbitfsTheme=next.id;
       document.documentElement.dataset.orbitfsThemeSurface=surface;
+      // Standalone themes must not inherit selectors from the legacy visual theme
+      // attribute. Overlay themes keep the legacy baseline by design.
+      if(next.manifest?.standalone===true)document.documentElement.setAttribute(legacyAttribute,next.id);
+      else if(legacyTheme)document.documentElement.setAttribute(legacyAttribute,legacyTheme);
     };
 
     const load=async()=>{
@@ -59,6 +65,8 @@ export default function ThemeRuntime({surface,fallback,onResolved}:{surface:Surf
         delete document.documentElement.dataset.orbitfsTheme;
         delete document.documentElement.dataset.orbitfsThemeSurface;
       }
+      if(legacyTheme)document.documentElement.setAttribute(legacyAttribute,legacyTheme);
+      else document.documentElement.removeAttribute(legacyAttribute);
     };
   },[surface,fallback,onResolved]);
 
