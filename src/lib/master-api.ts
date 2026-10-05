@@ -66,5 +66,7 @@ export async function masterExecuteDeployment(input:any):Promise<MasterDeploymen
   return await masterRequest("/api/v1/deployer",{method:"POST",body:JSON.stringify({...input,phase:input.phase||"authorize"})},"deployer") as MasterDeploymentResult;
 }
 export async function masterInstallationDetails(installationId:string,licenseId?:string|null){const qs=new URLSearchParams({installation_id:String(installationId||"").trim()});if(licenseId)qs.set("license_id",String(licenseId).trim());return masterRequest(`/api/v1/deployer?${qs.toString()}`,{method:"GET",cache:"no-store"},"deployer");}
+export async function masterInstallations(limit=250){const value=Math.min(500,Math.max(1,Number(limit)||250));return masterRequest(`/api/v1/installations?limit=${value}`,{method:"GET",cache:"no-store"},"deployer");}
+export async function masterInstallationControl(input:any){return masterRequest("/api/v1/installations/control",{method:"POST",body:JSON.stringify(input)},"deployer");}
 export async function masterInstallationLifecycle(input:any){return masterRequest("/api/v1/installations/lifecycle",{method:"POST",body:JSON.stringify(input)},"deployer");}
 export const licensingAuthority="orbitfs-license-master-v2";
