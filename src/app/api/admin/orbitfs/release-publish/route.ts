@@ -26,15 +26,13 @@ export async function POST(req:Request){
     if(!channel||channel.enabled===false||channel.customer_visible===false)throw Object.assign(new Error("Select an enabled customer-visible release channel before publishing"),{status:409});
 
     const manifest=release?.manifest&&typeof release.manifest==="object"?release.manifest:{};
-    let presentation:any=null;
-    if(releaseType==="base"){
-      const result=await licenseDb().from("orbitfs_release_presentation_overrides").select("*").eq("release_id",id).maybeSingle();
-      if(result.error)throw result.error;
-      presentation=result.data||null;
-    }
-    const title=String(presentation?.title??manifest.title??"").trim();
+    const presentationResult=await licenseDb().from("orbitfs_release_presentation_overrides").select("*").eq("release_id",id).maybeSingle();
+    if(presentationResult.error)throw presentationResult.error;
+    const presentation=presentationResult.data||null;
+    const configuredTitle=String(presentation?.title??manifest.title??"").trim();
+    const title=configuredTitle||(releaseType==="update"?`OrbitFS Update v${String(release?.version||"").trim()}`:"");
     const changelog=String(presentation?.changelog??manifest.customer_changelog??manifest.customerChangelog??release?.notes??release?.changelog??"").trim();
-    if(!title)throw Object.assign(new Error("Add a customer-facing release title before publishing"),{status:409});
+    if(releaseType==="base"&&!title)throw Object.assign(new Error("Add a customer-facing release title before publishing"),{status:409});
     if(!changelog)throw Object.assign(new Error("Add a customer-facing changelog before publishing"),{status:409});
     if(String(manifest.rollout||"public").toLowerCase()==="internal")throw Object.assign(new Error("Internal rollout cannot be published to the customer portal"),{status:409});
 
