@@ -17,6 +17,7 @@ const permissionAliases:Record<string,string[]>={
   "admin.access":["admin.access"],"customers.view":["customers.view"],"customers.cancellations":["customers.cancellations"],"customers.create":["customers.create","customers.edit"],"orders.view":["orders.view"],"orders.create":["orders.create","orders.manage"],"invoices.view":["invoices.view"],"invoices.create":["invoices.create","invoices.manage"],"coupons.view":["coupons.view","coupons.manage"],"payments.manage":["payments.manage","payment_gateways.manage"],"payments.view":["payments.view","payment_gateways.manage"],"licenses.view":["licenses.view"],"licenses.manage":["licenses.manage","licenses.enforce","license_api.manage"],"support.view":["support.view","support.manage"],"support.create":["support.create","support.ticket_create","support.manage"],"support.kb":["support.kb","support.kb.view","support.manage"],"support.templates":["support.templates","support.premade.use","support.manage"],"support.settings":["support.settings","support.manage"],"products.view":["products.view","products.manage"],"news.view":["news.view","settings.general"],"downloads.view":["downloads.view","products.manage"],"staff.view":["staff.view"],"settings.view":["settings.view","settings.general"],"analytics.view":["analytics.view"],"audit.view":["audit.view"],"mail.access":["mail.view","mail.admin","mail.admin.send","mail.settings","mail.templates","mail.queue.view","mail.queue.manage"]
 };
 const orbitfsGroup:NavGroup={label:"OrbitFS Control",shortLabel:"OrbitFS Control",match:path=>path.startsWith("/admin/orbitfs")||path.startsWith("/admin/license-controller")||path.startsWith("/admin/licensing")||path.startsWith("/admin/settings/license-master")||path.startsWith("/admin/releases"),items:[
+  {label:"Installations",href:"/admin/orbitfs/installations",permission:"licenses.view"},
   {label:"Base Release",href:"/admin/orbitfs/base-deployment",permission:"licenses.manage"},
   {label:"Update Release System",href:"/admin/orbitfs/update-release-deployer",permission:"licenses.manage"},
   {label:"Release Channels",href:"/admin/orbitfs/release-channels",permission:"licenses.manage"},
@@ -30,6 +31,7 @@ function allowed(perms:Set<string>,permission:string){if(perms.has("*")||perms.h
 function itemActive(path:string,href:string){return path===href||path.startsWith(href+"/")}
 function adminRouteKey(path:string){
   if(path==="/admin")return "dashboard";
+  if(path.startsWith("/admin/orbitfs/installations"))return "installations";
   if(path.startsWith("/admin/orbitfs/base-deployment")||path.startsWith("/admin/orbitfs/base-deploy"))return "base-deployment";
   if(path.startsWith("/admin/orbitfs/update-release-deployer")||path.startsWith("/admin/orbitfs/releases")||path.startsWith("/admin/releases"))return "update-release";
   if(path.startsWith("/admin/orbitfs/release-channels"))return "release-channels";
