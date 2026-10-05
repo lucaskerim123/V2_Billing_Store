@@ -74,7 +74,7 @@ export default function V6CDesignShell({path,children,canAccessAdmin=false,loggi
   },[closeMenus]);
 
   const info=routeInfo(path);
-  const routeKey=info?.key ?? ((path.startsWith("/portal/orders")||path.startsWith("/portal/invoices"))?"billing":path.startsWith("/portal/orbitfs/releases")?"updates":path.startsWith("/portal/orbitfs/base")?"base":path==="/portal/orbitfs"?"orbit-home":"page");
+  const routeKey=info?.key ?? ((path.startsWith("/portal/products")||path.startsWith("/portal/basket")||path.startsWith("/portal/checkout"))?"store":path.startsWith("/portal/support")?"support":(path.startsWith("/portal/orders")||path.startsWith("/portal/invoices"))?"billing":path.startsWith("/portal/orbitfs/releases")?"updates":path.startsWith("/portal/orbitfs/base")?"base":path==="/portal/orbitfs"?"orbit-home":"page");
   return <div className="v6c-screen">
     <header className="v6c-appbar">
       <Link className="v6c-mark" href="/portal" aria-label="OrbitFS home"><span/><b>OrbitFS</b></Link>
