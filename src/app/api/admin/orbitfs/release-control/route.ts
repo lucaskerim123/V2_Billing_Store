@@ -3,7 +3,7 @@ import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
-const allowed=new Set(["publish","withdraw","archive","restore","revert","promote","revise","return_to_dev","delete_return_to_dev"]);
+const allowed=new Set(["publish","republish","withdraw","archive","restore","revert","promote","revise","return_to_dev","delete_return_to_dev"]);
 export async function POST(req:Request){
   try{
     await requireOrbitAdmin(req);
