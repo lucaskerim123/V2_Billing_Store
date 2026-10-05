@@ -14,26 +14,27 @@ export async function GET(req:Request){
  try{
   const auth=await currentUser(req),user=auth.user,db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}}),q=(p:any)=>Promise.resolve(p).catch((error:any)=>({data:[],error:{message:error?.message||String(error)}}));
   const bootstrap=new URL(req.url).searchParams.get("view")==="bootstrap";
-  const [customerResult,bindings,connections,installations,settings,masterLicenseResult,channelAccess,masterAvailability]=await Promise.all([
+  const [customerResult,bindings,connections,installations,settings,masterAvailability]=await Promise.all([
    q(db.from("customers").select("id,customer_number,name,email").eq("auth_user_id",user.id).maybeSingle()),
    q(db.from("license_bindings").select("*").eq("auth_user_id",user.id).is("archived_at",null).order("created_at",{ascending:false})),
    q(db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("updated_at",{ascending:false})),
    q(db.from("orbitfs_installations").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
    q(db.from("orbitfs_release_system_settings").select("*").eq("id","primary").maybeSingle()),
-   masterLicenses().catch(()=>({licenses:[]})),
-   Promise.resolve(["stable"]),
    getLicenseMasterAvailability()
   ]);
   for(const [label,result] of [["customer",customerResult],["license bindings",bindings],["provider connections",connections],["installations",installations],["release settings",settings]] as const){
     if((result as any)?.error)throw Object.assign(new Error(`Could not load ${label}: ${(result as any).error.message||"database error"}`),{status:500});
   }
   const customer=customerResult.data||null;
+  const customerNumber=String(customer?.customer_number||"").trim();
+  const masterLicenseResult=customerNumber?await masterLicenses("billing",customerNumber).catch(()=>({licenses:[]})):{licenses:[]};
+  const channelAccess=["stable"];
   const installationRows=installations.data||[],bindingRows=bindings.data||[],masterLicensesRows=masterLicenseResult?.licenses||[];
   const preferredInstall=installationRows.find((x:any)=>String(x.component_key||"")==="orbitfs_base")||installationRows[0]||null;
   let channelDiscoveryError:string|null=null;
   const discoveredChannels=bootstrap?[String(preferredInstall?.release_channel||"stable")]:await customerReleaseChannels(user.id,preferredInstall?.license_binding_id||null).catch((error:any)=>{
     channelDiscoveryError=String(error?.message||"License Manager channel lookup failed");
-    return channelAccess||["stable"];
+    return channelAccess;
   });
   const allowedChannels=[...new Set(discoveredChannels.map((x:any)=>String(x)))];
   if(!allowedChannels.length)allowedChannels.push("stable");
