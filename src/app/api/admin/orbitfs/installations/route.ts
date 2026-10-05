@@ -27,9 +27,14 @@ export async function GET(req:Request){
 
     const customers=customerRows.data||[];
     const customerByUser=new Map<string,any>();
+    const customerByReference=new Map<string,any>();
     for(const customer of customers){
       const auth=clean(customer.auth_user_id||customer.user_id);
       if(auth)customerByUser.set(auth,customer);
+      for(const ref of [customer.customer_number,customer.id,customer.auth_user_id,customer.user_id]){
+        const key=clean(ref).toLowerCase();
+        if(key)customerByReference.set(key,customer);
+      }
     }
 
     const localByInstallation=new Map<string,any>();
@@ -47,7 +52,8 @@ export async function GET(req:Request){
       if(!installationId)continue;
       seen.add(installationId);
       const local=localByInstallation.get(installationId)||null;
-      const customer=local?customerByUser.get(clean(local.auth_user_id))||null:null;
+      const authorityCustomer=customerByReference.get(clean(remote.customer_external_id).toLowerCase())||null;
+      const customer=local?(customerByUser.get(clean(local.auth_user_id))||authorityCustomer):authorityCustomer;
       const metadata=local?.metadata&&typeof local.metadata==="object"?local.metadata:{};
       const updater=metadata?.updaterConnection&&typeof metadata.updaterConnection==="object"?metadata.updaterConnection:{};
       const engineUrl=normalizeUrl(updater.engineHostUrl||updater.hostUrl);
@@ -59,7 +65,7 @@ export async function GET(req:Request){
         license_id:remote.license_id||null,
         customer:{
           id:customer?.id||null,
-          auth_user_id:local?.auth_user_id||null,
+          auth_user_id:local?.auth_user_id||customer?.auth_user_id||customer?.user_id||null,
           customer_number:customer?.customer_number||remote.customer_external_id||null,
           name:customer?.name||null,
           email:customer?.email||null,
