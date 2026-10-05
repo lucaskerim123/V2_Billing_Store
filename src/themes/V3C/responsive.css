@@ -10,7 +10,7 @@
 }
 @media(max-width:760px){
  html[data-customer-theme="V3C"] .portalTopbar{position:sticky!important;grid-template-columns:1fr auto!important;min-height:auto!important;padding:5px 8px 0!important}
- html[data-customer-theme="V3C"] .portalTopBrand{min-width:0!important}.portalTopBrand>span:nth-child(2){max-width:120px!important;overflow:hidden!important;text-overflow:ellipsis!important}
+ html[data-customer-theme="V3C"] .portalTopBrand{min-width:0!important}html[data-customer-theme="V3C"] .portalTopBrand>span:nth-child(2){max-width:120px!important;overflow:hidden!important;text-overflow:ellipsis!important}
  html[data-customer-theme="V3C"] .portalTopBrand small{display:none!important}
  html[data-customer-theme="V3C"] .portalTopTools{gap:4px!important}
  html[data-customer-theme="V3C"] .portalAdminLink{display:none!important}
@@ -19,7 +19,7 @@
  html[data-customer-theme="V3C"] .portalTopNav a{min-height:39px!important;padding:0 8px!important;font-size:9px!important}
  html[data-customer-theme="V3C"] .portalContext{top:79px!important;min-height:33px!important;padding:0 8px!important}
  html[data-customer-theme="V3C"] .portalContext a{min-height:32px!important;font-size:8.5px!important}
- html[data-customer-theme="V3C"] .portalIdentityBar{padding:6px 10px 0!important}.portalIdentityBar small{display:none!important}
+ html[data-customer-theme="V3C"] .portalIdentityBar{padding:6px 10px 0!important}html[data-customer-theme="V3C"] .portalIdentityBar small{display:none!important}
  html[data-customer-theme="V3C"] .portalMain{padding:8px 10px 24px!important}
  html[data-customer-theme="V3C"] .portalOverviewV2,html[data-customer-theme="V3C"] .accountSettingsV2{gap:9px!important}
  html[data-customer-theme="V3C"] .portalOverviewHero,html[data-customer-theme="V3C"] .accountSettingsHero{align-items:flex-start!important;gap:8px!important;padding:2px 0!important}
