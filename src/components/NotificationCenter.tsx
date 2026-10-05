@@ -1,7 +1,7 @@
 "use client";
 
 import {useCallback,useEffect,useRef,useState} from "react";
-import {useRouter} from "next/navigation"
+import {usePathname,useRouter} from "next/navigation"
 import {createPortal} from "react-dom";
 import {createClient} from "@/lib/supabase";
 import styles from "./NotificationCenter.module.css";
@@ -43,6 +43,7 @@ function notificationKind(n:NotificationRow):AlertKind{
 
 export default function NotificationCenter({surface,compact=false}:{surface:Surface;compact?:boolean}){
   const router=useRouter();
+  const pathname=usePathname();
   const rootRef=useRef<HTMLDivElement|null>(null);
   const panelRef=useRef<HTMLElement|null>(null);
   const [mounted,setMounted]=useState(false);
@@ -57,6 +58,8 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
   const [configReady,setConfigReady]=useState(false);
   const [systemEnabled,setSystemEnabled]=useState(true);
   const [feedLimit,setFeedLimit]=useState(40);
+  const [userId,setUserId]=useState("");
+  const [realtimeEnabled,setRealtimeEnabled]=useState(true);
 
   const load=useCallback(async(limit=40)=>{
     const {data,error:e}=await sb.rpc("notification_feed",{p_surface:surface,p_limit:limit});
@@ -72,11 +75,13 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
     (async()=>{
       const {data:{user}}=await sb.auth.getUser();
       if(!user||cancelled){setConfigReady(true);return}
+      setUserId(user.id);
 
       const settingsResult=await sb.rpc("orbitfs_alert_client_settings");
       const cfg:ClientSettings=settingsResult.error?{enabled:true,realtime_enabled:true,feed_limit:40}:settingsResult.data as ClientSettings;
       const limit=Math.max(10,Math.min(100,Number(cfg?.feed_limit||40)));
       setSystemEnabled(cfg?.enabled!==false);
+      setRealtimeEnabled(cfg?.realtime_enabled!==false);
       setFeedLimit(limit);
 
       if(surface==="admin"){
@@ -94,6 +99,30 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
     })();
     return()=>{cancelled=true};
   },[sb,surface,load]);
+
+  useEffect(()=>{setOpen(false)},[pathname]);
+
+  useEffect(()=>{
+    if(!configReady||!systemEnabled||!realtimeEnabled||!userId)return;
+    let refreshTimer:ReturnType<typeof setTimeout>|undefined;
+    const refresh=()=>{
+      if(refreshTimer)clearTimeout(refreshTimer);
+      refreshTimer=setTimeout(()=>{void load(feedLimit)},120);
+    };
+    const channel=sb.channel(`orbitfs-notifications-${surface}-${userId}`)
+      .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:`recipient_user_id=eq.${userId}`},payload=>{
+        const row=(payload.new&&Object.keys(payload.new).length?payload.new:payload.old) as Record<string,any>;
+        if(!row?.surface||row.surface===surface)refresh();
+      })
+      .subscribe();
+    const onFocus=()=>void load(feedLimit);
+    window.addEventListener("focus",onFocus);
+    return()=>{
+      if(refreshTimer)clearTimeout(refreshTimer);
+      window.removeEventListener("focus",onFocus);
+      void sb.removeChannel(channel);
+    };
+  },[sb,surface,userId,configReady,systemEnabled,realtimeEnabled,feedLimit,load]);
 
   useEffect(()=>{
     if(!open)return;
@@ -125,7 +154,7 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
   if(!configReady||!systemEnabled)return null;
 
   return <div ref={rootRef} className={styles.root} data-surface={surface} data-compact={compact?"true":"false"}>
-    <button className={styles.trigger} type="button" aria-label={`Open ${surface} notifications`} aria-expanded={open} onClick={()=>{setOpen(v=>!v);if(!open)void load(feedLimit)}}>
+    <button className={styles.trigger} type="button" aria-label={`Open ${surface} notifications`} aria-expanded={open} onPointerDown={event=>event.stopPropagation()} onClick={()=>setOpen(current=>{const next=!current;if(next)void load(feedLimit);return next})}>
       <span className={styles.icon}><BellIcon/></span>
       <span className={styles.triggerText}>Notifications</span>
       {unread>0&&<span className={styles.badge}>{unread>99?"99+":unread}</span>}
