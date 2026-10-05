@@ -292,3 +292,39 @@
   border-radius:12px;
  }
 }
+
+
+/* Compact customer bell mode used by V6C. */
+.root[data-surface="portal"][data-compact="true"] .trigger{
+  width:32px!important;
+  min-width:32px!important;
+  height:32px!important;
+  min-height:32px!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:7px!important;
+  background:#061c2e!important;
+  border-color:#173d5c!important;
+  box-shadow:none!important;
+}
+.root[data-surface="portal"][data-compact="true"] .trigger:hover{
+  background:#0a2b43!important;
+  border-color:#2a6289!important;
+}
+.root[data-surface="portal"][data-compact="true"] .triggerText{display:none!important}
+.root[data-surface="portal"][data-compact="true"] .icon,
+.root[data-surface="portal"][data-compact="true"] .icon svg{
+  width:15px!important;
+  height:15px!important;
+}
+.root[data-surface="portal"][data-compact="true"] .badge{
+  position:absolute!important;
+  top:-5px!important;
+  right:-5px!important;
+  min-width:15px!important;
+  height:15px!important;
+  padding:0 3px!important;
+  border:2px solid #020b14!important;
+  font-size:7px!important;
+}

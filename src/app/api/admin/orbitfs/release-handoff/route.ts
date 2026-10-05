@@ -4,9 +4,11 @@ import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
 function normalize(r:any,override?:any){
   const m=r?.manifest&&typeof r.manifest==="object"?r.manifest:{};
+  const attempts=Array.isArray(m.build_attempts)?m.build_attempts:[];
+  const attempt=Math.max(Number(r?.revision||m.package_revision||1),Number(m.latest_attempt||0),...attempts.map((item:any)=>Number(item?.attempt||0)),1);
   return {
-    id:r.id,releaseId:r.id,version:r.version,channel:r.channel,releaseChannel:r.channel||"stable",status:r.status,
-    reviewStatus:r.review_status,releaseType:r.release_type||r.releaseType,
+    id:r.id,releaseId:r.id,version:r.version,revision:Number(r.revision||m.package_revision||1),attempt,channel:r.channel,releaseChannel:r.channel||"stable",status:r.status,
+    reviewStatus:r.review_status,releaseType:String(r.release_type||r.releaseType||"").trim().toLowerCase(),
     title:override?.title??m.title??`OrbitFS ${(r.release_type||r.releaseType)==="base"?"Base":"Update"} ${r.version}`,
     description:override?.description??m.description??r.description??null,
     changelog:override?.changelog??m.customer_changelog??m.customerChangelog??r.changelog??r.notes??null,
@@ -33,8 +35,8 @@ export async function GET(req:Request){
     ]);
     const rows=Array.isArray(result)?result:(Array.isArray(result?.releases)?result.releases:[]);
     let overrides:any[]=[];
-    if(rows.some((r:any)=>String(r.release_type||r.releaseType)==="base")){
-      const ids=rows.filter((r:any)=>String(r.release_type||r.releaseType)==="base").map((r:any)=>String(r.id));
+    if(rows.some((r:any)=>String(r.release_type||r.releaseType||"").trim().toLowerCase()==="base")){
+      const ids=rows.filter((r:any)=>String(r.release_type||r.releaseType||"").trim().toLowerCase()==="base").map((r:any)=>String(r.id));
       const query=await licenseDb().from("orbitfs_release_presentation_overrides").select("*").in("release_id",ids);
       if(!query.error)overrides=query.data||[];
     }

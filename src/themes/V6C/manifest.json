@@ -1,0 +1,10 @@
+{
+  "id": "V6C",
+  "name": "OrbitFS V6 Customer",
+  "version": "6.0.0",
+  "surface": "customer",
+  "entry": "theme.css",
+  "family": "V6",
+  "standalone": true,
+  "description": "Standalone OrbitFS V6 customer portal visual system based on the supplied 12ui design. V6C does not inherit V3C or V5C."
+}

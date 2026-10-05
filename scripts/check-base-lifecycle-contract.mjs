@@ -9,6 +9,7 @@ const explicitRoute=read("src/app/api/orbitfs/installations/[id]/base/[action]/r
 const legacyRoute=read("src/app/api/orbitfs/installations/[id]/deploy/route.ts");
 const status=read("src/app/api/orbitfs/status/route.ts");
 const portal=read("src/app/portal/orbitfs/page.tsx");
+const updatesPortal=read("src/app/portal/orbitfs/releases/page.tsx");
 const migration=read("database/migrations/20260928020000_orbitfs_base_operation_ledger.sql");
 
 const createProjectCalls=(deployer.match(/ensureVercelProject\(/g)||[]).length;
@@ -66,9 +67,11 @@ assert(
   "Base lifecycle invariant failed: Portal Base mutations must use explicit idempotent Base APIs."
 );
 assert(
-  portal.includes('const isBase=action!=="update"') &&
-  portal.includes('/api/orbitfs/installations/${install.id}/deploy'),
-  "Base lifecycle invariant failed: normal Engine/add-on updates must remain separate from Base lifecycle operations."
+  portal.includes('const isBase=true') &&
+  portal.includes('/api/orbitfs/installations/${install.id}/base/${baseAction}') &&
+  updatesPortal.includes('/api/orbitfs/installations/${install.id}/deploy') &&
+  updatesPortal.includes('action:"update"'),
+  "Base lifecycle invariant failed: Base lifecycle and standalone Update Release execution must remain separate."
 );
 assert(
   legacyRoute.includes('runBaseLifecycleOperation') &&

@@ -806,7 +806,11 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     }),
     ORBITFS_INSTALLATION_ID:String(install.installation_id||"").trim(),
     ORBITFS_INSTALLATION_ROUTE:"billing_store",
-    ORBITFS_PANEL_URL:panelUrl||"https://panel.incendiarynetworks.cc",
+    // The deployed Base is the customer panel. This must be correct on the very
+    // first deployment because the Base-owned inner deployer reads it at runtime
+    // when provisioning the Shared Engine. Updating project env after the Base
+    // deployment is already READY does not change that running deployment's env.
+    ORBITFS_PANEL_URL:panelUrl||(`https://${String(install.vercel_project_name||"").trim().toLowerCase()}.vercel.app`),
     ORBITFS_LICENSE_API_URL:ORBITFS_LICENSE_API_URL,
     ORBITFS_APP_VERSION:version||"unknown",
     ORBITFS_ENGINE_RELEASE_PROVIDER:ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER,

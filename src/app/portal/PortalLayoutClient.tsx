@@ -8,12 +8,13 @@ import {trackCustomerActivity} from "@/lib/customer-activity";
 import NotificationCenter from "@/components/NotificationCenter";
 import ThemeRuntime from "@/components/ThemeRuntime";
 import themeDefaults from "@/themes/active/defaults.json";
+import V6CDesignShell from "@/themes/V6C/V6CDesignShell";
 
 type NavItem={label:string;href:string;short:string};
 
 export default function PortalLayoutClient({children}:{children:React.ReactNode}){
  const sb=useMemo(()=>createClient(),[]),path=usePathname(),router=useRouter();
- const [d,setD]=useState<any>(),[enforcement,setEnforcement]=useState<any>({state:"active"}),[loggingOut,setLoggingOut]=useState(false),[mobileMenuOpen,setMobileMenuOpen]=useState(false);
+ const [d,setD]=useState<any>(),[enforcement,setEnforcement]=useState<any>({state:"active"}),[loggingOut,setLoggingOut]=useState(false),[mobileMenuOpen,setMobileMenuOpen]=useState(false),[activeTheme,setActiveTheme]=useState(String(themeDefaults.customer));
  const lastEnforcementCheck=useRef(0),lastPulseRevision=useRef<number|null>(null),billingMenuRef=useRef<HTMLDetailsElement|null>(null),orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
 
  useEffect(()=>{
@@ -66,6 +67,8 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   void checkPulse();return()=>{alive=false;if(timer)clearTimeout(timer)};
  },[]);
 
+ const onThemeResolved=useCallback((theme:{id:string})=>setActiveTheme(String(theme.id||themeDefaults.customer)),[]);
+
  const closeDropdowns=useCallback((except?:HTMLDetailsElement|null)=>{
   if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;
   if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
@@ -106,7 +109,8 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   path.startsWith("/portal/orbitfs/license")?"Licence":
   path.startsWith("/portal/orbitfs/channels")?"Release Channels":
   path.startsWith("/portal/orbitfs/releases")?"Updates":
-  path==="/portal/orbitfs"?"Base Deployment":
+  path.startsWith("/portal/orbitfs/base")?"Base Deployment":
+  path==="/portal/orbitfs"?"My OrbitFS":
   path.startsWith("/portal/invoices")?"Invoices":
   path.startsWith("/portal/orders")||path.startsWith("/portal/checkout")?"Orders":
   path.startsWith("/portal/products")?"Store":
@@ -123,8 +127,21 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   await sb.auth.signOut();location.replace("/login");
  }
 
+ const portalBody=suspended&&path==="/portal"
+  ?<section className="portalPage"><div className="panel"><p className="eyebrow">ACCOUNT SUSPENDED</p><h1>Your OrbitFS account is suspended</h1><p>{enforcement.reason||"Your account has been suspended."}</p><div className="listrow"><b>Suspension expiry</b><span>{enforcement.expires_at?new Date(enforcement.expires_at).toLocaleString():"No automatic expiry"}</span></div><p>While suspended, your OrbitFS licences are suspended and Store, Billing, Licences, My OrbitFS and Downloads are unavailable. Support remains available.</p><p>Contact support via ticket or <a href="mailto:support@orbitfs.cc">support@orbitfs.cc</a>.</p><Link className="buttonlink" href="/portal/support">Open support</Link></div></section>
+  :children;
+
  return <div className="portalLayout portalCustomerSite">
-  <ThemeRuntime surface="customer" fallback={themeDefaults.customer}/>
+  <ThemeRuntime surface="customer" fallback={themeDefaults.customer} onResolved={onThemeResolved}/>
+  {activeTheme==="V6C"?<V6CDesignShell
+    path={path}
+    canAccessAdmin={Boolean(d.staff?.is_staff)}
+    loggingOut={loggingOut}
+    onLogout={()=>void logout()}
+    tools={<NotificationCenter surface="portal" compact/>}
+    accountName={d.p?.display_name||d.p?.first_name||"OrbitFS Customer"}
+    accountEmail={d.user?.email||""}
+  >{portalBody}</V6CDesignShell>:<>
 
   <header className="portalTopbar">
    <Link className="portalTopBrand" href="/portal">OrbitFS</Link>
@@ -161,8 +178,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    </div>
   </header>
 
-  <main className="portalMain">
-   {suspended&&path==="/portal"?<section className="portalPage"><div className="panel"><p className="eyebrow">ACCOUNT SUSPENDED</p><h1>Your OrbitFS account is suspended</h1><p>{enforcement.reason||"Your account has been suspended."}</p><div className="listrow"><b>Suspension expiry</b><span>{enforcement.expires_at?new Date(enforcement.expires_at).toLocaleString():"No automatic expiry"}</span></div><p>While suspended, your OrbitFS licences are suspended and Store, Billing, Licences, My OrbitFS and Downloads are unavailable. Support remains available.</p><p>Contact support via ticket or <a href="mailto:support@orbitfs.cc">support@orbitfs.cc</a>.</p><Link className="buttonlink" href="/portal/support">Open support</Link></div></section>:children}
-  </main>
+  <main className="portalMain">{portalBody}</main>
+  </>}
  </div>;
 }

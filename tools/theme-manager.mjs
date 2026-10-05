@@ -83,7 +83,7 @@ async function syncRegistry(surface){
   if(!map.has(baseId))throw new Error("Canonical "+surface+" base theme "+baseId+" is missing");
 
   const themes=[...map.values()]
-    .filter(m=>m.surface===surface&&descendsFrom(m.id,baseId,map))
+    .filter(m=>m.surface===surface&&(m.standalone===true||descendsFrom(m.id,baseId,map)))
     .sort((a,b)=>inheritanceDepth(a.id,map)-inheritanceDepth(b.id,map)||a.id.localeCompare(b.id));
 
   const target=path.join(activeDir,surface==="admin"?"admin.css":"customer.css");

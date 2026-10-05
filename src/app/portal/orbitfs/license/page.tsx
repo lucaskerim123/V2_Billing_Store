@@ -199,7 +199,7 @@ export default function OrbitFSLicenseController() {
                     <code style={{ wordBreak: "break-all" }}>{newKey}</code>
                     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
                       <button type="button" className="secondary" onClick={()=>void navigator.clipboard?.writeText(newKey)}>Copy key</button>
-                      {pendingBaseForceReinstall&&<Link className="buttonlink" href="/portal/orbitfs">Return to Base Deployment →</Link>}
+                      {pendingBaseForceReinstall&&<Link className="buttonlink" href="/portal/orbitfs/base">Return to Base Deployment →</Link>}
                     </div>
                   </div>
                 )}

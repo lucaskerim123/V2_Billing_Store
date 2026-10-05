@@ -10,7 +10,7 @@ type ThemeChangedDetail={surface:Surface;id?:string};
 const suffixFor=(surface:Surface)=>surface==="admin"?"A":"C";
 const validForSurface=(id:string,surface:Surface)=>Boolean(id)&&id.endsWith(suffixFor(surface));
 
-export default function ThemeRuntime({surface,fallback}:{surface:Surface;fallback:string}){
+export default function ThemeRuntime({surface,fallback,onResolved}:{surface:Surface;fallback:string;onResolved?:(theme:ActiveTheme)=>void}){
   const [theme,setTheme]=useState<ActiveTheme|null>(null);
 
   useEffect(()=>{
@@ -24,6 +24,7 @@ export default function ThemeRuntime({surface,fallback}:{surface:Surface;fallbac
       if(!live)return;
       const next=raw&&raw.surface===surface&&validForSurface(raw.id,surface)?raw:fallbackTheme;
       setTheme(next);
+      onResolved?.(next);
       document.documentElement.dataset.orbitfsTheme=next.id;
       document.documentElement.dataset.orbitfsThemeSurface=surface;
     };
@@ -55,7 +56,7 @@ export default function ThemeRuntime({surface,fallback}:{surface:Surface;fallbac
       window.removeEventListener("orbitfs-theme-changed",onChanged as EventListener);
       channel?.close();
     };
-  },[surface,fallback]);
+  },[surface,fallback,onResolved]);
 
   // Built-in themes are bundled statically and selected by data-orbitfs-theme.
   // Imported themes stay isolated because their CSS exists in the document only while active.

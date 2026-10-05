@@ -41,7 +41,7 @@ function notificationKind(n:NotificationRow):AlertKind{
   return "notification";
 }
 
-export default function NotificationCenter({surface}:{surface:Surface}){
+export default function NotificationCenter({surface,compact=false}:{surface:Surface;compact?:boolean}){
   const router=useRouter();
   const rootRef=useRef<HTMLDivElement|null>(null);
   const panelRef=useRef<HTMLElement|null>(null);
@@ -124,7 +124,7 @@ export default function NotificationCenter({surface}:{surface:Surface}){
 
   if(!configReady||!systemEnabled)return null;
 
-  return <div ref={rootRef} className={styles.root} data-surface={surface}>
+  return <div ref={rootRef} className={styles.root} data-surface={surface} data-compact={compact?"true":"false"}>
     <button className={styles.trigger} type="button" aria-label={`Open ${surface} notifications`} aria-expanded={open} onClick={()=>{setOpen(v=>!v);if(!open)void load(feedLimit)}}>
       <span className={styles.icon}><BellIcon/></span>
       <span className={styles.triggerText}>Notifications</span>
