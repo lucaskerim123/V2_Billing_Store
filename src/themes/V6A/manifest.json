@@ -5,6 +5,5 @@
   "surface": "admin",
   "entry": "theme.css",
   "family": "V6",
-  "extends": "V5A",
-  "description": "OrbitFS V6 Admin starter theme. V6 visual foundation layered over the existing V5A admin functionality."
+  "description": "OrbitFS V6 Admin visual system using the shared admin functional structure without inheriting V5A visual styling."
 }
