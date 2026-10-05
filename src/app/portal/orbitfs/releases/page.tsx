@@ -10,14 +10,14 @@ type Release={
   release_type?:string;releaseType?:string;channel?:string;status?:string;
   published_at?:string;publishedAt?:string;changelog?:string;customer_notes?:string;
   components?:string[];minimum_version?:string;minimumVersion?:string;severity?:string;
-  required?:boolean;sha256?:string;checksum?:string;
+  required?:boolean;sha256?:string;checksum?:string;source_sha?:string;sourceSha?:string;
 };
 type UpdateEvent={id:string;type:string;status:string;message:string;createdAt:string;releaseId:string;releaseVersion:string};
 type UpdateProgress={
   lastCheckedAt:string;
   installationId:string;installationState:string|null;lastError:string|null;
   installedBaseVersion:string|null;
-  appliedUpdate:{releaseId:string;version:string;channel:string;components:string[];appliedAt:string|null}|null;
+  appliedUpdate:{releaseId:string;version:string;channel:string;components:string[];appliedAt:string|null;sha256?:string;sourceCommit?:string}|null;
   events:UpdateEvent[];
 };
 type Stage=1|2|3|4|5;
@@ -132,9 +132,16 @@ export default function OrbitFSUpdateReleaseSystem(){
     :(data?.updateReleaseDiscoveryAvailable??data?.releaseDiscoveryAvailable!==false);
   const updateDiscoveryError=String(updateChannelDiscovery?.error||data?.updateReleaseDiscoveryError||"License Manager Update release lookup unavailable");
   const selectedComparison=selected&&appliedVersion?compareOrbitReleaseVersions(versionOf(selected),appliedVersion):null;
-  const alreadyInstalled=Boolean(selected&&(appliedId&&appliedId===idOf(selected)||
-    appliedVersion&&appliedVersion===versionOf(selected)&&String(applied?.channel||channel)===channel));
-  const isPrevious=Boolean(selected&&appliedVersion&&selectedComparison!==null&&selectedComparison<=0&&!alreadyInstalled);
+  const selectedChecksum=String(selected?.checksum||selected?.sha256||"").trim().toLowerCase();
+  const appliedChecksum=String(applied?.sha256||"").trim().toLowerCase();
+  const selectedSourceCommit=String(selected?.source_sha||selected?.sourceSha||"").trim().toLowerCase();
+  const appliedSourceCommit=String(applied?.sourceCommit||"").trim().toLowerCase();
+  const alreadyInstalled=Boolean(selected&&(
+    (appliedId&&appliedId===idOf(selected))||
+    (!appliedId&&appliedChecksum&&selectedChecksum&&appliedChecksum===selectedChecksum)||
+    (!appliedId&&!appliedChecksum&&appliedSourceCommit&&selectedSourceCommit&&appliedSourceCommit===selectedSourceCommit)
+  ));
+  const isPrevious=Boolean(selected&&appliedVersion&&selectedComparison!==null&&selectedComparison<0);
   const requiredBase=String(selected?.minimum_version||selected?.minimumVersion||"");
   const compatible=Boolean(!selected||!requiredBase||
     (baseVersion&&compareOrbitReleaseVersions(baseVersion,requiredBase)!==null&&
