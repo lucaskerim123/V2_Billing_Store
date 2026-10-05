@@ -688,6 +688,28 @@ async function verifiedSelectedEngineHostUrl(install:any,state:any,projectId:str
   }catch{}
   return allowed.has(host)?selected:null;
 }
+async function recordSharedEngineDeploymentState(install:any,deploymentId:string,deploymentUrl:string|null){
+  if(!install?.supabase_project_ref||!install?.database_initialized_at)return;
+  const stamp=new Date().toISOString();
+  const sql=`update public.orbitfs_settings
+set value=coalesce(value,'{}'::jsonb)||jsonb_build_object(
+  'state','ready',
+  'deploymentId',${sqlLiteral(deploymentId)}::text,
+  'deploymentUrl',${deploymentUrl?sqlLiteral(deploymentUrl)+"::text":"null"},
+  'lastSyncAt',${sqlLiteral(stamp)}::text,
+  'lastHealthAt',${sqlLiteral(stamp)}::text,
+  'lastError',null,
+  'updatedAt',${sqlLiteral(stamp)}::text
+),
+updated_at=${sqlLiteral(stamp)}::timestamptz
+where scope_type='global' and scope_id='' and key='engine_host.shared'
+returning key;`;
+  const result=await supabaseApi(String(install.auth_user_id),`/projects/${encodeURIComponent(String(install.supabase_project_ref))}/database/query`,{
+    method:"POST",body:JSON.stringify({query:sql})
+  });
+  if(!managementRows(result).length)fail("Shared Engine Host state is missing from the customer database",409,"ENGINE_HOST_STATE_MISSING");
+}
+
 async function rebindSelectedEngineVercelAlias(install:any,state:any,deploymentId:string,projectId:string){
   if(String(state?.domainMode||"")!=="vercel")return;
   const domain=String(state?.domainName||"").trim().toLowerCase();
@@ -705,7 +727,7 @@ async function updaterConnection(install:any){
   const selectedState=await selectedEngineHostState(install);
   if(existing.linked===true&&existing.autoVerified===true&&existing.provenance==="inner-deployer-v1"&&existing.engineProjectId&&existing.engineProjectName&&/^https:\/\//i.test(String(existing.engineHostUrl||""))){
     const engineProjectId=String(existing.engineProjectId),engineProjectName=String(existing.engineProjectName);
-    const currentDeploymentId=String(selectedState?.deploymentId||existing.engineDeploymentId||"").trim()||null;
+    const currentDeploymentId=String(existing.engineDeploymentId||selectedState?.deploymentId||"").trim()||null;
     const selectedHost=await verifiedSelectedEngineHostUrl(install,selectedState,engineProjectId,engineProjectName,currentDeploymentId);
     const engineHostUrl=selectedHost||String(existing.engineHostUrl).replace(/\/$/,"");
     if(engineHostUrl!==String(existing.engineHostUrl).replace(/\/$/,"")||currentDeploymentId!==String(existing.engineDeploymentId||"").trim()){
@@ -741,7 +763,7 @@ async function updaterConnection(install:any){
   }
   if(!verified)fail("The Shared Engine Host was not created by the Inner Deployer, so this installation cannot use the OrbitFS Updater.",409,"UPDATER_INNER_DEPLOYER_REQUIRED");
   const aliases=Array.isArray(verified.alias)?verified.alias:[];
-  const engineDeploymentId=String(selectedState?.deploymentId||verified.uid||verified.id||"").trim()||null;
+  const engineDeploymentId=String(verified.uid||verified.id||selectedState?.deploymentId||"").trim()||null;
   const selectedHost=await verifiedSelectedEngineHostUrl(install,selectedState,String(project.id),name,engineDeploymentId);
   const engineHostUrl=selectedHost||"https://"+String(aliases[0]||project.alias?.[0]||name+".vercel.app").replace(/^https?:\/\//i,"").replace(/\/$/,"");
   const now=new Date().toISOString();
@@ -798,6 +820,7 @@ async function applyEngineUpdatePayload(install:any,release:any,bundle:UpdateBun
   const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:connection.engineHostUrl;
   const hostUrl=connection.engineHostUrl||deploymentUrl;
   if(!hostUrl||!await sharedEngineHostHealthy(hostUrl))fail("Updated Shared Engine Host is not healthy",502,"ENGINE_HOST_UNHEALTHY",true);
+  await recordSharedEngineDeploymentState(install,deploymentId,deploymentUrl);
   return {
     deploymentId,
     deploymentUrl,
@@ -814,6 +837,7 @@ async function rollbackEngineUpdatePayload(install:any,previousDeploymentId:stri
   const rollbackDeploymentId=String(previousDeploymentId);
   await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(connection.engineProjectId)}/rollback/${encodeURIComponent(rollbackDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
   await rebindSelectedEngineVercelAlias(install,await selectedEngineHostState(install),rollbackDeploymentId,connection.engineProjectId);
+  await recordSharedEngineDeploymentState(install,rollbackDeploymentId,connection.engineHostUrl||null);
   return {deploymentId:rollbackDeploymentId,hostUrl:connection.engineHostUrl,state:"ready"};
 }
 async function previousDeployment(install:any):Promise<{vercel_deployment_id:string;deployment_url:string|null;release_version:string;release_id:string;created_at:string}>{const {data,error}=await licenseDb().from("orbitfs_installation_releases").select("vercel_deployment_id,deployment_url,release_version,release_id,created_at,action").eq("installation_id",install.id).eq("status","ready").neq("action","update").not("vercel_deployment_id","is",null).order("created_at",{ascending:false}).limit(5);if(error)throw error;const previous=(data||[]).find((r:any)=>String(r.release_id||"")!==String(install.release_id||""));if(!previous)throw Object.assign(new Error("No previous successful Base deployment is available for rollback"),{status:409});if(!previous.vercel_deployment_id||!previous.release_id||!previous.release_version)throw Object.assign(new Error("Previous Base deployment record is incomplete and cannot be rolled back"),{status:409});return {vercel_deployment_id:String(previous.vercel_deployment_id),deployment_url:previous.deployment_url?String(previous.deployment_url):null,release_version:String(previous.release_version),release_id:String(previous.release_id),created_at:String(previous.created_at||"")}}
