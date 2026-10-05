@@ -688,6 +688,17 @@ async function verifiedSelectedEngineHostUrl(install:any,state:any,projectId:str
   }catch{}
   return allowed.has(host)?selected:null;
 }
+async function rebindSelectedEngineVercelAlias(install:any,state:any,deploymentId:string,projectId:string){
+  if(String(state?.domainMode||"")!=="vercel")return;
+  const domain=String(state?.domainName||"").trim().toLowerCase();
+  if(!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.vercel\.app$/.test(domain))fail("Stored Engine Vercel address is invalid",409,"ENGINE_VERCEL_ALIAS_INVALID");
+  await vercelApi(String(install.auth_user_id),"/v2/deployments/"+encodeURIComponent(deploymentId)+"/aliases",{method:"POST",body:JSON.stringify({alias:domain,redirect:null})});
+  const alias=await vercelApi(String(install.auth_user_id),"/v4/aliases/"+encodeURIComponent(domain));
+  const aliasDeploymentId=String(alias?.deploymentId||alias?.deployment?.id||"").trim();
+  const aliasProjectId=String(alias?.projectId||alias?.project?.id||alias?.deployment?.projectId||"").trim();
+  if(aliasDeploymentId!==deploymentId||(aliasProjectId&&aliasProjectId!==projectId))fail("Selected Engine Vercel address was not moved to the new deployment",502,"ENGINE_VERCEL_ALIAS_REBIND_FAILED",true);
+}
+
 async function updaterConnection(install:any){
   const metadata=install?.metadata&&typeof install.metadata==="object"?install.metadata:{};
   const existing=metadata.updaterConnection&&typeof metadata.updaterConnection==="object"?metadata.updaterConnection:{};
@@ -782,6 +793,8 @@ async function applyEngineUpdatePayload(install:any,release:any,bundle:UpdateBun
   const ready=await waitForReady(String(install.auth_user_id),deploymentId);
   const state=String(ready?.readyState||ready?.state||"").toUpperCase();
   if(state!=="READY")fail("Engine Host update deployment did not become ready within the deployment window",504);
+  const selectedState=await selectedEngineHostState(install);
+  await rebindSelectedEngineVercelAlias(install,selectedState,deploymentId,connection.engineProjectId);
   const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:connection.engineHostUrl;
   const hostUrl=connection.engineHostUrl||deploymentUrl;
   if(!hostUrl||!await sharedEngineHostHealthy(hostUrl))fail("Updated Shared Engine Host is not healthy",502,"ENGINE_HOST_UNHEALTHY",true);
@@ -800,6 +813,7 @@ async function rollbackEngineUpdatePayload(install:any,previousDeploymentId:stri
   if(!previousDeploymentId)fail("No previous Engine Host deployment is recorded for rollback",409,"ENGINE_ROLLBACK_TARGET_MISSING");
   const rollbackDeploymentId=String(previousDeploymentId);
   await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(connection.engineProjectId)}/rollback/${encodeURIComponent(rollbackDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
+  await rebindSelectedEngineVercelAlias(install,await selectedEngineHostState(install),rollbackDeploymentId,connection.engineProjectId);
   return {deploymentId:rollbackDeploymentId,hostUrl:connection.engineHostUrl,state:"ready"};
 }
 async function previousDeployment(install:any):Promise<{vercel_deployment_id:string;deployment_url:string|null;release_version:string;release_id:string;created_at:string}>{const {data,error}=await licenseDb().from("orbitfs_installation_releases").select("vercel_deployment_id,deployment_url,release_version,release_id,created_at,action").eq("installation_id",install.id).eq("status","ready").neq("action","update").not("vercel_deployment_id","is",null).order("created_at",{ascending:false}).limit(5);if(error)throw error;const previous=(data||[]).find((r:any)=>String(r.release_id||"")!==String(install.release_id||""));if(!previous)throw Object.assign(new Error("No previous successful Base deployment is available for rollback"),{status:409});if(!previous.vercel_deployment_id||!previous.release_id||!previous.release_version)throw Object.assign(new Error("Previous Base deployment record is incomplete and cannot be rolled back"),{status:409});return {vercel_deployment_id:String(previous.vercel_deployment_id),deployment_url:previous.deployment_url?String(previous.deployment_url):null,release_version:String(previous.release_version),release_id:String(previous.release_id),created_at:String(previous.created_at||"")}}
