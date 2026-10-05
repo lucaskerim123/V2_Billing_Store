@@ -20,7 +20,8 @@ function normalize(r:any,override?:any){
     artifactUrl:r.artifact_url||null,checksum:r.checksum||null,artifactName:r.artifact_name||null,
     artifactRepo:r.artifact_repo||null,artifactRunId:r.artifact_run_id||null,validation:m.validation||null,
     deliveryStatus:r.status==="published"?"published":r.review_status==="approved"?"approved":"pending",
-    publishedAt:r.published_at||null,updatedAt:r.updated_at||null
+    publishedAt:r.published_at||null,updatedAt:r.updated_at||null,
+    billingPresentation:Boolean(override),presentationOverride:override||null
   };
 }
 
@@ -35,8 +36,8 @@ export async function GET(req:Request){
     ]);
     const rows=Array.isArray(result)?result:(Array.isArray(result?.releases)?result.releases:[]);
     let overrides:any[]=[];
-    if(rows.some((r:any)=>String(r.release_type||r.releaseType||"").trim().toLowerCase()==="base")){
-      const ids=rows.filter((r:any)=>String(r.release_type||r.releaseType||"").trim().toLowerCase()==="base").map((r:any)=>String(r.id));
+    const ids=rows.map((r:any)=>String(r.id)).filter(Boolean);
+    if(ids.length){
       const query=await licenseDb().from("orbitfs_release_presentation_overrides").select("*").in("release_id",ids);
       if(!query.error)overrides=query.data||[];
     }
