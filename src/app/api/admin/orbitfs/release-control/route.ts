@@ -3,7 +3,7 @@ import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 
-const allowed=new Set(["publish","republish","withdraw","archive","restore","revert","promote","revise","return_to_dev","delete_return_to_dev"]);
+const allowed=new Set(["publish","republish","withdraw","archive","restore","revert","promote","revise","return_to_dev","delete_billing_copy","delete_return_to_dev"]);
 export async function POST(req:Request){
   try{
     await requireOrbitAdmin(req);
@@ -17,7 +17,18 @@ export async function POST(req:Request){
     const releaseType=String(release?.release_type||"").toLowerCase();
     if(!["base","update"].includes(releaseType))throw Object.assign(new Error("Unsupported OrbitFS release type"),{status:403});
 
-    if(action==="return_to_dev"||action==="delete_return_to_dev"){
+    if(action==="delete_billing_copy"||action==="delete_return_to_dev"){
+      const deleted=await licenseDb().from("orbitfs_release_presentation_overrides").delete().eq("release_id",id).select("release_id");
+      if(deleted.error)throw deleted.error;
+      return Response.json({
+        releaseId:id,
+        billingPresentationDeleted:(deleted.data||[]).length,
+        technicalReleaseChanged:false,
+        message:"Billing presentation copy deleted. License Manager release history was not changed."
+      },{headers:{"cache-control":"no-store"}});
+    }
+
+    if(action==="return_to_dev"){
       const reason=String(body.reason||"").trim();
       if(!reason)throw Object.assign(new Error("A reason is required before returning a release to Dev Panel"),{status:400});
       if(String(release.status||"").toLowerCase()==="published"){
@@ -28,13 +39,6 @@ export async function POST(req:Request){
         body:JSON.stringify({action:"reject",reason})
       },"billing");
       const returnedRelease=returned?.release||null;
-      let billingPresentationDeleted=0;
-      if(action==="delete_return_to_dev"){
-        const ids=[id,String(returnedRelease?.id||"")].filter(Boolean);
-        const deleted=await licenseDb().from("orbitfs_release_presentation_overrides").delete().in("release_id",ids).select("release_id");
-        if(deleted.error)throw deleted.error;
-        billingPresentationDeleted=(deleted.data||[]).length;
-      }
       const occurredAt=new Date().toISOString();
       const panelReport=await reportDevPanelReleaseEvent({
         eventId:`${releaseType}-returned-to-dev:${id}:${occurredAt}`,
@@ -49,12 +53,11 @@ export async function POST(req:Request){
         status:"completed",
         occurredAt,
         sourceSystem:"billing_store",
-        metadata:{billingPresentationDeleted,sourceReleaseId:id,handbackReleaseId:returnedRelease?.id||null}
+        metadata:{sourceReleaseId:id,handbackReleaseId:returnedRelease?.id||null}
       }).catch((error:any)=>({ok:false,error:error?.message||"Dev Panel event report failed"}));
       return Response.json({
         ...returned,
         returnedToDev:true,
-        billingPresentationDeleted,
         devPanelRecorded:panelReport?.ok===true,
         devPanelWarning:panelReport?.ok===true?null:(panelReport?.error||panelReport?.reason||"Dev Panel event history was not recorded")
       },{headers:{"cache-control":"no-store"}});
