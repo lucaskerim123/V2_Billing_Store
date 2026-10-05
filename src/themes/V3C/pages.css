@@ -64,7 +64,7 @@ html[data-customer-theme="V3C"] .portalLayout .invoiceDocument .invoiceDocTotalM
 html[data-customer-theme="V3C"] .portalLayout .invoiceDocument .invoiceDocFooter{background:#f8fafc!important}
 
 
-html[data-customer-theme="V3C"] /* OrbitFS License Controller — explicit V3C surface, no dependency on generic legacy .panel sizing. */
+/* OrbitFS License Controller — explicit V3C surface, no dependency on generic legacy .panel sizing. */
 html[data-customer-theme="V3C"] .orbitfsLicenseController{max-width:980px!important;margin:0 auto!important;padding-bottom:32px!important;min-width:0!important}
 html[data-customer-theme="V3C"] .orbitfsLicenseController>.portalOverviewHero{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:14px!important;align-items:center!important;padding:18px 20px!important;margin-bottom:10px!important;border:1px solid #2c3746!important;border-radius:12px!important;background:#131a23!important;box-shadow:0 8px 24px rgba(0,0,0,.18)!important}
 html[data-customer-theme="V3C"] .orbitfsLicenseController>.portalOverviewHero h1{font-size:24px!important;margin:3px 0 5px!important}
