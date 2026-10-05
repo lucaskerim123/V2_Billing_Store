@@ -83,8 +83,7 @@ export default function OrbitFSUpdateReleaseSystem(){
     }finally{if(!background)setLoading(false)}
   },[headers]);
 
-  useEffect(()=>{void load(false,true)},[load]);
-  useEffect(()=>{if(data?.releaseCatalogLoading)void load(true,false)},[data?.releaseCatalogLoading,load]);
+  useEffect(()=>{void load(false,false)},[load]);
 
   const baseBindings=(data?.bindings||[]).filter((value:any)=>value.license_product_key==="orbitfs_base"||value.components?.orbitfs_base||value.components?.orbitfs_panel);
   const binding=baseBindings.find((value:any)=>(data?.installations||[]).some((row:any)=>String(row.license_binding_id)===String(value.id)))||baseBindings[0]||null;
