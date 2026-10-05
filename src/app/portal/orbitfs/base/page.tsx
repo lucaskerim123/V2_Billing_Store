@@ -48,7 +48,7 @@ export default function MyOrbitFS(){
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
       try{
         const r=await fetch("/api/orbitfs/status"+(bootstrap?"?view=bootstrap":""),{headers,cache:"no-store",signal:controller.signal}),j=await r.json().catch(()=>({}));
-        if(r.ok){setD(j);setMsg("");if(bootstrap)void load(true,false)}else setMsg(apiError(j,"Could not load My OrbitFS."));
+        if(r.ok){setD(j);setMsg("")}else setMsg(apiError(j,"Could not load My OrbitFS."));
       }catch(e:any){setMsg(e?.name==="AbortError"?"My OrbitFS status request timed out. Please retry.":e?.message||"Could not load My OrbitFS.")}
       finally{clearTimeout(timer)}
     }finally{if(!background)setLoading(false)}
@@ -59,7 +59,7 @@ export default function MyOrbitFS(){
     if(callbackError)setMsg(callbackError);
     else if(connected==="supabase")setMsg("Supabase account connected. Loading your projects…");
     else if(connected==="vercel")setMsg("Vercel account connected.");
-    void load(false,true).finally(()=>{
+    void load(false,false).finally(()=>{
       if(connected==="supabase"&&!callbackError)setMsg("Supabase account connected. Choose an existing project or create a new one.");
       if(connected||callbackError)window.history.replaceState({},document.title,window.location.pathname);
     });
