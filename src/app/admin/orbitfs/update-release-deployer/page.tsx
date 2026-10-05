@@ -64,7 +64,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
  const reviewFailed=failedStatus(reviewStatus);
  const validationWorking=busy==="validate"||workingStatus(validationStatus);
  const reviewWorking=busy==="approve"||busy==="reject"||workingStatus(reviewStatus);
- const presentationReady=Boolean(selected?.title&&selected?.changelog);
+ const presentationReady=Boolean(selected?.changelog);
  const rolloutPublishable=String(selected?.rollout||"public").toLowerCase()!=="internal";
  const finalReviewReady=Boolean(selected?.checksum&&selected?.channel&&presentationReady&&rolloutPublishable);
  const finalReviewWorking=busy==="channel"||busy==="edit";
@@ -72,7 +72,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
  const publicationWorking=busy==="publish"||workingStatus(selected?.status);
  const canPublish=Boolean(selected&&!portalPublished&&!selected.publishedAt&&validationPassed&&reviewApproved&&finalReviewReady);
  const canRepublish=Boolean(selected?.status==="withdrawn"&&selected.publishedAt&&validationPassed&&reviewApproved&&finalReviewReady);
- const blockers=[!reviewApproved&&"Technical approval",!validationPassed&&"Validation",!selected?.checksum&&"Artifact checksum",!selected?.channel&&"Customer channel",!presentationReady&&"Customer title + changelog",!rolloutPublishable&&"Internal rollout cannot publish"].filter(Boolean) as string[];
+ const blockers=[!reviewApproved&&"Technical approval",!validationPassed&&"Validation",!selected?.checksum&&"Artifact checksum",!selected?.channel&&"Customer channel",!presentationReady&&"Customer changelog",!rolloutPublishable&&"Internal rollout cannot publish"].filter(Boolean) as string[];
  const stageClass=(state:"done"|"active"|"working"|"error"|"idle")=>"orbitStage "+(state==="idle"?"":state);
  const intakeStage=selected?"done":"active";
  const validationStage=pipelineError===2||validationFailed?"error":validationWorking?"working":validationPassed?"done":selected?"active":"idle";
@@ -242,7 +242,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
        </div>
        <div>
         <b>Final publication review</b>
-        <p className="muted">{presentationReady?"Customer title and changelog are ready.":"Add a customer-facing title and changelog before publishing."}</p>
+        <p className="muted">{presentationReady?"Customer changelog is ready. Title is optional and defaults to the Update version.":"Add a customer-facing changelog before publishing. Title is optional."}</p>
         {selected.customerNotes&&<p><b>Customer notes:</b> {selected.customerNotes}</p>}
         {selected.internalNotes&&<p className="muted"><b>Internal review:</b> {selected.internalNotes}</p>}
        </div>
@@ -286,7 +286,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    <div className="orbitModal" onMouseDown={e=>e.stopPropagation()}>
     <div className="orbitPanelHead"><div><p className="eyebrow">UPDATE PRESENTATION</p><h2>Edit v{selected.version}</h2></div><button className="orbitAction orbitActionQuiet" onClick={()=>setEditing(false)}>Close</button></div>
     <div className="orbitFormGrid">
-     <label>Title<input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/></label>
+     <label>Title <small className="muted">Optional</small><input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} placeholder={selected?`OrbitFS Update v${selected.version}`:"OrbitFS Update"}/></label>
      <label>Severity<select value={draft.severity} onChange={e=>setDraft({...draft,severity:e.target.value})}><option value="normal">Normal</option><option value="important">Important</option><option value="critical">Critical</option></select></label>
      <label>Rollout<select value={draft.rollout} onChange={e=>setDraft({...draft,rollout:e.target.value})}><option value="public">Public</option><option value="staged">Staged</option><option value="limited">Limited</option><option value="internal">Internal</option></select></label>
      <label className="wide">Description<textarea rows={3} value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})}/></label>
