@@ -1513,3 +1513,43 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layou
     color:#dff3ff!important;
   }
 }
+
+
+/* V6A admin section submenu authority.
+   Base/Update pages are V6A-exempt for page styling, but their section navigation
+   must still use the same single horizontal subnav row as the rest of admin. */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout .adminV3Subnav{
+  width:100%!important;
+  min-width:0!important;
+  min-height:39px!important;
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:nowrap!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:3px!important;
+  padding:5px 14px!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  grid-template-columns:none!important;
+  grid-auto-flow:unset!important;
+  scrollbar-width:none!important;
+  border-bottom:1px solid #12334b!important;
+  background:#03131f!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout .adminV3Subnav::-webkit-scrollbar{
+  display:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout .adminV3Subnav>a{
+  width:auto!important;
+  max-width:none!important;
+  min-width:max-content!important;
+  min-height:28px!important;
+  flex:0 0 auto!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 8px!important;
+  margin:0!important;
+  white-space:nowrap!important;
+}
