@@ -9,8 +9,6 @@ import {errorMessage} from "@/lib/error-message";
 import {isCanonicalLicenseUsable} from "@/lib/license-status";
 
 const hasBase=(b:any)=>b?.license_product_key==="orbitfs_base"||!!b?.components?.orbitfs_base||!!b?.components?.orbitfs_panel;
-const ENGINE_ADDON_KEYS=new Set(["orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
-const hasEngineAddon=(b:any)=>ENGINE_ADDON_KEYS.has(String(b?.license_product_key||"").toLowerCase())||[...ENGINE_ADDON_KEYS].some((key)=>b?.components?.[key]===true||b?.components?.[key]?.allowed===true||b?.components?.[key]?.state==="enabled");
 const usableLicence=(b:any)=>isCanonicalLicenseUsable(b);
 const label=(state:any)=>String(state||"waiting").replaceAll("_"," ");
 const sectionGap={display:"grid",gap:12} as const;
