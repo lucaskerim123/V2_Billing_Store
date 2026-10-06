@@ -38,6 +38,11 @@ export default function MyOrbitFS(){
   const [uninstallOptions,setUninstallOptions]=useState({removeDatabase:false,removeStorage:false,releaseLicense:false});
   const [lifecyclePlan,setLifecyclePlan]=useState<any>(null);
   const [liveCheckedAt,setLiveCheckedAt]=useState("");
+  const [showBaseDomain,setShowBaseDomain]=useState(false);
+  const [baseDomainMode,setBaseDomainMode]=useState<"generated"|"vercel"|"custom">("generated");
+  const [baseDomain,setBaseDomain]=useState("");
+  const [baseDomainState,setBaseDomainState]=useState<any>(null);
+  const [baseDomainAvailability,setBaseDomainAvailability]=useState<any>(null);
 
   async function authHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{} }
   async function load(background=false,bootstrap=false){
@@ -283,6 +288,70 @@ export default function MyOrbitFS(){
     }
   }
   async function repairPublicUrl(){if(!install)return;setBusy("public-url-repair");try{const r=await fetch(`/api/orbitfs/installations/${install.id}/status`,{method:"POST",headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not repair public Panel access."));await load();setMsg(j.installation?.health_status==="healthy"?"Public Panel URL repaired and verified.":"Production domain refreshed, but public health is unverified. Check the Vercel project protection settings and Panel health.")}catch(e:any){setMsg(e?.message||"Public URL repair failed.")}finally{setBusy("")}}
+  async function loadBaseDomain(){
+    if(!install?.id)return null;
+    setBusy("base-domain-refresh");
+    try{
+      const r=await fetch(`/api/orbitfs/installations/${install.id}/domain`,{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(apiError(j,"Could not load Base domain settings."));
+      const state=j.domain||null;
+      setBaseDomainState(state);
+      setBaseDomainMode(state?.mode==="custom"?"custom":state?.mode==="vercel"?"vercel":"generated");
+      setBaseDomain(String(state?.domainName||""));
+      setBaseDomainAvailability(null);
+      return state;
+    }catch(e:any){setMsg(e?.message||"Could not load Base domain settings.");return null}
+    finally{setBusy("")}
+  }
+  function toggleBaseDomain(){
+    if(showBaseDomain){setShowBaseDomain(false);return}
+    setShowBaseDomain(true);
+    const saved=install?.metadata?.baseDomain;
+    const live=String(install?.production_url||"").replace(/^https?:\/\//,"").replace(/\/$/,"");
+    const generated=`${String(install?.vercel_project_name||"").trim().toLowerCase()}.vercel.app`;
+    const initialMode=saved?.mode==="custom"?"custom":saved?.mode==="vercel"?"vercel":saved?.mode==="generated"?"generated":live&&live!==generated?(live.endsWith(".vercel.app")?"vercel":"custom"):"generated";
+    setBaseDomainMode(initialMode);
+    setBaseDomain(String(saved?.domainName||(initialMode==="generated"?"":live)||""));
+    setBaseDomainAvailability(null);
+    void loadBaseDomain();
+  }
+  async function checkBaseDomainAvailability(){
+    if(!install?.id||!baseDomain.trim())return null;
+    setBusy("base-domain-check");
+    try{
+      const r=await fetch(`/api/orbitfs/installations/${install.id}/domain`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"check",domain:baseDomain})}),j=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(apiError(j,"Could not check that Vercel address."));
+      setBaseDomainAvailability(j.availability||null);
+      if(j.availability?.domain)setBaseDomain(String(j.availability.domain));
+      return j.availability||null;
+    }catch(e:any){setBaseDomainAvailability(null);setMsg(e?.message||"Could not check that Vercel address.");return null}
+    finally{setBusy("")}
+  }
+  async function saveBaseDomain(){
+    if(!install?.id)return;
+    if(baseDomainMode!=="generated"&&!baseDomain.trim()){setMsg("Enter the Base domain you want to use.");return}
+    if(baseDomainMode==="vercel"){
+      const normalized=baseDomain.trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
+      const checked=String(baseDomainAvailability?.domain||"").toLowerCase();
+      const matches=checked===normalized||checked===`${normalized}.vercel.app`||normalized===`${checked}.vercel.app`;
+      const availability=matches&&baseDomainAvailability?.available?baseDomainAvailability:await checkBaseDomainAvailability();
+      if(!availability?.available){if(availability)setMsg(`${availability.domain||baseDomain} is already in use on Vercel.`);return}
+    }
+    setBusy("base-domain-save");
+    try{
+      const r=await fetch(`/api/orbitfs/installations/${install.id}/domain`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"save",mode:baseDomainMode,domain:baseDomainMode==="generated"?null:baseDomain})}),j=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(apiError(j,"Could not update the Base domain."));
+      if(j.installation)setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===j.installation.id?j.installation:x)}):current);
+      const state=j.domain||null;
+      setBaseDomainState(state);
+      setBaseDomainMode(state?.mode==="custom"?"custom":state?.mode==="vercel"?"vercel":"generated");
+      setBaseDomain(String(state?.domainName||""));
+      setBaseDomainAvailability(j.availability||null);
+      setMsg(state?.mode==="custom"&&state?.verified===false?`Custom domain ${state.domainName} is attached. Complete Vercel DNS verification; OrbitFS keeps the generated address active until verification succeeds.`:`Base Panel address updated to ${state?.effectiveUrl||state?.domainName||state?.generatedDomain||"the generated Vercel domain"}.`);
+    }catch(e:any){setMsg(e?.message||"Could not update the Base domain.")}
+    finally{setBusy("")}
+  }
+
   async function lifecyclePlanFor(action:"undeploy"|"uninstall"){if(!install)return;setBusy("lifecycle-plan");try{const options=action==="uninstall"?uninstallOptions:{removeDatabase:false,removeStorage:false,releaseLicense:false};const r=await fetch(`/api/orbitfs/installations/${install.id}/lifecycle`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"plan",mode:action,...options})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not create lifecycle plan."));setLifecyclePlan(j);return j}catch(e:any){setMsg(e?.message||"Could not create lifecycle plan.");return null}finally{setBusy("")}}
   async function executeLifecycle(action:"undeploy"|"uninstall"){if(!install)return;const planned=await lifecyclePlanFor(action);if(!planned)return;const destructive=action==="uninstall"&&[uninstallOptions.removeDatabase&&"OrbitFS database objects",uninstallOptions.removeStorage&&"OrbitFS storage bucket",uninstallOptions.releaseLicense&&"licence installation binding"].filter(Boolean);const summary=action==="undeploy"?"Undeploy OrbitFS? The Panel and Shared Engine Host will be removed. Your database, storage, licence binding and installation ID will be preserved.":`Uninstall OrbitFS? This removes the running Panel/Engine resources.${destructive&&destructive.length?` It will also permanently remove: ${destructive.join(", ")}.`:" Database, storage and licence binding will be preserved."} The Supabase project itself is never deleted.`;if(!confirm(summary))return;setBusy(action);try{const r=await fetch(`/api/orbitfs/installations/${install.id}/lifecycle`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action,jobId:planned?.job?.id,...(action==="uninstall"?uninstallOptions:{})})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,`${action} failed.`));setLifecyclePlan(j);await trackCustomerActivity(action==="undeploy"?"orbitfs.installation.undeploy":"orbitfs.installation.uninstall",{entityType:"license",entityId:binding?.id,detail:{installation_id:install.installation_id,job_id:j?.job?.id,options:action==="uninstall"?uninstallOptions:{}}});setMsg(action==="undeploy"?"OrbitFS undeployed. Database, storage, licence and installation ID were preserved.":"OrbitFS uninstall completed with the selected cleanup options.");await load()}catch(e:any){setMsg(e?.message||`${action} failed.`)}finally{setBusy("")}}
 
@@ -413,6 +482,40 @@ export default function MyOrbitFS(){
         <div className="orbitZipControlTop">
           <div className="orbitZipControlIdentity"><p className="eyebrow">BASE INSTANCE</p><h2>{install.vercel_project_name||"Your OrbitFS Panel"}</h2><div className="orbitZipControlDomain">{install.production_url?<a href={install.production_url} target="_blank" rel="noreferrer">{install.production_url}</a>:<span>Production domain not detected</span>}<small>{liveCheckedAt?`Vercel/domain checked ${new Date(liveCheckedAt).toLocaleTimeString()}`:"Vercel domain is rechecked automatically while this page is open."}</small></div></div>
           <div className="orbitZipControlTopActions"><span className={"state "+(validationReady?"ready":working?"current":"waiting")}>{validationReady?"HEALTHY":working?"IN PROGRESS":String(install.health_status||"UNVERIFIED").toUpperCase()}</span>{install.production_url&&<a className="buttonlink secondary" href={install.production_url} target="_blank" rel="noreferrer">Open Panel ↗</a>}<a className="buttonlink secondary" href={vercelProjectConsoleUrl} target="_blank" rel="noreferrer">Vercel ↗</a><button className="secondary" disabled={busy!==""} onClick={()=>void sync(false)}>Check status</button></div>
+        </div>
+
+        <div className="panel" style={{marginTop:12,padding:14}}>
+          <div className="panelTitle" style={{marginBottom:showBaseDomain?12:0}}>
+            <div>
+              <p className="eyebrow">DOMAIN & ADDRESS</p>
+              <h2 style={{fontSize:"1.05rem"}}>{install.production_url||(`https://${install.vercel_project_name}.vercel.app`)}</h2>
+              <p className="muted">Choose the Base Panel address on the existing Vercel project. Domain checks only run when you request them; this does not add background polling.</p>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className="secondary" type="button" disabled={busy!==""} onClick={()=>void loadBaseDomain()}>{busy==="base-domain-refresh"?"Checking…":"Refresh domain"}</button>
+              <button className="secondary" type="button" disabled={busy!==""} onClick={toggleBaseDomain}>{showBaseDomain?"Close":"Configure"}</button>
+            </div>
+          </div>
+          {showBaseDomain&&<div className="form" style={{marginTop:10}}>
+            <label>Address type
+              <select value={baseDomainMode} disabled={busy!==""} onChange={e=>{setBaseDomainMode(e.target.value as "generated"|"vercel"|"custom");setBaseDomainAvailability(null);if(e.target.value==="generated")setBaseDomain("");}}>
+                <option value="generated">Default generated Vercel domain</option>
+                <option value="vercel">Custom Vercel address</option>
+                <option value="custom">Custom domain</option>
+              </select>
+            </label>
+            {baseDomainMode==="generated"?<div className="listrow"><div><b>https://{install.vercel_project_name}.vercel.app</b><span>Stable generated address for this Base project.</span></div><span className="state ready">AVAILABLE</span></div>:<label>{baseDomainMode==="vercel"?"Custom Vercel address":"Custom domain"}
+              <input value={baseDomain} autoComplete="off" placeholder={baseDomainMode==="vercel"?"my-orbitfs.vercel.app":"orbitfs.example.com"} onChange={e=>{setBaseDomain(e.target.value);setBaseDomainAvailability(null)}}/>
+              <small className="muted">{baseDomainMode==="vercel"?"Enter any valid .vercel.app name, check whether it is free, then save it.":"OrbitFS attaches this domain to the existing Base project. Vercel may require DNS verification before it becomes the active Panel URL."}</small>
+            </label>}
+            {baseDomainMode==="vercel"&&baseDomainAvailability&&<p className="inlineStatus"><b>{baseDomainAvailability.available?"Available":"Unavailable"}:</b> {baseDomainAvailability.domain}{baseDomainAvailability.available?(baseDomainAvailability.attached?" is already attached to this Base deployment.":" can be claimed by this Base deployment."):" is already in use on Vercel."}</p>}
+            {baseDomainState?.mode==="custom"&&baseDomainState?.verified===false&&<p className="inlineStatus">Custom domain <b>{baseDomainState.domainName}</b> is attached but still needs Vercel DNS verification. The generated Vercel address remains active until verification succeeds.</p>}
+            <div className="controllerActions">
+              {baseDomainMode==="vercel"&&<button className="secondary" type="button" disabled={busy!==""||!baseDomain.trim()} onClick={()=>void checkBaseDomainAvailability()}>{busy==="base-domain-check"?"Checking…":"Check availability"}</button>}
+              <button type="button" disabled={busy!==""||(baseDomainMode!=="generated"&&!baseDomain.trim())} onClick={()=>void saveBaseDomain()}>{busy==="base-domain-save"?"Saving…":"Save address"}</button>
+              <a className="buttonlink secondary" href={vercelProjectConsoleUrl} target="_blank" rel="noreferrer">Open Vercel ↗</a>
+            </div>
+          </div>}
         </div>
 
         <div className="orbitZipReleaseWorkspace">
