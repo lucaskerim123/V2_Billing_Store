@@ -4,6 +4,7 @@ import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase";
 import {usePermissions} from "@/lib/usePermissions";
+import {canonicalAccountStatus,canonicalStatusLabel} from "@/lib/license-status";
 
 const empty={first_name:"",last_name:"",email:"",company_name:"",phone:"",address_line1:"",address_line2:"",city:"",state_region:"",postal_code:"",country_code:"AU",timezone:"Australia/Sydney",currency:"AUD",language:"en"};
 const label=(s:any)=>String(s||"").replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());
@@ -30,14 +31,14 @@ export default function Customers(){
  const balanceFor=(id:string)=>Number(balances.find(x=>x.user_id===id)?.available_cents||0);
  const userIdFor=(row:any)=>String(row.auth_user_id||row.id);
  const totalCredit=balances.reduce((n,x)=>n+Number(x.available_cents||0),0);
- const active=rows.filter(x=>x.status==="active"&&!x.banned_at).length;
- const suspended=rows.filter(x=>x.status==="suspended"&&!x.banned_at).length;
- const banned=rows.filter(x=>!!x.banned_at||x.status==="banned").length;
+ const active=rows.filter(x=>canonicalAccountStatus(x)==="active").length;
+ const suspended=rows.filter(x=>canonicalAccountStatus(x)==="suspended").length;
+ const terminated=rows.filter(x=>canonicalAccountStatus(x)==="terminated").length;
 
  const filtered=useMemo(()=>{
   const needle=q.trim().toLowerCase();
   let out=rows.filter(x=>{
-   const state=x.banned_at?"banned":String(x.status||"active");
+   const state=canonicalAccountStatus(x);
    if(status!=="all"&&state!==status)return false;
    if(!needle)return true;
    return `${x.display_name||""} ${x.name||""} ${x.username||""} ${x.email||""} ${x.customer_number||""} ${x.first_name||""} ${x.last_name||""} ${x.company_name||""} ${x.phone||""} ${x.city||""} ${x.state_region||""} ${x.country_code||""} ${x.status||""}`.toLowerCase().includes(needle);
@@ -83,22 +84,22 @@ export default function Customers(){
   <section className="stats four">
    <article><small>Total customers</small><strong>{rows.length}</strong></article>
    <article><small>Active</small><strong>{active}</strong></article>
-   <article><small>Needs review</small><strong>{suspended+banned}</strong></article>
+   <article><small>Needs review</small><strong>{suspended+terminated}</strong></article>
    <article><small>Customer credit</small><strong>${(totalCredit/100).toFixed(2)}</strong></article>
   </section>
 
   <div className="customerControlBar">
    <input className="searchInput" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search customer, username, email, number, company, phone…"/>
-   <select value={status} onChange={e=>setStatus(e.target.value)} aria-label="Customer status"><option value="all">All states</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="banned">Banned</option></select>
+   <select value={status} onChange={e=>setStatus(e.target.value)} aria-label="Customer status"><option value="all">All states</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="terminated">Terminated</option></select>
    <select value={sort} onChange={e=>setSort(e.target.value)} aria-label="Sort customers"><option value="recent">Newest first</option><option value="name">Name A–Z</option><option value="credit">Highest credit</option></select>
   </div>
 
   <section className="panel">
    <div className="panelTitle"><div><h2>Customer records</h2><p className="muted">{loading?"Loading customers…":`${filtered.length} of ${rows.length} customers shown. Open a record for billing, licences, support, mail, notes, security and history.`}</p></div></div>
    <div className="customerRecordList">
-    {filtered.map(u=>{const cents=balanceFor(u.id),state=String(u.status||"active"),name=u.name||u.display_name||`${u.first_name||""} ${u.last_name||""}`.trim()||u.username||u.id;return <div className="customerRecord" key={u.customer_id||u.id}>
+    {filtered.map(u=>{const cents=balanceFor(u.id),state=canonicalAccountStatus(u),name=u.name||u.display_name||`${u.first_name||""} ${u.last_name||""}`.trim()||u.username||u.id;return <div className="customerRecord" key={u.customer_id||u.id}>
      <Link className="customerRecordMain" href={`/admin/customers/${u.id}`}><b>{name}</b><span>{u.email||"No email"}{u.username?` · @${u.username}`:""}{u.customer_number?` · ${u.customer_number}`:""}</span><span className="customerRecordSub">{u.company_name||"Personal account"} · Joined {u.created_at?new Date(u.created_at).toLocaleDateString():"—"} · {u.email_verified_at?"Verified":"Unverified"}</span></Link>
-     <div className="customerRecordMetric"><small>Account</small><span className={`customerStatus ${state}`}>{label(state)}</span></div>
+     <div className="customerRecordMetric"><small>Account</small><span className={`customerStatus ${state}`}>{canonicalStatusLabel(state)}</span></div>
      <div className="customerRecordMetric"><small>Credit</small><strong>${(cents/100).toFixed(2)}</strong></div>
      <div className="inlineActions"><Link className="buttonlink small secondary" href={`/admin/customers/${u.id}`}>Open</Link>{(can("customers.password_reset")||can("customers.edit"))&&<button className="small secondary" onClick={()=>reset(u)}>Reset</button>}{role==="superadmin"&&<button className="small danger" onClick={()=>remove(u)}>Delete</button>}</div>
     </div>})}
