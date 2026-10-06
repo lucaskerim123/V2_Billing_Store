@@ -3,6 +3,7 @@ import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import "./mail-config-compact.css";
+import "../mail-v6.css";
 import MailSubscriptionCategories from "@/components/MailSubscriptionCategories";
 
 async function readJson(r:Response){const t=await r.text();if(!t)return {};try{return JSON.parse(t)}catch{return {error:t||`Request failed (${r.status})`}}}
@@ -43,13 +44,20 @@ export default function MailConfig(){
   }
   const settings=useMemo(()=>Object.fromEntries((adminData?.settings||[]).map((x:any)=>[x.key,x.value])),[adminData]);
 
-  return <main className="mailConfigCompact" style={{minHeight:'100vh',background:'#f4f6fa',fontFamily:'Arial,sans-serif',color:'#172033'}}>
-    <header style={{background:'#111827',color:'#fff',padding:'20px 18px'}}><div style={{maxWidth:1280,margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}><div><h1 style={{margin:0,fontSize:24}}>Mail Config</h1><p style={{margin:'5px 0 0',opacity:.7}}>OrbitFS Mail settings and mailbox management.</p></div><div style={{display:'flex',gap:16,flexWrap:'wrap'}}><Link href="/mail" style={{color:'#fff',fontWeight:700,textDecoration:'none'}}>Mail & Queue</Link><Link href="/admin" style={{color:'#fff',fontWeight:700,textDecoration:'none'}}>Back to Admin</Link></div></div></header>
-    <div style={{maxWidth:1280,margin:'0 auto',padding:'20px 16px 30px'}}>
-      {error&&<div style={{padding:14,border:'1px solid #f2b8b5',background:'#fff5f5',borderRadius:12,color:'#a52727',marginBottom:16}}>{error}</div>}
-      {msg&&<div style={{padding:12,background:'#eef4ff',borderRadius:10,marginBottom:14}}>{msg}</div>}
+  return <main className="mailConfigCompact">
+    <header><div><div><h1 style={{margin:0}}>Mail Configuration</h1><p>Current OrbitFS Mail settings, mailboxes, subscriptions, templates, spam controls and delivery history.</p></div><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><Link href="/mail">Mailboxes & Queue</Link><Link href="/admin">Back to Admin</Link></div></div></header>
+    <div>
+      <nav className="mailV6SectionTabs" aria-label="Mail sections"><Link href="/mail">Mailboxes & Queue</Link><Link className="active" href="/mail/admin">Configuration</Link></nav>
+      {error&&<div className="mailV6Notice error">{error}</div>}
+      {msg&&<div className="mailV6Notice">{msg}</div>}
       {loading&&<p>Loading Mail Config…</p>}
       {!loading&&adminData&&<section style={{display:'grid',gap:12}}>
+        <div className="mailV6QueueStats">
+          <div className="mailV6QueueStat"><small>Mailboxes</small><b>{(adminData.accounts||[]).length}</b></div>
+          <div className="mailV6QueueStat"><small>Templates</small><b>{(adminData.templates||[]).length}</b></div>
+          <div className="mailV6QueueStat"><small>Automations</small><b>{(adminData.automations||[]).length}</b></div>
+          <div className="mailV6QueueStat"><small>Recent deliveries</small><b>{(adminData.logs||[]).length}</b></div>
+        </div>
         {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Mail settings</summary><div style={{marginTop:14}}><MainSettings settings={settings} provider={adminData.provider||{}} save={save}/></div></details>}
         {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Email subscriptions & categories</summary><div style={{marginTop:14}}><MailSubscriptionCategories categories={adminData.subscriptionCategories||[]} events={adminData.subscriptionEvents||[]} automations={adminData.automations||[]} templates={adminData.templates||[]} onSave={save} showEvents/></div></details>}
         {caps.settings&&<details style={panel}><summary style={{cursor:'pointer',fontWeight:700,fontSize:17}}>Mailbox settings</summary><div style={{marginTop:14}}><MailboxSettings rows={adminData.accounts||[]} users={adminData.users||[]} save={save}/></div></details>}
