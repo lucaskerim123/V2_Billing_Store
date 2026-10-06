@@ -55,16 +55,16 @@ export default function LicenseControllerPage(){
  }
 
  async function loadCustomers(){
-  const {data,error}=await sb.from("customers").select("id,auth_user_id,user_id,customer_number,name,email").not("auth_user_id","is",null).order("created_at",{ascending:false});
+  const {data,error}=await sb.from("customers").select("id,auth_user_id,user_id,customer_number,name,email").order("created_at",{ascending:false});
   if(error)throw error;
-  const rows=data||[];
+  const rows=(data||[]).filter((row:any)=>row.auth_user_id||row.user_id);
   setCustomers(rows);
   setCustomerId(current=>current||String(rows[0]?.id||""));
  }
 
  async function loadCustomer(id=customerId){
-  if(!id){setData(null);return}
-  setLoading(true);setError("");
+  if(!id){setData(null);setChannelData({channels:[],access:[]});return}
+  setLoading(true);setError("");setData(null);setChannelData({channels:[],access:[]});
   try{
    const t=await getToken();
    const h={Authorization:"Bearer "+t};
