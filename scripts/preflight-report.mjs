@@ -29,7 +29,9 @@ if(!existsSync("vercel.json"))failures.push({label:"Vercel configuration",exitCo
 else{try{const v=JSON.parse(readFileSync("vercel.json","utf8"));if(v?.git?.deploymentEnabled!==false)failures.push({label:"Automatic Vercel deployments",exitCode:1,output:["vercel.json does not disable automatic Git deployments."]});}catch(e){failures.push({label:"Vercel configuration",exitCode:1,output:[String(e)]});}}
 run("Clean locked dependency install",npm,["ci"]);
 run("Whitespace / patch integrity","git",["diff","--check"]);
-run("Base lifecycle contract","node",["scripts/check-base-lifecycle-contract.mjs"]);\nrun("Canonical licence status contract","node",["--test","scripts/license-status-contract.test.mjs"]);
+run("Base lifecycle contract","node",["scripts/check-base-lifecycle-contract.mjs"]);
+run("Canonical licence status contract","node",["--test","scripts/license-status-contract.test.mjs"]);
+run("Immediate account enforcement contract","node",["--test","scripts/account-enforcement-immediate-sync.test.mjs"]);
 run("Theme package validation",npm,["run","theme:validate"]);
 run("Lint",npm,["run","lint"]);
 run("Typecheck",npm,["run","typecheck"]);
