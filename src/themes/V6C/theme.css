@@ -5444,6 +5444,107 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route
   font-size:7.5px!important;
   line-height:1.45!important;
 }
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseAuthorityNotice{
+  border-color:rgba(245,158,11,.58)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseReinstallNotice{
+  border-color:rgba(245,158,11,.68)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseRecoveryActions{
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  margin-top:8px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseRecoveryActions>.muted{
+  flex:1 1 260px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseStatusPanel{
+  margin-bottom:0!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseStatusStats,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseStatusError{
+  margin-top:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseOperations,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseHistoryOlder{
+  margin-top:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseSummary{
+  cursor:pointer!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseOperationsList,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseHistoryList{
+  margin-top:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDomainPanel{
+  margin-top:2px!important;
+  padding:12px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDomainHead.open{
+  margin-bottom:11px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDomainHead.closed{
+  margin-bottom:0!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDomainTitle{
+  font-size:15px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDomainActions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDomainForm,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseVercelForm,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseLockedReleaseForm{
+  margin-top:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseProjectForm{
+  margin-top:11px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseProjectAction{
+  margin-top:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDnsPanel{
+  margin-top:9px!important;
+  padding:11px!important;
+  background:#031522!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDnsHead{
+  margin-bottom:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDnsTitle{
+  margin:0!important;
+  color:#eaf3fa!important;
+  font-size:10px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseDnsRecords{
+  display:grid!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseBreakAll{
+  word-break:break-all!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseConnectedNote,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseInitializedRow{
+  margin-top:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseReleaseNotes{
+  white-space:pre-wrap!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseConsoleRow{
+  margin-bottom:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBaseSelectedReleasePanel{
+  margin-top:9px!important;
+  padding:10px!important;
+  background:#031522!important;
+}
 
 /* Responsive */
 @media(max-width:980px){
