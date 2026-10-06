@@ -2,6 +2,7 @@ import {licenseDb} from "@/lib/license-api";
 import {masterControl,masterIssue,masterLicenses} from "@/lib/master-api";
 import {syncPaidOrderToLicenseMaster} from "@/lib/license-master-sync";
 import {canonicalLicenseStatus} from "@/lib/license-status";
+import {accountEnforcementRemoteSatisfied} from "@/lib/account-enforcement-state";
 
 const CANONICAL=new Set(["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio"]);
 const MAX_BATCH=50;
@@ -29,10 +30,10 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
    const userId=String(customer.auth_user_id||customer.user_id||"");if(!userId)continue;
    const policy=remoteLicense?.metadata?.license_policy||{},raw=remoteLicense?.components||policy?.components||{};
    const components={orbitfs_base:true,orbitfs_apex:Boolean(raw.orbitfs_apex),orbitfs_mcp:Boolean(raw.orbitfs_mcp),orbitfs_studio:Boolean(raw.orbitfs_studio)};
-   const owner=await db.from("license_bindings").select("id,auth_user_id").eq("license_id",id).is("archived_at",null).limit(1).maybeSingle();
+   const owner=await db.from("license_bindings").select("id,auth_user_id,desired_state,suspension_reason").eq("license_id",id).is("archived_at",null).limit(1).maybeSingle();
    if(owner.error)throw owner.error;
    const storageState=String(remoteLicense.storage_status||remoteLicense.status||"active").toLowerCase();
-   const now=new Date().toISOString(),payload:any={auth_user_id:userId,license_id:id,license_product_key:"orbitfs_base",desired_state:storageState,remote_state:storageState,components,license_key_last4:remoteLicense.license_key_last4||null,expires_at:remoteLicense.expires_at||null,label:remoteLicense.product_name||remoteLicense.product||"OrbitFS Base",api_source:"license_master",admin_override:remoteLicense.customer_override===true,last_synced_at:now,last_sync_error:null,updated_at:now};
+   const now=new Date().toISOString(),payload:any={auth_user_id:userId,license_id:id,license_product_key:"orbitfs_base",desired_state:String(owner.data?.desired_state||storageState),remote_state:storageState,components,license_key_last4:remoteLicense.license_key_last4||null,expires_at:remoteLicense.expires_at||null,label:remoteLicense.product_name||remoteLicense.product||"OrbitFS Base",api_source:"license_master",admin_override:remoteLicense.customer_override===true,last_synced_at:now,last_sync_error:null,updated_at:now};
    let bindingId=owner.data?.id||null;
    if(bindingId){
     const write=await db.from("license_bindings").update(payload).eq("id",bindingId);if(write.error)throw write.error;
@@ -62,6 +63,7 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
    if(!bindingId)continue;
    const desired=String(binding.desired_state||"").toLowerCase(),remote=String(binding.remote_state||"").toLowerCase(),product=productOf(binding);
    if(!CANONICAL.has(product)){await db.from("license_bindings").update({last_synced_at:new Date().toISOString(),last_sync_error:null}).eq("id",bindingId);continue}
+   if(accountEnforcementRemoteSatisfied(binding)){const now=new Date().toISOString();await db.from("license_bindings").update({last_synced_at:now,last_sync_error:null,updated_at:now}).eq("id",bindingId);results.push({kind:"binding",bindingId,licenseId:binding.license_id||null,desired,remoteState:remote,status:"account_termination_confirmed"});continue}
    if(remote===desired&&!binding.last_sync_error)continue;
    if(remote===desired&&binding.last_sync_error&&binding.license_id){
     const reason=String(binding.suspension_reason||"").trim();
@@ -86,13 +88,18 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
    }else if(desired==="suspended"||desired==="revoked"){
     if(!newLicenseId)throw new Error("Binding has no License Manager licence id");
     const reason=String(binding.suspension_reason||"").trim();
-    remoteResult=await masterControl(newLicenseId,desired==="revoked"
-      ?{action:"terminate",actorRef:"billing_store_reconciliation"}
-      :reason.toLowerCase().startsWith("account_enforcement:")
+    const lowerReason=reason.toLowerCase();
+    const accountTermination=lowerReason.startsWith("account_enforcement:banned:")||lowerReason.startsWith("account_enforcement:terminated:");
+    remoteResult=await masterControl(newLicenseId,desired==="revoked"||accountTermination
+      ?{action:"terminate",reason,actorRef:"billing_store_reconciliation"}
+      :lowerReason.startsWith("account_enforcement:")
         ?{action:"suspend",scope:"account",reason,actorRef:"billing_store_reconciliation"}
         :{action:"restrict",reason,actorRef:"billing_store_reconciliation"});
    }else if(desired){throw new Error("Unsupported desired license state: "+desired)}
-   const now=new Date().toISOString(),state=desired==="active"?masterState(remoteResult,"active"):desired==="revoked"?"revoked":"suspended",key=masterKey(remoteResult);
+   const reason=String(binding.suspension_reason||"").trim().toLowerCase();
+   const accountTermination=reason.startsWith("account_enforcement:banned:")||reason.startsWith("account_enforcement:terminated:");
+   const fallbackState=desired==="active"?"active":desired==="revoked"||accountTermination?"revoked":"suspended";
+   const now=new Date().toISOString(),state=masterState(remoteResult,fallbackState),key=masterKey(remoteResult);
    const patch:any={remote_state:state,last_synced_at:now,last_sync_error:null,updated_at:now};
    if(newLicenseId)patch.license_id=newLicenseId;if(key)patch.license_key_last4=key.slice(-4);
    if(desired==="active"){patch.archived_at=null;patch.archive_reason=null;patch.suspension_reason=null}
