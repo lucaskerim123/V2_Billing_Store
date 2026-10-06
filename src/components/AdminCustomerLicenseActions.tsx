@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import {canonicalLicenseStatus,canonicalStatusLabel} from "@/lib/license-status";
 
 type Binding = {
   id: string;
@@ -48,7 +49,7 @@ export default function AdminCustomerLicenseActions() {
 
     const current = (Array.isArray(master?.licenses) ? master.licenses : [])
       .filter((x: any) => String(x.customer_external_id || "").trim() === number)
-      .filter((x: any) => String(x.status || "").toLowerCase() !== "expired");
+      .filter((x: any) => canonicalLicenseStatus(x) !== "expired");
 
     setBindings(current.map((x: any) => ({
       ...x,
@@ -140,28 +141,31 @@ export default function AdminCustomerLicenseActions() {
       {bindings.length === 0 ? (
         <p className="muted">No active licence bindings found.</p>
       ) : (
-        bindings.map((binding) => (
+        bindings.map((binding) => {
+          const status=canonicalLicenseStatus(binding);
+          return (
           <div key={binding.id} style={{ display: "grid", gap: 8, padding: "12px 0", borderBottom: "1px solid var(--line,#ddd)" }}>
             <div>
               <b>{binding.label}</b>
               <span style={{ display: "block", opacity: 0.7, fontSize: 12 }}>
-                {binding.license_id} · {binding.license_key_last4 ? `••••${binding.license_key_last4}` : "Key protected"} · {binding.status || "unknown"}
+                {binding.license_id} · {binding.license_key_last4 ? `••••${binding.license_key_last4}` : "Key protected"} · {canonicalStatusLabel(status)}
               </span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
-              {String(binding.status||"").toLowerCase()==="suspended"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "activate")}>Unsuspend</button>}
-              {String(binding.status||"").toLowerCase()==="revoked"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "activate")}>Reactivate with new key</button>}
-              {String(binding.status||"").toLowerCase()==="active"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "suspend")}>Suspend</button>}
-              {String(binding.status||"").toLowerCase()==="active"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "rotate")}>Rotate key</button>}
-              {String(binding.status||"").toLowerCase()!=="revoked"&&<button className="danger" disabled={!!busy} onClick={() => void control(binding.license_id, "terminate")}>Terminate</button>}
+              {status==="restricted"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "activate")}>Remove restriction</button>}
+              {status==="terminated"&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "activate")}>Reactivate with new key</button>}
+              {(status==="active"||status==="locked")&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "restrict")}>Restrict</button>}
+              {(status==="active"||status==="locked")&&<button disabled={!!busy} onClick={() => void control(binding.license_id, "rotate")}>Rotate key</button>}
+              {status==="suspended"&&<span className="muted">Suspended by account enforcement. Manage the customer account to restore it.</span>}
+              {status!=="terminated"&&<button className="danger" disabled={!!busy} onClick={() => void control(binding.license_id, "terminate")}>Terminate</button>}
 
-              {String(binding.status||"").toLowerCase()==="active" && binding.activations.length > 0 && (
+              {binding.activations.length > 0 && (
                 <div style={{ display: "grid", gap: 6, paddingTop: 6 }}>
                   <b>Installations</b>
                   {binding.activations.map((activation: any) => (
                     <div key={activation.id || activation.installation_id} style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
                       <span style={{ fontSize: 12, opacity: 0.8 }}>
-                        {activation.installation_id} · {activation.status || "unknown"}{activation.product_version ? " · v" + activation.product_version : ""}
+                        {activation.installation_id} · {String(activation.status||"").toLowerCase()==="active"?"locked":activation.status || "unknown"}{activation.product_version ? " · v" + activation.product_version : ""}
                       </span>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {String(activation.status || "").toLowerCase() === "active" && (
@@ -174,7 +178,8 @@ export default function AdminCustomerLicenseActions() {
               )}
             </div>
           </div>
-        ))
+          );
+        })
       )}
 
       {msg && <p>{msg}</p>}
