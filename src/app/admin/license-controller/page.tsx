@@ -3,6 +3,7 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import {canonicalLicenseStatus,canonicalStatusLabel,isCanonicalLicenseUsable} from "@/lib/license-status";
+import V6ConfirmDialog from "@/components/V6ConfirmDialog";
 
 type Row=Record<string,any>;
 
@@ -292,12 +293,12 @@ export default function LicenseControllerPage(){
        const addonControls=[["orbitfs_apex","APEX"],["orbitfs_mcp","MCP"],["orbitfs_studio","Studio"]] as const;
        const installs=b.master_activations?.length?b.master_activations:(data?.installations||[]).filter((i:any)=>String(i.license_binding_id)===String(b.id)).map((i:any)=>({...i,status:i.state}));
        return <details className="orbitReferenceLicenceCard" key={b.id}>
-        <summary className="orbitReferenceLicenceTop" style={{cursor:"pointer",listStyle:"none",alignItems:"center"}}>
+        <summary className="orbitReferenceLicenceTop">
          <div><h3>{b.label||productName(b.license_product_key)}</h3><p>{productName(b.license_product_key)} · {b.license_key_last4?"••••-"+b.license_key_last4:"Protected"}</p></div>
-         <span style={{display:"flex",alignItems:"center",gap:12}}><span className={"orbitMiniState "+((status==="active"||status==="locked")?"live":(status==="restricted"||status==="suspended")?"suspended":"")}>{canonicalStatusLabel(status)}</span><span aria-hidden="true">▾</span></span>
+         <span className="orbitReferenceLicenceTopState"><span className={"orbitMiniState "+((status==="active"||status==="locked")?"live":(status==="restricted"||status==="suspended")?"suspended":"")}>{canonicalStatusLabel(status)}</span><span aria-hidden="true">▾</span></span>
         </summary>
-        <div style={{padding:"0 12px 12px"}}>
-         {editingNickname===String(b.id)?<div className="orbitReferenceActions" style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
+        <div className="orbitReferenceLicenceBody">
+         {editingNickname===String(b.id)?<div className="orbitReferenceActions orbitLicenceNicknameEditor">
            <input aria-label="Licence nickname" maxLength={80} autoFocus value={nickname} onChange={e=>setNickname(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();void saveNickname(String(b.id))}}} placeholder="Licence nickname (optional)"/>
            <button disabled={!!busy} onClick={()=>void saveNickname(String(b.id))}>{busy==="nickname:"+b.id?"Saving…":"Save name"}</button>
            <button className="secondary" onClick={()=>{setEditingNickname("");setNickname("")}}>Cancel</button>
@@ -354,13 +355,15 @@ export default function LicenseControllerPage(){
    </>:<div className="orbitReferenceEmpty">Select a customer to review linked licences.</div>}
    </section>
   </div>
-  {confirmState&&<div className="orbitConfirmBackdrop" role="presentation" onMouseDown={closeConfirmation}>
-   <section className="orbitConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="orbit-confirm-title" onMouseDown={event=>event.stopPropagation()}>
-    <p className="eyebrow">CONFIRM ACTION</p>
-    <h2 id="orbit-confirm-title">{confirmState.title}</h2>
-    <p>{confirmState.message}</p>
-    <div className="orbitReferenceDecision"><button className="secondary" type="button" onClick={closeConfirmation}>Cancel</button><button type="button" onClick={acceptConfirmation}>Confirm</button></div>
-   </section>
-  </div>}
+  <V6ConfirmDialog
+   open={Boolean(confirmState)}
+   title={confirmState?.title||""}
+   description={confirmState?.message||""}
+   confirmLabel="Confirm"
+   danger={confirmState?.title==="Terminate licence"||confirmState?.title==="Rotate licence key"}
+   busy={Boolean(busy)}
+   onCancel={closeConfirmation}
+   onConfirm={acceptConfirmation}
+  />
  </main>;
 }
