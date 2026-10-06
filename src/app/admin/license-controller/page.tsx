@@ -2,6 +2,7 @@
 
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import {canonicalLicenseStatus,canonicalStatusLabel,isCanonicalLicenseUsable} from "@/lib/license-status";
 
 type Row=Record<string,any>;
 
@@ -223,7 +224,7 @@ export default function LicenseControllerPage(){
        <small>{selectedCustomer.customer_number||selectedCustomer.id}</small>
       </div>
       <div className="orbitReferenceCustomerSummary">
-       <span className="orbitMiniState live">{bindings.some((b:any)=>String(b.authoritative_status||b.status||"").toLowerCase()==="active")?"Active":"Linked"}</span>
+       <span className="orbitMiniState live">{bindings.some((b:any)=>isCanonicalLicenseUsable(b))?"Active":"Linked"}</span>
        <span className="orbitLicenceCount">{bindings.length} {bindings.length===1?"licence":"licences"}</span>
       </div>
     </div>
@@ -238,7 +239,7 @@ export default function LicenseControllerPage(){
      <div className="orbitReferenceSectionHead"><div><b>Linked licences</b><small>License Manager records currently linked to this Billing Store customer.</small></div><span>{bindings.length}</span></div>
      {loading?<div className="orbitReferenceEmpty compact">Loading customer licences…</div>:bindings.length?<div className="orbitReferenceLicenceList">
       {bindings.map((b:any)=>{
-       const status=String(b.authoritative_status||b.status||"unknown").toLowerCase();
+       const status=canonicalLicenseStatus(b);
        const authoritativeComponents=b.authoritative_components||{};
        const components=Object.entries(authoritativeComponents).filter(([,enabled])=>Boolean(enabled)).map(([key])=>productName(key)).join(" · ")||productName(b.license_product_key||"orbitfs_base");
        const addonControls=[["orbitfs_apex","APEX"],["orbitfs_mcp","MCP"],["orbitfs_studio","Studio"]] as const;
@@ -246,7 +247,7 @@ export default function LicenseControllerPage(){
        return <details className="orbitReferenceLicenceCard" key={b.id}>
         <summary className="orbitReferenceLicenceTop" style={{cursor:"pointer",listStyle:"none",alignItems:"center"}}>
          <div><h3>{b.label||productName(b.license_product_key)}</h3><p>{productName(b.license_product_key)} · {b.license_key_last4?"••••-"+b.license_key_last4:"Protected"}</p></div>
-         <span style={{display:"flex",alignItems:"center",gap:12}}><span className={"orbitMiniState "+(status==="active"?"live":status==="suspended"?"suspended":"")}>{status}</span><span aria-hidden="true">▾</span></span>
+         <span style={{display:"flex",alignItems:"center",gap:12}}><span className={"orbitMiniState "+((status==="active"||status==="locked")?"live":(status==="restricted"||status==="suspended")?"suspended":"")}>{canonicalStatusLabel(status)}</span><span aria-hidden="true">▾</span></span>
         </summary>
         <div style={{padding:"0 12px 12px"}}>
          {editingNickname===String(b.id)?<div className="orbitReferenceActions" style={{display:"flex",flexWrap:"wrap",gap:8,alignItems:"center"}}>
@@ -261,12 +262,15 @@ export default function LicenseControllerPage(){
          <div><span>Components</span><b>{components}</b></div>
         </div>
         <div className="orbitReferenceLicenceActions">
-         {status==="active"&&<button disabled={!!busy} onClick={()=>void control(String(b.license_id),"rotate")}>{busy.startsWith("rotate:"+b.license_id)?"Rotating…":"Rotate key"}</button>}
-         {["active","suspended"].includes(status)&&<button className="secondary" disabled={!!busy} onClick={()=>void control(String(b.license_id),status==="suspended"?"activate":"suspend")}>{busy.startsWith("activate:"+b.license_id)?"Unsuspending…":busy.startsWith("suspend:"+b.license_id)?"Suspending…":status==="suspended"?"Unsuspend":"Suspend"}</button>}
-         <button className="danger" disabled={!!busy} onClick={()=>void control(String(b.license_id),"revoke")}>{busy.startsWith("revoke:"+b.license_id)?"Terminating…":"Terminate"}</button>
+         {(status==="active"||status==="locked")&&<button disabled={!!busy} onClick={()=>void control(String(b.license_id),"rotate")}>{busy.startsWith("rotate:"+b.license_id)?"Rotating…":"Rotate key"}</button>}
+         {(status==="active"||status==="locked")&&<button className="secondary" disabled={!!busy} onClick={()=>void control(String(b.license_id),"restrict")}>{busy.startsWith("restrict:"+b.license_id)?"Restricting…":"Restrict"}</button>}
+         {status==="restricted"&&<button className="secondary" disabled={!!busy} onClick={()=>void control(String(b.license_id),"activate")}>{busy.startsWith("activate:"+b.license_id)?"Removing…":"Remove restriction"}</button>}
+         {status==="suspended"&&<span className="orbitMiniState suspended">Account suspended · manage customer</span>}
+         {status==="terminated"&&<button className="secondary" disabled={!!busy} onClick={()=>void control(String(b.license_id),"activate")}>{busy.startsWith("activate:"+b.license_id)?"Reactivating…":"Reactivate with new key"}</button>}
+         {status!=="terminated"&&<button className="danger" disabled={!!busy} onClick={()=>void control(String(b.license_id),"terminate")}>{busy.startsWith("terminate:"+b.license_id)?"Terminating…":"Terminate"}</button>}
         </div>
         <div className="orbitReferenceInstallations">
-         {addonControls.map(([key,label])=>{const enabled=Boolean(authoritativeComponents[key]);const busyKey="component:"+key+":"+b.license_id;return <div key={key}><span><b>{label}</b><small>{enabled?"Active entitlement":"Inactive entitlement"} · Base binding stays locked</small></span><button className="secondary" disabled={!!busy||status!=="active"} onClick={()=>void controlComponent(String(b.license_id),key,!enabled)}>{busy===busyKey?(enabled?"Deactivating…":"Activating…"):(enabled?"Deactivate":"Activate")}</button></div>})}
+         {addonControls.map(([key,label])=>{const enabled=Boolean(authoritativeComponents[key]);const busyKey="component:"+key+":"+b.license_id;return <div key={key}><span><b>{label}</b><small>{enabled?"Active entitlement":"Not entitled"} · Base binding stays locked</small></span><button className="secondary" disabled={!!busy||!(status==="active"||status==="locked")} onClick={()=>void controlComponent(String(b.license_id),key,!enabled)}>{busy===busyKey?(enabled?"Deactivating…":"Activating…"):(enabled?"Deactivate":"Activate")}</button></div>})}
         </div>
         {!!installs.length&&<div className="orbitReferenceInstallations">
          {installs.map((i:any)=><div key={i.id||i.installation_id}><span><b>{i.installation_id}</b><small>{String(i.status||"").toLowerCase()==="active"?"bound / locked":String(i.status||"").toLowerCase()==="released"?"released / unlocked":i.status||"unknown"}</small></span>{String(i.status||"").toLowerCase()==="active"&&<button className="secondary" disabled={!!busy} onClick={()=>void control(String(b.license_id),"unlock-installation",String(i.installation_id))}>{busy===("unlock-installation:"+b.license_id+":"+i.installation_id)?"Releasing…":"Unlock / release"}</button>}</div>)}
@@ -294,7 +298,7 @@ export default function LicenseControllerPage(){
       <p>These are existing License Manager records. Linking creates the Billing Store customer association only; it does not issue a licence.</p>
       <input value={masterQuery} onChange={e=>setMasterQuery(e.target.value)} placeholder="Search licence ID, product, status, customer reference or order…"/>
       <div className="orbitReferenceGrantList inventory">
-       {available.slice(0,50).map((x:any)=><div className="orbitReferenceGrantRow" key={String(x.id||x.license_id)}><div><b>{productName(x.product_code||x.product)}</b><small>{x.id||x.license_id} · {x.status||"unknown"}{x.customer_external_id?" · Customer ref "+x.customer_external_id:""}</small></div><button disabled={!!busy} onClick={()=>void link(String(x.id||x.license_id))}>{busy==="manual:"+String(x.id||x.license_id)?"Linking…":"Link to customer"}</button></div>)}
+       {available.slice(0,50).map((x:any)=><div className="orbitReferenceGrantRow" key={String(x.id||x.license_id)}><div><b>{productName(x.product_code||x.product)}</b><small>{x.id||x.license_id} · {canonicalStatusLabel(canonicalLicenseStatus(x))}{x.customer_external_id?" · Customer ref "+x.customer_external_id:""}</small></div><button disabled={!!busy} onClick={()=>void link(String(x.id||x.license_id))}>{busy==="manual:"+String(x.id||x.license_id)?"Linking…":"Link to customer"}</button></div>)}
        {!available.length&&<div className="orbitReferenceEmpty compact">No unlinked licences match this search.</div>}
       </div>
      </div>
