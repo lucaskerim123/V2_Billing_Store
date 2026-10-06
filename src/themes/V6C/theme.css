@@ -3213,6 +3213,15 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route
   font-size:9.5px!important;
   line-height:1.5!important;
 }
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-updates .orbitV5UpdateCheckDetail{
+  display:block!important;
+  margin-top:6px!important;
+  color:#738ea4!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-updates .orbitV5UpdateCheckAction{
+  margin-top:8px!important;
+}
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-updates .orbitV5UpdateConfirm{
   display:flex!important;
   align-items:center!important;
