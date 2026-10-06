@@ -306,11 +306,6 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-conte
 .v6c-route-settings .accountSettingsV2{display:grid;gap:12px}.v6c-route-settings .accountSettingsNav{display:flex;gap:5px;padding:7px;border:1px solid #12364f;border-radius:8px;background:#031522}.v6c-route-settings .accountSettingsNav button{height:30px;padding:0 11px;background:transparent!important;border-color:transparent!important;color:#7594ad!important}.v6c-route-settings .accountSettingsNav button.active{background:linear-gradient(90deg,#6c22dc,#3548eb)!important;border-color:#5537c3!important;color:#fff!important}
 .v6c-route-settings .accountSettingsSections{display:grid;gap:12px}.v6c-route-settings .accountSettingsCard{padding:18px!important}.v6c-route-settings .form{display:grid;gap:10px}.v6c-route-settings .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.v6c-route-settings label{color:#9fb4c6;font-size:8px}.v6c-route-settings .settingsSaveBar{padding:11px 0;display:flex;align-items:center;justify-content:space-between}.v6c-route-settings .walletSettingsActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.v6c-route-settings .walletActionBox{padding:14px;border:1px solid #12364f;border-radius:7px;background:#041827}
 
-/* Update Release: align the existing working flow to the ZIP release-update screen. */
-.v6c-route-updates .orbitV5UpdateHero{min-height:188px!important;padding:26px 320px 26px 24px!important;border:1px solid #123650!important;border-radius:10px!important;background:radial-gradient(440px 190px at 84% 40%,rgba(91,42,255,.2),transparent 68%),linear-gradient(120deg,#06172a,#031522)!important}
-.v6c-route-updates .orbitV5UpdateHero h1{font-size:32px!important;color:#fff!important;letter-spacing:-.04em}.v6c-route-updates .orbitV5UpdateHero p{font-size:9px!important;color:#7492ab!important}.v6c-route-updates .orbitV5UpdateJourney{border:1px solid #12364f!important;border-radius:8px!important;background:#031522!important;padding:12px!important}.v6c-route-updates .orbitV5UpdateSteps{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}.v6c-route-updates .orbitV5UpdateStep{min-height:56px!important;border:1px solid #153a58!important;border-radius:6px!important;background:#041827!important}.v6c-route-updates .orbitV5UpdateStep.active{background:linear-gradient(90deg,#281353,#102243)!important;border-color:#5c3ec4!important}.v6c-route-updates .orbitV5UpdatePanel{padding:18px!important;border-color:#12364f!important;background:linear-gradient(180deg,#061f33,#031523)!important}.v6c-route-updates .orbitV5UpdateFacts{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}.v6c-route-updates .orbitV5UpdateFacts>div{padding:10px!important;border:1px solid #12364f!important;border-radius:6px!important;background:#041827!important}
-.v6c-route-updates .orbitV5UpdateRelease{border:1px solid #12364f!important;border-radius:7px!important;background:#041827!important}.v6c-route-updates .orbitV5UpdateRelease.selected{border-color:#593ac5!important;background:linear-gradient(120deg,#15133f,#041827)!important}
-
 /* Base Deployment keeps its real workflow, but follows the same ZIP card language. */
 .v6c-route-base .orbitZipDeployer{display:grid;gap:12px}.v6c-route-base .orbitV5Connections>.panel,.v6c-route-base .orbitInstallerWorkspace{padding:17px!important}.v6c-route-base .orbitZipControlGrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.v6c-route-base .orbitV5Start{border:1px solid #12364f!important;border-radius:9px!important;background:radial-gradient(420px 170px at 85% 40%,rgba(91,42,255,.16),transparent 68%),linear-gradient(180deg,#061e32,#031523)!important}
 
@@ -690,22 +685,6 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-conte
 .v6c-system-status{padding:15px!important}
 .v6c-status-grid{gap:6px!important;margin-top:10px!important}
 .v6c-status-card{min-height:90px!important;padding:10px!important}
-
-/* Base + Updates */
-.v6c-route-base .orbitV5Hero{min-height:145px!important;padding:16px 255px 16px 6px!important}
-.v6c-route-base .orbitV5Hero h1{font-size:26px!important}
-.v6c-route-base .orbitV5Lead{font-size:8px!important}
-.v6c-route-base .orbitV5FlowCards{gap:4px!important;margin-bottom:10px!important}
-.v6c-route-base .orbitV5FlowCard{min-height:46px!important;padding:6px!important}
-.v6c-route-base .orbitV5Connections{gap:9px!important}
-.v6c-route-base .orbitInstallerWorkspace{padding:13px!important}
-.v6c-route-updates .orbitV5UpdateHero{min-height:145px!important;padding:18px 270px 18px 18px!important}
-.v6c-route-updates .orbitV5UpdateHero h1{font-size:27px!important}
-.v6c-route-updates .orbitV5UpdateJourney{padding:9px!important}
-.v6c-route-updates .orbitV5UpdateSteps{gap:4px!important}
-.v6c-route-updates .orbitV5UpdateStep{min-height:46px!important;padding:6px!important}
-.v6c-route-updates .orbitV5UpdatePanel{padding:13px!important}
-.v6c-route-updates .orbitV5UpdateFacts{gap:5px!important}
 
 /* --------------------------------------------------------------------------
    V6C route audit pass — readable controls, balanced density and complete
@@ -1630,79 +1609,6 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-conte
 .v6c-route-settings .mailSubscriptionTrack:after{
   content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#dceafa;transition:left .15s ease;
 }
-
-/* Base deployment */
-.v6c-route-base .orbitZipDeployer{max-width:none!important}
-.v6c-route-base .orbitV5SectionTitle{padding:0 2px!important}
-.v6c-route-base .orbitV5SectionTitle h2{font-size:15px!important}
-.v6c-route-base .orbitV5FlowCards{padding:0!important}
-.v6c-route-base .orbitV5FlowCard{
-  min-width:0!important;
-  min-height:52px!important;
-  display:flex!important;
-  align-items:flex-start!important;
-  gap:6px!important;
-}
-.v6c-route-base .orbitV5Connections{
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-}
-.v6c-route-base .orbitInstallerWorkspace .form,
-.v6c-route-base .orbitInstallerWorkspace form{display:grid;gap:8px}
-.v6c-route-base .orbitZipControlPanel{padding:14px!important}
-.v6c-route-base .orbitZipReleaseControls{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;
-  gap:8px!important;
-  align-items:end!important;
-}
-.v6c-route-base .orbitZipReleaseControls label{display:grid!important;gap:5px!important}
-.v6c-route-base .orbitZipControlTop{
-  display:flex!important;
-  justify-content:space-between!important;
-  gap:16px!important;
-  align-items:flex-start!important;
-}
-.v6c-route-base .orbitZipControlTopActions{display:flex!important;gap:6px!important;flex-wrap:wrap!important;justify-content:flex-end!important}
-
-/* Update release system */
-.v6c-route-updates .orbitV5UpdatePanelHeading{
-  display:flex!important;
-  align-items:flex-start!important;
-  justify-content:space-between!important;
-  gap:14px!important;
-}
-.v6c-route-updates .orbitV5UpdateFilter{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) minmax(180px,.5fr) auto!important;
-  gap:8px!important;
-  align-items:end!important;
-}
-.v6c-route-updates .orbitV5UpdateFilter label{display:grid!important;gap:5px!important}
-.v6c-route-updates .orbitV5UpdateReleaseList{display:grid!important;gap:7px!important}
-.v6c-route-updates .orbitV5UpdateRelease{padding:11px!important}
-.v6c-route-updates .orbitV5UpdateReleaseMain{
-  display:flex!important;
-  align-items:flex-start!important;
-  justify-content:space-between!important;
-  gap:12px!important;
-}
-.v6c-route-updates .orbitV5UpdateActions{
-  display:flex!important;
-  gap:7px!important;
-  justify-content:flex-end!important;
-  flex-wrap:wrap!important;
-}
-.v6c-route-updates .orbitV5UpdateConfirm{
-  margin-top:10px;
-  padding:9px;
-  display:flex!important;
-  align-items:flex-start!important;
-  gap:8px!important;
-  border:1px solid #21475f;
-  border-radius:6px;
-  background:#061a29;
-}
-
 
 /* V6C staff-only Admin shortcut on the global top bar. */
 .v6c-admin-toplink{
