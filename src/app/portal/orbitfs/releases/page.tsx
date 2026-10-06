@@ -291,7 +291,7 @@ export default function OrbitFSUpdateReleaseSystem(){
 
   async function repairAppliedUpdate(){
     if(!install||!appliedPublishedRelease||!canRepairAppliedUpdate)return;
-    if(!window.confirm("Repair installed Update v"+appliedVersion+"? This re-applies the same verified Update through the standalone Updater and does not invoke the Inner Deployer."))return;
+    if(!window.confirm("Repair installed Update v"+appliedVersion+"? This re-applies the same verified Update through the existing update workflow."))return;
     const releaseId=idOf(appliedPublishedRelease);
     setProgressTarget(releaseId);setProgressMode("update");setProgress(null);setAttemptStartedAt(Date.now());
     completionReported.current="";setStage(4);setBusy("repair-update");setMessage("");
@@ -303,14 +303,14 @@ export default function OrbitFSUpdateReleaseSystem(){
         body:JSON.stringify({action:"update",version:"update:"+appliedVersion,releaseId,channel:appliedChannel,reason:"repair_reapply"})
       });
       const response=await res.json().catch(()=>({}));
-      if(!res.ok)throw Error(response.error||"The Engine Update repair request was not completed.");
+      if(!res.ok)throw Error(response.error||"The Update repair request was not completed.");
       await refreshProgress(String(install.id));
-      setMessage("Update v"+appliedVersion+" was re-applied through the standalone Updater.");
+      setMessage("Update v"+appliedVersion+" was re-applied through the verified update workflow.");
       setStage(5);
       await load(true);
     }catch(error:any){
-      setMessage((error?.message||"The Engine Update repair did not return a result.")+
-        " Review the recorded updater events before retrying.");
+      setMessage((error?.message||"The Update repair did not return a result.")+
+        " Review the recorded update events before retrying.");
       await refreshProgress(String(install.id));
     }finally{requestInFlight.current=false;setBusy("")}
   }
@@ -566,13 +566,13 @@ export default function OrbitFSUpdateReleaseSystem(){
         <div><small>APPLIED</small><b>{dateLabel(applied?.appliedAt)||"Not recorded"}</b></div>
       </div>
       {recoveryOpen&&appliedVersion&&<details className="orbitV5UpdateRecovery" open><summary>Repair / reapply installed Update</summary>
-        <p>Use this when an updated deployed component is unhealthy. It re-applies the same published, verified Update through the standalone Updater and does not invoke the Inner Deployer.</p>
-        <button type="button" disabled={!canRepairAppliedUpdate} onClick={()=>void repairAppliedUpdate()}>{busy==="repair-update"?"Repairing Engine Update…":"Repair / reapply Update v"+appliedVersion}</button>
+        <p>Use this when an updated deployed component is unhealthy. It re-applies the same published, verified Update through the existing update workflow.</p>
+        <button type="button" disabled={!canRepairAppliedUpdate} onClick={()=>void repairAppliedUpdate()}>{busy==="repair-update"?"Repairing Update…":"Repair / reapply Update v"+appliedVersion}</button>
         {!appliedPublishedRelease&&<p className="orbitV5UpdateHint">The installed Update release is no longer published in this authorized channel, so it cannot be re-applied. Publish/restore an authorized Update release first.</p>}
         {appliedPublishedRelease&&!canRepairAppliedUpdate&&<p className="orbitV5UpdateHint">Repair is blocked until Base, Update authority and release discovery are ready.</p>}
       </details>}
       {recoveryOpen&&appliedVersion&&<details className="orbitV5UpdateRecovery" open><summary>Rollback installed Update</summary>
-        <p>Rollback requires License Manager authorization and may restore Panel and Engine checkpoints where available. Forward-compatible database migrations remain applied.</p>
+        <p>Rollback requires License Manager authorization and may restore deployment checkpoints where available. Forward-compatible database migrations remain applied.</p>
         <label htmlFor="orbit-update-rollback-reason">Reason for rollback
           <textarea id="orbit-update-rollback-reason" value={rollbackReason} onChange={event=>setRollbackReason(event.target.value)} rows={3} placeholder="Reason for this rollback"/>
         </label>
