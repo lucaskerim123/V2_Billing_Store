@@ -1456,3 +1456,60 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layou
   }
 }
 /* END V6A MOBILE MENU VISUAL PASS 2026-10-06 */
+
+
+/* V6A SUBNAV AUTHORITY — section subpages are one horizontal row on desktop/tablet.
+   This explicitly covers the Base/Update V6A-exempt routes too. */
+@media(min-width:641px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout .adminV3Subnav{
+    width:100%!important;
+    min-width:0!important;
+    min-height:39px!important;
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:3px!important;
+    padding:5px 14px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    white-space:nowrap!important;
+    scrollbar-width:none!important;
+    border-bottom:1px solid #12334b!important;
+    background:#03131f!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout .adminV3Subnav::-webkit-scrollbar{
+    display:none!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout .adminV3Subnav>a{
+    width:auto!important;
+    min-width:max-content!important;
+    max-width:none!important;
+    flex:0 0 auto!important;
+    min-height:28px!important;
+    margin:0!important;
+    padding:0 9px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border:1px solid transparent!important;
+    border-radius:5px!important;
+    color:#6f8da5!important;
+    background:transparent!important;
+    font-size:7px!important;
+    font-weight:650!important;
+    line-height:1!important;
+    text-decoration:none!important;
+    white-space:nowrap!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout .adminV3Subnav>a:hover{
+    background:#071e31!important;
+    color:#e6f4ff!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout .adminV3Subnav>a.active{
+    border-color:#244f6c!important;
+    background:#08243a!important;
+    color:#dff3ff!important;
+  }
+}
