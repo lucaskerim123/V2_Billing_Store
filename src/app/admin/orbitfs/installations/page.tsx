@@ -1,7 +1,7 @@
 "use client";
 
-import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
+import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import {usePermissions} from "@/lib/usePermissions";
 
@@ -27,6 +27,10 @@ function domainOf(value:any){
   if(!raw)return "";
   try{return new URL(raw).hostname}catch{return String(value||"")}
 }
+function shortId(value:any){
+  const text=String(value||"");
+  return text.length>24?text.slice(0,10)+"…"+text.slice(-8):text||"—";
+}
 
 export default function InstallationsPage(){
   const sb=useMemo(()=>createClient(),[]);
@@ -35,15 +39,18 @@ export default function InstallationsPage(){
   const [loading,setLoading]=useState(true);
   const [checking,setChecking]=useState(false);
   const [message,setMessage]=useState("");
+  const [error,setError]=useState("");
   const [query,setQuery]=useState("");
   const [filter,setFilter]=useState<"all"|"locked"|"attention">("all");
+  const [selectedId,setSelectedId]=useState("");
   const [lockTarget,setLockTarget]=useState<Installation|null>(null);
+  const [unlockTarget,setUnlockTarget]=useState<Installation|null>(null);
   const [lockReason,setLockReason]=useState("");
   const [busyId,setBusyId]=useState<string|null>(null);
   const [fetchedAt,setFetchedAt]=useState<string|null>(null);
 
   async function load(kind:"initial"|"manual"="manual"){
-    if(kind==="manual"){setChecking(true);setMessage("Checking License Manager for new or changed installations…");}
+    if(kind==="manual"){setChecking(true);setMessage("");setError("")}
     else setLoading(true);
     try{
       const {data:{session}}=await sb.auth.getSession();
@@ -51,11 +58,13 @@ export default function InstallationsPage(){
       const response=await fetch("/api/admin/orbitfs/installations",{headers:{authorization:`Bearer ${session.access_token}`},cache:"no-store"});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data?.error||"Could not load installations.");
-      setItems(Array.isArray(data.installations)?data.installations:[]);
+      const rows=Array.isArray(data.installations)?data.installations:[];
+      setItems(rows);
       setFetchedAt(data.fetched_at||new Date().toISOString());
-      if(kind==="manual")setMessage(`Check complete. ${Array.isArray(data.installations)?data.installations.length:0} current installation${data.installations?.length===1?"":"s"} found.`);
+      setSelectedId(current=>rows.some((row:any)=>String(row.installation_id)===current)?current:String(rows[0]?.installation_id||""));
+      if(kind==="manual")setMessage(`Check complete. ${rows.length} current installation${rows.length===1?"":"s"} found.`);
     }catch(error:any){
-      setMessage(error?.message||"Could not load installations.");
+      setError(error?.message||"Could not load installations.");
     }finally{
       setLoading(false);
       setChecking(false);
@@ -65,8 +74,7 @@ export default function InstallationsPage(){
   useEffect(()=>{void load("initial")},[]);
 
   async function setLock(item:Installation,action:"lock"|"unlock",reason?:string){
-    setBusyId(item.installation_id);
-    setMessage(action==="lock"?"Locking deployment in License Manager…":"Unlocking deployment in License Manager…");
+    setBusyId(item.installation_id);setMessage("");setError("");
     try{
       const {data:{session}}=await sb.auth.getSession();
       if(!session?.access_token)throw new Error("Administrator session expired.");
@@ -77,8 +85,8 @@ export default function InstallationsPage(){
           action,
           installation_id:item.installation_id,
           license_id:item.license_id||undefined,
-          reason:action==="lock"?String(reason||"").trim():undefined,
-        }),
+          reason:action==="lock"?String(reason||"").trim():undefined
+        })
       });
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data?.error||`Could not ${action} deployment.`);
@@ -91,13 +99,13 @@ export default function InstallationsPage(){
           reason:action==="lock"?(authority?.deployment_lock_reason||reason||null):null,
           changed_at:authority?.deployment_lock_changed_at||new Date().toISOString(),
           changed_by:authority?.deployment_lock_changed_by||"License Manager",
-          authority:"orbitfs-license-master-v2",
+          authority:"orbitfs-license-master-v2"
         }};
       }));
-      setLockTarget(null);setLockReason("");
+      setLockTarget(null);setUnlockTarget(null);setLockReason("");
       setMessage(action==="lock"?"Deployment locked by License Manager.":"Deployment unlocked by License Manager.");
     }catch(error:any){
-      setMessage(error?.message||`Could not ${action} deployment.`);
+      setError(error?.message||`Could not ${action} deployment.`);
     }finally{setBusyId(null)}
   }
 
@@ -106,7 +114,7 @@ export default function InstallationsPage(){
       item.customer?.name,item.customer?.customer_number,item.customer?.id,item.customer?.email,
       item.installation_id,item.license_id,item.network?.ip,item.network?.hostname,
       item.network?.panel_url,item.network?.engine_url,item.projects?.panel_project_name,
-      item.projects?.engine_project_name,
+      item.projects?.engine_project_name
     ].map(value=>String(value||"").toLowerCase()).join(" ");
     const matches=!query.trim()||hay.includes(query.trim().toLowerCase());
     if(!matches)return false;
@@ -115,133 +123,163 @@ export default function InstallationsPage(){
     return true;
   });
 
+  useEffect(()=>{
+    if(!filtered.length)return;
+    if(!filtered.some(item=>String(item.installation_id)===selectedId))setSelectedId(String(filtered[0].installation_id||""));
+  },[query,filter,items.length,selectedId]);
+
+  const selected=filtered.find(item=>String(item.installation_id)===selectedId)||filtered[0]||null;
   const lockedCount=items.filter(item=>item.deployment_lock?.locked).length;
   const deployerCount=items.filter(item=>item.deployment_source==="deployer").length;
   const externalCount=items.filter(item=>item.deployment_source==="external").length;
 
-  if(loading)return <main className="adminShell"><header className="adminTop"><div><p className="eyebrow">ORBITFS CONTROL</p><h1>Installations</h1><p className="muted">Loading installation authority view…</p></div></header></main>;
+  if(loading)return <main className="adminShell orbitPhaseOne orbitInstallationsPhase"><section className="orbitAdminLoading"><b>Loading installations</b><span>Reading current deployment authority from License Manager.</span></section></main>;
 
-  return <main className="adminShell">
-    <header className="adminTop">
+  return <main className="adminShell orbitPhaseOne orbitInstallationsPhase">
+    <header className="orbitReferenceHero orbitPhaseHero">
       <div>
-        <p className="eyebrow">ORBITFS CONTROL · LICENSE MANAGER AUTHORITY</p>
+        <p className="eyebrow">ORBITFS CONTROL · INSTALLATIONS</p>
         <h1>Installations</h1>
-        <p className="muted">Current OrbitFS installations only. Released, uninstalled and historical deployment records stay in history and are not listed here. Billing presents the view; License Manager remains authoritative for deployment authorization and lock state.</p>
+        <p className="muted">Current customer installations projected from License Manager. Billing presents operational controls without becoming deployment authority.</p>
       </div>
-      <div className="adminTopActions">
-        <button onClick={()=>void load("manual")} disabled={checking}>{checking?"Checking…":"Check for new installations"}</button>
+      <div className="orbitReferenceHeroActions">
+        <button className="secondary" type="button" onClick={()=>void load("manual")} disabled={checking}>{checking?"Checking…":"Check for changes"}</button>
       </div>
     </header>
 
-    <section className="stats four">
-      <article><small>Current installations</small><strong>{items.length}</strong><span>Active/current only</span></article>
-      <article><small>Deployer managed</small><strong>{deployerCount}</strong><span>Billing deployer installations</span></article>
-      <article><small>External / manual</small><strong>{externalCount}</strong><span>Active authority binding outside deployer</span></article>
-      <article><small>Deploy locked</small><strong>{lockedCount}</strong><span>License Manager enforced</span></article>
+    {error&&<div className="orbitReferenceNotice danger" role="alert"><b>Installation action failed</b><span>{error}</span></div>}
+    {message&&<div className="orbitReferenceNotice" role="status"><b>Updated</b><span>{message}</span></div>}
+
+    <section className="orbitInstallationStats">
+      <article><span>Current installations</span><b>{items.length}</b><small>Active/current authority records</small></article>
+      <article><span>Deployer managed</span><b>{deployerCount}</b><small>Billing deployer execution path</small></article>
+      <article><span>External / manual</span><b>{externalCount}</b><small>Authority bindings outside Billing deployer</small></article>
+      <article><span>Deploy locked</span><b>{lockedCount}</b><small>License Manager enforced locks</small></article>
     </section>
 
-    <section className="panel">
-      <div className="panelTitle">
-        <div><h2>Current installations</h2><p className="muted">One row per current installation. Old deployments, released bindings and uninstalled records are kept as history, not separate rows.</p></div>
-        <span>{filtered.length} shown</span>
-      </div>
-      <div className="form">
-        <div className="two">
-          <label>Search<input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Customer, ID, IP, domain, project…"/></label>
-          <label>View<select value={filter} onChange={event=>setFilter(event.target.value as any)}><option value="all">Current installations</option><option value="locked">Deploy locked</option><option value="attention">Needs attention</option></select></label>
-        </div>
-      </div>
+    <section className="orbitInstallationToolbar">
+      <label><span>Search installations</span><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Customer, installation ID, IP, domain, project…"/></label>
+      <label><span>View</span><select value={filter} onChange={event=>setFilter(event.target.value as any)}><option value="all">Current installations</option><option value="locked">Deploy locked</option><option value="attention">Needs attention</option></select></label>
+      <div><span>LAST CHECK</span><b>{fetchedAt?displayDate(fetchedAt):"Not recorded"}</b><small>{filtered.length} shown</small></div>
     </section>
 
-    {filtered.length?filtered.map(item=>{
-      const customerName=item.customer?.name||item.customer?.email||item.customer?.customer_number||"Unmatched customer";
-      const panelUrl=safeUrl(item.network?.panel_url);
-      const engineUrl=safeUrl(item.network?.engine_url);
-      const domain=domainOf(panelUrl)||item.network?.hostname||"—";
-      const locked=item.deployment_lock?.locked===true;
-      const attention=Boolean(item.authority_error||item.runtime?.last_error);
-      return <section className="panel" key={item.installation_id} style={{marginTop:14}}>
-        <div className="panelTitle">
-          <div>
-            <p className="eyebrow">CURRENT INSTALLATION · {item.deployment_source==="external"?"EXTERNAL / MANUAL":"DEPLOYER MANAGED"}</p>
-            <h2>{customerName}</h2>
-            <p className="muted">{item.customer?.customer_number||"No customer number"} · {item.installation_id}</p>
-          </div>
-          <div className="actionStack" style={{minWidth:190}}>
-            <span className={"state "+(locked?"error":attention?"waiting":"ok")}>{locked?"Deploy locked":attention?"Attention":String(item.runtime?.state||"ready").replaceAll("_"," ")}</span>
-          </div>
+    {filtered.length?<div className="orbitReferenceSplit orbitInstallationWorkspace">
+      <aside className="orbitReferenceRail orbitInstallationRail">
+        <div className="orbitReferenceRailHead"><div><b>Current installations</b><span>{filtered.length} matching this view</span></div><small>Select one installation to inspect runtime, projects and authority controls.</small></div>
+        <div className="orbitReferenceRailList">
+          {filtered.map(item=>{
+            const customerName=item.customer?.name||item.customer?.email||item.customer?.customer_number||"Unmatched customer";
+            const locked=item.deployment_lock?.locked===true;
+            const attention=Boolean(item.authority_error||item.runtime?.last_error||String(item.runtime?.health||"").toLowerCase()==="unhealthy");
+            const active=String(item.installation_id)===String(selected?.installation_id);
+            return <button type="button" key={item.installation_id} className={"orbitReferenceRailCard orbitInstallationChoice "+(active?"active":"")} onClick={()=>setSelectedId(String(item.installation_id))}>
+              <div className="orbitReferenceRailCardTop"><b>{customerName}</b><span className={"orbitMiniState "+(locked?"suspended":attention?"":"live")}>{locked?"Locked":attention?"Attention":"Current"}</span></div>
+              <small>{shortId(item.installation_id)}</small>
+              <div className="orbitReferenceRailMeta"><span>{displayVersion(item.versions?.base)}</span><span>{item.versions?.channel||"No channel"}</span><span>{item.deployment_source==="external"?"External":"Deployer"}</span></div>
+            </button>
+          })}
         </div>
+      </aside>
 
-        <div className="stats four">
-          <article><small>Version running</small><strong>{displayVersion(item.versions?.running)}</strong><span>Runtime report</span></article>
-          <article><small>Base</small><strong>{displayVersion(item.versions?.base)}</strong><span>{item.versions?.channel||"No channel"}</span></article>
-          <article><small>Update release system</small><strong>{displayVersion(item.versions?.update)}</strong><span>{item.versions?.update_release_id?"Last applied update":"No update recorded"}</span></article>
-          <article><small>Health</small><strong>{item.runtime?.health||"unknown"}</strong><span>{item.runtime?.last_seen_at?"Seen "+displayDate(item.runtime.last_seen_at):"No runtime check-in"}</span></article>
-        </div>
-
-        <div className="adminGrid">
-          <div>
-            <h3>Customer & installation</h3>
-            <div className="listrow"><b>Customer name</b><span>{item.customer?.name||"—"}</span></div>
-            <div className="listrow"><b>Customer ID</b><span>{item.customer?.customer_number||item.customer?.id||"—"}</span></div>
-            <div className="listrow"><b>Installation ID</b><span>{item.installation_id}</span></div>
-            <div className="listrow"><b>Licence ID</b><span>{item.license_id||"—"}</span></div>
-            <div className="listrow"><b>IP / hostname</b><span>{item.network?.ip||item.network?.hostname||"—"}</span></div>
-            <div className="listrow"><b>Domain</b><span>{domain}</span></div>
-          </div>
-          <div>
-            <h3>Projects & links</h3>
-            <div className="listrow"><b>Panel</b><span>{panelUrl?<a href={panelUrl} target="_blank" rel="noreferrer">{domainOf(panelUrl)||"Open panel"}</a>:"Not deployed"}</span></div>
-            <div className="listrow"><b>Engine</b><span>{engineUrl?<a href={engineUrl} target="_blank" rel="noreferrer">{domainOf(engineUrl)||"Open engine"}</a>:"Not installed / not linked"}</span></div>
-            <div className="listrow"><b>Panel project</b><span>{item.projects?.panel_project_name||item.projects?.panel_project_id||"—"}</span></div>
-            <div className="listrow"><b>Engine project</b><span>{item.projects?.engine_project_name||item.projects?.engine_project_id||"—"}</span></div>
-            <div className="listrow"><b>Supabase</b><span>{item.projects?.supabase_project_name||item.projects?.supabase_project_ref||"—"}</span></div>
-            <div className="listrow"><b>Schema</b><span>{item.runtime?.schema_version||"—"}</span></div>
-          </div>
-        </div>
-
-        <div className="adminGrid" style={{marginTop:12}}>
-          <div className="panel">
-            <h3>Deployment authority</h3>
-            <div className="listrow"><b>Authority</b><span>License Manager</span></div>
-            <div className="listrow"><b>Deployment source</b><span>{item.deployment_source==="external"?"External / manual":"Billing deployer"}</span></div>
-            <div className="listrow"><b>Deploy state</b><span>{locked?"Locked":"Unlocked"}</span></div>
-            <div className="listrow"><b>Last operation</b><span>{item.runtime?.last_operation||"—"}</span></div>
-            <div className="listrow"><b>Deployment count</b><span>{item.runtime?.deployment_count??"—"}</span></div>
-            {locked&&<div className="notice"><b>Deployment locked</b><span>{item.deployment_lock?.reason||"No reason recorded."}</span><span>{item.deployment_lock?.changed_at?displayDate(item.deployment_lock.changed_at):""}</span></div>}
-            {item.authority_error&&<div className="notice"><b>Authority mismatch</b><span>{item.authority_error}</span></div>}
-            {item.runtime?.last_error&&<div className="notice"><b>Latest runtime error</b><span>{item.runtime.last_error}</span></div>}
-          </div>
-          <div className="panel">
-            <h3>Controls</h3>
-            <p className="muted">These controls do not create Billing-owned technical state. Lock/unlock is written to License Manager and enforced during deployment authorization.</p>
-            <div className="actionStack">
-              {item.customer?.auth_user_id&&<Link className="buttonlink secondary" href={`/admin/customers/${item.customer.auth_user_id}`}>Open customer</Link>}
-              {panelUrl&&<a className="buttonlink secondary" href={panelUrl} target="_blank" rel="noreferrer">Open Panel</a>}
-              {engineUrl&&<a className="buttonlink secondary" href={engineUrl} target="_blank" rel="noreferrer">Open Engine</a>}
-              {!can("licenses.manage")
-                ?<button className="secondary" disabled>View-only deployment control</button>
-                :!item.license_id
-                  ?<button className="secondary" disabled title="License Manager has not returned an authoritative activation for this installation">Lock unavailable until authority links</button>
-                  :locked
-                    ?<button onClick={()=>void setLock(item,"unlock")} disabled={busyId===item.installation_id}>{busyId===item.installation_id?"Unlocking…":"Unlock deployment"}</button>
-                    :<button className="danger" onClick={()=>{setLockTarget(item);setLockReason("")}} disabled={busyId===item.installation_id}>Lock deployment</button>}
+      <section className="orbitReferenceWorkspace orbitInstallationDetail">
+        {selected&&(()=>{
+          const item=selected;
+          const customerName=item.customer?.name||item.customer?.email||item.customer?.customer_number||"Unmatched customer";
+          const panelUrl=safeUrl(item.network?.panel_url);
+          const engineUrl=safeUrl(item.network?.engine_url);
+          const domain=domainOf(panelUrl)||item.network?.hostname||"—";
+          const locked=item.deployment_lock?.locked===true;
+          const attention=Boolean(item.authority_error||item.runtime?.last_error||String(item.runtime?.health||"").toLowerCase()==="unhealthy");
+          return <>
+            <div className="orbitReferenceWorkspaceHead orbitInstallationHead">
+              <div>
+                <p className="eyebrow">{item.deployment_source==="external"?"EXTERNAL / MANUAL":"DEPLOYER MANAGED"}</p>
+                <div className="orbitReferenceTitleLine"><h2>{customerName}</h2><span className={"orbitMiniState "+(locked?"suspended":attention?"":"live")}>{locked?"Deploy locked":attention?"Needs attention":String(item.runtime?.state||"ready").replaceAll("_"," ")}</span></div>
+                <p>{item.customer?.customer_number||"No customer number"} · installation <code>{shortId(item.installation_id)}</code></p>
+              </div>
+              <div className="orbitReferenceActions">
+                {item.customer?.auth_user_id&&<Link className="buttonlink secondary" href={`/admin/customers/${item.customer.auth_user_id}`}>Open customer</Link>}
+                {panelUrl&&<a className="buttonlink secondary" href={panelUrl} target="_blank" rel="noreferrer">Open Panel ↗</a>}
+              </div>
             </div>
-          </div>
-        </div>
+
+            <div className="orbitReferenceFacts orbitInstallationFacts">
+              <div><span>Running version</span><b>{displayVersion(item.versions?.running)}</b><small>Runtime report</small></div>
+              <div><span>Base release</span><b>{displayVersion(item.versions?.base)}</b><small>Channel {item.versions?.channel||"—"}</small></div>
+              <div><span>Applied Update</span><b>{displayVersion(item.versions?.update)}</b><small>{item.versions?.update_release_id?"Update release recorded":"No Update recorded"}</small></div>
+              <div><span>Health</span><b>{item.runtime?.health||"unknown"}</b><small>{item.runtime?.last_seen_at?"Seen "+displayDate(item.runtime.last_seen_at):"No runtime check-in"}</small></div>
+            </div>
+
+            {locked&&<div className="orbitReferenceNotice danger"><b>Deployment locked</b><span>{item.deployment_lock?.reason||"No reason recorded."} {item.deployment_lock?.changed_at?"· "+displayDate(item.deployment_lock.changed_at):""}</span></div>}
+            {item.authority_error&&<div className="orbitReferenceNotice danger"><b>Authority mismatch</b><span>{item.authority_error}</span></div>}
+            {item.runtime?.last_error&&<div className="orbitReferenceNotice danger"><b>Latest runtime error</b><span>{item.runtime.last_error}</span></div>}
+
+            <div className="orbitInstallationColumns">
+              <section className="orbitReferenceSection">
+                <div className="orbitReferenceSectionHead"><div><b>Customer & installation</b><small>Authoritative installation identity and network record.</small></div><span>{item.deployment_source==="external"?"External":"Deployer"}</span></div>
+                <div className="orbitInstallationKeyList">
+                  <div><span>Customer</span><b>{item.customer?.name||"—"}</b></div>
+                  <div><span>Customer ID</span><b>{item.customer?.customer_number||item.customer?.id||"—"}</b></div>
+                  <div><span>Installation ID</span><b className="orbitMono">{item.installation_id}</b></div>
+                  <div><span>Licence ID</span><b className="orbitMono">{item.license_id||"—"}</b></div>
+                  <div><span>IP / hostname</span><b>{item.network?.ip||item.network?.hostname||"—"}</b></div>
+                  <div><span>Domain</span><b>{domain}</b></div>
+                </div>
+              </section>
+
+              <section className="orbitReferenceSection">
+                <div className="orbitReferenceSectionHead"><div><b>Provider projects</b><small>Customer infrastructure connected to this installation.</small></div><span>{panelUrl||engineUrl?"Live links":"No links"}</span></div>
+                <div className="orbitInstallationKeyList">
+                  <div><span>Panel</span><b>{panelUrl?<a href={panelUrl} target="_blank" rel="noreferrer">{domainOf(panelUrl)||"Open Panel ↗"}</a>:"Not deployed"}</b></div>
+                  <div><span>Engine</span><b>{engineUrl?<a href={engineUrl} target="_blank" rel="noreferrer">{domainOf(engineUrl)||"Open Engine ↗"}</a>:"Not installed / not linked"}</b></div>
+                  <div><span>Panel project</span><b>{item.projects?.panel_project_name||item.projects?.panel_project_id||"—"}</b></div>
+                  <div><span>Engine project</span><b>{item.projects?.engine_project_name||item.projects?.engine_project_id||"—"}</b></div>
+                  <div><span>Supabase</span><b>{item.projects?.supabase_project_name||item.projects?.supabase_project_ref||"—"}</b></div>
+                  <div><span>Schema</span><b>{item.runtime?.schema_version||"—"}</b></div>
+                </div>
+              </section>
+            </div>
+
+            <section className="orbitReferenceSection orbitInstallationAuthority">
+              <div className="orbitReferenceSectionHead"><div><b>Deployment authority</b><small>Lock state is written to and enforced by License Manager during deployment authorization.</small></div><span className={"orbitMiniState "+(locked?"suspended":"live")}>{locked?"Locked":"Unlocked"}</span></div>
+              <div className="orbitInstallationAuthorityGrid">
+                <div><span>Authority</span><b>License Manager</b></div>
+                <div><span>Deployment source</span><b>{item.deployment_source==="external"?"External / manual":"Billing deployer"}</b></div>
+                <div><span>Last operation</span><b>{item.runtime?.last_operation||"—"}</b></div>
+                <div><span>Deployment count</span><b>{item.runtime?.deployment_count??"—"}</b></div>
+              </div>
+              <div className="orbitInstallationActions">
+                {engineUrl&&<a className="buttonlink secondary" href={engineUrl} target="_blank" rel="noreferrer">Open Engine ↗</a>}
+                {!can("licenses.manage")
+                  ?<button className="secondary" disabled>View-only deployment control</button>
+                  :!item.license_id
+                    ?<button className="secondary" disabled title="License Manager has not returned an authoritative activation for this installation">Lock unavailable until authority links</button>
+                    :locked
+                      ?<button type="button" onClick={()=>setUnlockTarget(item)} disabled={busyId===item.installation_id}>{busyId===item.installation_id?"Unlocking…":"Unlock deployment"}</button>
+                      :<button type="button" className="danger" onClick={()=>{setLockTarget(item);setLockReason("")}} disabled={busyId===item.installation_id}>Lock deployment</button>}
+              </div>
+            </section>
+          </>
+        })()}
       </section>
-    }):<section className="panel"><h2>No installations found</h2><p className="muted">Use “Check for new installations” to request a fresh License Manager projection.</p></section>}
+    </div>:<section className="orbitReferenceEmpty"><b>No installations found</b><span>Change the search/filter or run “Check for changes” to request a fresh License Manager projection.</span></section>}
 
-    {message&&<p className="muted" style={{marginTop:16}}>{message}</p>}
+    {lockTarget&&<div className="orbitConfirmBackdrop" role="presentation" onMouseDown={()=>{if(!busyId)setLockTarget(null)}}>
+      <section className="orbitConfirmDialog orbitInstallationLockDialog" role="dialog" aria-modal="true" aria-labelledby="lock-deployment-title" onMouseDown={event=>event.stopPropagation()}>
+        <p className="eyebrow">LICENSE MANAGER CONTROL</p>
+        <h2 id="lock-deployment-title">Lock deployment?</h2>
+        <p>Base deploy, Base update, redeploy, rollback and Update deployment authorization will be blocked for this installation until an administrator unlocks it.</p>
+        <label>Reason<textarea rows={4} value={lockReason} onChange={event=>setLockReason(event.target.value)} placeholder="Required reason for the deployment lock"/></label>
+        <div className="orbitReferenceDecision"><button type="button" className="secondary" onClick={()=>setLockTarget(null)} disabled={Boolean(busyId)}>Cancel</button><button type="button" className="danger" disabled={!lockReason.trim()||Boolean(busyId)} onClick={()=>void setLock(lockTarget,"lock",lockReason)}>{busyId?"Locking…":"Lock deployment"}</button></div>
+      </section>
+    </div>}
 
-    {lockTarget&&<div className="orderModalBackdrop" onMouseDown={()=>!busyId&&setLockTarget(null)}>
-      <section className="orderModal" onMouseDown={event=>event.stopPropagation()}>
-        <div className="panelTitle"><div><p className="eyebrow">LICENSE MANAGER CONTROL</p><h2>Lock deployment</h2><p className="muted">{lockTarget.customer?.name||lockTarget.installation_id}</p></div><button className="small secondary" onClick={()=>setLockTarget(null)} disabled={Boolean(busyId)}>Close</button></div>
-        <div className="form">
-          <div className="notice"><b>What this blocks</b><span>Base deploy, Base update, redeploy, rollback and Update deployment authorization for this installation until an admin unlocks it.</span></div>
-          <label>Reason<textarea rows={4} value={lockReason} onChange={event=>setLockReason(event.target.value)} placeholder="Required reason for the deployment lock"/></label>
-          <button className="danger" disabled={!lockReason.trim()||Boolean(busyId)} onClick={()=>void setLock(lockTarget,"lock",lockReason)}>{busyId?"Locking…":"Lock deployment in License Manager"}</button>
-        </div>
+    {unlockTarget&&<div className="orbitConfirmBackdrop" role="presentation" onMouseDown={()=>{if(!busyId)setUnlockTarget(null)}}>
+      <section className="orbitConfirmDialog" role="alertdialog" aria-modal="true" aria-labelledby="unlock-deployment-title" onMouseDown={event=>event.stopPropagation()}>
+        <p className="eyebrow">LICENSE MANAGER CONTROL</p>
+        <h2 id="unlock-deployment-title">Unlock deployment?</h2>
+        <p>Deployment authorization will be available again if the licence and release policy otherwise allow it.</p>
+        <div className="orbitReferenceDecision"><button type="button" className="secondary" autoFocus onClick={()=>setUnlockTarget(null)} disabled={Boolean(busyId)}>Cancel</button><button type="button" disabled={Boolean(busyId)} onClick={()=>void setLock(unlockTarget,"unlock")}>{busyId?"Unlocking…":"Unlock deployment"}</button></div>
       </section>
     </div>}
   </main>;
