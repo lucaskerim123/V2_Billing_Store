@@ -25,6 +25,72 @@ function aliasUnavailable(error:any){
   const message=String(error?.message||"").toLowerCase();
   return /alias.*(already|in use)|already.*(used|assigned|exists)|domain.*(in use|assigned)|alias_in_use|forbidden.*alias/.test(message);
 }
+function dnsValues(value:any):string[]{
+  if(value==null)return [];
+  if(typeof value==="string"||typeof value==="number"){
+    const out=String(value).trim();
+    return out?[out]:[];
+  }
+  if(Array.isArray(value))return [...new Set(value.flatMap(dnsValues))];
+  if(typeof value==="object"){
+    for(const key of ["value","target","hostname","address"]){
+      if(value[key]!=null)return dnsValues(value[key]);
+    }
+  }
+  return [];
+}
+function dnsNameservers(value:any):string[]{
+  if(!value)return [];
+  if(Array.isArray(value))return [...new Set(value.flatMap((item:any)=>typeof item==="string"?[item]:dnsValues(item)))];
+  return dnsValues(value);
+}
+function uniqueDnsRecords(records:any[]){
+  const seen=new Set<string>();
+  return records.filter(record=>{
+    const key=[record.type,record.name,record.value].map(value=>String(value||"").trim().toLowerCase()).join("|");
+    if(!record.type||!record.name||!record.value||seen.has(key))return false;
+    seen.add(key);return true;
+  });
+}
+async function customDomainDns(install:any,domainInput:unknown,entryInput?:any){
+  const domain=normalizeCustomDomain(domainInput);
+  let entry=entryInput||null;
+  if(!entry){
+    try{
+      const domains=await projectDomains(install);
+      entry=domains.find((item:any)=>normalizeHost(item?.name)===domain)||null;
+    }catch{}
+  }
+  let config:any=null,configError:string|null=null;
+  try{
+    config=await vercelApi(String(install.auth_user_id),`/v6/domains/${encodeURIComponent(domain)}/config`,{method:"GET"});
+  }catch(error:any){
+    configError=String(error?.message||"Vercel did not return domain configuration details.");
+  }
+  const records:any[]=[];
+  for(const verification of Array.isArray(entry?.verification)?entry.verification:[]){
+    const type=String(verification?.type||"TXT").trim().toUpperCase();
+    const name=normalizeHost(verification?.domain)||String(verification?.domain||domain).trim()||domain;
+    const value=String(verification?.value||"").trim();
+    if(value)records.push({type,name,value,purpose:"ownership",reason:verification?.reason||"Vercel domain ownership verification"});
+  }
+  for(const value of dnsValues(config?.recommendedCNAME))records.push({type:"CNAME",name:domain,value,purpose:"routing",reason:"Point this hostname to Vercel"});
+  for(const value of dnsValues(config?.recommendedIPv4))records.push({type:"A",name:domain,value,purpose:"routing",reason:"Point this hostname to Vercel"});
+  for(const value of dnsValues(config?.recommendedIPv6))records.push({type:"AAAA",name:domain,value,purpose:"routing",reason:"Point this hostname to Vercel"});
+  const nameservers=dnsNameservers(config?.recommendedNameservers||config?.nameservers);
+  const verified=entry?.verified===true;
+  const misconfigured=entry?.misconfigured===true||config?.misconfigured===true;
+  return {
+    domain,
+    verified,
+    misconfigured,
+    configured:Boolean(verified&&!misconfigured),
+    configuredBy:config?.configuredBy||null,
+    records:uniqueDnsRecords(records),
+    nameservers,
+    configError
+  };
+}
 function generatedDomain(install:any){
   const name=String(install?.vercel_project_name||"").trim().toLowerCase();
   return name?`${name}.vercel.app`:"";
@@ -110,8 +176,10 @@ export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){
     const authority=await masterInstallationPanelDomain(String(install.installation_id),licenseId);
     const domains=await projectDomains(install);
     const state=domainState(install,authority,domains);
+    const selected=state.mode==="custom"&&state.domainName?domains.find((item:any)=>normalizeHost(item?.name)===state.domainName):null;
+    const dns=state.mode==="custom"&&state.domainName?await customDomainDns(install,state.domainName,selected).catch(()=>null):null;
     await cacheAuthorityState(install,state);
-    return Response.json({domain:state,authority:"orbitfs-license-master-v2"},{headers:{"cache-control":"no-store"}});
+    return Response.json({domain:state,dns,authority:"orbitfs-license-master-v2"},{headers:{"cache-control":"no-store"}});
   }catch(error){return httpError(error)}
 }
 
@@ -125,6 +193,12 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const action=String(body.action||"save").trim().toLowerCase();
     if(action==="check"){
       return Response.json({availability:await checkAlias(install,body.domain)},{headers:{"cache-control":"no-store"}});
+    }
+    if(action==="dns"){
+      const domain=normalizeCustomDomain(body.domain);
+      const domains=await projectDomains(install);
+      const entry=domains.find((item:any)=>normalizeHost(item?.name)===domain)||null;
+      return Response.json({dns:await customDomainDns(install,domain,entry)},{headers:{"cache-control":"no-store"}});
     }
     if(action!=="save")return Response.json({error:"Unsupported Base domain action."},{status:400});
     const mode=String(body.mode||"generated").trim().toLowerCase();
@@ -192,9 +266,10 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       panel_domain:{mode:"custom",domain_name:domain,verified,effective_url:effectiveUrl}
     });
     const state=domainState(install,recorded,domains);
+    const dns=await customDomainDns(install,domain,refreshed).catch(()=>null);
     install=await cacheAuthorityState(install,state);
     install=await syncDeployment(install);
-    await event(install,"panel.domain_preference",verified?"ok":"warning",verified?`Base Panel custom domain changed to ${domain}`:`Base Panel custom domain ${domain} is waiting for Vercel DNS verification`,{authority:"license-manager",mode:"custom",domainName:domain,verified});
-    return Response.json({installation:install,domain:{...state,effectiveUrl:install.production_url||state.effectiveUrl},authority:"orbitfs-license-master-v2"},{headers:{"cache-control":"no-store"}});
+    await event(install,"panel.domain_preference",verified?"ok":"warning",verified?`Base Panel custom domain changed to ${domain}`:`Base Panel custom domain ${domain} is waiting for Vercel DNS verification`,{authority:"license-manager",mode:"custom",domainName:domain,verified,dnsRecordCount:Number(dns?.records?.length||0)});
+    return Response.json({installation:install,domain:{...state,effectiveUrl:install.production_url||state.effectiveUrl},dns,authority:"orbitfs-license-master-v2"},{headers:{"cache-control":"no-store"}});
   }catch(error){return httpError(error)}
 }
