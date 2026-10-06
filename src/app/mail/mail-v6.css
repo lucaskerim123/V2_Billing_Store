@@ -1,7 +1,7 @@
 
 .mailV6,
-.mailV6 *{box-sizing:border-box}
-.mailV6{
+.mailV6 *,.mailConfigCompact,.mailConfigCompact *{box-sizing:border-box}
+.mailV6,.mailConfigCompact{
   --mail-bg:#03111f;
   --mail-shell:#071829;
   --mail-panel:#0a1d31;
@@ -20,14 +20,14 @@
   --mail-warning:#f0a24d;
   --mail-danger:#ff5b72;
   --mail-shadow:0 18px 50px rgba(0,0,0,.24);
-  background:
-    radial-gradient(circle at 78% -10%,rgba(81,74,255,.11),transparent 34rem),
-    radial-gradient(circle at 18% 110%,rgba(25,199,221,.07),transparent 34rem),
-    var(--mail-bg);
   color:var(--mail-text);
   font-family:Inter,Geist,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   min-height:100vh;
 }
+.mailV6{background:
+    radial-gradient(circle at 78% -10%,rgba(81,74,255,.11),transparent 34rem),
+    radial-gradient(circle at 18% 110%,rgba(25,199,221,.07),transparent 34rem),
+    var(--mail-bg);}
 .mailV6 a{color:inherit}
 .mailV6 button,.mailV6 input,.mailV6 select,.mailV6 textarea{font:inherit}
 .mailV6 button,.mailV6 a{outline:none}
@@ -354,3 +354,9 @@
   .mailV6Shell{padding:12px 10px 22px}.mailV6TitleRow{align-items:flex-start;flex-direction:column}.mailV6QueueStats{grid-template-columns:1fr 1fr}
   .mailV6QueueRow{grid-template-columns:1fr}.mailV6QueueRow>div:last-child{justify-content:flex-start!important}
 }
+
+.mailMobileFolders{display:none}
+.mailV6ConfirmBackdrop{position:fixed;inset:0;z-index:80;background:rgba(0,6,14,.72);display:grid;place-items:center;padding:20px;backdrop-filter:blur(4px)}
+.mailV6ConfirmDialog{width:min(420px,100%);border:1px solid #365b7e;background:#091c2f;border-radius:11px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.46)}
+.mailV6ConfirmDialog h2{margin:0 0 7px;font-size:16px}.mailV6ConfirmDialog p{margin:0;color:var(--mail-muted);font-size:12px;line-height:1.5}.mailV6ConfirmActions{display:flex;justify-content:flex-end;gap:7px;margin-top:16px}
+@media(max-width:820px){.mailMobileFolders{display:flex;gap:5px;overflow-x:auto;padding:6px 8px;border-bottom:1px solid #102d46;background:#061625}.mailMobileFolders button{flex:0 0 auto;min-height:30px;padding:5px 8px;font-size:10px}.mailMobileFolders button.active{background:linear-gradient(135deg,#273a9c,#5b31bb);border-color:#5369ff}.mailWorkspaceGrid{height:calc(100dvh - 141px)}}
