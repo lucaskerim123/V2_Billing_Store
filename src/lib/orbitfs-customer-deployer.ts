@@ -524,7 +524,7 @@ async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigrat
     if((parsed.root as any).format==="orbitfs-update-bundle-v3")fail("Installed Base release points to an Update Bundle",409);
     const pkg=parsed.root as Package;
     const files=validateFiles(pkg.files,"Installed Base package");
-    const chain=(await releaseBaseMigrationChain(targetRelease))??validateBaseMigrationChain(pkg,files);
+    const chain=(await releaseBaseMigrationChain(currentRelease))??validateBaseMigrationChain(pkg,files);
     const packageCount=chain.length,packageLatest=chain.at(-1)?.id||"";
     if(manifestCountValid&&count!==packageCount)fail("Installed Base release migration count does not match its immutable package",409);
     if(manifestLatestValid&&latest!==packageLatest)fail("Installed Base release latest migration does not match its immutable package",409);
