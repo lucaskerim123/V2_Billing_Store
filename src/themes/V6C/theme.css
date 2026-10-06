@@ -6,7 +6,21 @@
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .portalTopbar,
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .portalMain{display:none!important}
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6cMount{display:block}
-html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .portalLayout{min-height:100vh;background:#020810!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .portalLayout{
+  min-height:100vh!important;
+  width:100%!important;
+  max-width:none!important;
+  display:block!important;
+  grid-template-columns:none!important;
+  padding-top:0!important;
+  align-items:stretch!important;
+  overflow-x:hidden!important;
+  background:#020810!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-screen{
+  width:100%!important;
+  min-width:0!important;
+}
 
 .v6c-screen{min-height:100vh;display:grid;grid-template-columns:206px minmax(0,1fr);color:#eef6ff;background:
 radial-gradient(980px 520px at 74% -8%,rgba(0,188,255,.11),transparent 60%),
