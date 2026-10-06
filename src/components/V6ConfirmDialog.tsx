@@ -10,13 +10,14 @@ type Props={
   cancelLabel?:string;
   busy?:boolean;
   danger?:boolean;
+  confirmDisabled?:boolean;
   children?:ReactNode;
   onCancel:()=>void;
   onConfirm:()=>void;
 };
 
 export default function V6ConfirmDialog({
-  open,title,description,confirmLabel,cancelLabel="Cancel",busy=false,danger=false,children,onCancel,onConfirm
+  open,title,description,confirmLabel,cancelLabel="Cancel",busy=false,danger=false,confirmDisabled=false,children,onCancel,onConfirm
 }:Props){
   const titleId=useId();
   const descriptionId=useId();
@@ -76,7 +77,7 @@ export default function V6ConfirmDialog({
       {children&&<div className="v6ConfirmBody">{children}</div>}
       <div className="v6ConfirmActions">
         <button ref={cancelRef} type="button" className="secondary" disabled={busy} onClick={onCancel}>{cancelLabel}</button>
-        <button type="button" className={danger?"danger":""} disabled={busy} onClick={onConfirm}>{busy?"Working…":confirmLabel}</button>
+        <button type="button" className={danger?"danger":""} disabled={busy||confirmDisabled} onClick={onConfirm}>{busy?"Working…":confirmLabel}</button>
       </div>
     </section>
   </div>;
