@@ -1,6 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
 import {syncAccountEnforcementNow} from "@/lib/account-enforcement-sync";
-import {normalizeAccountEnforcementState} from "@/lib/account-enforcement-state";
+import {accountEnforcementAllowsExpiry,canReactivateAccountEnforcement,normalizeAccountEnforcementState} from "@/lib/account-enforcement-state";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -34,6 +34,16 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
   if(expiresAt){
     const parsed=new Date(expiresAt);
     if(Number.isNaN(parsed.getTime())||parsed.getTime()<=Date.now())return Response.json({error:"Expiry must be a future date/time."},{status:400});
+    if(!accountEnforcementAllowsExpiry(state))return Response.json({error:"Terminated accounts cannot use automatic expiry. Use Suspended for a temporary account block."},{status:400});
+  }
+
+  if(state==="active"){
+    const {data:current,error:currentError}=await db.rpc("account_enforcement_status",{target_user:id});
+    if(currentError)return Response.json({error:currentError.message||"Could not verify current account enforcement."},{status:400});
+    const currentState=normalizeAccountEnforcementState(current?.state);
+    if(!canReactivateAccountEnforcement(currentState)){
+      return Response.json({error:currentState==="terminated"?"Terminated accounts require explicit licence recovery/reactivation. Generic account reactivation is blocked because terminated licences burn their old keys.":"This account is not suspended."},{status:409});
+    }
   }
 
   const legacyState=state==="terminated"?"banned":state;
