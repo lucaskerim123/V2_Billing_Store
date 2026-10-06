@@ -46,7 +46,7 @@ export default function Mailbox(){
   <header className="mailV6Topbar">
     <Link className="mailV6Brand" href="/mail"><span className="mailV6BrandMark">M</span><span className="mailV6BrandText"><b>{title}</b><span>{address}</span></span></Link>
     <div className="mailV6TopSearch"><input value={query} onChange={e=>setQuery(e.target.value)} aria-label={`Search ${folderLabel(folder)}`} placeholder={`Search ${folderLabel(folder)} messages…`}/>{query&&<button type="button" onClick={()=>setQuery("")} aria-label="Clear search">×</button>}</div>
-    <div className="mailV6TopActions"><button type="button" onClick={()=>void load()}>Refresh</button>{canSend&&<button type="button" className="primary" onClick={newMessage}>Compose</button>}<Link href="/mail/admin">Mail Config</Link></div>
+    <div className="mailV6TopActions"><button type="button" onClick={()=>void load()}>Refresh</button>{canSend&&<button type="button" className="primary" onClick={newMessage}>Compose</button>}<Link href="/mail">Mail home</Link></div>
   </header>
 
   <div className="mailMobileFolders" aria-label="Mail folders">{folders.map(f=><button type="button" key={f} className={folder===f?"active":""} onClick={()=>setFolder(f)}>{folderLabel(f)}</button>)}</div>
@@ -57,7 +57,7 @@ export default function Mailbox(){
       <div className="mailFolderIdentity"><small>OrbitFS Mailbox</small><b>{title}</b><span>{address}</span></div>
       {canSend&&<button type="button" className="primary mailComposeButton" onClick={newMessage}>Compose email</button>}
       <nav className="mailFolderNav" aria-label="Mail folders">{folders.map(f=><button type="button" key={f} className={folder===f?"active":""} onClick={()=>setFolder(f)}><span>{folderLabel(f)}</span>{folder===f&&<small>{filtered.length}</small>}</button>)}</nav>
-      <div className="mailRailLinks"><Link href="/mail">Mailboxes & Queue</Link><Link href="/mail/admin">Mail configuration</Link><Link href="/admin">Back to Admin</Link></div>
+      <div className="mailRailLinks"><Link href="/mail">Mailboxes & Queue</Link><Link href="/admin">Back to Admin</Link></div>
     </aside>
 
     <section className={`mailMessageColumn ${mobileReader?"mobileHide":""}`}>
