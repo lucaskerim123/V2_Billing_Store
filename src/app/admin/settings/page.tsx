@@ -33,7 +33,7 @@ const sections:Section[]=[
   {title:"Support workflow",description:"Departments, routing, staffing, escalations and automatic ticket messages.",href:"/admin/support/settings",badge:"Support ops",tags:["Departments","Routing","Escalation"]},
   {title:"OrbitFS Alert System",description:"Configure alert delivery, composer defaults, safety limits and available alert types.",href:"/admin/settings/alerts",badge:"Alerts",tags:["Types","Delivery","Targeting"]},
   {title:"Outbound Mail",description:"System email behaviour, sender identities, automation and reusable templates.",href:"/admin/settings/outbound-mail",badge:"Messaging",tags:["Senders","Automation","Templates"]},
-  {title:"Account enforcement",description:"View and manage currently suspended or banned customer accounts, reasons and expiry times.",href:"/admin/settings/enforcement/accounts",badge:"Enforcement",tags:["Suspensions","Bans","Expiry"]}
+  {title:"Account enforcement",description:"View and manage currently suspended or terminated customer accounts, reasons and expiry times.",href:"/admin/settings/enforcement/accounts",badge:"Enforcement",tags:["Suspensions","Terminations","Expiry"]}
  ]}
 ];
 
