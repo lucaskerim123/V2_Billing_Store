@@ -23,6 +23,10 @@ export default function V6ConfirmDialog({
   const descriptionId=useId();
   const panelRef=useRef<HTMLElement|null>(null);
   const cancelRef=useRef<HTMLButtonElement|null>(null);
+  const cancelHandlerRef=useRef(onCancel);
+  const busyRef=useRef(busy);
+  cancelHandlerRef.current=onCancel;
+  busyRef.current=busy;
 
   useEffect(()=>{
     if(!open)return;
@@ -31,9 +35,9 @@ export default function V6ConfirmDialog({
     document.body.style.overflow="hidden";
     const timer=window.setTimeout(()=>cancelRef.current?.focus(),0);
     const onKeyDown=(event:KeyboardEvent)=>{
-      if(event.key==="Escape"&&!busy){
+      if(event.key==="Escape"&&!busyRef.current){
         event.preventDefault();
-        onCancel();
+        cancelHandlerRef.current();
         return;
       }
       if(event.key!=="Tab")return;
@@ -57,7 +61,7 @@ export default function V6ConfirmDialog({
       document.body.style.overflow=previousOverflow;
       previous?.focus?.();
     };
-  },[open,busy,onCancel]);
+  },[open]);
 
   if(!open)return null;
 
