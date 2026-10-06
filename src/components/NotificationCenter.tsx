@@ -1,6 +1,7 @@
 "use client";
 
 import {useCallback,useEffect,useRef,useState} from "react";
+import type {CSSProperties} from "react";
 import {usePathname,useRouter} from "next/navigation"
 import {createPortal} from "react-dom";
 import {createClient} from "@/lib/supabase";
@@ -60,6 +61,7 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
   const [feedLimit,setFeedLimit]=useState(40);
   const [userId,setUserId]=useState("");
   const [realtimeEnabled,setRealtimeEnabled]=useState(true);
+  const [panelStyle,setPanelStyle]=useState<CSSProperties>({});
 
   const load=useCallback(async(limit=40)=>{
     const {data,error:e}=await sb.rpc("notification_feed",{p_surface:surface,p_limit:limit});
@@ -125,6 +127,35 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
   },[sb,surface,userId,configReady,systemEnabled,realtimeEnabled,feedLimit,load]);
 
   useEffect(()=>{
+    if(!open||!mounted)return;
+    const syncPanelToVisualViewport=()=>{
+      const viewport=window.visualViewport;
+      const width=Math.max(0,viewport?.width??window.innerWidth);
+      const height=Math.max(0,viewport?.height??window.innerHeight);
+      const offsetLeft=viewport?.offsetLeft??0;
+      const offsetTop=viewport?.offsetTop??0;
+      const mobile=width<=760;
+      const panelWidth=mobile?Math.max(0,width-12):Math.min(460,Math.max(320,width-20));
+      const panelHeight=mobile?Math.min(620,Math.max(260,Math.floor(height*.76))):Math.min(720,Math.max(260,height-70));
+      const left=mobile?offsetLeft+6:offsetLeft+Math.max(10,width-panelWidth-10);
+      const top=mobile?offsetTop+Math.max(6,height-panelHeight-6):offsetTop+58;
+      setPanelStyle({position:"fixed",top:Math.round(top),left:Math.round(left),right:"auto",bottom:"auto",width:Math.round(panelWidth),height:mobile?Math.round(panelHeight):undefined,maxHeight:Math.round(panelHeight)});
+    };
+    syncPanelToVisualViewport();
+    const viewport=window.visualViewport;
+    viewport?.addEventListener("resize",syncPanelToVisualViewport);
+    viewport?.addEventListener("scroll",syncPanelToVisualViewport);
+    window.addEventListener("resize",syncPanelToVisualViewport);
+    window.addEventListener("scroll",syncPanelToVisualViewport,true);
+    return()=>{
+      viewport?.removeEventListener("resize",syncPanelToVisualViewport);
+      viewport?.removeEventListener("scroll",syncPanelToVisualViewport);
+      window.removeEventListener("resize",syncPanelToVisualViewport);
+      window.removeEventListener("scroll",syncPanelToVisualViewport,true);
+    };
+  },[open,mounted]);
+
+  useEffect(()=>{
     if(!open)return;
     const close=(e:PointerEvent)=>{if(!rootRef.current?.contains(e.target as Node)&&!panelRef.current?.contains(e.target as Node))setOpen(false)};
     document.addEventListener("pointerdown",close);
@@ -159,7 +190,7 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
       <span className={styles.triggerText}>Notifications</span>
       {unread>0&&<span className={styles.badge}>{unread>99?"99+":unread}</span>}
     </button>
-    {open&&mounted&&createPortal(<section ref={panelRef} data-surface={surface} className={styles.panel} aria-label={surface==="admin"?"Admin notifications":"Customer notifications"}>
+    {open&&mounted&&createPortal(<section ref={panelRef} data-surface={surface} className={styles.panel} style={panelStyle} aria-label={surface==="admin"?"Admin notifications":"Customer notifications"}>
       <header className={styles.header}>
         <div><small>{surface==="admin"?"ORBITFS ALERT SYSTEM":"CUSTOMER PORTAL"}</small><h2>Notifications</h2></div>
         <div className={styles.headerActions}>
