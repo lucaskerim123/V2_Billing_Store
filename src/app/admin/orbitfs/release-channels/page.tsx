@@ -2,6 +2,7 @@
 
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import V6ConfirmDialog from "@/components/V6ConfirmDialog";
 
 type Channel={
  id:string;
@@ -33,6 +34,7 @@ export default function ReleaseChannelsAdmin(){
  const [query,setQuery]=useState("");
  const [creating,setCreating]=useState(false);
  const [newChannel,setNewChannel]=useState({channel:"",label:"",description:"",access_mode:"closed"});
+ const [confirmAction,setConfirmAction]=useState<null|{title:string;description:string;confirmLabel:string;danger?:boolean;body:any;success:string}>(null);
  const [busy,setBusy]=useState("");
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
@@ -248,7 +250,7 @@ export default function ReleaseChannelsAdmin(){
            <div><b>{customerName(u)}</b><small>{u.email||u.customer_number||u.id}</small></div>
            <span className="orbitMiniState live">Granted</span>
            <span className="orbitMono">{grant.license_id||"Linked Base licence"}</span>
-           <button className="danger" disabled={!!busy||!grant.license_id} onClick={()=>void mutate({action:"revoke",licenseId:grant.license_id,channel:channel.channel,userId:u.id},"Customer access revoked.")}>Revoke</button>
+           <button className="danger" disabled={!!busy||!grant.license_id} onClick={()=>setConfirmAction({title:"Revoke release-channel access?",description:"Remove "+customerName(u)+" from "+(channel.label||channel.channel)+". Future Base and Update release discovery through this restricted channel will stop for this licence.",confirmLabel:"Revoke access",danger:true,body:{action:"revoke",licenseId:grant.license_id,channel:channel.channel,userId:u.id},success:"Customer access revoked."})}>Revoke</button>
           </div>})}
          </div>
         :<div className="orbitReferenceEmpty compact">No customers are explicitly assigned to this channel.</div>}
@@ -261,7 +263,7 @@ export default function ReleaseChannelsAdmin(){
       </div>
       <div className="orbitReferenceSearch"><input placeholder="Search customer, email or customer number…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
       <div className="orbitReferenceGrantList">
-       {assignableCustomers.slice(0,40).map((u:Customer)=><div className="orbitReferenceGrantRow" key={u.id}><div><b>{customerName(u)}</b><small>{u.email||u.customer_number||u.id}</small></div><button disabled={!!busy} onClick={()=>void mutate({action:"grant",channel:channel.channel,userId:u.id},"Customer access granted.")}>Grant access</button></div>)}
+       {assignableCustomers.slice(0,40).map((u:Customer)=><div className="orbitReferenceGrantRow" key={u.id}><div><b>{customerName(u)}</b><small>{u.email||u.customer_number||u.id}</small></div><button disabled={!!busy} onClick={()=>setConfirmAction({title:"Grant release-channel access?",description:"Grant "+customerName(u)+" access to "+(channel.label||channel.channel)+". The authoritative grant will be written to License Manager and will apply to shared Base + Update discovery.",confirmLabel:"Grant access",body:{action:"grant",channel:channel.channel,userId:u.id},success:"Customer access granted."})}>Grant access</button></div>)}
        {!assignableCustomers.length&&<div className="orbitReferenceEmpty compact">No customers match this search, or every matching customer already has access.</div>}
       </div>
      </section>}
@@ -276,7 +278,7 @@ export default function ReleaseChannelsAdmin(){
          <div><b>{u?customerName(u):r.external_reference||"Customer"}</b><small>{u?.email||r.license_id||""}</small>{details.use_case&&<small className="orbitRequestDetail">{details.use_case}</small>}{details.notes&&<small className="orbitRequestNote">{details.notes}</small>}</div>
          <span>{r.requested_at?new Date(r.requested_at).toLocaleDateString():"Pending"}</span>
          <span>{details.environment||"Not supplied"}</span>
-         <div className="orbitReferenceDecision"><button disabled={!!busy} onClick={()=>void mutate({action:"approve",licenseId:r.license_id,channel:r.channel,customerReference:r.external_reference,userId:r.user_id},"Channel request approved.")}>Approve</button><button className="danger" disabled={!!busy} onClick={()=>void mutate({action:"reject",licenseId:r.license_id,channel:r.channel,customerReference:r.external_reference,userId:r.user_id},"Channel request rejected.")}>Reject</button></div>
+         <div className="orbitReferenceDecision"><button disabled={!!busy} onClick={()=>setConfirmAction({title:"Approve channel request?",description:"Approve this customer request for "+(channel.label||channel.channel)+". License Manager will create the authoritative restricted-channel grant.",confirmLabel:"Approve request",body:{action:"approve",licenseId:r.license_id,channel:r.channel,customerReference:r.external_reference,userId:r.user_id},success:"Channel request approved."})}>Approve</button><button className="danger" disabled={!!busy} onClick={()=>setConfirmAction({title:"Reject channel request?",description:"Reject this customer request for "+(channel.label||channel.channel)+". No release-channel grant will be created.",confirmLabel:"Reject request",danger:true,body:{action:"reject",licenseId:r.license_id,channel:r.channel,customerReference:r.external_reference,userId:r.user_id},success:"Channel request rejected."})}>Reject</button></div>
         </div>
        })}
       </div>:<div className="orbitReferenceEmpty compact">No requests are waiting for review on this channel.</div>}
@@ -284,5 +286,20 @@ export default function ReleaseChannelsAdmin(){
     </>:<div className="orbitReferenceEmpty">Select a release channel to inspect its policy, release usage and customer access.</div>}
    </section>
   </div>
+  <V6ConfirmDialog
+   open={Boolean(confirmAction)}
+   title={confirmAction?.title||""}
+   description={confirmAction?.description||""}
+   confirmLabel={confirmAction?.confirmLabel||"Confirm"}
+   danger={confirmAction?.danger===true}
+   busy={Boolean(busy)}
+   onCancel={()=>setConfirmAction(null)}
+   onConfirm={()=>{
+    if(!confirmAction)return;
+    const pending=confirmAction;
+    setConfirmAction(null);
+    void mutate(pending.body,pending.success);
+   }}
+  />
  </main>
 }
