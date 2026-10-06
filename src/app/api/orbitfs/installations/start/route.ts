@@ -2,6 +2,7 @@ import {httpError,requireOrbitUser,requireSetupSystem} from "@/lib/orbitfs-deplo
 import {licenseDb} from "@/lib/license-api";
 import {masterLicenses} from "@/lib/master-api";
 import {serviceRpc} from "@/lib/paymentServer";
+import {canonicalLicenseStatus,isCanonicalLicenseUsable} from "@/lib/license-status";
 
 export async function POST(req:Request){
   try{
@@ -27,8 +28,8 @@ export async function POST(req:Request){
       (!customerNumber||String(row?.customer_external_id||"").trim()===customerNumber)
     );
     if(!authoritative)throw Object.assign(new Error("License Manager does not recognize this licence for the current account"),{status:403,code:"LICENCE_NOT_AUTHORIZED"});
-    const status=String(authoritative.status||"").toLowerCase();
-    if(["revoked","expired","suspended"].includes(status))throw Object.assign(new Error(`This OrbitFS licence is ${status}`),{status:403,code:"LICENCE_NOT_ACTIVE"});
+    const status=canonicalLicenseStatus(authoritative);
+    if(!isCanonicalLicenseUsable(status))throw Object.assign(new Error(`This OrbitFS licence is ${status}`),{status:403,code:"LICENCE_NOT_ACTIVE"});
 
     const addonKeys=new Set(["orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
     const product=String(authoritative.product||authoritative.product_code||"").trim().toLowerCase();
