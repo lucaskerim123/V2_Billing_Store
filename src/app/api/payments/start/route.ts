@@ -15,7 +15,7 @@ export async function POST(req:NextRequest){
   const auth=req.headers.get('authorization')||'';
   if(!auth.startsWith('Bearer '))return NextResponse.json({error:'Unauthorized'},{status:401});
   const enforcement:any=await rpc(auth,'account_enforcement_status',{});
-  if(enforcement?.state&&enforcement.state!=='active')return NextResponse.json({error:enforcement.state==='banned'?'Account banned. Contact support via ticket or support@orbitfs.cc.':'Account suspended. Purchasing and payments are unavailable. Contact support via ticket or support@orbitfs.cc.',enforcement},{status:403});
+  if(enforcement?.state&&enforcement.state!=='active')return NextResponse.json({error:enforcement.state==='banned'?'Account terminated. Contact support via ticket or support@orbitfs.cc.':'Account suspended. Purchasing and payments are unavailable. Contact support via ticket or support@orbitfs.cc.',enforcement},{status:403});
   const body=await req.json().catch(()=>({}));
   const attemptId=String(body.attempt_id||'');
   if(!attemptId)return NextResponse.json({error:'Missing payment attempt'},{status:400});
