@@ -38,7 +38,7 @@ test('components can be restricted independently while Base remains locked',()=>
   const row={canonical_status:'locked',components:{orbitfs_base:true,orbitfs_mcp:true,orbitfs_apex:false}};
   assert.equal(canonicalComponentStatus(row,'orbitfs_base'),'locked');
   assert.equal(canonicalComponentStatus(row,'orbitfs_mcp'),'locked');
-  assert.equal(canonicalComponentStatus(row,'orbitfs_apex'),'restricted');
+  assert.equal(canonicalComponentStatus(row,'orbitfs_apex'),'not_entitled');
 });
 
 test('only active and locked licences are usable',()=>{
