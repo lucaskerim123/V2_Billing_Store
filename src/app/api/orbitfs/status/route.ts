@@ -28,8 +28,12 @@ export async function GET(req:Request){
   }
   const customer=customerResult.data||null;
   const customerNumber=String(customer?.customer_number||"").trim();
-  const bindingRows=bindings.data||[];
-  const linkedLicenseIds=[...new Set(bindingRows.map((row:any)=>String(row?.license_id||"").trim()).filter(Boolean))];
+  const bindingRows:any[]=Array.isArray(bindings.data)?bindings.data:[];
+  const linkedLicenseIds:string[]=[...new Set<string>(
+    bindingRows
+      .map((row:any)=>String(row?.license_id||"").trim())
+      .filter((licenseId:string)=>licenseId.length>0)
+  )];
   const masterLicenseResult=(customerNumber||linkedLicenseIds.length)?await masterLicenses("billing",customerNumber,linkedLicenseIds).catch(()=>({licenses:[]})):{licenses:[]};
   const channelAccess=["stable"];
   const installationRows=installations.data||[],masterLicensesRows=masterLicenseResult?.licenses||[];
