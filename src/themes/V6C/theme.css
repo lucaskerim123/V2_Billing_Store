@@ -306,14 +306,6 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-conte
 .v6c-route-settings .accountSettingsV2{display:grid;gap:12px}.v6c-route-settings .accountSettingsNav{display:flex;gap:5px;padding:7px;border:1px solid #12364f;border-radius:8px;background:#031522}.v6c-route-settings .accountSettingsNav button{height:30px;padding:0 11px;background:transparent!important;border-color:transparent!important;color:#7594ad!important}.v6c-route-settings .accountSettingsNav button.active{background:linear-gradient(90deg,#6c22dc,#3548eb)!important;border-color:#5537c3!important;color:#fff!important}
 .v6c-route-settings .accountSettingsSections{display:grid;gap:12px}.v6c-route-settings .accountSettingsCard{padding:18px!important}.v6c-route-settings .form{display:grid;gap:10px}.v6c-route-settings .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.v6c-route-settings label{color:#9fb4c6;font-size:8px}.v6c-route-settings .settingsSaveBar{padding:11px 0;display:flex;align-items:center;justify-content:space-between}.v6c-route-settings .walletSettingsActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.v6c-route-settings .walletActionBox{padding:14px;border:1px solid #12364f;border-radius:7px;background:#041827}
 
-/* Licence */
-.v6c-route-license .orbitfsLicenseController{display:grid;gap:12px}.v6c-route-license .portalOverviewGrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(290px,.8fr);gap:12px}.v6c-route-license .panel{padding:18px!important}.v6c-route-license .listrow{border-color:#103149!important}.v6c-route-license code{color:#8fbcda}
-
-/* Release channels */
-.v6c-route-channels .orbitfsChannelsPage{display:grid;gap:12px}.v6c-route-channels .channelIntroPanel{padding:14px!important}.v6c-route-channels .channelIntroCopy{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.v6c-route-channels .channelIntroCopy>div{padding:10px;border:1px solid #12364f;border-radius:6px;background:#041827}.v6c-route-channels .channelIntroCopy b,.v6c-route-channels .channelIntroCopy small{display:block}.v6c-route-channels .channelIntroCopy small{margin-top:4px;font-size:7px}
-.v6c-route-channels .customerChannelGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.v6c-route-channels .customerChannelCard{padding:16px!important}.v6c-route-channels .customerChannelCard.active{border-color:#4b3bb2!important;background:radial-gradient(320px 160px at 0 0,rgba(83,48,203,.16),transparent 68%),linear-gradient(180deg,#071d32,#031523)!important}.v6c-route-channels .customerChannelCard h2{font-size:16px}.v6c-route-channels .customerChannelPolicy{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0}.v6c-route-channels .customerChannelPolicy>div{padding:9px;border:1px solid #12364f;border-radius:6px;background:#041827}.v6c-route-channels .customerChannelPolicy span,.v6c-route-channels .customerChannelPolicy b{display:block}.v6c-route-channels .customerChannelPolicy span{font-size:7px;color:#5c7e99}.v6c-route-channels .customerChannelPolicy b{margin-top:4px;font-size:8px}
-.v6c-route-channels .channelRequestForm{margin-top:12px;padding-top:12px;border-top:1px solid #103149}
-
 /* Update Release: align the existing working flow to the ZIP release-update screen. */
 .v6c-route-updates .orbitV5UpdateHero{min-height:188px!important;padding:26px 320px 26px 24px!important;border:1px solid #123650!important;border-radius:10px!important;background:radial-gradient(440px 190px at 84% 40%,rgba(91,42,255,.2),transparent 68%),linear-gradient(120deg,#06172a,#031522)!important}
 .v6c-route-updates .orbitV5UpdateHero h1{font-size:32px!important;color:#fff!important;letter-spacing:-.04em}.v6c-route-updates .orbitV5UpdateHero p{font-size:9px!important;color:#7492ab!important}.v6c-route-updates .orbitV5UpdateJourney{border:1px solid #12364f!important;border-radius:8px!important;background:#031522!important;padding:12px!important}.v6c-route-updates .orbitV5UpdateSteps{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}.v6c-route-updates .orbitV5UpdateStep{min-height:56px!important;border:1px solid #153a58!important;border-radius:6px!important;background:#041827!important}.v6c-route-updates .orbitV5UpdateStep.active{background:linear-gradient(90deg,#281353,#102243)!important;border-color:#5c3ec4!important}.v6c-route-updates .orbitV5UpdatePanel{padding:18px!important;border-color:#12364f!important;background:linear-gradient(180deg,#061f33,#031523)!important}.v6c-route-updates .orbitV5UpdateFacts{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}.v6c-route-updates .orbitV5UpdateFacts>div{padding:10px!important;border:1px solid #12364f!important;border-radius:6px!important;background:#041827!important}
@@ -714,16 +706,6 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-conte
 .v6c-route-updates .orbitV5UpdateStep{min-height:46px!important;padding:6px!important}
 .v6c-route-updates .orbitV5UpdatePanel{padding:13px!important}
 .v6c-route-updates .orbitV5UpdateFacts{gap:5px!important}
-
-/* Licence + channels */
-.v6c-route-license .portalOverviewGrid{gap:9px!important}
-.v6c-route-license .panel{padding:13px!important}
-.v6c-route-channels .orbitfsChannelsPage{gap:9px!important}
-.v6c-route-channels .channelIntroPanel{padding:11px!important}
-.v6c-route-channels .customerChannelGrid{gap:8px!important}
-.v6c-route-channels .customerChannelCard{padding:12px!important}
-.v6c-route-channels .customerChannelCard h2{font-size:14px!important}
-
 
 /* --------------------------------------------------------------------------
    V6C route audit pass — readable controls, balanced density and complete
@@ -1648,87 +1630,6 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-conte
 .v6c-route-settings .mailSubscriptionTrack:after{
   content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#dceafa;transition:left .15s ease;
 }
-
-/* Licence */
-.v6c-route-license .orbitfsLicenseController>.portalOverviewHero{display:none!important}
-.v6c-route-license .portalOverviewGrid>.panel{
-  min-width:0;
-}
-.v6c-route-license .portalOverviewGrid>.panel>.panel{
-  margin-top:8px!important;
-  padding:11px!important;
-  background:#061a29!important;
-  border-color:#1d425a!important;
-}
-.v6c-route-license .listrow{
-  min-height:36px!important;
-  padding:6px 0!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:space-between!important;
-  gap:12px!important;
-}
-.v6c-route-license .listrow b{font-size:7px!important}
-.v6c-route-license .listrow>span{max-width:70%;text-align:right;font-size:7px!important;color:#84a0b4!important}
-.v6c-route-license .badge{
-  padding:4px 6px;
-  border:1px solid #24536d;
-  border-radius:999px;
-  background:#0a3047;
-  font-size:6px;
-}
-.v6c-route-license .licenseKeyReveal code{
-  display:block;
-  margin-top:7px;
-  padding:9px;
-  border:1px solid #28516a;
-  border-radius:6px;
-  background:#031522;
-  color:#9fe2ff;
-  font-size:8px;
-}
-
-/* Channels */
-.v6c-route-channels .portalReleaseHeader{display:none!important}
-.v6c-route-channels .customerChannelCardHead{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-}
-.v6c-route-channels .customerChannelTitle{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.v6c-route-channels .customerChannelTitle h2{margin:0!important}
-.v6c-route-channels .customerChannelCardHead p{margin:5px 0 0!important}
-.v6c-route-channels .customerChannelActions{
-  min-height:32px;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  flex-wrap:wrap;
-}
-.v6c-route-channels .channelRequestForm{
-  display:grid;
-  gap:9px;
-}
-.v6c-route-channels .channelRequestForm label{display:grid;gap:5px}
-.v6c-route-channels .channelRequestFormHead,.v6c-route-channels .channelRequestSubmit{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-.v6c-route-channels .channelRequestFormHead b,.v6c-route-channels .channelRequestFormHead span{display:block}
-.v6c-route-channels .channelRequestFormHead b{font-size:8px}
-.v6c-route-channels .channelRequestFormHead span{margin-top:3px;color:#68869f;font-size:7px}
-.v6c-route-channels .channelRequestFeedback{
-  margin:8px 0;
-  padding:9px;
-  border:1px solid #694356;
-  border-radius:6px;
-  background:#211827;
-}
-.v6c-route-channels .channelRequestFeedback b,.v6c-route-channels .channelRequestFeedback span{display:block}
-.v6c-route-channels .channelRequestFeedback b{font-size:8px}
-.v6c-route-channels .channelRequestFeedback span{margin-top:3px;color:#987c8c;font-size:7px}
 
 /* Base deployment */
 .v6c-route-base .orbitZipDeployer{max-width:none!important}
