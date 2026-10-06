@@ -38,7 +38,7 @@ export async function POST(req:Request){
     const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
     if(!licenseId)throw new Error("License Master did not return a license ID");
     const key=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||result?.licence?.licenseKey||"");
-    const remoteState=String(result?.status||result?.licence?.status||result?.license?.status||result?.binding?.status||"active");
+    const remoteState=String(result?.storage_status||result?.licence?.storage_status||result?.license?.storage_status||result?.binding?.storage_status||result?.status||result?.licence?.status||result?.license?.status||result?.binding?.status||"active");
     const db=licenseDb();
     const now=new Date().toISOString();
     const {data:existing}=await db.from("license_bindings").select("id").eq("auth_user_id",userId).eq("license_id",licenseId).maybeSingle();
