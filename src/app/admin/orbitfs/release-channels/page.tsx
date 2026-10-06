@@ -31,6 +31,8 @@ export default function ReleaseChannelsAdmin(){
  const [data,setData]=useState<any>({channels:[],access:[],customers:[],requests:[],releaseUsage:{}});
  const [selected,setSelected]=useState("");
  const [query,setQuery]=useState("");
+ const [creating,setCreating]=useState(false);
+ const [newChannel,setNewChannel]=useState({channel:"",label:"",description:"",access_mode:"closed"});
  const [busy,setBusy]=useState("");
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
@@ -76,7 +78,7 @@ export default function ReleaseChannelsAdmin(){
  }
 
  const channels:Channel[]=(data.channels||[]);
- const channel=channels.find(c=>c.channel===selected)||channels[0]||null;
+ const channel=creating?null:(channels.find(c=>c.channel===selected)||channels[0]||null);
  const usage:ChannelUsage=channel?(data.releaseUsage?.[channel.channel]||{}):{};
  const channelAccess=((data.access||[]) as Access[]).filter(a=>String(a.channel||"")===String(channel?.channel||""));
  const channelRequests=channel?(data.requests||[]).filter((r:any)=>String(r.channel||"")===String(channel.channel)):[];
@@ -106,6 +108,27 @@ export default function ReleaseChannelsAdmin(){
  const assignedCustomers=channel?(data.customers||[]).filter((u:Customer)=>Boolean(accessFor(u.id))):[];
  const assignableCustomers=channel?customers.filter(u=>!accessFor(u.id)):[];
  const requestCustomer=(r:any)=>(data.customers||[]).find((u:Customer)=>String(u.id)===String(r.user_id||r.external_reference||""));
+ const normalizedNewChannel=String(newChannel.channel||"").trim().toLowerCase().replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,32);
+ const newChannelValid=/^[a-z0-9][a-z0-9_-]{0,31}$/.test(normalizedNewChannel)&&Boolean(newChannel.label.trim())&&!channels.some(c=>c.channel===normalizedNewChannel);
+ async function createChannel(){
+  if(!newChannelValid)return;
+  const key=normalizedNewChannel;
+  setSelected(key);
+  setCreating(false);
+  await mutate({
+   action:"save",
+   channel:key,
+   label:newChannel.label.trim(),
+   description:newChannel.description.trim(),
+   enabled:true,
+   customer_visible:true,
+   access_mode:newChannel.access_mode==="open"?"open":"closed",
+   access_request_enabled:false,
+   self_join_enabled:false,
+   sort_order:Math.max(100,...channels.map(c=>Number(c.sort_order||0)))+10
+  },"Release channel created in License Manager.");
+  setNewChannel({channel:"",label:"",description:"",access_mode:"closed"});
+ }
 
  return <main className="orbitAdminPage orbitReferencePage orbitReleaseChannelsReference orbitPhaseOne">
   <header className="orbitReferenceHero orbitPhaseHero">
@@ -126,8 +149,9 @@ export default function ReleaseChannelsAdmin(){
   <div className="orbitReferenceSplit orbitChannelWorkspace">
    <aside className="orbitReferenceRail">
     <div className="orbitReferenceRailHead">
-     <div><b>Channels</b><span>{channels.length} defined in License Manager</span></div>
+     <div><b>Channels</b><span>{channels.length} defined</span></div>
      <small>Base and Update release dropdowns use this same list.</small>
+     <button className="secondary" type="button" onClick={()=>{setCreating(true);setSelected("")}}>+ New channel</button>
     </div>
     <div className="orbitReferenceRailList">
      {channels.map(c=>{
@@ -148,7 +172,20 @@ export default function ReleaseChannelsAdmin(){
    </aside>
 
    <section className="orbitReferenceWorkspace">
-    {channel?<>
+    {creating?<section className="orbitChannelCreate">
+     <div className="orbitReferenceWorkspaceHead">
+      <div><div className="orbitReferenceTitleLine"><h2>Create release channel</h2><span className="orbitMiniState">Shared</span></div><p>Create one authoritative channel for both Base and Update releases. Customer access can be assigned after creation.</p></div>
+      <button className="secondary" type="button" onClick={()=>setCreating(false)}>Cancel</button>
+     </div>
+     <div className="orbitChannelPolicyGrid">
+      <label><span>Channel key</span><input value={newChannel.channel} onChange={e=>setNewChannel(v=>({...v,channel:e.target.value}))} placeholder="customer-acme"/><small>Lowercase letters, numbers, underscore or hyphen. Max 32 characters.</small></label>
+      <label><span>Access mode</span><select value={newChannel.access_mode} onChange={e=>setNewChannel(v=>({...v,access_mode:e.target.value}))}><option value="closed">Closed / assigned</option><option value="open">Open</option></select></label>
+      <label className="wide"><span>Label</span><input value={newChannel.label} onChange={e=>setNewChannel(v=>({...v,label:e.target.value}))} placeholder="Customer Acme"/></label>
+      <label className="wide"><span>Description</span><textarea rows={3} value={newChannel.description} onChange={e=>setNewChannel(v=>({...v,description:e.target.value}))} placeholder="What this channel is for and who should receive it."/></label>
+     </div>
+     {normalizedNewChannel&&channels.some(c=>c.channel===normalizedNewChannel)&&<div className="orbitReferenceNotice danger"><span>A channel with key <code>{normalizedNewChannel}</code> already exists.</span></div>}
+     <div className="orbitReferenceActions orbitPolicyActions"><button type="button" disabled={!newChannelValid||!!busy} onClick={()=>void createChannel()}>{busy==="save"?"Creating…":"Create channel"}</button></div>
+    </section>:channel?<>
      <div className="orbitReferenceWorkspaceHead">
       <div>
        <div className="orbitReferenceTitleLine"><h2>{channel.label||channel.channel}</h2><span className={"orbitMiniState "+(channel.enabled?"live":"")}>{channelPolicy(channel)}</span></div>
