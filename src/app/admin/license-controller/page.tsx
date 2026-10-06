@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import {canonicalLicenseStatus,canonicalStatusLabel,isCanonicalLicenseUsable} from "@/lib/license-status";
 
@@ -33,6 +33,20 @@ export default function LicenseControllerPage(){
  const [editingNickname,setEditingNickname]=useState("");
  const [nickname,setNickname]=useState("");
  const [issueComponents,setIssueComponents]=useState({orbitfs_apex:false,orbitfs_mcp:false,orbitfs_studio:false});
+ const [channelData,setChannelData]=useState<any>({channels:[],access:[]});
+ const [confirmState,setConfirmState]=useState<{title:string;message:string}|null>(null);
+ const confirmAction=useRef<null|(()=>void)>(null);
+
+ function askConfirmation(title:string,message:string,action:()=>void){
+  confirmAction.current=action;
+  setConfirmState({title,message});
+ }
+ function closeConfirmation(){confirmAction.current=null;setConfirmState(null)}
+ function acceptConfirmation(){
+  const action=confirmAction.current;
+  closeConfirmation();
+  action?.();
+ }
 
  async function getToken(){
   const {data:{session}}=await sb.auth.getSession();
@@ -53,10 +67,16 @@ export default function LicenseControllerPage(){
   setLoading(true);setError("");
   try{
    const t=await getToken();
-   const r=await fetch("/api/admin/license-link?customerId="+encodeURIComponent(id),{headers:{Authorization:"Bearer "+t},cache:"no-store"});
+   const h={Authorization:"Bearer "+t};
+   const [r,cr]=await Promise.all([
+    fetch("/api/admin/license-link?customerId="+encodeURIComponent(id),{headers:h,cache:"no-store"}),
+    fetch("/api/admin/orbitfs/release-channels",{headers:h,cache:"no-store"})
+   ]);
    const j=await r.json().catch(()=>({}));
+   const cj=await cr.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not load customer licences.");
    setData(j);
+   setChannelData(cr.ok?cj:{channels:[],access:[]});
   }catch(e:any){
    setError(e?.message||"Could not load customer licences.");
    setData(null);
@@ -107,9 +127,9 @@ export default function LicenseControllerPage(){
   finally{setBusy("")}
  }
 
- async function issueAdditional(){
+ async function issueAdditional(confirmed=false){
   if(!customerId)return;
-  if(!confirm("Issue an additional independent OrbitFS Base licence for this customer? Existing licences will remain active."))return;
+  if(!confirmed){askConfirmation("Issue additional licence","Create another independent OrbitFS Base licence for this customer. Existing licences remain active.",()=>void issueAdditional(true));return;}
   setBusy("issue-additional");setError("");setMessage("");setNewKey("");
   try{
    const t=await getToken();
@@ -138,10 +158,15 @@ export default function LicenseControllerPage(){
   finally{setBusy("")}
  }
 
- async function control(licenseId:string,action:string,installationId=""){
+ async function control(licenseId:string,action:string,installationId="",confirmed=false){
   const needsInstallation=["lock-installation","unlock-installation","reactivate-installation","terminate-installation"].includes(action);
   if(needsInstallation&&!installationId){setError("A specific installation is required for this control.");return}
-  if(!confirm(action==="rotate"?"Rotate this licence key? The replacement key will be shown once.":"Apply "+action+" to this licence?"))return;
+  if(!confirmed){
+   const title=action==="rotate"?"Rotate licence key":action==="terminate"?"Terminate licence":"Confirm licence action";
+   const message=action==="rotate"?"The current key will be replaced and the new key will be shown once.":action==="terminate"?"This terminates the licence. Recovery requires an explicit reactivation flow.":"Apply "+action.replaceAll("-"," ")+" to this licence?";
+   askConfirmation(title,message,()=>void control(licenseId,action,installationId,true));
+   return;
+  }
   setBusy(action+":"+licenseId+":"+installationId);setError("");setMessage("");
   try{
    const t=await getToken();
@@ -161,9 +186,9 @@ export default function LicenseControllerPage(){
   finally{setBusy("")}
  }
 
- async function controlComponent(licenseId:string,component:string,enabled:boolean){
+ async function controlComponent(licenseId:string,component:string,enabled:boolean,confirmed=false){
   const label=productName(component);
-  if(!confirm((enabled?"Activate ":"Deactivate ")+label+"? The Base installation binding will stay locked to its current installation."))return;
+  if(!confirmed){askConfirmation((enabled?"Activate ":"Deactivate ")+label,(enabled?"Enable ":"Disable ")+label+" on this licence. The Base installation binding remains locked to its current installation.",()=>void controlComponent(licenseId,component,enabled,true));return;}
   setBusy("component:"+component+":"+licenseId);setError("");setMessage("");
   try{
    const t=await getToken();
@@ -181,8 +206,16 @@ export default function LicenseControllerPage(){
  }
 
  const bindings=data?.bindings||[];
+ const selectedUserId=String(data?.customer?.auth_user_id||data?.customer?.user_id||selectedCustomer?.auth_user_id||selectedCustomer?.user_id||"");
+ const channelDefinitions=(channelData?.channels||[]) as Array<{channel:string;label?:string;enabled?:boolean;customer_visible?:boolean;access_mode?:string}>;
+ const customerChannelAccess=(channelData?.access||[]).filter((x:any)=>String(x.user_id||"")===selectedUserId);
+ const channelsForLicense=(licenseId:string)=>{
+  const explicit=customerChannelAccess.filter((x:any)=>String(x.license_id||"")===String(licenseId||"")).map((x:any)=>String(x.channel||"")).filter(Boolean);
+  const automatic=channelDefinitions.filter((x:any)=>x.enabled!==false&&x.customer_visible!==false&&(x.channel==="stable"||x.access_mode==="open")).map((x:any)=>String(x.channel));
+  return [...new Set([...automatic,...explicit])];
+ };
 
- return <main className="lmPage licenseControllerPage orbitReferencePage orbitLicenceReference">
+ return <main className="lmPage licenseControllerPage orbitReferencePage orbitLicenceReference orbitPhaseOne">
   <header className="orbitReferenceHero">
    <div>
     <p className="eyebrow">MY ORBITFS · CUSTOMER LICENCES</p>
@@ -229,6 +262,19 @@ export default function LicenseControllerPage(){
       </div>
     </div>
 
+    <section className="orbitReferenceSection orbitLicenceChannelSummary">
+     <div className="orbitReferenceSectionHead"><div><b>Release channel access</b><small>Shared Base + Update eligibility from the authoritative License Manager channel system.</small></div><span>{customerChannelAccess.length} explicit grants</span></div>
+     <div className="orbitLicenceChannelGrid">
+      {channelDefinitions.filter((ch:any)=>ch.enabled!==false&&ch.customer_visible!==false).map((ch:any)=>{
+       const automatic=ch.channel==="stable"||ch.access_mode==="open";
+       const explicit=customerChannelAccess.some((grant:any)=>String(grant.channel||"")===String(ch.channel));
+       const available=automatic||explicit;
+       return <div key={ch.channel} className={available?"available":""}><span><b>{ch.label||ch.channel}</b><small>{ch.channel} · {automatic?"automatic":explicit?"explicit grant":"restricted"}</small></span><span className={"orbitMiniState "+(available?"live":"")}>{available?"Available":"No access"}</span></div>
+      })}
+      {!channelDefinitions.length&&<div className="orbitReferenceEmpty compact">Channel authority is unavailable for this customer view.</div>}
+     </div>
+    </section>
+
     {newKey&&<section className="orbitReferenceKeyBox" role="status">
      <div><b>New licence key</b><span>Shown once. Save it before leaving this page.</span></div>
      <code>{newKey}</code>
@@ -260,6 +306,7 @@ export default function LicenseControllerPage(){
          <div><span>Licence key</span><b>{b.license_key_last4?"••••-"+b.license_key_last4:"Protected"}</b></div>
          <div><span>Expiry</span><b>{b.authoritative_expires_at?new Date(b.authoritative_expires_at).toLocaleDateString():"No expiry"}</b></div>
          <div><span>Components</span><b>{components}</b></div>
+         <div><span>Release channels</span><b>{channelsForLicense(String(b.license_id)).join(" · ")||"No channel access"}</b></div>
         </div>
         <div className="orbitReferenceLicenceActions">
          {(status==="active"||status==="locked")&&<button disabled={!!busy} onClick={()=>void control(String(b.license_id),"rotate")}>{busy.startsWith("rotate:"+b.license_id)?"Rotating…":"Rotate key"}</button>}
@@ -306,5 +353,13 @@ export default function LicenseControllerPage(){
    </>:<div className="orbitReferenceEmpty">Select a customer to review linked licences.</div>}
    </section>
   </div>
+  {confirmState&&<div className="orbitConfirmBackdrop" role="presentation" onMouseDown={closeConfirmation}>
+   <section className="orbitConfirmDialog" role="dialog" aria-modal="true" aria-labelledby="orbit-confirm-title" onMouseDown={event=>event.stopPropagation()}>
+    <p className="eyebrow">CONFIRM ACTION</p>
+    <h2 id="orbit-confirm-title">{confirmState.title}</h2>
+    <p>{confirmState.message}</p>
+    <div className="orbitReferenceDecision"><button className="secondary" type="button" onClick={closeConfirmation}>Cancel</button><button type="button" onClick={acceptConfirmation}>Confirm</button></div>
+   </section>
+  </div>}
  </main>;
 }
