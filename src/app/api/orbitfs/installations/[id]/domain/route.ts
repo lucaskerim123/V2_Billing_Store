@@ -200,6 +200,38 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       const entry=domains.find((item:any)=>normalizeHost(item?.name)===domain)||null;
       return Response.json({dns:await customDomainDns(install,domain,entry)},{headers:{"cache-control":"no-store"}});
     }
+    if(action==="verify"){
+      const domain=normalizeCustomDomain(body.domain);
+      const before=await projectDomains(install);
+      const attached=before.find((item:any)=>normalizeHost(item?.name)===domain)||null;
+      if(!attached)throw Object.assign(new Error("Save the custom domain to this Base project before verifying it."),{status:409,code:"BASE_CUSTOM_DOMAIN_NOT_ATTACHED"});
+      await masterAuthorizeInstallationPanelDomain({installation_id:install.installation_id,license_id:licenseId});
+      let verification:any=null;
+      try{
+        verification=await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(String(install.vercel_project_id))}/domains/${encodeURIComponent(domain)}/verify`,{method:"POST"});
+      }catch(error:any){
+        const dns=await customDomainDns(install,domain,attached).catch(()=>null);
+        const message=dns?.records?.length
+          ?"Vercel could not verify the custom domain yet. Apply the DNS records shown below, wait for DNS propagation, then verify again."
+          :"Vercel could not verify the custom domain yet. Check the domain in Vercel and try again after the required DNS records propagate.";
+        throw Object.assign(new Error(message),{status:409,code:"BASE_CUSTOM_DOMAIN_VERIFY_PENDING",cause:error});
+      }
+      const domains=await projectDomains(install);
+      const refreshed=domains.find((item:any)=>normalizeHost(item?.name)===domain)||verification||attached;
+      const dns=await customDomainDns(install,domain,refreshed).catch(()=>null);
+      const verified=Boolean((verification?.verified===true||refreshed?.verified===true)&&refreshed?.misconfigured!==true&&dns?.misconfigured!==true);
+      const generated=generatedDomain(install);
+      const recorded=await masterRecordInstallationPanelDomain({
+        installation_id:install.installation_id,
+        license_id:licenseId,
+        panel_domain:{mode:"custom",domain_name:domain,verified,effective_url:verified?`https://${domain}`:(generated?`https://${generated}`:null)}
+      });
+      const state=domainState(install,recorded,domains);
+      install=await cacheAuthorityState(install,state);
+      install=await syncDeployment(install);
+      await event(install,"panel.domain_verification",verified?"ok":"warning",verified?`Base Panel custom domain ${domain} verified with Vercel.`:`Vercel ownership verification completed for ${domain}, but DNS routing is not fully configured yet.`,{authority:"license-manager",mode:"custom",domainName:domain,verified,dnsConfigured:dns?.configured===true,dnsRecordCount:Number(dns?.records?.length||0)});
+      return Response.json({installation:install,domain:{...state,effectiveUrl:install.production_url||state.effectiveUrl},dns,verification,authority:"orbitfs-license-master-v2"},{headers:{"cache-control":"no-store"}});
+    }
     if(action!=="save")return Response.json({error:"Unsupported Base domain action."},{status:400});
     const mode=String(body.mode||"generated").trim().toLowerCase();
     if(!["generated","vercel","custom"].includes(mode))return Response.json({error:"Unsupported Base domain mode."},{status:400});
