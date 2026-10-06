@@ -61,15 +61,15 @@ export function canonicalAccountStatus(row:any):'active'|'suspended'|'terminated
   return 'active';
 }
 
-export function canonicalComponentStatus(row:any,component:string):CanonicalLicenseStatus{
+export function canonicalComponentStatus(row:any,component:string):CanonicalLicenseStatus|'not_entitled'{
   const key=String(component||'').trim().toLowerCase();
-  const explicit=row?.component_states?.[key]?.status||row?.authoritative_component_states?.[key]?.status;
-  if(CANONICAL.has(asStatus(explicit) as CanonicalLicenseStatus))return asStatus(explicit) as CanonicalLicenseStatus;
-  const licence=canonicalLicenseStatus(row);
-  if(['pending','restricted','suspended','terminated','expired'].includes(licence))return licence;
+  const explicit=asStatus(row?.component_states?.[key]?.status||row?.authoritative_component_states?.[key]?.status);
+  if(explicit==='not_entitled')return 'not_entitled';
+  if(CANONICAL.has(explicit as CanonicalLicenseStatus))return explicit as CanonicalLicenseStatus;
   const components=row?.authoritative_components||row?.components||row?.metadata?.license_policy?.components||{};
   const entitled=key==='orbitfs_base'||components?.[key]===true||components?.[key]?.allowed===true;
-  return entitled?licence:'restricted';
+  if(!entitled)return 'not_entitled';
+  return canonicalLicenseStatus(row);
 }
 
 export function isCanonicalLicenseUsable(row:any){
