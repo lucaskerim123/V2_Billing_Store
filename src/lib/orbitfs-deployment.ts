@@ -883,6 +883,11 @@ async function selectedBasePanelUrlForDeployment(install:any){
  if(preference.mode==="custom"&&preference.domainName&&preference.verified)return `https://${preference.domainName}`;
  return generated&&generated!==".vercel.app"?`https://${generated}`:null;
 }
+export async function refreshBasePanelUrlEnv(install:any){
+ const panelUrl=await selectedBasePanelUrlForDeployment(install);
+ if(panelUrl&&install?.vercel_project_id)await upsertVercelEnv(install,"ORBITFS_PANEL_URL",panelUrl);
+ return panelUrl;
+}
 function normalizeBaseVercelAlias(value:any){
  const raw=String(value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
  const domain=raw.endsWith(".vercel.app")?raw:`${raw}.vercel.app`;
