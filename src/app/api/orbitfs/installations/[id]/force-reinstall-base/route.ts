@@ -5,6 +5,7 @@ import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {licenseDb} from "@/lib/license-api";
 import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 import {expireStaleBaseOperations} from "@/lib/orbitfs-base-operations";
+import {isCanonicalLicenseUsable} from "@/lib/license-status";
 
 const ACTIVE_STATES=["requested","authorising","validated","deploying","migrating","verifying","promoting"];
 
@@ -62,12 +63,12 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     const allowedChannels=await customerReleaseChannels(String(user.id),install.license_binding_id||null);
     if(!allowedChannels.includes(channel))throw Object.assign(new Error(`Release channel "${channel}" is not available for this installation's licence`),{status:403,code:"RELEASE_CHANNEL_ACCESS_DENIED"});
 
-    const bindingResult=await licenseDb().from("license_bindings").select("license_id,desired_state,remote_state,license_key_last4").eq("id",String(install.license_binding_id||"")).eq("auth_user_id",String(user.id)).is("archived_at",null).maybeSingle();
+    const bindingResult=await licenseDb().from("license_bindings").select("license_id,desired_state,remote_state,suspension_reason,license_key_last4").eq("id",String(install.license_binding_id||"")).eq("auth_user_id",String(user.id)).is("archived_at",null).maybeSingle();
     if(bindingResult.error)throw bindingResult.error;
     if(!bindingResult.data?.license_id)throw Object.assign(new Error("This installation is not linked to an authoritative Billing licence"),{status:409,code:"LICENSE_BINDING_REQUIRED"});
     const authorityLicenseId=String(bindingResult.data.license_id);
-    if(["revoked","expired"].includes(String(bindingResult.data.desired_state||bindingResult.data.remote_state||"").toLowerCase())){
-      throw Object.assign(new Error("The installation's Billing licence is not active"),{status:403,code:"LICENSE_BINDING_INACTIVE"});
+    if(!isCanonicalLicenseUsable(bindingResult.data)){
+      throw Object.assign(new Error("The installation's Billing licence is not Active or Locked"),{status:403,code:"LICENSE_BINDING_INACTIVE"});
     }
 
     const rows=await masterReleases("orbitfs_base",channel,"base","deployer",true);
