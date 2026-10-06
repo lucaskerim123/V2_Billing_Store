@@ -898,9 +898,11 @@ export async function resolveProductionUrl(install:any,deployment?:any):Promise<
  if(preference.mode==="custom"&&preferred){
   const selected=candidates.find((d:any)=>normalize(d?.name)===preferred);
   if(selected)return `https://${preferred}`;
+  return projectDomain!==".vercel.app"?`https://${projectDomain}`:null;
  }
  if(preference.mode==="vercel"&&preferred&&preferred.endsWith(".vercel.app")){
   if(aliases.includes(preferred)||candidates.some((d:any)=>normalize(d?.name)===preferred))return `https://${preferred}`;
+  return projectDomain!==".vercel.app"?`https://${projectDomain}`:null;
  }
  const custom=candidates.find((d:any)=>!d.redirect&&!normalize(d.name).endsWith(".vercel.app"))
   ||candidates.find((d:any)=>!normalize(d.name).endsWith(".vercel.app"));
