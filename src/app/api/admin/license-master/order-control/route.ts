@@ -55,7 +55,7 @@ export async function POST(req:Request){
           if(!newId)throw new Error("License Master did not return a license id");
           const key=String(remote?.license_key||remote?.licenseKey||remote?.key||remote?.license?.license_key||remote?.licence?.license_key||"");
           const now=new Date().toISOString();
-          const patch={license_id:newId,remote_state:String(remote?.status||remote?.license?.status||"active"),desired_state:"active",archived_at:null,archive_reason:null,license_key_last4:key?key.slice(-4):binding.license_key_last4||null,last_synced_at:now,last_sync_error:null,updated_at:now};
+          const patch={license_id:newId,remote_state:String(remote?.storage_status||remote?.license?.storage_status||remote?.status||remote?.license?.status||"active"),desired_state:"active",archived_at:null,archive_reason:null,license_key_last4:key?key.slice(-4):binding.license_key_last4||null,last_synced_at:now,last_sync_error:null,updated_at:now};
           const {error}=await licenseDb().from("license_bindings").update(patch).eq("id",binding.id);if(error)throw error;
           if(binding.fulfillment_id){const {error:fe}=await licenseDb().from("license_fulfillments").update({license_id:newId,state:"fulfilled",last_error:null,fulfilled_at:now,updated_at:now,metadata:{...(binding.metadata||{}),master_license_id:newId,reprovisioned:true}}).eq("id",binding.fulfillment_id);if(fe)throw fe}
           const entitlementResult=await licenseDb().from("download_entitlements").select("id,metadata").eq("auth_user_id",order.auth_user_id).eq("order_item_id",binding.order_item_id||"").maybeSingle();
