@@ -15,10 +15,12 @@ export async function masterRequest(path:string,init:RequestInit={},role:MasterR
 export async function masterProducts(role:MasterRole="billing"){
   return masterRequest("/api/v1/products",{method:"GET"},role);
 }
-export async function masterLicenses(role:MasterRole="billing",customerExternalId?:string){
+export async function masterLicenses(role:MasterRole="billing",customerExternalId?:string,licenseIds:string[]=[]){
   const qs=new URLSearchParams();
   const customer=String(customerExternalId||"").trim();
+  const ids=[...new Set((licenseIds||[]).map(value=>String(value||"").trim()).filter(Boolean))].slice(0,100);
   if(customer)qs.set("customer_external_id",customer);
+  if(ids.length)qs.set("license_ids",ids.join(","));
   const query=qs.toString();
   return masterRequest("/api/v1/license"+(query?"?"+query:""),{method:"GET",cache:"no-store"},role);
 }
