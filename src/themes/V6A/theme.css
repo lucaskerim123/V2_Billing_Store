@@ -3059,3 +3059,86 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProduct
   }
 }
 /* END ORBITFS PRODUCT CONNECTIONS V6A WORKSPACE 2026-10-07 */
+
+/* SHARED V6 ADMIN CONFIRMATION 2026-10-07 */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmBackdrop{
+  position:fixed!important;
+  inset:0!important;
+  z-index:120000!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:18px!important;
+  background:rgba(1,7,13,.78)!important;
+  backdrop-filter:blur(4px)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmDialog{
+  width:min(430px,100%)!important;
+  padding:18px!important;
+  border:1px solid #2b536d!important;
+  border-radius:9px!important;
+  background:linear-gradient(180deg,#071d2e,#041522)!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.48)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmKicker{
+  display:block!important;
+  color:#63caee!important;
+  font-size:6.5px!important;
+  font-weight:850!important;
+  letter-spacing:.11em!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmDialog h2{
+  margin:5px 0 7px!important;
+  color:#f0f6fb!important;
+  font-size:16px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmDialog>p{
+  margin:0!important;
+  color:#86a4b8!important;
+  font-size:9px!important;
+  line-height:1.55!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmBody{margin-top:12px!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmActions{
+  display:flex!important;
+  justify-content:flex-end!important;
+  gap:6px!important;
+  margin-top:14px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmActions button{
+  min-height:34px!important;
+  padding:0 11px!important;
+  border-radius:6px!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmActions button.danger{
+  border-color:#744052!important;
+  background:#351824!important;
+  color:#ff9fb5!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmReason{
+  display:grid!important;
+  gap:5px!important;
+  color:#9db2c3!important;
+  font-size:7.5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmReason textarea{
+  width:100%!important;
+  min-height:88px!important;
+  box-sizing:border-box!important;
+  padding:8px!important;
+  border:1px solid #2c4f68!important;
+  border-radius:6px!important;
+  background:#031624!important;
+  color:#edf6ff!important;
+  outline:none!important;
+  resize:vertical!important;
+  font-size:8.5px!important;
+}
+@media(max-width:460px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmActions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .v6ConfirmActions button{width:100%!important}
+}
+/* END SHARED V6 ADMIN CONFIRMATION 2026-10-07 */
