@@ -272,3 +272,23 @@ V6A exposes a compact circular Admin account menu with identity, role, customer-
 - No duplicate dropdown + tile selectors for the same choice.
 - No browser-native alert/confirm/prompt for product interactions.
 - No Base/Update workflow restructuring without explicit approval.
+
+
+## V6 Mail System
+
+OrbitFS Mail is part of the V6 operational product family. Its current functionality is the design authority for scope; the visual redesign must wrap the existing mail system before new mail capabilities are added.
+
+Current Mail surfaces:
+- `/mail` — authorised mailbox launcher plus transactional Mail queue.
+- `/mail/mailbox/[account]` — Inbox, Outbox, Sent, Spam and Trash; search, message threads, compose, reply/reply-all, forward, read state, move, spam/block, restore and delete.
+- `/mail/admin` — runtime Mail settings, customer email subscription categories/event routing, mailbox management, spam protection, lifecycle templates and delivery history.
+
+Visual direction:
+- use the V6 dark navy shell with restrained violet/indigo selection and primary actions;
+- preserve cyan for focus/information and green for healthy/success state;
+- keep panels compact with 7–10px radii and one border rather than stacked decorative cards;
+- desktop mailbox workspaces use three operational regions: folder rail, message list and reader;
+- configuration screens use compact disclosure sections and live counts, not invented KPI data;
+- mobile must retain real folder navigation and message-reader back navigation.
+
+Do not add visual tabs, metrics, folders, campaigns, scheduling or provider controls unless the underlying system supports them. New capabilities should be added after this current-system pass and then inherit this Mail visual system.
