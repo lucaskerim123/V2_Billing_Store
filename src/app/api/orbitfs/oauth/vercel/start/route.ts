@@ -1,8 +1,8 @@
 import {createHash,createHmac} from "node:crypto";
 import {createOAuthState,httpError,requireOrbitUser,requireSetupSystem} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
+import {orbitfsStoreUrl} from "@/lib/site-origin";
 
-const STORE_ORIGIN=(process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.SITE_URL||"https://orbitfsstore.vercel.app").replace(/\/+$/,"");
 function pkceVerifier(state:string,secret:string){return createHmac("sha256",secret).update(`orbitfs-vercel:${state}`).digest("base64url")}
 
 export async function POST(req:Request){
@@ -15,7 +15,7 @@ export async function POST(req:Request){
     if(!secret)throw Object.assign(new Error("OrbitFS Vercel App client secret is not configured"),{status:503});
     const body=await req.json().catch(()=>({}));
     const state=await createOAuthState(user.id,"vercel",body.installationId||null,"/portal/orbitfs");
-    const redirect=`${STORE_ORIGIN}/api/orbitfs/oauth/vercel/callback`;
+    const redirect=await orbitfsStoreUrl("/api/orbitfs/oauth/vercel/callback",req.url);
     const verifier=pkceVerifier(state,secret);
     const challenge=createHash("sha256").update(verifier).digest("base64url");
     const u=new URL("https://vercel.com/oauth/authorize");
