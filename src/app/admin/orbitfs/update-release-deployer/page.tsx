@@ -39,6 +39,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
    const j=await r.json().catch(()=>({}));
    const cj=await cr.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not load Update releases");
+   if(!cr.ok)throw Error(cj.error||"Could not load shared release channels from License Manager");
    const rows=(Array.isArray(j.releases)?j.releases:[]).filter((x:any)=>String(x.releaseType||x.release_type||"").toLowerCase()==="update");
    setReleases(rows);
    setChannels((Array.isArray(cj.channels)?cj.channels:[]).filter((x:any)=>x.enabled!==false&&x.customer_visible!==false));
