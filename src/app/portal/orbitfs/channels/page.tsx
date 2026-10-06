@@ -1,169 +1,246 @@
 "use client";
 
-import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
+import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import V6ConfirmDialog from "@/components/V6ConfirmDialog";
 
 type RequestDetails={use_case:string;environment:string;notes:string};
 const emptyRequest:RequestDetails={use_case:"",environment:"test",notes:""};
 
+function policyLabel(channel:any){
+  if(channel?.channel==="stable")return "Included";
+  if(channel?.access_mode==="open")return "Open";
+  if(channel?.self_join_enabled===true)return "Self-join";
+  if(channel?.access_request_enabled===true)return "Approval";
+  return "Invite only";
+}
+
 export default function CustomerReleaseChannelsPage(){
  const sb=useMemo(()=>createClient(),[]);
  const [data,setData]=useState<any>({channels:[],requests:[],access:[]});
+ const [orbitStatus,setOrbitStatus]=useState<any>(null);
+ const [selected,setSelected]=useState("");
  const [busy,setBusy]=useState("");
  const [message,setMessage]=useState("");
- const [formChannel,setFormChannel]=useState("");
+ const [error,setError]=useState("");
+ const [requestOpen,setRequestOpen]=useState(false);
  const [form,setForm]=useState<RequestDetails>(emptyRequest);
  const [loading,setLoading]=useState(true);
+ const [leaveChannel,setLeaveChannel]=useState("");
 
- async function headers():Promise<Record<string,string>>{
+ async function authHeaders():Promise<Record<string,string>>{
   const {data:{session}}=await sb.auth.getSession();
-  return session?.access_token?{Authorization:"Bearer "+session.access_token}:{};
+  if(!session?.access_token)throw new Error("Your session has expired. Sign in again.");
+  return {Authorization:"Bearer "+session.access_token};
  }
 
- async function load(){
+ async function load(options?:{preserveFeedback?:boolean}){
   setLoading(true);
+  if(!options?.preserveFeedback){setMessage("");setError("")}
   try{
-   const r=await fetch("/api/orbitfs/release-channels",{headers:await headers(),cache:"no-store"});
-   const j=await r.json().catch(()=>({}));
-   if(!r.ok)throw Error(j.error||"Could not load release channels.");
-   setData(j);
-  }catch(e:any){setMessage(e?.message||"Could not load release channels.")}
+   const headers=await authHeaders();
+   const [channelResult,statusResult]=await Promise.all([
+    fetch("/api/orbitfs/release-channels",{headers,cache:"no-store"}),
+    fetch("/api/orbitfs/status?view=bootstrap",{headers,cache:"no-store"}).catch(()=>null)
+   ]);
+   const channels=await channelResult.json().catch(()=>({}));
+   if(!channelResult.ok)throw Error(channels.error||"Could not load release channels.");
+   setData(channels);
+   const status=statusResult?await statusResult.json().catch(()=>({})):null;
+   setOrbitStatus(statusResult?.ok?status:null);
+   const rows=Array.isArray(channels.channels)?channels.channels:[];
+   setSelected(current=>rows.some((row:any)=>String(row.channel)===current)?current:String(rows.find((row:any)=>row.channel==="stable")?.channel||rows[0]?.channel||""));
+  }catch(e:any){setError(e?.message||"Could not load release channels.")}
   finally{setLoading(false)}
  }
 
  useEffect(()=>{void load()},[]);
 
- const explicitAccess=new Set((data.access||[]).map((x:any)=>String(x.channel||"").toLowerCase()));
+ const channels=Array.isArray(data.channels)?data.channels:[];
+ const requests=Array.isArray(data.requests)?data.requests:[];
+ const access=Array.isArray(data.access)?data.access:[];
+ const explicitAccess=new Set(access.map((row:any)=>String(row.channel||"").toLowerCase()));
+ const selectedChannel=channels.find((row:any)=>String(row.channel)===selected)||channels[0]||null;
+ const baseInstall=(Array.isArray(orbitStatus?.installations)?orbitStatus.installations:[]).find((row:any)=>String(row.component_key||"")==="orbitfs_base")||(Array.isArray(orbitStatus?.installations)?orbitStatus.installations[0]:null);
+ const currentChannel=String(baseInstall?.release_channel||"stable");
+ const hasActiveBase=Boolean((Array.isArray(orbitStatus?.bindings)?orbitStatus.bindings:[]).some((row:any)=>String(row.license_product_key||"")==="orbitfs_base"&&["active","locked"].includes(String(row.authoritative_status||row.status||"").toLowerCase())));
+ const pendingCount=requests.filter((row:any)=>String(row.status||"").toLowerCase()==="pending").length;
+ const availableCount=channels.filter((row:any)=>row.channel==="stable"||row.access_mode==="open"||explicitAccess.has(String(row.channel||"").toLowerCase())).length;
 
  function latestRequest(channel:string){
-  return (data.requests||[])
-   .filter((x:any)=>String(x.channel||"")===channel)
+  return requests
+   .filter((row:any)=>String(row.channel||"")===channel)
    .sort((a:any,b:any)=>String(b.requested_at||"").localeCompare(String(a.requested_at||"")))[0]||null;
  }
 
  async function act(action:"join"|"leave"|"request",channel:string){
-  setBusy(action+":"+channel);setMessage("");
+  setBusy(action+":"+channel);setMessage("");setError("");
   try{
    const body:any={action,channel};
    if(action==="request")body.requestDetails=form;
-   const r=await fetch("/api/orbitfs/release-channels",{
+   const response=await fetch("/api/orbitfs/release-channels",{
     method:"POST",
-    headers:{...(await headers()),"content-type":"application/json"},
-    body:JSON.stringify(body),
+    headers:{...(await authHeaders()),"content-type":"application/json"},
+    body:JSON.stringify(body)
    });
-   const j=await r.json().catch(()=>({}));
-   if(!r.ok)throw Error(j.error||"Channel access action failed.");
-   setMessage(action==="request"?"Access request submitted for review.":action==="join"?"Channel joined.":"Channel access removed.");
-   setFormChannel("");setForm(emptyRequest);
-   await load();
-  }catch(e:any){setMessage(e?.message||"Channel access action failed.")}
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(result.error||"Channel access action failed.");
+   setMessage(action==="request"?"Access request submitted for review.":action==="join"?"Release-channel access added.":"Release-channel access removed.");
+   setRequestOpen(false);setForm(emptyRequest);setLeaveChannel("");
+   await load({preserveFeedback:true});
+  }catch(e:any){setError(e?.message||"Channel access action failed.")}
   finally{setBusy("")}
  }
 
- if(loading)return <main className="portalReleasePage orbitfsChannelsPage"><section className="portalCompactPanel"><h2>Loading release channels…</h2><p className="muted">Checking your channel access with License Manager.</p></section></main>;
+ if(loading&&!channels.length){
+  return <main className="orbitCustomerChannels"><section className="orbitCustomerLoading"><span className="orbitCustomerSpinner" aria-hidden="true"/><div><b>Loading Release Channels</b><p>Checking your shared Base + Update access with License Manager.</p></div></section></main>;
+ }
 
- return <main className="portalReleasePage orbitfsChannelsPage">
-  <header className="portalReleaseHeader">
+ if(error&&!channels.length){
+  return <main className="orbitCustomerChannels"><section className="orbitCustomerEmpty"><b>Release Channels unavailable</b><p>{error}</p><button type="button" onClick={()=>void load()}>Retry</button></section></main>;
+ }
+
+ const channel=selectedChannel;
+ const channelKey=String(channel?.channel||"");
+ const request=channel?latestRequest(channelKey):null;
+ const hasExplicit=explicitAccess.has(channelKey.toLowerCase());
+ const isStable=channelKey==="stable";
+ const isOpen=channel?.access_mode==="open";
+ const canSelfJoin=!isOpen&&!isStable&&channel?.self_join_enabled===true;
+ const canRequest=!isOpen&&!isStable&&!channel?.self_join_enabled&&channel?.access_request_enabled===true;
+ const requestStatus=String(request?.status||"").toLowerCase();
+ const pending=!hasExplicit&&requestStatus==="pending";
+ const approved=!hasExplicit&&requestStatus==="approved";
+ const rejected=!hasExplicit&&requestStatus==="rejected";
+ const hasAccess=isStable||isOpen||hasExplicit;
+ const isCurrent=channelKey===currentChannel;
+ const lifecycleState=isStable?"Included":isOpen?"Available":hasExplicit?"Granted":pending?"Pending":approved?"Approved · syncing":rejected?"Denied":"Restricted";
+ const requestDetails=request?.request_details&&typeof request.request_details==="object"?request.request_details:{};
+
+ return <main className="orbitCustomerChannels">
+  <section className="orbitCustomerCommandbar">
    <div>
-    <p className="eyebrow">MY ORBITFS · RELEASE CHANNELS</p>
-    <h1>Release Channels</h1>
-    <p className="muted">Choose how early you want access to OrbitFS releases. Stable is included, open channels are available immediately, and restricted channels can require approval.</p>
+    <span>ONE SHARED RELEASE CHANNEL SYSTEM</span>
+    <b>Base and Update use the same channel access</b>
+    <small>License Manager is authoritative for channel definitions and grants. Billing Store only provides this customer workflow.</small>
    </div>
-   <div className="portalHeaderActions">
-    <Link className="buttonlink secondary" href="/portal/orbitfs">Base Deployment</Link>
-    <Link className="buttonlink secondary" href="/portal/orbitfs/releases">Updates</Link>
-   </div>
-  </header>
-
-  {message&&<div className="orbitInlineNotice">{message}</div>}
-
-  <section className="portalCompactPanel channelIntroPanel">
-   <div className="channelIntroCopy">
-    <div><span className="channelLegendDot stable"/><b>Stable</b><small>Default production releases.</small></div>
-    <div><span className="channelLegendDot open"/><b>Open channel</b><small>Available immediately to eligible customers.</small></div>
-    <div><span className="channelLegendDot request"/><b>Approval channel</b><small>Send a short request for staff review.</small></div>
+   <div>
+    <Link className="buttonlink secondary" href="/portal/orbitfs/license">License Controller</Link>
+    <Link className="buttonlink secondary" href="/portal/orbitfs/base">Base Deployment</Link>
+    <button type="button" onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button>
    </div>
   </section>
 
-  <section className="customerChannelGrid">
-   {(data.channels||[]).map((c:any)=>{
-    const channel=String(c.channel||"");
-    const request=latestRequest(channel);
-    const hasExplicit=explicitAccess.has(channel.toLowerCase());
-    const isStable=channel==="stable";
-    const isOpen=c.access_mode==="open";
-    const canSelfJoin=!isOpen&&!isStable&&c.self_join_enabled===true;
-    const canRequest=!isOpen&&!isStable&&!c.self_join_enabled&&c.access_request_enabled===true;
-    const requestStatus=String(request?.status||"").toLowerCase();
-    // Authoritative access always wins over request history. A rejected/approved
-    // request is historical once License Manager says this licence has access.
-    const pending=!hasExplicit&&requestStatus==="pending";
-    const approved=!hasExplicit&&requestStatus==="approved";
-    const rejected=!hasExplicit&&requestStatus==="rejected";
-    const hasAccess=isStable||isOpen||hasExplicit;
-    const policy=isStable?"Stable":isOpen?"Open":canSelfJoin?"Self-join":canRequest?"Approval required":"Invite only";
-    const lifecycleState=isStable?"Included":isOpen?"Available":hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":approved?"Approved · syncing":"Restricted";
+  {error&&<div className="orbitCustomerNotice danger" role="alert"><b>Channel action failed</b><span>{error}</span></div>}
+  {message&&<div className="orbitCustomerNotice" role="status"><b>Updated</b><span>{message}</span></div>}
 
-    return <article className={"customerChannelCard "+(hasAccess?"active":"")} key={channel}>
-     <div className="customerChannelCardHead">
-      <div>
-       <div className="customerChannelTitle"><h2>{c.label||channel}</h2><span className={"channelPolicyBadge "+(hasAccess?"available":"")}>{policy}</span></div>
-       <p>{c.description||"OrbitFS release channel"}</p>
-      </div>
-      <span className={"state "+((hasExplicit||isStable||isOpen)?"ready":pending||approved?"current":"")}>{lifecycleState}</span>
-     </div>
-
-     <div className="customerChannelPolicy">
-      <div><span>Access</span><b>{isStable?"Included":isOpen?"Open to customers":canSelfJoin?"Join instantly":canRequest?"Staff approval":"Assigned only"}</b></div>
-      <div><span>Status</span><b>{isStable?"Included":isOpen?"Available now":hasExplicit?"Approved":pending?"Request pending":rejected?"Denied":approved?"Approved · access syncing":"Not requested"}</b></div>
-     </div>
-
-     {approved&&<div className="channelRequestFeedback"><b>Approved</b><span>Your request is approved, but the access grant has not appeared yet. Refresh this page; deployment remains blocked until the grant is authoritative.</span></div>}
-     {rejected&&<div className="channelRequestFeedback"><b>Denied</b><span>{request?.reason||"Your access request was not approved."}</span></div>}
-
-     <div className="customerChannelActions">
-      {isStable&&<span className="state ready">Included with your licence</span>}
-      {isOpen&&<span className="state ready">No request required</span>}
-      {canSelfJoin&&!hasExplicit&&<button disabled={!!busy} onClick={()=>void act("join",channel)}>{busy==="join:"+channel?"Joining…":"Join channel"}</button>}
-      {canSelfJoin&&hasExplicit&&<button className="secondary" disabled={!!busy} onClick={()=>void act("leave",channel)}>{busy==="leave:"+channel?"Leaving…":"Leave channel"}</button>}
-      {canRequest&&!hasExplicit&&!approved&&!pending&&<button disabled={!!busy} onClick={()=>{setFormChannel(channel);setForm(emptyRequest)}}>{rejected?"Request again":"Request access"}</button>}
-      {canRequest&&pending&&<span className="state current">Request pending</span>}
-      {canRequest&&hasExplicit&&<span className="state ready">Approved</span>}
-      {canRequest&&approved&&!hasExplicit&&<button className="secondary" disabled={!!busy} onClick={()=>void load()}>Refresh approved access</button>}
-      {canRequest&&rejected&&!pending&&!approved&&<span className="state">Denied</span>}
-      {!isStable&&!isOpen&&!canSelfJoin&&!canRequest&&hasExplicit&&<span className="state ready">Assigned by staff</span>}
-      {!isStable&&!isOpen&&!canSelfJoin&&!canRequest&&!hasExplicit&&<span className="state">Invite only</span>}
-      {!isStable&&!isOpen&&hasExplicit&&!canSelfJoin&&<button className="secondary" disabled={!!busy} onClick={()=>void act("leave",channel)}>{busy==="leave:"+channel?"Leaving…":"Leave channel"}</button>}
-     </div>
-
-     {formChannel===channel&&canRequest&&!hasExplicit&&!approved&&!pending&&<div className="channelRequestForm">
-      <div className="channelRequestFormHead"><div><b>Request {c.label||channel} access</b><span>Three quick fields. Your request is reviewed by OrbitFS staff.</span></div><button className="secondary" type="button" onClick={()=>setFormChannel("")}>Cancel</button></div>
-      <label>
-       <span>What do you want to test?</span>
-       <textarea maxLength={500} value={form.use_case} onChange={e=>setForm(v=>({...v,use_case:e.target.value}))} placeholder="Briefly describe what you want to test or validate."/>
-      </label>
-      <label>
-       <span>Testing environment</span>
-       <select value={form.environment} onChange={e=>setForm(v=>({...v,environment:e.target.value}))}>
-        <option value="test">Test / sandbox</option>
-        <option value="staging">Staging</option>
-        <option value="production">Production</option>
-        <option value="other">Other</option>
-       </select>
-      </label>
-      <label>
-       <span>Anything else? <small>Optional</small></span>
-       <textarea maxLength={500} value={form.notes} onChange={e=>setForm(v=>({...v,notes:e.target.value}))} placeholder="Extra context for the reviewer."/>
-      </label>
-      <div className="channelRequestSubmit">
-       <small>Submitting does not grant access automatically.</small>
-       <button disabled={!!busy||!form.use_case.trim()||!form.environment} onClick={()=>void act("request",channel)}>{busy==="request:"+channel?"Submitting…":"Submit request"}</button>
-      </div>
-     </div>}
-    </article>
-   })}
-   {!(data.channels||[]).length&&<div className="portalCompactPanel"><p className="muted">No customer-visible release channels are currently available.</p></div>}
+  <section className="orbitCustomerChannelStats" aria-label="Release-channel summary">
+   <article><span>Base installation channel</span><b>{baseInstall?currentChannel:"Not installed"}</b><small>{baseInstall?"Current Base release discovery channel":"Base Deployment will choose a channel when installed"}</small></article>
+   <article><span>Available channels</span><b>{availableCount}</b><small>{channels.length} customer-visible channel{channels.length===1?"":"s"} defined</small></article>
+   <article><span>Explicit grants</span><b>{access.length}</b><small>Restricted-channel access recorded by License Manager</small></article>
+   <article><span>Pending requests</span><b>{pendingCount}</b><small>{pendingCount?"Waiting for staff review":"Nothing waiting for review"}</small></article>
   </section>
+
+  <div className="orbitCustomerChannelWorkspace">
+   <aside className="orbitCustomerChannelRail">
+    <header><div><b>Release channels</b><span>Select a channel to review access and policy.</span></div><strong>{channels.length}</strong></header>
+    <div className="orbitCustomerChannelList">
+     {channels.map((row:any)=>{
+      const key=String(row.channel||"");
+      const latest=latestRequest(key);
+      const explicit=explicitAccess.has(key.toLowerCase());
+      const automatic=key==="stable"||row.access_mode==="open";
+      const pendingRow=!explicit&&String(latest?.status||"").toLowerCase()==="pending";
+      const accessible=automatic||explicit;
+      const current=key===currentChannel;
+      return <button type="button" key={key} className={"orbitCustomerChannelChoice "+(key===channelKey?"active ":"")+(accessible?"available ":"")+(current?"current":"")} onClick={()=>{setSelected(key);setRequestOpen(false);setForm(emptyRequest);setError("")}}>
+       <div><b>{row.label||key}</b><span>{policyLabel(row)}</span></div>
+       <small>{row.description||"OrbitFS release channel"}</small>
+       <footer><span>{current?"Current Base channel":accessible?"Available":pendingRow?"Request pending":"Restricted"}</span><em>{key}</em></footer>
+      </button>
+     })}
+    </div>
+   </aside>
+
+   <section className="orbitCustomerChannelDetail">
+    {channel?<><header className="orbitCustomerChannelHead">
+     <div>
+      <span className="orbitCustomerKicker">SHARED BASE + UPDATE ACCESS</span>
+      <div className="orbitCustomerChannelTitle"><h2>{channel.label||channelKey}</h2><span className={"orbitCustomerState "+(hasAccess?"ready":pending||approved?"current":"")}>{lifecycleState}</span></div>
+      <p>{channel.description||"OrbitFS release channel managed by License Manager."}</p>
+     </div>
+     <div className="orbitCustomerChannelKey"><span>CHANNEL KEY</span><code>{channelKey}</code></div>
+    </header>
+
+    {isCurrent&&<section className="orbitCustomerCallout info">
+     <div><span>CURRENT BASE CHANNEL</span><b>This installation currently follows {channel.label||channelKey}</b><p>Base Deployment and the Update Release System use the same authorised channel model. Changing access here does not silently rewrite the installed Base channel.</p></div>
+     <Link className="buttonlink secondary" href="/portal/orbitfs/base">Open Base Deployment</Link>
+    </section>}
+
+    {!hasActiveBase&&<section className="orbitCustomerCallout warning">
+     <div><span>ACTIVE BASE LICENCE REQUIRED</span><b>Channel access depends on an eligible Base licence</b><p>You can review channel policy here, but restricted access and release deployment remain unavailable until an active OrbitFS Base licence is linked.</p></div>
+     <Link className="buttonlink secondary" href="/portal/orbitfs/license">Check licence</Link>
+    </section>}
+
+    <section className="orbitCustomerDetailGrid orbitChannelPolicyFacts">
+     <article><span>Access policy</span><b>{policyLabel(channel)}</b><small>{isStable?"Included with every eligible Base licence":isOpen?"Available without an explicit grant":canSelfJoin?"Join or leave without staff approval":canRequest?"Request staff approval":"Staff assignment only"}</small></article>
+     <article><span>Your access</span><b>{lifecycleState}</b><small>{hasAccess?"Authoritative access is available":pending?"Request is waiting for review":approved?"Approval exists but grant has not appeared yet":rejected?"Your latest request was denied":"No grant is currently recorded"}</small></article>
+     <article><span>Used by</span><b>Base + Update</b><small>One channel entitlement, not separate release systems</small></article>
+     <article><span>Customer visibility</span><b>{channel.customer_visible===false?"Hidden":"Visible"}</b><small>{channel.enabled===false?"Channel disabled":"Channel enabled by License Manager"}</small></article>
+    </section>
+
+    {(approved||rejected)&&<section className={"orbitCustomerRequestResult "+(rejected?"denied":"approved")}>
+     <div><span>{rejected?"REQUEST DENIED":"REQUEST APPROVED"}</span><b>{rejected?"Access was not approved":"Waiting for authoritative grant"}</b><p>{rejected?(request?.reason||"Your access request was not approved."):"License Manager reports the request as approved, but the access grant has not appeared yet. Refresh before attempting deployment."}</p></div>
+     {approved&&<button type="button" className="secondary" onClick={()=>void load()} disabled={loading}>Refresh access</button>}
+    </section>}
+
+    {pending&&<section className="orbitCustomerRequestResult pending">
+     <div><span>REQUEST PENDING</span><b>Staff review is in progress</b><p>{requestDetails.use_case||"Your request has been submitted."}{request?.requested_at?" Requested "+new Date(request.requested_at).toLocaleDateString()+".":""}</p></div>
+    </section>}
+
+    <section className="orbitCustomerChannelActionPanel">
+     <div>
+      <span>ACCESS CONTROL</span>
+      <h3>{hasAccess?"This channel is available to you":"This channel is restricted"}</h3>
+      <p>{isStable?"Stable is the default production channel and does not need a separate grant.":isOpen?"Open channels are immediately available to eligible customers.":canSelfJoin?"You can add or remove this channel yourself.":canRequest?"Send a short access request for staff review.":"This channel can only be assigned by OrbitFS staff."}</p>
+     </div>
+     <div>
+      {isStable&&<span className="orbitCustomerState ready">Included with licence</span>}
+      {isOpen&&<span className="orbitCustomerState ready">No request required</span>}
+      {canSelfJoin&&!hasExplicit&&<button type="button" disabled={!!busy||!hasActiveBase} onClick={()=>void act("join",channelKey)}>{busy==="join:"+channelKey?"Joining…":"Join channel"}</button>}
+      {canSelfJoin&&hasExplicit&&<button type="button" className="secondary" disabled={!!busy} onClick={()=>setLeaveChannel(channelKey)}>Leave channel</button>}
+      {canRequest&&!hasExplicit&&!approved&&!pending&&<button type="button" disabled={!!busy||!hasActiveBase} onClick={()=>{setRequestOpen(true);setForm(emptyRequest)}}>{rejected?"Request again":"Request access"}</button>}
+      {canRequest&&pending&&<span className="orbitCustomerState current">Request pending</span>}
+      {canRequest&&hasExplicit&&<span className="orbitCustomerState ready">Access granted</span>}
+      {!isStable&&!isOpen&&!canSelfJoin&&!canRequest&&hasExplicit&&<span className="orbitCustomerState ready">Assigned by staff</span>}
+      {!isStable&&!isOpen&&!canSelfJoin&&!canRequest&&!hasExplicit&&<span className="orbitCustomerState">Invite only</span>}
+      {!isStable&&!isOpen&&hasExplicit&&!canSelfJoin&&<button type="button" className="secondary" disabled={!!busy} onClick={()=>setLeaveChannel(channelKey)}>Leave channel</button>}
+     </div>
+    </section>
+
+    {requestOpen&&canRequest&&!hasExplicit&&!approved&&!pending&&<section className="orbitCustomerChannelRequest">
+     <header><div><span>REQUEST ACCESS</span><h3>{channel.label||channelKey}</h3><p>Tell staff what you need this channel for. Submitting a request does not grant access automatically.</p></div><button type="button" className="secondary" onClick={()=>setRequestOpen(false)}>Cancel</button></header>
+     <div className="orbitCustomerRequestFields">
+      <label className="wide"><span>What do you want to test?</span><textarea maxLength={500} value={form.use_case} onChange={e=>setForm(value=>({...value,use_case:e.target.value}))} placeholder="Briefly describe what you want to test or validate."/></label>
+      <label><span>Testing environment</span><select value={form.environment} onChange={e=>setForm(value=>({...value,environment:e.target.value}))}><option value="test">Test / sandbox</option><option value="staging">Staging</option><option value="production">Production</option><option value="other">Other</option></select></label>
+      <label><span>Additional context <small>Optional</small></span><textarea maxLength={500} value={form.notes} onChange={e=>setForm(value=>({...value,notes:e.target.value}))} placeholder="Anything the reviewer should know."/></label>
+     </div>
+     <footer><small>{form.use_case.length}/500 characters · License Manager decides the authoritative result.</small><button type="button" disabled={!!busy||!form.use_case.trim()||!form.environment} onClick={()=>void act("request",channelKey)}>{busy==="request:"+channelKey?"Submitting…":"Submit request"}</button></footer>
+    </section>}
+    </>:<div className="orbitCustomerEmpty"><b>No release channels available</b><p>License Manager did not return any customer-visible release channels.</p></div>}
+   </section>
+  </div>
+
+  <V6ConfirmDialog
+   open={Boolean(leaveChannel)}
+   title="Leave release channel?"
+   description="Removing this explicit grant stops future Base and Update release discovery from this restricted channel. It does not automatically change an already deployed Base installation."
+   confirmLabel="Leave channel"
+   danger
+   busy={Boolean(busy)}
+   onCancel={()=>setLeaveChannel("")}
+   onConfirm={()=>{if(leaveChannel)void act("leave",leaveChannel)}}
+  />
  </main>;
 }
