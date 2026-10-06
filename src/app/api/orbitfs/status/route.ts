@@ -28,9 +28,11 @@ export async function GET(req:Request){
   }
   const customer=customerResult.data||null;
   const customerNumber=String(customer?.customer_number||"").trim();
-  const masterLicenseResult=customerNumber?await masterLicenses("billing",customerNumber).catch(()=>({licenses:[]})):{licenses:[]};
+  const bindingRows=bindings.data||[];
+  const linkedLicenseIds=[...new Set(bindingRows.map((row:any)=>String(row?.license_id||"").trim()).filter(Boolean))];
+  const masterLicenseResult=(customerNumber||linkedLicenseIds.length)?await masterLicenses("billing",customerNumber,linkedLicenseIds).catch(()=>({licenses:[]})):{licenses:[]};
   const channelAccess=["stable"];
-  const installationRows=installations.data||[],bindingRows=bindings.data||[],masterLicensesRows=masterLicenseResult?.licenses||[];
+  const installationRows=installations.data||[],masterLicensesRows=masterLicenseResult?.licenses||[];
   const preferredInstall=installationRows.find((x:any)=>String(x.component_key||"")==="orbitfs_base")||installationRows[0]||null;
   let channelDiscoveryError:string|null=null;
   const discoveredChannels=bootstrap?[String(preferredInstall?.release_channel||"stable")]:await customerReleaseChannels(user.id,preferredInstall?.license_binding_id||null).catch((error:any)=>{
