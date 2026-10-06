@@ -3,7 +3,7 @@ import {errorMessage} from "@/lib/error-message";
 import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
-import {masterDownloadReleaseArtifact,masterReleases} from "@/lib/master-api";
+import {masterDownloadReleaseArtifact,masterInstallationPanelDomain,masterReleases} from "@/lib/master-api";
 import {requireLicenseMasterForDeployment,requireLicenseMasterForMutation} from "@/lib/license-master-availability";
 
 const SUPABASE_API="https://api.supabase.com/v1";
@@ -801,7 +801,7 @@ export async function configureVercel(install:any,releaseVersion?:string,panelUr
     // first deployment because the Base-owned inner deployer reads it at runtime
     // when provisioning the Shared Engine. Updating project env after the Base
     // deployment is already READY does not change that running deployment's env.
-    ORBITFS_PANEL_URL:panelUrl||(`https://${String(install.vercel_project_name||"").trim().toLowerCase()}.vercel.app`),
+    ORBITFS_PANEL_URL:panelUrl||(await selectedBasePanelUrlForDeployment(install))||(`https://${String(install.vercel_project_name||"").trim().toLowerCase()}.vercel.app`),
     ORBITFS_LICENSE_API_URL:ORBITFS_LICENSE_API_URL,
     ORBITFS_APP_VERSION:version||"unknown",
     ORBITFS_ENGINE_RELEASE_PROVIDER:ORBITFS_SHARED_ENGINE_RELEASE_PROVIDER,
@@ -844,11 +844,44 @@ export async function configureVercelUpdateIdentity(install:any,input:{version:s
   for(const [name,value] of Object.entries(vars)){if(value)await upsertVercelEnv(install,name,value)}
 }
 
-// Resolve only a project-level production address; generated deployment URLs can be protected.
-function baseDomainPreference(install:any){
- const value=install?.metadata?.baseDomain;
- if(!value||typeof value!=="object")return {mode:"",domainName:""};
- return {mode:String(value.mode||"").trim().toLowerCase(),domainName:String(value.domainName||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"")};
+// Base Panel domain selection is authoritative in License Manager. Billing keeps
+// only a mirror for display/telemetry; deploy/runtime decisions always refresh
+// the current authority state when an installation binding exists.
+async function authoritativeBaseDomainPreference(install:any){
+ const generatedDomain=`${String(install?.vercel_project_name||"").trim().toLowerCase()}.vercel.app`;
+ const installationId=String(install?.installation_id||"").trim();
+ const bindingId=String(install?.license_binding_id||"").trim();
+ if(!installationId||!bindingId)return {mode:"generated",domainName:"",verified:true,effectiveUrl:generatedDomain!==".vercel.app"?`https://${generatedDomain}`:null,generatedDomain};
+ const binding=await licenseDb().from("license_bindings").select("license_id").eq("id",bindingId).eq("auth_user_id",String(install.auth_user_id||"")).is("archived_at",null).maybeSingle();
+ if(binding.error)throw binding.error;
+ const licenseId=String(binding.data?.license_id||"").trim();
+ if(!licenseId)return {mode:"generated",domainName:"",verified:true,effectiveUrl:generatedDomain!==".vercel.app"?`https://${generatedDomain}`:null,generatedDomain};
+ let authority:any;
+ try{
+  authority=await masterInstallationPanelDomain(installationId,licenseId);
+ }catch(error:any){
+  // Fresh Base installs do not have an activation until first-time licence setup.
+  // Before that point the generated project address is the only valid choice.
+  if(Number(error?.status||0)===404)return {mode:"generated",domainName:"",verified:true,effectiveUrl:generatedDomain!==".vercel.app"?`https://${generatedDomain}`:null,generatedDomain};
+  throw error;
+ }
+ const value=authority?.panel_domain&&typeof authority.panel_domain==="object"?authority.panel_domain:{};
+ const mode=["generated","vercel","custom"].includes(String(value.mode||""))?String(value.mode):"generated";
+ const domainName=String(value.domain_name||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
+ return {
+  mode,
+  domainName,
+  verified:mode==="generated"?true:value.verified===true,
+  effectiveUrl:String(value.effective_url||"").trim()||null,
+  generatedDomain:String(value.generated_domain||generatedDomain).trim().toLowerCase()
+ };
+}
+async function selectedBasePanelUrlForDeployment(install:any){
+ const preference=await authoritativeBaseDomainPreference(install);
+ const generated=preference.generatedDomain||`${String(install?.vercel_project_name||"").trim().toLowerCase()}.vercel.app`;
+ if(preference.mode==="vercel"&&preference.domainName)return `https://${preference.domainName}`;
+ if(preference.mode==="custom"&&preference.domainName&&preference.verified)return `https://${preference.domainName}`;
+ return generated&&generated!==".vercel.app"?`https://${generated}`:null;
 }
 function normalizeBaseVercelAlias(value:any){
  const raw=String(value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
@@ -862,7 +895,7 @@ function baseVercelAliasUnavailable(error:any){
  return /alias.*(already|in use)|already.*(used|assigned|exists)|domain.*(in use|assigned)|alias_in_use|forbidden.*alias/.test(message);
 }
 export async function ensureSelectedBaseVercelAliasOnDeployment(install:any,deploymentId:string):Promise<string|null>{
- const preference=baseDomainPreference(install);
+ const preference=await authoritativeBaseDomainPreference(install);
  if(preference.mode!=="vercel"||!preference.domainName)return null;
  const domain=normalizeBaseVercelAlias(preference.domainName);
  const projectId=String(install?.vercel_project_id||"").trim();
@@ -892,7 +925,7 @@ export async function resolveProductionUrl(install:any,deployment?:any):Promise<
  const result=await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(String(install.vercel_project_id))}/domains`,{method:"GET"});
  const domains=Array.isArray(result?.domains)?result.domains:[];
  const candidates=domains.filter((d:any)=>d?.verified!==false&&d?.misconfigured!==true&&normalize(d?.name)&&normalize(d?.name)!==deploymentHost);
- const preference=baseDomainPreference(install);
+ const preference=await authoritativeBaseDomainPreference(install);
  const preferred=normalize(preference.domainName);
  if(preference.mode==="generated"&&projectDomain!==".vercel.app")return `https://${projectDomain}`;
  if(preference.mode==="custom"&&preferred){
