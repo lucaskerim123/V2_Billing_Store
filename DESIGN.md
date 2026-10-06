@@ -286,6 +286,27 @@ V6A exposes a compact circular Admin account menu with identity, role, customer-
 - No Base/Update workflow restructuring without explicit approval.
 
 
+
+### V6C Base and Update customer workflows
+
+The customer-facing Base Deployment and Update Release System retain their existing authoritative workflow and API behavior while using the V6C presentation layer.
+
+Base Deployment:
+- keep the five customer stages: Connections → Database → Base release → Database setup → Live Progress;
+- use the shared License Manager channel list for Base release discovery;
+- keep customer Supabase/Vercel credentials isolated to the deployer execution path;
+- show actual operation state and recorded events rather than invented percentages;
+- once installed, present one compact Base control workspace for domain, releases, runtime state, lifecycle and history.
+
+Update Release System:
+- keep the five-stage Update flow already used by the working customer updater;
+- release cards stay compact and expanded technical notes are bounded/scrollable;
+- review, compatibility and live execution state stay separate;
+- repair and rollback remain recovery actions against the authoritative published release;
+- the support footer is a contained V6C end-cap, not loose legacy text.
+
+Both pages must remain usable below 720px: stage navigation becomes horizontal scroll rather than five tiny columns, action groups stack cleanly and technical identifiers wrap without forcing horizontal page overflow.
+
 ## V6 Mail System
 
 OrbitFS Mail is part of the V6 operational product family. Its current functionality is the design authority for scope; the visual redesign must wrap the existing mail system before new mail capabilities are added.
