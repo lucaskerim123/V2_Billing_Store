@@ -79,12 +79,17 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
    const customer=customerResult.data,customerNumber=String(customer?.customer_number||"").trim();
    if(!customerNumber)throw new Error("Customer number is missing");
    let remoteResult:any=null,newLicenseId=String(binding.license_id||"");
-   if(desired==="active"&&(remote!=="active"||!newLicenseId)){
-    if(!order||!String(order.payment_status||"").toLowerCase().startsWith("paid")||String(order.status||"").toLowerCase()!=="active")throw new Error("Active license reconciliation requires a paid, active order");
-    const ref=String(binding.order_id||order.id)+":"+String(binding.order_item_id||binding.id)+":reconcile";
-    remoteResult=await masterIssue({product,customer_external_id:customerNumber,external_reference:ref,metadata:{billingOrderId:String(order.id),orderNumber:String(order.order_number||""),orderItemId:binding.order_item_id||null,customerId:customer?.id||null,customerNumber,licenseProductKey:product,source:"v2_billing_store_reconciliation"}});
-    newLicenseId=masterId(remoteResult);
-    if(!newLicenseId)throw new Error("License Master did not return a license id");
+   if(desired==="active"){
+    if(newLicenseId&&remote==="revoked")throw new Error("Terminated licence requires explicit recovery before reconciliation can restore it");
+    if(newLicenseId&&remote!=="active"){
+      remoteResult=await masterControl(newLicenseId,{action:"activate",actorRef:"billing_store_reconciliation"});
+    }else if(!newLicenseId){
+      if(!order||!String(order.payment_status||"").toLowerCase().startsWith("paid")||String(order.status||"").toLowerCase()!=="active")throw new Error("Active license reconciliation requires a paid, active order");
+      const ref=String(binding.order_id||order.id)+":"+String(binding.order_item_id||binding.id)+":reconcile";
+      remoteResult=await masterIssue({product,customer_external_id:customerNumber,external_reference:ref,metadata:{billingOrderId:String(order.id),orderNumber:String(order.order_number||""),orderItemId:binding.order_item_id||null,customerId:customer?.id||null,customerNumber,licenseProductKey:product,source:"v2_billing_store_reconciliation"}});
+      newLicenseId=masterId(remoteResult);
+      if(!newLicenseId)throw new Error("License Manager did not return a license id");
+    }
    }else if(desired==="suspended"||desired==="revoked"){
     if(!newLicenseId)throw new Error("Binding has no License Manager licence id");
     const reason=String(binding.suspension_reason||"").trim();
