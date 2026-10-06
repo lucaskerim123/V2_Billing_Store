@@ -115,7 +115,9 @@ export async function GET(req:Request){
         expires_at:remote.expires_at||null,
         components:remote.components||{},
         activations:Array.isArray(remote.activations)?remote.activations:[],
-        api_source:"license_master"
+        api_source:"license_master",
+        linked_order_id:null,
+        linked_order_item_id:null
       });
     }
   }
