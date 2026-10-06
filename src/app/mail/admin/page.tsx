@@ -118,9 +118,9 @@ function MailboxSettings({rows,users,save}:{rows:any[],users:any[],save:(b:any)=
 }
 
 function AccountSettings({account,users,save}:{account:any,users:any[],save:(b:any)=>Promise<boolean>}){
-  const [name,setName]=useState(account.display_name||''),[kind,setKind]=useState(account.kind||'shared'),[active,setActive]=useState(account.active!==false),[assignedUserId,setAssignedUserId]=useState(account.assigned_user_id||'');
+  const [name,setName]=useState(account.display_name||''),[kind,setKind]=useState(account.kind||'shared'),[active,setActive]=useState(account.active!==false),[assignedUserId,setAssignedUserId]=useState(account.assigned_user_id||''),[confirmDelete,setConfirmDelete]=useState(false);
   function changeKind(v:string){setKind(v);if(v!=='personal')setAssignedUserId('')}
-  async function remove(){if(!confirm(`Delete mailbox ${account.address}? This removes the mailbox configuration. Existing delivery history is kept.`))return;await save({action:'account_delete',address:account.address})}
+  async function remove(){await save({action:'account_delete',address:account.address});setConfirmDelete(false)}
   return <details style={{border:'1px solid #dfe4ec',borderRadius:9,padding:'11px 13px'}}>
     <summary style={{cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,fontSize:12,fontWeight:800}}>
       <span style={{overflowWrap:'anywhere'}}>{account.display_name||account.address} <span style={muted}>· {account.address}</span></span>
@@ -130,7 +130,7 @@ function AccountSettings({account,users,save}:{account:any,users:any[],save:(b:a
       <div><label>Display name</label><input style={input} value={name} onChange={e=>setName(e.target.value)} placeholder="Display name"/><small style={muted}>Permission key: mail.account.{String(account.address).split('@')[0]}</small></div>
       <TypeSelect value={kind} onChange={changeKind}/>{kind==='personal'&&<StaffSelect users={users} value={assignedUserId} onChange={setAssignedUserId}/>}
       <label style={{display:'flex',alignItems:'center',gap:7,padding:'10px 0'}}><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)}/> Active</label>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button onClick={()=>save({action:'account',address:account.address,displayName:name,kind,active,assignedUserId:kind==='personal'?assignedUserId:null})}>Save</button><button style={danger} onClick={remove}>Delete</button></div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button onClick={()=>save({action:'account',address:account.address,displayName:name,kind,active,assignedUserId:kind==='personal'?assignedUserId:null})}>Save</button>{confirmDelete?<><button type="button" onClick={()=>setConfirmDelete(false)}>Cancel</button><button type="button" style={danger} onClick={()=>void remove()}>Confirm delete</button></>:<button type="button" style={danger} onClick={()=>setConfirmDelete(true)}>Delete</button>}</div>
     </div>
   </details>;
 }
