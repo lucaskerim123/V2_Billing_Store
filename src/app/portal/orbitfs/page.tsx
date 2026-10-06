@@ -112,7 +112,7 @@ export default function MyOrbitFSHome(){
 
     <section className="v6c-orbit-secondary-grid">
       <Link className="v6c-orbit-destination compact" href="/portal/orbitfs/license"><small>LICENSING</small><h3>License Controller</h3><p>View authoritative licence state and permitted customer actions.</p><span>Open →</span></Link>
-      <Link className="v6c-orbit-destination compact" href="/portal/orbitfs/channels"><small>RELEASE ACCESS</small><h3>Release Channels</h3><p>Manage Stable, preview and restricted release-channel access.</p><span>Open →</span></Link>
+      <Link className="v6c-orbit-destination compact" href="/portal/orbitfs/channels"><small>RELEASE ACCESS</small><h3>Release Channels</h3><p>Manage the shared Base + Update channels your licence can discover.</p><span>Open →</span></Link>
     </section>
 
     <section className="v6c-system-status">
