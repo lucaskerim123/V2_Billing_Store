@@ -1868,7 +1868,7 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layou
   color:#93acbd!important;
   font-size:8px!important;
 }
-html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitPhaseOne :where(input,select){
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitPhaseOne :where(input:not([type="checkbox"]):not([type="radio"]),select){
   min-height:36px!important;
   padding:0 9px!important;
   font-size:9px!important;
@@ -1877,6 +1877,13 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layou
   min-height:86px!important;
   padding:9px!important;
   font-size:9px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitPhaseOne :where(input[type="checkbox"],input[type="radio"]){
+  width:16px!important;
+  height:16px!important;
+  min-height:16px!important;
+  padding:0!important;
+  accent-color:#6840e8!important;
 }
 html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitPhaseOne .orbitChannelToggleGrid{
   display:grid!important;
