@@ -10,7 +10,8 @@
   pointer-events:auto!important;
   cursor:pointer!important;
 }
-\n/* V3A admin notification alignment — keep bell inside the admin tool row, never floating over content. */.root[data-surface="admin"]{
+
+/* V3A admin notification alignment — keep bell inside the admin tool row, never floating over content. */.root[data-surface="admin"]{
   position:relative!important;
   top:auto!important;
   right:auto!important;
@@ -329,7 +330,9 @@
   font-size:7px!important;
 }
 
-/* Notification portal hardening 2026-10-06 */
+/* Notification portal hardening 2026-10-06.
+   Panel coordinates are supplied inline from window.visualViewport so the sheet stays
+   inside the actually visible browser area, including Android/iOS desktop-site mode. */
 .panel{
   --line:#263d55;
   --text:#e8f2fb;
