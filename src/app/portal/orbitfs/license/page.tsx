@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
+import {canonicalLicenseStatus,canonicalStatusLabel,isCanonicalLicenseUsable} from "@/lib/license-status";
 
 const componentLabels:Record<string,string>={orbitfs_base:"OrbitFS Base",orbitfs_apex:"OrbitFS APEX",orbitfs_mcp:"OrbitFS MCP",orbitfs_studio:"OrbitFS Studio"};
 function enabledComponents(binding:any){
@@ -51,7 +52,7 @@ export default function OrbitFSLicenseController() {
     (x: any) => x.license_binding_id === binding?.id,
   );
   const customerUnlockEnabled = d?.settings?.customer_self_unlock_enabled !== false;
-  const licenseActive = String(binding?.authoritative_status || binding?.status || '').toLowerCase() === 'active';
+  const licenseUsable = isCanonicalLicenseUsable(binding);
   const pendingBaseForceReinstall=install?.metadata?.pendingBaseForceReinstall&&typeof install.metadata.pendingBaseForceReinstall==="object"?install.metadata.pendingBaseForceReinstall:null;
 
   async function control(action: string) {
@@ -161,7 +162,7 @@ export default function OrbitFSLicenseController() {
 
                 <div className="listrow">
                   <b>Status</b>
-                  <span>{b.authoritative_status || b.status || "unknown"}</span>
+                  <span>{canonicalStatusLabel(canonicalLicenseStatus(b))}</span>
                 </div>
                 <div className="listrow">
                   <b>Key</b>
@@ -219,14 +220,14 @@ export default function OrbitFSLicenseController() {
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
-              disabled={!!busy || !binding?.license_id || !licenseActive}
+              disabled={!!busy || !binding?.license_id || !licenseUsable}
               onClick={() => void control("rotate")}
             >
               {busy === "rotate" ? "Rotating…" : pendingBaseForceReinstall ? "Rotate key for Base reinstall" : "Rotate key"}
             </button>
             <button
               className="secondary"
-              disabled={!!busy || !binding?.license_id || !install?.installation_id || !customerUnlockEnabled || !licenseActive}
+              disabled={!!busy || !binding?.license_id || !install?.installation_id || !customerUnlockEnabled || !licenseUsable}
               onClick={() => void control("unlock")}
             >
               {busy === "unlock" ? "Unlocking…" : customerUnlockEnabled ? "Unlock installation" : "Customer unlock disabled"}
