@@ -8,7 +8,7 @@ async function readJson(r:Response){const t=await r.text();if(!t)return {};try{r
 
 export default function MailHome(){
   const sb=createClient();
-  const [accounts,setAccounts]=useState<any[]>([]),[caps,setCaps]=useState<any>({}),[queueData,setQueueData]=useState<any>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[msg,setMsg]=useState("");
+  const [accounts,setAccounts]=useState<any[]>([]),[caps,setCaps]=useState<any>({}),[queueData,setQueueData]=useState<any>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[msg,setMsg]=useState(""),[confirmClearQueue,setConfirmClearQueue]=useState(false);
 
   async function token(){const {data}=await sb.auth.getSession();return data.session?.access_token||""}
   async function load(){
@@ -69,14 +69,15 @@ export default function MailHome(){
 
         {caps.queueView?<section className="mailV6Panel mailV6QueuePanel">
           <div className="mailV6QueueHead"><div><h2>Mail Queue</h2><p>Pending, processing, failed and stuck transactional mail jobs.</p></div></div>
-          {loading&&!queueData?<div className="mailV6Empty">Loading queue…</div>:<MailQueue data={queueData||{summary:{},queue:[],stuck_logs:[]}} reload={load} action={queueAction} processNow={processQueueNow} canManage={!!caps.queueManage}/>}
+          {loading&&!queueData?<div className="mailV6Empty">Loading queue…</div>:<MailQueue data={queueData||{summary:{},queue:[],stuck_logs:[]}} reload={load} action={queueAction} processNow={processQueueNow} canManage={!!caps.queueManage} requestClearQueue={()=>setConfirmClearQueue(true)}/>}
         </section>:<section className="mailV6Panel mailV6QueuePanel"><div className="mailV6QueueHead"><div><h2>Mail Queue</h2><p>Your account does not have Mail queue permission.</p></div></div><div className="mailV6Empty">Queue controls are hidden by your current staff permissions.</div></section>}
       </div>
     </div>
+    {confirmClearQueue&&<div className="mailV6ConfirmBackdrop" role="presentation" onMouseDown={()=>setConfirmClearQueue(false)}><section className="mailV6ConfirmDialog" role="alertdialog" aria-modal="true" aria-labelledby="clear-mail-queue-title" aria-describedby="clear-mail-queue-description" onMouseDown={e=>e.stopPropagation()}><h2 id="clear-mail-queue-title">Clear Mail queue?</h2><p id="clear-mail-queue-description">All non-sent queue items will be cleared. Sent delivery history is kept.</p><div className="mailV6ConfirmActions"><button type="button" autoFocus onClick={()=>setConfirmClearQueue(false)}>Cancel</button><button type="button" className="danger" onClick={async()=>{setConfirmClearQueue(false);await queueAction("clear_queue")}}>Clear queue</button></div></section></div>}
   </main>
 }
 
-function MailQueue({data,reload,action,processNow,canManage}:{data:any,reload:()=>Promise<void>,action:(name:string,extra?:any)=>Promise<void>,processNow:()=>Promise<void>,canManage:boolean}){
+function MailQueue({data,reload,action,processNow,canManage,requestClearQueue}:{data:any,reload:()=>Promise<void>,action:(name:string,extra?:any)=>Promise<void>,processNow:()=>Promise<void>,canManage:boolean,requestClearQueue:()=>void}){
   const s=data.summary||{},rows=data.queue||[],stuck=data.stuck_logs||[];
   return <div>
     <div className="mailV6QueueStats">{["pending","processing","failed","stuck"].map(k=><div className="mailV6QueueStat" key={k}><small>{k}</small><b>{s[k]||0}</b></div>)}</div>
@@ -86,6 +87,6 @@ function MailQueue({data,reload,action,processNow,canManage}:{data:any,reload:()
       <div className="mailV6QueueActions">{canManage&&r.state!=="sent"&&<><button type="button" onClick={()=>void action("retry",{outboxId:r.id})}>Retry</button><button type="button" onClick={()=>void action("clear",{outboxId:r.id})}>Clear</button></>}</div>
     </div>)}</div>:<div className="mailV6Empty">No queued mail events.</div>}
     {stuck.length>0&&<div style={{marginTop:16}}><div className="mailV6QueueHead"><div><h2>Stuck preparing records</h2><p>Delivery records that never finalized.</p></div></div><div className="mailV6QueueList">{stuck.map((l:any)=><div className="mailV6QueueRow" key={l.id}><div><b>{l.subject}</b><div className="mailV6QueueRowMeta"><small>{l.sender} → {l.recipient}</small><small>Created {new Date(l.created_at).toLocaleString()}</small></div></div>{canManage&&<div><button type="button" onClick={()=>void action("clear_log",{logId:l.id})}>Clear</button></div>}</div>)}</div></div>}
-    {canManage&&rows.some((r:any)=>r.state!=="sent")&&<div className="mailV6QueueActions" style={{marginTop:12}}><button type="button" className="danger" onClick={()=>{if(window.confirm("Clear all non-sent items from the Mail queue? Sent delivery history will be kept."))void action("clear_queue")}}>Clear queue</button></div>}
+    {canManage&&rows.some((r:any)=>r.state!=="sent")&&<div className="mailV6QueueActions" style={{marginTop:12}}><button type="button" className="danger" onClick={requestClearQueue}>Clear queue</button></div>}
   </div>
 }
