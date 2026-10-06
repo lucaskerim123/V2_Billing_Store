@@ -2560,3 +2560,247 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitConfirm
   }
 }
 /* END ORBITFS CONTROL PHASE 1 WORKSPACES 2026-10-06 */
+
+/* ORBITFS INSTALLATIONS V6A WORKSPACE 2026-10-07 */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitInstallationsPhase{
+  display:grid!important;
+  gap:10px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitAdminLoading{
+  min-height:150px!important;
+  display:grid!important;
+  align-content:center!important;
+  justify-items:start!important;
+  gap:5px!important;
+  padding:18px!important;
+  border:1px dashed #244b66!important;
+  border-radius:8px!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitAdminLoading b{
+  color:#e8f2f9!important;
+  font-size:12px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitAdminLoading span{
+  color:#7190a7!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationStats{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationStats>article{
+  min-height:70px!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:4px!important;
+  padding:10px 11px!important;
+  border:1px solid #153a54!important;
+  border-radius:7px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationStats span,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationStats small{
+  color:#63859d!important;
+  font-size:6.7px!important;
+  line-height:1.35!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationStats b{
+  color:#ecf5fb!important;
+  font-size:15px!important;
+  line-height:1.1!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationToolbar{
+  display:grid!important;
+  grid-template-columns:minmax(240px,1fr) minmax(160px,.38fr) minmax(170px,.38fr)!important;
+  align-items:end!important;
+  gap:8px!important;
+  padding:10px!important;
+  border:1px solid #153a54!important;
+  border-radius:7px!important;
+  background:#041725!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationToolbar label{
+  display:grid!important;
+  gap:4px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationToolbar label>span,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationToolbar>div>span{
+  color:#61829b!important;
+  font-size:6.5px!important;
+  font-weight:780!important;
+  letter-spacing:.06em!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationToolbar>div{
+  min-height:36px!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:2px!important;
+  padding:0 9px!important;
+  border:1px solid #163a54!important;
+  border-radius:6px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationToolbar>div>b{
+  color:#dceaf4!important;
+  font-size:7.5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationToolbar>div>small{
+  color:#587b94!important;
+  font-size:6.5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationWorkspace{
+  grid-template-columns:285px minmax(0,1fr)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationChoice{
+  min-height:76px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationDetail{
+  min-height:440px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationHead code{
+  color:#85b2cf!important;
+  font-size:7.5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationFacts{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationColumns{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:9px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationColumns .orbitReferenceSection{
+  margin-top:0!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationKeyList{
+  display:grid!important;
+  gap:0!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationKeyList>div{
+  min-height:37px!important;
+  display:grid!important;
+  grid-template-columns:120px minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:9px!important;
+  padding:6px 0!important;
+  border-bottom:1px solid #103047!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationKeyList>div:last-child{border-bottom:0!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationKeyList span{
+  color:#61829a!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationKeyList b{
+  min-width:0!important;
+  color:#d8e7f2!important;
+  font-size:8px!important;
+  text-align:right!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationKeyList a{
+  color:#69c8ec!important;
+  text-decoration:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationAuthority{
+  margin-top:9px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationAuthorityGrid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationAuthorityGrid>div{
+  min-height:54px!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:3px!important;
+  padding:8px!important;
+  border:1px solid #123650!important;
+  border-radius:5px!important;
+  background:#031522!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationAuthorityGrid span{
+  color:#5d8099!important;
+  font-size:6.5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationAuthorityGrid b{
+  color:#dbe9f3!important;
+  font-size:8px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationActions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+  margin-top:9px!important;
+  padding-top:9px!important;
+  border-top:1px solid #12344d!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationLockDialog label{
+  display:grid!important;
+  gap:5px!important;
+  margin-top:12px!important;
+  color:#9aafc0!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationLockDialog textarea{
+  width:100%!important;
+  min-height:90px!important;
+  box-sizing:border-box!important;
+  padding:9px!important;
+  border:1px solid #284d67!important;
+  border-radius:6px!important;
+  background:#031624!important;
+  color:#edf6ff!important;
+  outline:none!important;
+  resize:vertical!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationLockDialog textarea:focus{
+  border-color:#5d79a0!important;
+  box-shadow:0 0 0 2px rgba(73,134,178,.14)!important;
+}
+@media(max-width:1020px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationWorkspace{
+    grid-template-columns:235px minmax(0,1fr)!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationFacts,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationAuthorityGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationColumns{
+    grid-template-columns:1fr!important;
+  }
+}
+@media(max-width:760px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationStats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationToolbar{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationWorkspace{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationKeyList>div{
+    grid-template-columns:1fr!important;
+    gap:2px!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationKeyList b{
+    text-align:left!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationActions{
+    justify-content:flex-start!important;
+  }
+}
+@media(max-width:460px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationStats,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationFacts,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstallationAuthorityGrid{
+    grid-template-columns:1fr!important;
+  }
+}
+/* END ORBITFS INSTALLATIONS V6A WORKSPACE 2026-10-07 */
