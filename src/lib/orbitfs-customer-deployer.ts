@@ -894,7 +894,7 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
     const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:String(install.deployment_url||"");
     if(!deploymentUrl)fail("Vercel Base update did not return a deployment URL",502,"VERCEL_DEPLOY_FAILED",true);
 
-    const selectedBaseAlias=await ensureSelectedBaseVercelAliasOnDeployment(install,String(ready?.id||ready?.uid||install.vercel_deployment_id||""));
+    const selectedBaseAlias=await ensureSelectedBaseVercelAliasOnDeployment(install,createdDeploymentId);
     const productionUrl=selectedBaseAlias?`https://${selectedBaseAlias}`:await resolveProductionUrl(install,ready);
     const settings=await billingOrbitfsConfig();
     if(productionUrl&&!await checkPublicPanelHealth(productionUrl,settings.health_path||"/api/health")){
@@ -1302,8 +1302,8 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   await progress?.("verifying",{action,releaseId:String(release.id),projectId:install.vercel_project_id,deploymentId});
   const ready=await waitForReady(install.auth_user_id,deploymentId),state=String(ready?.readyState||ready?.state||"");if(state!=="READY")fail("Vercel deployment did not become ready within the deployment window",504);
   const previousVersion=install.release_version||null,deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url;
-  const selectedBaseAlias=await ensureSelectedBaseVercelAliasOnDeployment(install,String(ready?.id||ready?.uid||install.vercel_deployment_id||""));
-    const productionUrl=selectedBaseAlias?`https://${selectedBaseAlias}`:await resolveProductionUrl(install,ready);
+  const selectedBaseAlias=await ensureSelectedBaseVercelAliasOnDeployment(install,deploymentId);
+  const productionUrl=selectedBaseAlias?`https://${selectedBaseAlias}`:await resolveProductionUrl(install,ready);
   // Register the deployed Base as Billing-managed before the customer opens its
   // first-time installer. Licence activation itself happens later inside Base.
   await registerInstalledBaseRoute(productionUrl||deploymentUrl,install,deploymentId);
