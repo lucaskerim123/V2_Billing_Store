@@ -35,3 +35,11 @@ export function accountEnforcementRemoteSatisfied(binding:any){
     reason.startsWith("account_enforcement:terminated:")
   );
 }
+
+export function canReactivateAccountEnforcement(state:CanonicalAccountEnforcementState|string){
+  return normalizeAccountEnforcementState(state)==="suspended";
+}
+
+export function accountEnforcementAllowsExpiry(state:CanonicalAccountEnforcementState|string){
+  return normalizeAccountEnforcementState(state)==="suspended";
+}
