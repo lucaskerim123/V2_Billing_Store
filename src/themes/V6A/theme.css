@@ -2137,6 +2137,22 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layou
   border-bottom:1px solid transparent!important;
   background:#061b2b!important;
 }
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitLicenceReference .orbitReferenceLicenceTop{
+  cursor:pointer!important;
+  list-style:none!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitLicenceReference .orbitReferenceLicenceTop::-webkit-details-marker{display:none!important}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitLicenceReference .orbitReferenceLicenceTopState{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitLicenceReference .orbitReferenceLicenceBody{
+  padding:0 11px 11px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitLicenceReference .orbitLicenceNicknameEditor{
+  margin-top:9px!important;
+}
 html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .orbitLicenceReference details[open]>.orbitReferenceLicenceTop{
   border-bottom-color:#12344d!important;
   background:#082139!important;
