@@ -209,6 +209,7 @@ export default function LicenseControllerPage(){
  const selectedUserId=String(data?.customer?.auth_user_id||data?.customer?.user_id||selectedCustomer?.auth_user_id||selectedCustomer?.user_id||"");
  const channelDefinitions=(channelData?.channels||[]) as Array<{channel:string;label?:string;enabled?:boolean;customer_visible?:boolean;access_mode?:string}>;
  const customerChannelAccess=(channelData?.access||[]).filter((x:any)=>String(x.user_id||"")===selectedUserId);
+ const hasUsableBase=bindings.some((b:any)=>String(b.license_product_key||"").toLowerCase()==="orbitfs_base"&&isCanonicalLicenseUsable(b));
  const channelsForLicense=(licenseId:string)=>{
   const explicit=customerChannelAccess.filter((x:any)=>String(x.license_id||"")===String(licenseId||"")).map((x:any)=>String(x.channel||"")).filter(Boolean);
   const automatic=channelDefinitions.filter((x:any)=>x.enabled!==false&&x.customer_visible!==false&&(x.channel==="stable"||x.access_mode==="open")).map((x:any)=>String(x.channel));
@@ -223,8 +224,8 @@ export default function LicenseControllerPage(){
     <p className="muted">Manage Billing Store customer links and run permitted licence actions through the authoritative License Manager APIs.</p>
    </div>
    <div className="orbitReferenceHeroActions">
-    <button className="orbitIconAction" title="Refresh customer licences" aria-label="Refresh customer licences" onClick={()=>void refresh()} disabled={loading}>↻</button>
-    <button className="orbitIconAction primary" title="Find and automatically link the single matching existing License Manager licence for this customer" aria-label="Auto-link matching licence" onClick={()=>void link("","auto")} disabled={!selectedCustomer||!!busy}>↗</button>
+    <button className="secondary" type="button" onClick={()=>void refresh()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button>
+    <button type="button" onClick={()=>void link("","auto")} disabled={!selectedCustomer||!!busy}>{busy==="auto:"?"Matching…":"Auto-link match"}</button>
    </div>
   </header>
 
@@ -268,8 +269,8 @@ export default function LicenseControllerPage(){
       {channelDefinitions.filter((ch:any)=>ch.enabled!==false&&ch.customer_visible!==false).map((ch:any)=>{
        const automatic=ch.channel==="stable"||ch.access_mode==="open";
        const explicit=customerChannelAccess.some((grant:any)=>String(grant.channel||"")===String(ch.channel));
-       const available=automatic||explicit;
-       return <div key={ch.channel} className={available?"available":""}><span><b>{ch.label||ch.channel}</b><small>{ch.channel} · {automatic?"automatic":explicit?"explicit grant":"restricted"}</small></span><span className={"orbitMiniState "+(available?"live":"")}>{available?"Available":"No access"}</span></div>
+       const available=(automatic&&hasUsableBase)||explicit;
+       return <div key={ch.channel} className={available?"available":""}><span><b>{ch.label||ch.channel}</b><small>{ch.channel} · {automatic?(hasUsableBase?"automatic":"requires active Base licence"):explicit?"explicit grant":"restricted"}</small></span><span className={"orbitMiniState "+(available?"live":"")}>{available?"Available":"No access"}</span></div>
       })}
       {!channelDefinitions.length&&<div className="orbitReferenceEmpty compact">Channel authority is unavailable for this customer view.</div>}
      </div>
