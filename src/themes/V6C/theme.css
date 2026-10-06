@@ -306,10 +306,6 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-conte
 .v6c-route-settings .accountSettingsV2{display:grid;gap:12px}.v6c-route-settings .accountSettingsNav{display:flex;gap:5px;padding:7px;border:1px solid #12364f;border-radius:8px;background:#031522}.v6c-route-settings .accountSettingsNav button{height:30px;padding:0 11px;background:transparent!important;border-color:transparent!important;color:#7594ad!important}.v6c-route-settings .accountSettingsNav button.active{background:linear-gradient(90deg,#6c22dc,#3548eb)!important;border-color:#5537c3!important;color:#fff!important}
 .v6c-route-settings .accountSettingsSections{display:grid;gap:12px}.v6c-route-settings .accountSettingsCard{padding:18px!important}.v6c-route-settings .form{display:grid;gap:10px}.v6c-route-settings .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.v6c-route-settings label{color:#9fb4c6;font-size:8px}.v6c-route-settings .settingsSaveBar{padding:11px 0;display:flex;align-items:center;justify-content:space-between}.v6c-route-settings .walletSettingsActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.v6c-route-settings .walletActionBox{padding:14px;border:1px solid #12364f;border-radius:7px;background:#041827}
 
-/* Base Deployment keeps its real workflow, but follows the same ZIP card language. */
-.v6c-route-base .orbitZipDeployer{display:grid;gap:12px}.v6c-route-base .orbitV5Connections>.panel,.v6c-route-base .orbitInstallerWorkspace{padding:17px!important}.v6c-route-base .orbitZipControlGrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.v6c-route-base .orbitV5Start{border:1px solid #12364f!important;border-radius:9px!important;background:radial-gradient(420px 170px at 85% 40%,rgba(91,42,255,.16),transparent 68%),linear-gradient(180deg,#061e32,#031523)!important}
-
-
 /* --------------------------------------------------------------------------
    12ui-derived global shell hardening + My OrbitFS hub
    -------------------------------------------------------------------------- */
