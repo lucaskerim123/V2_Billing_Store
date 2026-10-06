@@ -4483,6 +4483,30 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6Confirm
   line-height:1.55!important;
 }
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmBody{margin-top:11px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmReason{
+  display:grid!important;
+  gap:5px!important;
+  color:#9db2c3!important;
+  font-size:7.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmReason textarea{
+  width:100%!important;
+  min-height:82px!important;
+  box-sizing:border-box!important;
+  padding:8px!important;
+  border:1px solid #2c4f68!important;
+  border-radius:6px!important;
+  background:#031624!important;
+  color:#edf6ff!important;
+  outline:none!important;
+  resize:vertical!important;
+  font-size:8.5px!important;
+  line-height:1.45!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmReason textarea:focus{
+  border-color:#6379d7!important;
+  box-shadow:0 0 0 2px rgba(99,121,215,.14)!important;
+}
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmActions{
   display:flex!important;
   justify-content:flex-end!important;
