@@ -5,15 +5,20 @@ export type OrbitReleaseVersion = {
   rank: number;
 };
 
-const VERSION_PATTERN=/^([vVbBdD])?\.?(\d+(?:\.\d+){0,7})(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/;
+const CURRENT_VERSION_PATTERN=/^[1-9][0-9]*(?:\.(?:0|[1-9][0-9]*)){1,3}$/;
+const LEGACY_VERSION_PATTERN=/^([vVbBdD])?\.?(\d+(?:\.\d+){0,7})(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/;
 
 export function parseOrbitReleaseVersion(value:unknown):OrbitReleaseVersion|null{
-  const match=String(value??'').trim().match(VERSION_PATTERN);
+  const match=String(value??'').trim().match(LEGACY_VERSION_PATTERN);
   if(!match)return null;
   const prefix=(match[1]?.toLowerCase()||null) as OrbitReleaseVersion['prefix'];
   const parts=match[2].split('.').map(Number);
   if(!parts.length||parts.some((part)=>!Number.isSafeInteger(part)||part<0))return null;
   return {prefix,parts,prerelease:match[3]||null,rank:prefix==='d'?0:prefix==='b'?1:2};
+}
+
+export function isCurrentOrbitReleaseVersion(value:unknown){
+  return CURRENT_VERSION_PATTERN.test(String(value??'').trim());
 }
 
 export function compareOrbitReleaseVersions(a:unknown,b:unknown):number|null{
