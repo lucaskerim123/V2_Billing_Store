@@ -3,6 +3,7 @@ import {licenseDb} from "@/lib/license-api";
 import {masterLicenses} from "@/lib/master-api";
 import {serviceRpc} from "@/lib/paymentServer";
 import {canonicalLicenseStatus,isCanonicalLicenseUsable} from "@/lib/license-status";
+import {billingCustomerUserFilter} from "@/lib/billing-customer-identity.mjs";
 
 export async function POST(req:Request){
   try{
@@ -15,7 +16,7 @@ export async function POST(req:Request){
     const db=licenseDb();
     const [{data:binding,error:bindingError},{data:customer,error:customerError},master]=await Promise.all([
       db.from("license_bindings").select("id,license_id,auth_user_id,archived_at").eq("id",bindingId).eq("auth_user_id",user.id).is("archived_at",null).maybeSingle(),
-      db.from("customers").select("customer_number").eq("auth_user_id",user.id).maybeSingle(),
+      db.from("customers").select("customer_number").or(billingCustomerUserFilter(user.id)).limit(1).maybeSingle(),
       masterLicenses()
     ]);
     if(bindingError)throw bindingError;
