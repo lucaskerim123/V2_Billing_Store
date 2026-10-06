@@ -10,6 +10,7 @@ import PortalGlobalBanner,{type PortalBannerConfig} from "@/components/PortalGlo
 import ThemeRuntime from "@/components/ThemeRuntime";
 import themeDefaults from "@/themes/active/defaults.json";
 import V6CDesignShell from "@/themes/V6C/V6CDesignShell";
+import {canonicalAccountStatus} from "@/lib/license-status";
 
 type NavItem={label:string;href:string;short:string};
 
@@ -22,13 +23,15 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
   let alive=true;
   async function applyEnforcement(enf:any){
    if(!alive)return false;
-   if(enf?.state==="banned"){
-    try{const payload=JSON.stringify({...enf,stored_at:new Date().toISOString()});localStorage.setItem("orbitfs_account_blocked",payload);sessionStorage.setItem("orbitfs_account_blocked",payload)}catch{}
+   const state=canonicalAccountStatus({status:enf?.state,banned_at:enf?.state==="banned"});
+   const normalized={...(enf||{}),state};
+   if(state==="terminated"){
+    try{const payload=JSON.stringify({...normalized,stored_at:new Date().toISOString()});localStorage.setItem("orbitfs_account_blocked",payload);sessionStorage.setItem("orbitfs_account_blocked",payload)}catch{}
     await fetch("/api/auth/logout",{method:"POST"}).catch(()=>null);
     await sb.auth.signOut();location.replace("/account-blocked");return false;
    }
-   if(enf?.state==="active"){try{localStorage.removeItem("orbitfs_account_blocked");sessionStorage.removeItem("orbitfs_account_blocked")}catch{}}
-   setEnforcement(enf||{state:"active"});return true;
+   if(state==="active"){try{localStorage.removeItem("orbitfs_account_blocked");sessionStorage.removeItem("orbitfs_account_blocked")}catch{}}
+   setEnforcement(normalized);return true;
   }
   async function loadInitial(){
    const {data:{user}}=await sb.auth.getUser();if(!user){location.href="/login";return}
