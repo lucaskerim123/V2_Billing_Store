@@ -79,7 +79,7 @@ export async function POST(req:Request){
       const mirrorWarnings:string[]=[];
       const update={
         license_key_last4:key?String(key).slice(-4):null,
-        remote_state:String(result?.license?.status||result?.status||"active"),
+        remote_state:String(result?.license?.storage_status||result?.storage_status||result?.license?.status||result?.status||"active"),
         desired_state:"active",
         api_source:"license_master",
         last_synced_at:now,
