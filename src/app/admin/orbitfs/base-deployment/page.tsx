@@ -32,12 +32,18 @@ export default function BaseDeploymentAdmin(){
   if(!silent)setLoading(true);
   if(!options?.preserveMessage)setMessage("");
   try{
-   const r=await fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:await auth(),cache:"no-store"});
+   const h=await auth();
+   const [r,cr]=await Promise.all([
+    fetch("/api/admin/orbitfs/release-handoff?action=history&type=base",{headers:h,cache:"no-store"}),
+    fetch("/api/admin/orbitfs/release-channels",{headers:h,cache:"no-store"})
+   ]);
    const j=await r.json().catch(()=>({}));
+   const cj=await cr.json().catch(()=>({}));
    if(!r.ok)throw Error(j.error||"Could not load Base releases from License Manager");
+   if(!cr.ok)throw Error(cj.error||"Could not load shared release channels from License Manager");
    const rows=(Array.isArray(j.releases)?j.releases:[]).filter((x:Release)=>String(x.releaseType||"").trim().toLowerCase()==="base");
    setReleases(rows);
-   setChannels(Array.isArray(j.channels)?j.channels:[]);
+   setChannels(Array.isArray(cj.channels)?cj.channels:[]);
    setSelectedId(current=>rows.some((x:Release)=>x.id===current)?current:(rows.find((x:Release)=>x.status!=="published"&&!x.publishedAt)?.id||rows[0]?.id||""));
   }catch(e:any){setMessage(e?.message||"Could not load Base release state")}finally{if(!silent)setLoading(false)}
  }
