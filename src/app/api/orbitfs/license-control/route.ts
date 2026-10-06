@@ -1,6 +1,7 @@
 import {createClient as createSupabaseClient} from "@supabase/supabase-js";
 import {masterControl,masterLicenses} from "@/lib/master-api";
 import {errorMessage} from "@/lib/error-message";
+import {billingCustomerUserFilter} from "@/lib/billing-customer-identity.mjs";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -25,7 +26,7 @@ export async function POST(req:Request){
     if(!licenseId||!CUSTOMER_ACTIONS.has(action))return Response.json({error:"That licence action is not available to customers"},{status:400});
 
     const [{data:customer},{data:orders}]=await Promise.all([
-      sb.from("customers").select("id,auth_user_id,user_id,customer_number").eq("auth_user_id",user.id).maybeSingle(),
+      sb.from("customers").select("id,auth_user_id,user_id,customer_number").or(billingCustomerUserFilter(user.id)).limit(1).maybeSingle(),
       sb.from("orders").select("id,order_number").eq("auth_user_id",user.id)
     ]);
     const refs=new Set<string>();
