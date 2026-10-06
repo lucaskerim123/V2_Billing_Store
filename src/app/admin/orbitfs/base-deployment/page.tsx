@@ -1,6 +1,7 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import V6ConfirmDialog from "@/components/V6ConfirmDialog";
 
 type Release={
  id:string;version:string;revision?:number;attempt?:number;channel?:string;status?:string;reviewStatus?:string;releaseType?:string;
@@ -25,6 +26,18 @@ export default function BaseDeploymentAdmin(){
  const [pipelineError,setPipelineError]=useState<number|null>(null);
  const [editing,setEditing]=useState(false);
  const [draft,setDraft]=useState({title:"",description:"",changelog:"",customer_notes:""});
+ const [confirmState,setConfirmState]=useState<null|{title:string;description:string;confirmLabel:string;danger?:boolean;reasonRequired?:boolean}>(null);
+ const [confirmReason,setConfirmReason]=useState("");
+ const confirmAction=useRef<null|((reason:string)=>void)>(null);
+ function askConfirm(state:NonNullable<typeof confirmState>,action:(reason:string)=>void){
+  confirmAction.current=action;setConfirmReason("");setConfirmState(state);
+ }
+ function cancelConfirm(){confirmAction.current=null;setConfirmReason("");setConfirmState(null)}
+ function acceptConfirm(){
+  const reason=confirmReason.trim();
+  if(confirmState?.reasonRequired&&!reason){setMessage("Enter a reason before continuing.");return}
+  const action=confirmAction.current;cancelConfirm();action?.(reason);
+ }
 
  async function auth(){const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Administrator session expired. Sign in again.");return {Authorization:"Bearer "+session.access_token};}
  async function load(options?:{silent?:boolean;preserveMessage?:boolean}){
@@ -106,8 +119,8 @@ export default function BaseDeploymentAdmin(){
   }catch(e:any){setPipelineError(4);setMessage(e?.message||"Could not publish Base release")}finally{setBusy("")}
  }
 
- async function unpublishBase(r:Release){
-  if(!confirm("Unpublish Base v"+r.version+" from customer deployment?"))return;
+ async function unpublishBase(r:Release,confirmed=false){
+  if(!confirmed){askConfirm({title:"Unpublish Base v"+r.version+"?",description:"Remove this Base release from customer deployment discovery. The License Manager release record and audit history remain intact.",confirmLabel:"Unpublish Base",danger:true},()=>void unpublishBase(r,true));return}
   setBusy("unpublish:"+r.id);setMessage("");
   try{
    const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"withdraw",releaseId:r.id})});
@@ -118,8 +131,8 @@ export default function BaseDeploymentAdmin(){
   }catch(e:any){setMessage(e?.message||"Could not unpublish Base release")}finally{setBusy("")}
  }
 
- async function republishBase(r:Release){
-  if(!confirm("Republish Base v"+r.version+" to the "+(r.channel||"stable")+" customer channel? This reuses the same License Manager release record and does not create another entry."))return;
+ async function republishBase(r:Release,confirmed=false){
+  if(!confirmed){askConfirm({title:"Republish Base v"+r.version+"?",description:"Republish the same License Manager release record to the "+(r.channel||"stable")+" customer channel. No duplicate release entry will be created.",confirmLabel:"Republish Base"},()=>void republishBase(r,true));return}
   setBusy("republish:"+r.id);setMessage("");setPipelineError(null);
   try{
    const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"republish",releaseId:r.id})});
@@ -131,8 +144,8 @@ export default function BaseDeploymentAdmin(){
   }catch(e:any){setPipelineError(4);setMessage(e?.message||"Could not republish Base release")}finally{setBusy("")}
  }
 
- async function deleteBillingCopy(r:Release){
-  if(!confirm("Delete the Billing-owned customer presentation for Base v"+r.version+"? This will not create, reject, withdraw or return any License Manager release."))return;
+ async function deleteBillingCopy(r:Release,confirmed=false){
+  if(!confirmed){askConfirm({title:"Delete Billing presentation?",description:"Delete only the Billing-owned customer presentation for Base v"+r.version+". License Manager release state and audit history are not changed.",confirmLabel:"Delete Billing copy",danger:true},()=>void deleteBillingCopy(r,true));return}
   setBusy("delete-copy:"+r.id);setMessage("");
   try{
    const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"delete_billing_copy",releaseId:r.id})});
@@ -143,9 +156,9 @@ export default function BaseDeploymentAdmin(){
   }catch(e:any){setMessage(e?.message||"Could not delete Billing copy")}finally{setBusy("")}
  }
 
- async function returnToDev(r:Release){
-  const reason=prompt("Reason for returning this Base release to Dev Panel:","")||"";
-  if(!reason.trim())return;
+ async function returnToDev(r:Release,confirmedReason=""){
+  const reason=confirmedReason.trim();
+  if(!reason){askConfirm({title:"Return Base v"+r.version+" to Dev Panel?",description:"Return this release to Stage 1 rework. Enter the reason that should be recorded in the release audit history.",confirmLabel:"Return to Dev Panel",danger:true,reasonRequired:true},value=>void returnToDev(r,value));return}
   setBusy("return:"+r.id);setMessage("");
   try{
    const res=await fetch("/api/admin/orbitfs/release-control",{method:"POST",headers:{...(await auth()),"content-type":"application/json"},body:JSON.stringify({action:"return_to_dev",releaseId:r.id,reason})});
@@ -250,5 +263,18 @@ export default function BaseDeploymentAdmin(){
     <div className="orbitAdminActions"><button className="orbitAction orbitActionPrimary" onClick={()=>void savePresentation()} disabled={busy==="edit"}>{busy==="edit"?"Saving…":"Save portal details"}</button><button className="orbitAction orbitActionQuiet" onClick={()=>setEditing(false)}>Cancel</button></div>
    </div>
   </div>}
+  <V6ConfirmDialog
+   open={Boolean(confirmState)}
+   title={confirmState?.title||""}
+   description={confirmState?.description||""}
+   confirmLabel={confirmState?.confirmLabel||"Confirm"}
+   danger={confirmState?.danger===true}
+   busy={Boolean(busy)}
+   confirmDisabled={confirmState?.reasonRequired===true&&!confirmReason.trim()}
+   onCancel={cancelConfirm}
+   onConfirm={acceptConfirm}
+  >
+   {confirmState?.reasonRequired&&<label className="v6ConfirmReason"><span>Required reason</span><textarea autoFocus maxLength={500} value={confirmReason} onChange={event=>setConfirmReason(event.target.value)} placeholder="Reason for returning this release to Dev Panel"/></label>}
+  </V6ConfirmDialog>
  </main>
 }
