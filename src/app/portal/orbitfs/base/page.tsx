@@ -7,6 +7,7 @@ import {createClient} from "@/lib/supabase";
 import {trackCustomerActivity} from "@/lib/customer-activity";
 import {errorMessage} from "@/lib/error-message";
 import {isCanonicalLicenseUsable} from "@/lib/license-status";
+import V6ConfirmDialog from "@/components/V6ConfirmDialog";
 
 const hasBase=(b:any)=>b?.license_product_key==="orbitfs_base"||!!b?.components?.orbitfs_base||!!b?.components?.orbitfs_panel;
 const usableLicence=(b:any)=>isCanonicalLicenseUsable(b);
@@ -14,6 +15,7 @@ const label=(state:any)=>String(state||"waiting").replaceAll("_"," ");
 const sectionGap={display:"grid",gap:12} as const;
 const summaryStyle={cursor:"pointer"} as const;
 const workingStates=new Set(["configuring","deploying","updating"]);
+type BaseConfirmState={title:string;description:string;confirmLabel:string;danger?:boolean;reasonRequired?:boolean}|null;
 
 export default function MyOrbitFS(){
   const apiError=(payload:any,fallback:string)=>errorMessage(payload?.error??payload?.message??payload,fallback);
@@ -42,6 +44,32 @@ export default function MyOrbitFS(){
   const [baseDomainState,setBaseDomainState]=useState<any>(null);
   const [baseDomainAvailability,setBaseDomainAvailability]=useState<any>(null);
   const [baseDomainDns,setBaseDomainDns]=useState<any>(null);
+  const [confirmState,setConfirmState]=useState<BaseConfirmState>(null);
+  const [confirmReason,setConfirmReason]=useState("");
+  const confirmAction=useRef<null|((reason:string)=>void)>(null);
+
+  function askConfirm(state:NonNullable<BaseConfirmState>,action:(reason:string)=>void){
+    confirmAction.current=action;
+    setConfirmReason("");
+    setConfirmState(state);
+  }
+  function cancelConfirm(){
+    confirmAction.current=null;
+    setConfirmReason("");
+    setConfirmState(null);
+  }
+  function acceptConfirm(){
+    const reason=confirmReason.trim();
+    if(confirmState?.reasonRequired&&!reason){
+      setMsg("Enter a rollback reason before proceeding.");
+      return;
+    }
+    const action=confirmAction.current;
+    confirmAction.current=null;
+    setConfirmState(null);
+    setConfirmReason("");
+    action?.(reason);
+  }
 
   async function authHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{} }
   async function load(background=false,bootstrap=false){
@@ -152,7 +180,7 @@ export default function MyOrbitFS(){
 
   async function start(){if(!binding)return;if(providerSetupUnavailable)return setMsg(settings.maintenance_mode?(settings.maintenance_message||"OrbitFS deployment maintenance is active."):(settings.license_authority_notice||"OrbitFS authority is unavailable."));setBusy("start");try{const r=await fetch("/api/orbitfs/installations/start",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({bindingId:binding.id})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not start OrbitFS setup."));const data=j.installation;setMsg("OrbitFS setup started.");setSiteStep(1);await trackCustomerActivity("orbitfs.installation.create",{entityType:"license",entityId:binding.id,detail:{installation_id:data?.installation_id}});await load()}catch(e:any){setMsg(e?.message||"Could not start OrbitFS setup.")}finally{setBusy("")}}
   async function connectSupabase(){if(!install)return;setBusy("supabase");const r=await fetch("/api/orbitfs/oauth/supabase/start",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({installationId:install.id})}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(apiError(j,"Could not connect Supabase."));location.href=j.url}
-  async function resetSupabase(){if(!confirm("Disconnect the current Supabase connector? This removes the saved OAuth tokens. Your Supabase project and its data are not deleted."))return;setBusy("supabase-reset");const r=await fetch("/api/orbitfs/providers/supabase",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"disconnect"})}),j=await r.json().catch(()=>({}));setBusy("");setResources(undefined);if(!r.ok)return setMsg(apiError(j,"Could not reset Supabase connection."));setMsg("Supabase connector reset. Connect your Supabase account again.");await load()}
+  async function resetSupabase(confirmed=false){if(!confirmed){askConfirm({title:"Disconnect Supabase connector?",description:"This removes the saved Supabase OAuth tokens from OrbitFS. Your Supabase project and customer data are not deleted.",confirmLabel:"Disconnect Supabase",danger:true},()=>void resetSupabase(true));return}setBusy("supabase-reset");const r=await fetch("/api/orbitfs/providers/supabase",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"disconnect"})}),j=await r.json().catch(()=>({}));setBusy("");setResources(undefined);if(!r.ok)return setMsg(apiError(j,"Could not reset Supabase connection."));setMsg("Supabase connector reset. Connect your Supabase account again.");await load()}
   async function saveReleaseChannel(channel:string){
     setPreferredBaseChannel(channel);setSelectedReleaseId("");setReleaseConfirmed(false);
     if(!install)return;
@@ -177,11 +205,11 @@ export default function MyOrbitFS(){
   }
   async function loadSupabase(){setBusy("resources");const r=await fetch("/api/orbitfs/providers/supabase",{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(apiError(j,"Could not load your Supabase projects."));setResources(j);const first=j.organizations?.[0];if(!newProject.organizationSlug&&first)setNewProject(current=>({...current,organizationSlug:first.slug||first.id||""}))}
   async function supabaseAction(action:"select"|"create"){if(!install)return;setBusy(action);const body=action==="select"?{action,installationId:install.id,projectRef:selectedProject}:{action,installationId:install.id,...newProject},r=await fetch("/api/orbitfs/providers/supabase",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify(body)}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?`Your Supabase project was ${action==="select"?"selected":"created"}.`:apiError(j,"Supabase project action failed."));if(r.ok){setResources(undefined);setSiteStep(null);await load()}}
-  async function initialize(){if(!install||!selectedRelease)return;if(!selectedReleaseMatchesInstalled&&install.release_version&&install.release_id&&!confirm("This will initialize the selected published Base release, replacing the current installation release identity. Continue?"))return;setBusy("init");const r=await fetch(`/api/orbitfs/installations/${install.id}/initialize`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({releaseId:String(selectedRelease.id)})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?"OrbitFS database initialized. Licence activation happens after deployment in the Base first-time installer.":apiError(j,"Database initialization failed."));if(r.ok){setSiteStep(null);await load()}}
+  async function initialize(confirmed=false){if(!install||!selectedRelease)return;if(!selectedReleaseMatchesInstalled&&install.release_version&&install.release_id&&!confirmed){askConfirm({title:"Initialize a different Base release?",description:"This replaces the current installation release identity with the selected published Base release before deployment continues.",confirmLabel:"Initialize release",danger:true},()=>void initialize(true));return}setBusy("init");const r=await fetch(`/api/orbitfs/installations/${install.id}/initialize`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({releaseId:String(selectedRelease.id)})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?"OrbitFS database initialized. Licence activation happens after deployment in the Base first-time installer.":apiError(j,"Database initialization failed."));if(r.ok){setSiteStep(null);await load()}}
   async function connectVercelOAuth(){if(!install)return;setBusy("vercel-oauth");try{const r=await fetch("/api/orbitfs/oauth/vercel/start",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({installationId:install.id})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not connect Vercel."));location.href=j.url}catch(e:any){setMsg(e?.message||"Could not connect Vercel.");setBusy("")}}
   async function connectVercelToken(){const token=vercelToken.trim();if(!token)return setMsg("Enter your Vercel Full Account Access token.");setBusy("vercel");const r=await fetch("/api/orbitfs/providers/vercel",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"connect",token})}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(apiError(j,"Could not validate Vercel access."));setVercelToken("");setVercelTeamId(String(j.account?.teamId||""));setMsg("Vercel API access connected.");await load()}
-  async function resetVercel(){if(!confirm("Reset the Vercel connector? This removes the saved Vercel token but does not delete your Vercel project. If OrbitFS is currently deployed, undeploy it first."))return;setBusy("vercel-reset");const r=await fetch("/api/orbitfs/providers/vercel",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"disconnect"})}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(apiError(j,"Could not reset Vercel connection."));setVercelTeamId("");setVercelToken("");setMsg("Vercel connector reset. Connect it again when ready.");await load()}
-  async function resetSetupToStage1(){
+  async function resetVercel(confirmed=false){if(!confirmed){askConfirm({title:"Reset Vercel connector?",description:"This removes the saved Vercel token from OrbitFS but does not delete your Vercel project. If OrbitFS is deployed, undeploy it first.",confirmLabel:"Reset Vercel",danger:true},()=>void resetVercel(true));return}setBusy("vercel-reset");const r=await fetch("/api/orbitfs/providers/vercel",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"disconnect"})}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(apiError(j,"Could not reset Vercel connection."));setVercelTeamId("");setVercelToken("");setMsg("Vercel connector reset. Connect it again when ready.");await load()}
+  async function resetSetupToStage1(confirmed=false){
     if(!install)return;
     if(install.vercel_deployment_id||install.production_url){
       setMsg("Undeploy OrbitFS first. Reset to Stage 1 never removes a live Vercel deployment automatically.");
@@ -189,7 +217,7 @@ export default function MyOrbitFS(){
       setCurrentStep(6);
       return;
     }
-    if(!confirm("Reset OrbitFS setup to Stage 1? This disconnects the saved Supabase and Vercel connections and clears installer selections. It does not delete your Supabase/Vercel projects, customer data, installation ID or licence binding."))return;
+    if(!confirmed){askConfirm({title:"Reset setup to Stage 1?",description:"This disconnects the saved Supabase and Vercel connections and clears installer selections. It does not delete provider projects, customer data, the installation ID or the licence binding.",confirmLabel:"Reset setup",danger:true},()=>void resetSetupToStage1(true));return}
     setBusy("reset-setup");
     try{
       const r=await fetch(`/api/orbitfs/installations/${install.id}/reset`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:"{}"});
@@ -215,13 +243,25 @@ export default function MyOrbitFS(){
     }
   }
   async function selectVercelTeam(){setBusy("vercel-team");const r=await fetch("/api/orbitfs/providers/vercel",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"select_team",teamId:vercelTeamId||null})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?"Vercel deployment account updated.":apiError(j,"Could not select that Vercel team."));if(r.ok)await load()}
-  async function deploy(action:"deploy"|"base_update"|"rollback"|"redeploy",version?:string,releaseId?:string){
+  async function deploy(action:"deploy"|"base_update"|"rollback"|"redeploy",version?:string,releaseId?:string,confirmed=false,confirmedReason=""){
     if(!install)return;
     if(activeOperation){setMsg(label(activeOperation.action)+" is already "+label(activeOperation.state)+". Deployment status below will update automatically.");return}
-    let reason="";
-    if(action==="rollback"){version=undefined;reason=prompt("Why are you rolling this Base deployment back?","")?.trim()||"";if(!reason)return}
     const actionLabel=action==="base_update"?"Update Base":action==="redeploy"?"Redeploy published Base":action==="rollback"?"Rollback Base":"Install Base";
-    if(!confirm(actionLabel+(version?" to "+version:"")+"?"))return;
+    if(!confirmed){
+      const target=version?" to "+version:"";
+      const description=action==="rollback"
+        ?"Roll back the current Base deployment through the authorised Base recovery flow. Enter a reason so the rollback is recorded in deployment history."
+        :action==="base_update"
+          ?"Apply the selected published Base release in the existing customer Vercel project."
+          :action==="redeploy"
+            ?"Redeploy the current published Base release in the existing customer Vercel project."
+            :"Install the selected published Base release into the configured customer environment.";
+      askConfirm({title:actionLabel+target+"?",description,confirmLabel:actionLabel,danger:action==="rollback",reasonRequired:action==="rollback"},reason=>void deploy(action,action==="rollback"?undefined:version,releaseId,true,reason));
+      return;
+    }
+    const reason=action==="rollback"?confirmedReason.trim():"";
+    if(action==="rollback"&&!reason){setMsg("Enter a rollback reason before proceeding.");return}
+    if(action==="rollback")version=undefined;
     if(action==="deploy")setSiteStep(5);
     const isBase=true;
     const baseAction=action==="deploy"?"install":action==="base_update"?"update":action;
@@ -250,11 +290,11 @@ export default function MyOrbitFS(){
       setBusy("");
     }
   }
-  async function forceReinstallBase(){
+  async function forceReinstallBase(confirmed=false){
     if(!install)return;
     if(activeOperation){setMsg(label(activeOperation.action)+" is already "+label(activeOperation.state)+". Wait for the active Base operation to finish before forcing a reinstall.");return}
     const channel=String(install.release_channel||selectedChannel||"stable");
-    if(!confirm("Force reinstall OrbitFS Base? This deletes ONLY the current Base Vercel project, releases/unlocks its licence activation, preserves Supabase/database/storage, the installation ID and linked runtime services, then PAUSES. Rotate the licence key, continue the reinstall here, then enter the new key inside the deployed Base."))return;
+    if(!confirmed){askConfirm({title:"Force reinstall OrbitFS Base?",description:"This deletes only the current Base Vercel project and releases its licence activation. Supabase, database, storage, installation ID and linked runtime services are preserved. The flow then pauses so you can rotate the licence key before continuing.",confirmLabel:"Force reinstall",danger:true},()=>void forceReinstallBase(true));return}
     setBusy("force-base-reinstall");
     try{
       const r=await fetch(`/api/orbitfs/installations/${install.id}/force-reinstall-base`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:"{}"});
@@ -389,7 +429,7 @@ export default function MyOrbitFS(){
   }
 
   async function lifecyclePlanFor(action:"undeploy"|"uninstall"){if(!install)return;setBusy("lifecycle-plan");try{const options=action==="uninstall"?uninstallOptions:{removeDatabase:false,removeStorage:false,releaseLicense:false};const r=await fetch(`/api/orbitfs/installations/${install.id}/lifecycle`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"plan",mode:action,...options})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not create lifecycle plan."));setLifecyclePlan(j);return j}catch(e:any){setMsg(e?.message||"Could not create lifecycle plan.");return null}finally{setBusy("")}}
-  async function executeLifecycle(action:"undeploy"|"uninstall"){if(!install)return;const planned=await lifecyclePlanFor(action);if(!planned)return;const destructive=action==="uninstall"&&[uninstallOptions.removeDatabase&&"OrbitFS database objects",uninstallOptions.removeStorage&&"OrbitFS storage bucket",uninstallOptions.releaseLicense&&"licence installation binding"].filter(Boolean);const summary=action==="undeploy"?"Undeploy OrbitFS? The deployed OrbitFS runtime will be removed. Your database, storage, licence binding and installation ID will be preserved.":`Uninstall OrbitFS? This removes the running OrbitFS resources.${destructive&&destructive.length?` It will also permanently remove: ${destructive.join(", ")}.`:" Database, storage and licence binding will be preserved."} The Supabase project itself is never deleted.`;if(!confirm(summary))return;setBusy(action);try{const r=await fetch(`/api/orbitfs/installations/${install.id}/lifecycle`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action,jobId:planned?.job?.id,...(action==="uninstall"?uninstallOptions:{})})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,`${action} failed.`));setLifecyclePlan(j);await trackCustomerActivity(action==="undeploy"?"orbitfs.installation.undeploy":"orbitfs.installation.uninstall",{entityType:"license",entityId:binding?.id,detail:{installation_id:install.installation_id,job_id:j?.job?.id,options:action==="uninstall"?uninstallOptions:{}}});setMsg(action==="undeploy"?"OrbitFS undeployed. Database, storage, licence and installation ID were preserved.":"OrbitFS uninstall completed with the selected cleanup options.");await load()}catch(e:any){setMsg(e?.message||`${action} failed.`)}finally{setBusy("")}}
+  async function executeLifecycle(action:"undeploy"|"uninstall",plannedOverride:any=null,confirmed=false){if(!install)return;const planned=plannedOverride||await lifecyclePlanFor(action);if(!planned)return;const destructive=action==="uninstall"&&[uninstallOptions.removeDatabase&&"OrbitFS database objects",uninstallOptions.removeStorage&&"OrbitFS storage bucket",uninstallOptions.releaseLicense&&"licence installation binding"].filter(Boolean);const summary=action==="undeploy"?"The deployed OrbitFS runtime will be removed. Database, storage, licence binding and installation ID are preserved.":`This removes the running OrbitFS resources.${destructive&&destructive.length?` It will also permanently remove: ${destructive.join(", ")}.`:" Database, storage and licence binding will be preserved."} The Supabase project itself is never deleted.`;if(!confirmed){askConfirm({title:action==="undeploy"?"Undeploy OrbitFS?":"Uninstall OrbitFS?",description:summary,confirmLabel:action==="undeploy"?"Undeploy":"Uninstall",danger:true},()=>void executeLifecycle(action,planned,true));return}setBusy(action);try{const r=await fetch(`/api/orbitfs/installations/${install.id}/lifecycle`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action,jobId:planned?.job?.id,...(action==="uninstall"?uninstallOptions:{})})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,`${action} failed.`));setLifecyclePlan(j);await trackCustomerActivity(action==="undeploy"?"orbitfs.installation.undeploy":"orbitfs.installation.uninstall",{entityType:"license",entityId:binding?.id,detail:{installation_id:install.installation_id,job_id:j?.job?.id,options:action==="uninstall"?uninstallOptions:{}}});setMsg(action==="undeploy"?"OrbitFS undeployed. Database, storage, licence and installation ID were preserved.":"OrbitFS uninstall completed with the selected cleanup options.");await load()}catch(e:any){setMsg(e?.message||`${action} failed.`)}finally{setBusy("")}}
 
   if(loading)return <main className="portalOverviewV2 orbitfsBaseV3"><section className="panel"><b>{msg||"Loading My OrbitFS…"}</b>{msg&&<p className="muted">Loading the rest of your deployment state…</p>}</section></main>;
   if(!d)return <main className="portalOverviewV2 orbitfsBaseV3 orbitZipDeployer"><section className="panel"><h2>My OrbitFS could not load</h2><p className="muted">{msg||"The OrbitFS status service did not return data."}</p><button onClick={()=>void load()}>Retry</button></section></main>;
@@ -734,5 +774,17 @@ export default function MyOrbitFS(){
       <Link className="buttonlink secondary" href="/portal/support">Contact support ↗</Link>
     </section>}
 
-  </main>;
+   <V6ConfirmDialog
+    open={Boolean(confirmState)}
+    title={confirmState?.title||""}
+    description={confirmState?.description||""}
+    confirmLabel={confirmState?.confirmLabel||"Confirm"}
+    danger={confirmState?.danger===true}
+    busy={Boolean(busy)}
+    onCancel={cancelConfirm}
+    onConfirm={acceptConfirm}
+  >
+    {confirmState?.reasonRequired&&<label className="v6ConfirmReason"><span>Rollback reason</span><textarea autoFocus maxLength={500} value={confirmReason} onChange={event=>setConfirmReason(event.target.value)} placeholder="Why are you rolling this Base deployment back?"/></label>}
+  </V6ConfirmDialog>
+ </main>;
 }
