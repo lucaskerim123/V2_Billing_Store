@@ -4,6 +4,7 @@ import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import {usePermissions} from "@/lib/usePermissions";
+import V6ConfirmDialog from "@/components/V6ConfirmDialog";
 
 type Installation=any;
 
@@ -264,23 +265,28 @@ export default function InstallationsPage(){
       </section>
     </div>:<section className="orbitReferenceEmpty"><b>No installations found</b><span>Change the search/filter or run “Check for changes” to request a fresh License Manager projection.</span></section>}
 
-    {lockTarget&&<div className="orbitConfirmBackdrop" role="presentation" onMouseDown={()=>{if(!busyId)setLockTarget(null)}}>
-      <section className="orbitConfirmDialog orbitInstallationLockDialog" role="dialog" aria-modal="true" aria-labelledby="lock-deployment-title" onMouseDown={event=>event.stopPropagation()}>
-        <p className="eyebrow">LICENSE MANAGER CONTROL</p>
-        <h2 id="lock-deployment-title">Lock deployment?</h2>
-        <p>Base deploy, Base update, redeploy, rollback and Update deployment authorization will be blocked for this installation until an administrator unlocks it.</p>
-        <label>Reason<textarea rows={4} value={lockReason} onChange={event=>setLockReason(event.target.value)} placeholder="Required reason for the deployment lock"/></label>
-        <div className="orbitReferenceDecision"><button type="button" className="secondary" onClick={()=>setLockTarget(null)} disabled={Boolean(busyId)}>Cancel</button><button type="button" className="danger" disabled={!lockReason.trim()||Boolean(busyId)} onClick={()=>void setLock(lockTarget,"lock",lockReason)}>{busyId?"Locking…":"Lock deployment"}</button></div>
-      </section>
-    </div>}
+    <V6ConfirmDialog
+      open={Boolean(lockTarget)}
+      title="Lock deployment?"
+      description="Base deploy, Base update, redeploy, rollback and Update deployment authorization will be blocked for this installation until an administrator unlocks it."
+      confirmLabel="Lock deployment"
+      danger
+      busy={Boolean(busyId)}
+      confirmDisabled={!lockReason.trim()}
+      onCancel={()=>{setLockTarget(null);setLockReason("")}}
+      onConfirm={()=>{if(lockTarget)void setLock(lockTarget,"lock",lockReason)}}
+    >
+      <label className="v6ConfirmReason"><span>Required reason</span><textarea rows={4} value={lockReason} onChange={event=>setLockReason(event.target.value)} placeholder="Reason for the deployment lock"/></label>
+    </V6ConfirmDialog>
 
-    {unlockTarget&&<div className="orbitConfirmBackdrop" role="presentation" onMouseDown={()=>{if(!busyId)setUnlockTarget(null)}}>
-      <section className="orbitConfirmDialog" role="alertdialog" aria-modal="true" aria-labelledby="unlock-deployment-title" onMouseDown={event=>event.stopPropagation()}>
-        <p className="eyebrow">LICENSE MANAGER CONTROL</p>
-        <h2 id="unlock-deployment-title">Unlock deployment?</h2>
-        <p>Deployment authorization will be available again if the licence and release policy otherwise allow it.</p>
-        <div className="orbitReferenceDecision"><button type="button" className="secondary" autoFocus onClick={()=>setUnlockTarget(null)} disabled={Boolean(busyId)}>Cancel</button><button type="button" disabled={Boolean(busyId)} onClick={()=>void setLock(unlockTarget,"unlock")}>{busyId?"Unlocking…":"Unlock deployment"}</button></div>
-      </section>
-    </div>}
+    <V6ConfirmDialog
+      open={Boolean(unlockTarget)}
+      title="Unlock deployment?"
+      description="Deployment authorization will be available again if the licence and release policy otherwise allow it."
+      confirmLabel="Unlock deployment"
+      busy={Boolean(busyId)}
+      onCancel={()=>setUnlockTarget(null)}
+      onConfirm={()=>{if(unlockTarget)void setLock(unlockTarget,"unlock")}}
+    />
   </main>;
 }
