@@ -29,6 +29,14 @@ test("legacy terminated account mirrors are treated as reconciled, not downgrade
   assert.equal(accountEnforcementRemoteSatisfied({desired:"suspended",remote:"revoked",reason:"invoice overdue"}),false);
 });
 
+test("suspension is reversible but termination requires explicit licence recovery",()=>{
+  const {canReactivateAccountEnforcement,accountEnforcementAllowsExpiry}=loadStateModule();
+  assert.equal(canReactivateAccountEnforcement("suspended"),true);
+  assert.equal(canReactivateAccountEnforcement("terminated"),false);
+  assert.equal(accountEnforcementAllowsExpiry("suspended"),true);
+  assert.equal(accountEnforcementAllowsExpiry("terminated"),false);
+});
+
 test("admin customer enforcement runs through the server enforcement endpoint",()=>{
   const route=new URL("src/app/api/admin/customers/[id]/enforcement/route.ts",root);
   assert.equal(existsSync(route),true,"admin enforcement API route must exist");
