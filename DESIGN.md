@@ -148,6 +148,18 @@ Danger actions remain visually separated from normal deployment actions.
 - Use blue as the Base Deployer's primary accent.
 - Hide lifecycle consequences or present failed/partial deployment as success.
 
+## V6C My OrbitFS authority workspaces
+
+License Controller and Release Channels are operational customer workspaces, not legacy portal card stacks.
+
+- Keep the V6C route context header compact; the working area begins immediately below it.
+- Use a bounded selector rail plus one dominant detail workspace on desktop. On phone widths, the selector rail becomes a horizontal snap list above the detail workspace.
+- License Controller shows authoritative licence status, enabled components, installation bindings and shared Base + Update channel access together. Customer actions remain narrower than Admin enforcement actions.
+- Release Channels exposes the single License Manager channel model used by both Base and Update. It manages customer access only; changing channel access must not silently rewrite an installed Base channel.
+- Stable/open access is visually distinct from explicit restricted-channel grants. Pending/approved/denied requests must remain clearly separate from authoritative access.
+- Destructive, security-sensitive or permission-changing customer actions use the shared V6 app dialog, never browser-native confirm/prompt/alert.
+- Empty, loading and error states preserve the workspace footprint and tell the customer what can be done next.
+
 ## V6 Customer and Admin System
 
 V6 is the compact OrbitFS product interface derived from the supplied 12ui ZIP and maintained with the Frontend Design Premium consistency contract.
