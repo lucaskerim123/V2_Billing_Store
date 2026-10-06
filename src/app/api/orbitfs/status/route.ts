@@ -4,6 +4,7 @@ import {masterLicenses,masterReleases} from "@/lib/master-api";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {expireStaleBaseOperations} from "@/lib/orbitfs-base-operations";
 import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
+import {canonicalLicenseStatus} from "@/lib/license-status";
 
 export const dynamic="force-dynamic";
 const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
@@ -64,7 +65,7 @@ export async function GET(req:Request){
   const updateReleaseDiscoveryAvailable=Object.values(updateReleaseDiscoveryByChannel).every((x:any)=>x.available===true);
   const updateReleaseDiscoveryError=remoteReleaseResults.filter((x:any)=>x.type==="update"&&!x.ok).map((x:any)=>`${x.channel}: ${x.error}`).join("; ")||null;
   const masterReleaseRows=remoteReleaseResults.flatMap((x:any)=>x?.value?.releases||[]);
-  const customerMasterLicenses=masterLicensesRows.filter((x:any)=>!["revoked","expired"].includes(String(x.status||"").toLowerCase()));
+  const customerMasterLicenses=masterLicensesRows.filter((x:any)=>!["terminated","expired"].includes(canonicalLicenseStatus(x)));
   let connectionRows=(connections.data||[]).map((x:any)=>({...x,metadata:{...(x.metadata||{})}}));
   const enrichedBindings=bindingRows.flatMap((b:any)=>{
     const remote=customerMasterLicenses.find((x:any)=>String(x.id)===String(b.license_id));
@@ -76,9 +77,12 @@ export async function GET(req:Request){
       license_product_key:product,
       label:b.label||remote.product_name||product,
       license_key_last4:remote.license_key_last4||b.license_key_last4||null,
-      authoritative_status:String(remote.status||"unknown"),
+      authoritative_status:canonicalLicenseStatus(remote),
+      authoritative_storage_status:String(remote.storage_status||remote.status||"unknown"),
+      authoritative_component_states:remote.component_states||{},
       authoritative_expires_at:remote.expires_at||null,
-      status:String(remote.status||"unknown"),
+      status:canonicalLicenseStatus(remote),
+      storage_status:String(remote.storage_status||remote.status||"unknown"),
       expires_at:remote.expires_at||null,
       components:remote.components||{},
       activations:Array.isArray(remote.activations)?remote.activations:[],
@@ -96,9 +100,12 @@ export async function GET(req:Request){
         license_product_key:product,
         label:remote.product_name||product,
         license_key_last4:remote.license_key_last4||null,
-        authoritative_status:String(remote.status||"unknown"),
+        authoritative_status:canonicalLicenseStatus(remote),
+      authoritative_storage_status:String(remote.storage_status||remote.status||"unknown"),
+      authoritative_component_states:remote.component_states||{},
         authoritative_expires_at:remote.expires_at||null,
-        status:String(remote.status||"unknown"),
+        status:canonicalLicenseStatus(remote),
+      storage_status:String(remote.storage_status||remote.status||"unknown"),
         expires_at:remote.expires_at||null,
         components:remote.components||{},
         activations:Array.isArray(remote.activations)?remote.activations:[],
