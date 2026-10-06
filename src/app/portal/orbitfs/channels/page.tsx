@@ -64,7 +64,8 @@ export default function CustomerReleaseChannelsPage(){
  const selectedChannel=channels.find((row:any)=>String(row.channel)===selected)||channels[0]||null;
  const baseInstall=(Array.isArray(orbitStatus?.installations)?orbitStatus.installations:[]).find((row:any)=>String(row.component_key||"")==="orbitfs_base")||(Array.isArray(orbitStatus?.installations)?orbitStatus.installations[0]:null);
  const currentChannel=String(baseInstall?.release_channel||"stable");
- const hasActiveBase=Boolean((Array.isArray(orbitStatus?.bindings)?orbitStatus.bindings:[]).some((row:any)=>String(row.license_product_key||"")==="orbitfs_base"&&["active","locked"].includes(String(row.authoritative_status||row.status||"").toLowerCase())));
+ const baseEligibilityKnown=orbitStatus!==null;
+ const hasActiveBase=!baseEligibilityKnown||Boolean((Array.isArray(orbitStatus?.bindings)?orbitStatus.bindings:[]).some((row:any)=>String(row.license_product_key||"")==="orbitfs_base"&&["active","locked"].includes(String(row.authoritative_status||row.status||"").toLowerCase())));
  const pendingCount=requests.filter((row:any)=>String(row.status||"").toLowerCase()==="pending").length;
  const availableCount=channels.filter((row:any)=>row.channel==="stable"||row.access_mode==="open"||explicitAccess.has(String(row.channel||"").toLowerCase())).length;
 
@@ -178,7 +179,7 @@ export default function CustomerReleaseChannelsPage(){
      <Link className="buttonlink secondary" href="/portal/orbitfs/base">Open Base Deployment</Link>
     </section>}
 
-    {!hasActiveBase&&<section className="orbitCustomerCallout warning">
+    {baseEligibilityKnown&&!hasActiveBase&&<section className="orbitCustomerCallout warning">
      <div><span>ACTIVE BASE LICENCE REQUIRED</span><b>Channel access depends on an eligible Base licence</b><p>You can review channel policy here, but restricted access and release deployment remain unavailable until an active OrbitFS Base licence is linked.</p></div>
      <Link className="buttonlink secondary" href="/portal/orbitfs/license">Check licence</Link>
     </section>}
