@@ -19,7 +19,7 @@ export default function EnforcedCustomers(){
    {loading?<p className="muted">Loading enforcement records…</p>:shown.length?shown.map((x:any)=>{const state=canonicalAccountStatus({status:x.effective_state,banned_at:x.effective_state==="banned"});return <div className="customerRecord" key={x.id}>
     <Link className="customerRecordMain" href={"/admin/customers/"+x.id}><b>{x.display_name||x.customer_number||x.id}</b><span>{x.customer_number||"Customer"} · {x.reason||"No reason provided"}</span><span className="customerRecordSub">{x.expires_at?("Expires "+new Date(x.expires_at).toLocaleString()):state==="terminated"?"No automatic reactivation":"No automatic expiry"}</span></Link>
     <div className="customerRecordMetric"><small>State</small><span className={"customerStatus "+state}>{canonicalStatusLabel(state)}</span></div>
-    <div className="inlineActions"><Link className="buttonlink small secondary" href={"/admin/customers/"+x.id}>Open</Link><button className="small" onClick={()=>reactivate(x.id,x.display_name||x.customer_number||"customer")}>Reactivate</button></div>
+    <div className="inlineActions"><Link className="buttonlink small secondary" href={"/admin/customers/"+x.id}>Open</Link>{state==="suspended"?<button className="small" onClick={()=>reactivate(x.id,x.display_name||x.customer_number||"customer")}>Reactivate</button>:<span className="customerRecordSub">Explicit licence recovery required</span>}</div>
    </div>}):<div className="v3Empty">No customers currently match this enforcement filter.</div>}
   </section>
   {msg&&<p className="inlineStatus">{msg}</p>}
