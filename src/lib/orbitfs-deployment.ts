@@ -845,6 +845,45 @@ export async function configureVercelUpdateIdentity(install:any,input:{version:s
 }
 
 // Resolve only a project-level production address; generated deployment URLs can be protected.
+function baseDomainPreference(install:any){
+ const value=install?.metadata?.baseDomain;
+ if(!value||typeof value!=="object")return {mode:"",domainName:""};
+ return {mode:String(value.mode||"").trim().toLowerCase(),domainName:String(value.domainName||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"")};
+}
+function normalizeBaseVercelAlias(value:any){
+ const raw=String(value||"").trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
+ const domain=raw.endsWith(".vercel.app")?raw:`${raw}.vercel.app`;
+ const slug=domain.slice(0,-".vercel.app".length);
+ if(!slug||slug.includes(".")||slug.length>63||!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(slug))throw Object.assign(new Error("Enter a valid Vercel address such as my-orbitfs.vercel.app."),{status:400,code:"BASE_VERCEL_ALIAS_INVALID"});
+ return domain;
+}
+function baseVercelAliasUnavailable(error:any){
+ const message=String(error?.message||"").toLowerCase();
+ return /alias.*(already|in use)|already.*(used|assigned|exists)|domain.*(in use|assigned)|alias_in_use|forbidden.*alias/.test(message);
+}
+export async function ensureSelectedBaseVercelAliasOnDeployment(install:any,deploymentId:string):Promise<string|null>{
+ const preference=baseDomainPreference(install);
+ if(preference.mode!=="vercel"||!preference.domainName)return null;
+ const domain=normalizeBaseVercelAlias(preference.domainName);
+ const projectId=String(install?.vercel_project_id||"").trim();
+ if(!projectId||!deploymentId)throw Object.assign(new Error("Base Vercel project/deployment identity is missing while restoring the selected address."),{status:409,code:"BASE_DOMAIN_PROJECT_REQUIRED"});
+ let current:any=null;
+ try{current=await vercelApi(String(install.auth_user_id),`/v4/aliases/${encodeURIComponent(domain)}`,{method:"GET"});}catch(error:any){if(Number(error?.status||0)!==404)throw error}
+ const currentDeploymentId=String(current?.deploymentId||current?.deployment?.id||"").trim();
+ const currentProjectId=String(current?.projectId||current?.project?.id||current?.deployment?.projectId||"").trim();
+ if(currentDeploymentId===deploymentId&&(!currentProjectId||currentProjectId===projectId))return domain;
+ try{
+  await vercelApi(String(install.auth_user_id),`/v2/deployments/${encodeURIComponent(deploymentId)}/aliases`,{method:"POST",body:JSON.stringify({alias:domain,redirect:null})});
+ }catch(error:any){
+  if(Number(error?.status||0)===403||Number(error?.status||0)===409||baseVercelAliasUnavailable(error))throw Object.assign(new Error(`${domain} is already in use on Vercel.`),{status:409,code:"BASE_VERCEL_ALIAS_UNAVAILABLE"});
+  throw error;
+ }
+ const verified=await vercelApi(String(install.auth_user_id),`/v4/aliases/${encodeURIComponent(domain)}`,{method:"GET"});
+ const verifiedDeploymentId=String(verified?.deploymentId||verified?.deployment?.id||"").trim();
+ const verifiedProjectId=String(verified?.projectId||verified?.project?.id||verified?.deployment?.projectId||"").trim();
+ if(verifiedDeploymentId!==deploymentId||(verifiedProjectId&&verifiedProjectId!==projectId))throw Object.assign(new Error("Vercel did not bind the selected Base address to the current production deployment."),{status:503,code:"BASE_VERCEL_ALIAS_REBIND_FAILED"});
+ return domain;
+}
 export async function resolveProductionUrl(install:any,deployment?:any):Promise<string|null>{
  const normalize=(v:any)=>String(v||"").trim().replace(/^https?:\/\//,"").replace(/\/$/,"").toLowerCase();
  const projectDomain=`${String(install.vercel_project_name||"").trim().toLowerCase()}.vercel.app`;
@@ -852,7 +891,17 @@ export async function resolveProductionUrl(install:any,deployment?:any):Promise<
  const aliases=Array.isArray(deployment?.alias)?deployment.alias.map(normalize).filter(Boolean):[];
  const result=await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(String(install.vercel_project_id))}/domains`,{method:"GET"});
  const domains=Array.isArray(result?.domains)?result.domains:[];
- const candidates=domains.filter((d:any)=>d?.verified!==false&&normalize(d?.name)&&normalize(d?.name)!==deploymentHost);
+ const candidates=domains.filter((d:any)=>d?.verified!==false&&d?.misconfigured!==true&&normalize(d?.name)&&normalize(d?.name)!==deploymentHost);
+ const preference=baseDomainPreference(install);
+ const preferred=normalize(preference.domainName);
+ if(preference.mode==="generated"&&projectDomain!==".vercel.app")return `https://${projectDomain}`;
+ if(preference.mode==="custom"&&preferred){
+  const selected=candidates.find((d:any)=>normalize(d?.name)===preferred);
+  if(selected)return `https://${preferred}`;
+ }
+ if(preference.mode==="vercel"&&preferred&&preferred.endsWith(".vercel.app")){
+  if(aliases.includes(preferred)||candidates.some((d:any)=>normalize(d?.name)===preferred))return `https://${preferred}`;
+ }
  const custom=candidates.find((d:any)=>!d.redirect&&!normalize(d.name).endsWith(".vercel.app"))
   ||candidates.find((d:any)=>!normalize(d.name).endsWith(".vercel.app"));
  const customAlias=aliases.find((host:string)=>host!==deploymentHost&&!host.endsWith(".vercel.app"));
@@ -860,7 +909,7 @@ export async function resolveProductionUrl(install:any,deployment?:any):Promise<
  const vercel=candidates.find((d:any)=>!d.redirect&&normalize(d.name).endsWith(".vercel.app"))
   ||candidates.find((d:any)=>normalize(d.name).endsWith(".vercel.app"));
  const name=normalize(custom?.name)||customAlias||normalize(project?.name)||(aliases.includes(projectDomain)&&projectDomain!==deploymentHost?projectDomain:"")||normalize(vercel?.name)||normalize(candidates[0]?.name);
- return name?`https://${name}`:null;
+ return name?`https://${name}`:projectDomain!==".vercel.app"?`https://${projectDomain}`:null;
 }
 export async function checkPublicPanelHealth(url:string,path:string):Promise<boolean>{
  try{const r=await fetch(new URL(path||"/api/health",url),{redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(15000)});return r.status>=200&&r.status<300&&!r.headers.get("x-vercel-mitigated")}catch{return false}
