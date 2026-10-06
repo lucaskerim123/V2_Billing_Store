@@ -12,8 +12,8 @@ That suffix is part of the theme contract. Admin theme IDs must end in `A`; cust
 - `V3A` — stable Admin baseline
 - `V5A` — current Admin redesign, extending `V3A`
 - `V3C` — stable Customer baseline
-- `V5C` — current Customer redesign, extending `V3C`
-- `V6C` — standalone Customer Portal redesign based on the supplied 12ui visual system; it does not inherit `V3C` or `V5C`
+- `V5C` — compatibility Customer redesign, extending `V3C`
+- `V6C` — standalone current-generation Customer Portal design based on the supplied 12ui visual system; it does not inherit `V3C` or `V5C`
 
 V5 is an overlay family. It keeps the V3 baseline underneath it and only owns the surfaces intentionally redesigned for V5. V6C is different: it is a standalone customer visual system and does not use the V3C/V5C portal design when selected.
 
@@ -63,20 +63,19 @@ An `.orbit-theme.zip` must contain exactly one theme root whose folder name matc
 
 Production selection stays database-backed in the Theme Manager. The CLI fallback is only used when runtime theme settings are unavailable.
 
-## V5C ownership
+## Base / Update theme ownership
 
-V5C currently owns the customer Base Deployer redesign in:
+V5C keeps its compatibility Base/Update presentation inside `src/themes/V5C/` and must not leak those rules into V6C.
 
-- `src/themes/V5C/base-deployer-foundation.css`
-- `src/themes/V5C/base-deployer.css`
+V6C owns its customer Base Deployment, Update Release System, License Controller and Release Channels presentation in `src/themes/V6C/theme.css`. Those V6C rules are route-scoped and do not import or inherit the V5C Base/Update styles.
 
-Do not move V5C Base Deployer styling back into shared V3C portal CSS.
+Business workflow and technical authority are not theme-owned: Base/Update behavior remains in the existing routes/APIs, with License Manager authoritative for releases, channels and deployment authorization.
 
-## V6C starter
+## V6C runtime
 
-V6C is a standalone customer-theme redesign:
+V6C is a standalone customer-theme system:
 
 - `src/themes/V6C/manifest.json` defines it as a built-in Customer Portal theme.
 - `src/themes/V6C/theme.css` is the V6-only design entry point.
-- It does not extend `V3C` or `V5C`; unfinished V6 pages use the V6C shell rather than legacy portal layouts.
-- It is registered without changing `themes.active_customer`; creating or migrating V6C does not activate it.
+- It does not extend `V3C` or `V5C`; V6 pages use the V6C shell rather than legacy portal presentation.
+- Runtime activation remains database-backed in Theme Manager; source changes do not silently switch the selected customer theme.
