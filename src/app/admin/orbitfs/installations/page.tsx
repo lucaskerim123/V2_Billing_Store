@@ -124,12 +124,6 @@ export default function InstallationsPage(){
     return true;
   });
 
-  const filteredKey=filtered.map(item=>String(item.installation_id||"")).join("|");
-  useEffect(()=>{
-    if(!filtered.length)return;
-    if(!filtered.some(item=>String(item.installation_id)===selectedId))setSelectedId(String(filtered[0].installation_id||""));
-  },[filteredKey,selectedId]);
-
   const selected=filtered.find(item=>String(item.installation_id)===selectedId)||filtered[0]||null;
   const lockedCount=items.filter(item=>item.deployment_lock?.locked).length;
   const deployerCount=items.filter(item=>item.deployment_source==="deployer").length;
