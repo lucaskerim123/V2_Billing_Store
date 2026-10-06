@@ -3564,3 +3564,1046 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route
   }
 }
 /* END ORBITFS UPDATE RELEASE REDESIGN 2026-10-06 */
+
+/* ORBITFS CUSTOMER AUTHORITY WORKSPACES 2026-10-07 */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels)>.v6c-context-hero{
+  min-height:128px!important;
+  margin-bottom:10px!important;
+  padding:19px 22px!important;
+  border-color:#153d59!important;
+  background:
+    radial-gradient(360px 150px at 88% 20%,rgba(93,53,210,.18),transparent 72%),
+    linear-gradient(125deg,#061c30,#041624)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels)>.v6c-context-hero h1{
+  margin:4px 0 5px!important;
+  font-size:25px!important;
+  letter-spacing:-.035em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels)>.v6c-context-hero p{
+  max-width:700px!important;
+  font-size:9.5px!important;
+  line-height:1.55!important;
+}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicense,.orbitCustomerChannels){
+  display:grid!important;
+  gap:10px!important;
+  min-width:0!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar{
+  min-height:64px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:16px!important;
+  padding:11px 13px!important;
+  border:1px solid #143b57!important;
+  border-radius:8px!important;
+  background:#041725!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar>div:first-child{
+  min-width:0!important;
+  display:grid!important;
+  gap:2px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar>div:first-child>span{
+  color:#55c8ee!important;
+  font-size:6.5px!important;
+  font-weight:850!important;
+  letter-spacing:.11em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar>div:first-child>b{
+  color:#eef6fc!important;
+  font-size:10.5px!important;
+  line-height:1.35!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar>div:first-child>small{
+  color:#6c8ca4!important;
+  font-size:7.5px!important;
+  line-height:1.45!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar>div:last-child{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar :is(button,.buttonlink){
+  min-height:32px!important;
+  padding:0 10px!important;
+  border-radius:5px!important;
+  font-size:7.5px!important;
+}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerNotice{
+  min-height:42px!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:8px!important;
+  padding:9px 11px!important;
+  border:1px solid #1e5a64!important;
+  border-radius:7px!important;
+  background:#06262d!important;
+  color:#9fd7d5!important;
+  font-size:8.5px!important;
+  line-height:1.5!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerNotice b{
+  flex:0 0 auto!important;
+  color:#74e1d4!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerNotice.danger{
+  border-color:#673947!important;
+  background:#25141c!important;
+  color:#e6a5b2!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerNotice.danger b{color:#ff9fb2!important}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicenceStats,.orbitCustomerChannelStats){
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicenceStats,.orbitCustomerChannelStats)>article{
+  min-height:72px!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:4px!important;
+  padding:10px 11px!important;
+  border:1px solid #143a55!important;
+  border-radius:7px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicenceStats,.orbitCustomerChannelStats) span{
+  color:#5f829c!important;
+  font-size:6.5px!important;
+  font-weight:760!important;
+  letter-spacing:.04em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicenceStats,.orbitCustomerChannelStats) b{
+  color:#eaf3fa!important;
+  font-size:11px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicenceStats,.orbitCustomerChannelStats) small{
+  color:#66869e!important;
+  font-size:7px!important;
+  line-height:1.4!important;
+  overflow-wrap:anywhere!important;
+}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceWorkspace,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelWorkspace{
+  display:grid!important;
+  grid-template-columns:250px minmax(0,1fr)!important;
+  align-items:start!important;
+  gap:9px!important;
+  min-width:0!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceRail,.orbitCustomerChannelRail),
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceDetail,.orbitCustomerChannelDetail){
+  min-width:0!important;
+  border:1px solid #153b55!important;
+  border-radius:8px!important;
+  background:linear-gradient(180deg,#061b2b,#041522)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceRail,.orbitCustomerChannelRail){
+  position:sticky!important;
+  top:12px!important;
+  overflow:hidden!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceRail,.orbitCustomerChannelRail)>header{
+  min-height:58px!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  padding:11px!important;
+  border-bottom:1px solid #12344d!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceRail,.orbitCustomerChannelRail)>header>div{
+  min-width:0!important;
+  display:grid!important;
+  gap:3px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceRail,.orbitCustomerChannelRail)>header b{
+  color:#eaf3fa!important;
+  font-size:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceRail,.orbitCustomerChannelRail)>header span{
+  color:#66879f!important;
+  font-size:7px!important;
+  line-height:1.4!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceRail,.orbitCustomerChannelRail)>header strong{
+  min-width:24px!important;
+  height:22px!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid #264a67!important;
+  border-radius:999px!important;
+  background:#082238!important;
+  color:#a8c4d6!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceList,.orbitCustomerChannelList){
+  display:grid!important;
+  gap:5px!important;
+  max-height:calc(100vh - 285px)!important;
+  overflow:auto!important;
+  padding:6px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceChoice,.orbitCustomerChannelChoice){
+  width:100%!important;
+  min-height:72px!important;
+  display:grid!important;
+  align-content:start!important;
+  gap:5px!important;
+  padding:9px!important;
+  border:1px solid #123650!important;
+  border-radius:6px!important;
+  background:#051827!important;
+  color:#a7bfd0!important;
+  text-align:left!important;
+  white-space:normal!important;
+  box-shadow:none!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceChoice,.orbitCustomerChannelChoice):hover{
+  border-color:#2d607e!important;
+  background:#082239!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceChoice,.orbitCustomerChannelChoice).active{
+  border-color:#6548d6!important;
+  background:
+    linear-gradient(90deg,rgba(104,63,218,.18),transparent 70%),
+    #082038!important;
+  box-shadow:inset 3px 0 #704ee7!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerLicenceChoice>div,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerChannelChoice>div{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerLicenceChoice>div{
+  justify-content:flex-start!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceChoice,.orbitCustomerChannelChoice) b{
+  color:#e5eff6!important;
+  font-size:8.5px!important;
+  line-height:1.3!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerChannelChoice>div>span{
+  flex:0 0 auto!important;
+  padding:3px 5px!important;
+  border:1px solid #21445e!important;
+  border-radius:4px!important;
+  color:#7ea2b9!important;
+  font-size:6px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceChoice,.orbitCustomerChannelChoice)>small{
+  color:#66879f!important;
+  font-size:7px!important;
+  line-height:1.4!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerLicenceChoice>span{
+  color:#557993!important;
+  font-size:6.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerChannelChoice>footer{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:7px!important;
+  margin-top:2px!important;
+  color:#6f91a8!important;
+  font-size:6.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerChannelChoice>footer em{
+  color:#4f718a!important;
+  font-style:normal!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerChannelChoice.current>footer span{color:#60d9c7!important}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceDetail,.orbitCustomerChannelDetail){
+  padding:13px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceHead,.orbitCustomerChannelHead){
+  min-height:76px!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:14px!important;
+  padding:2px 1px 12px!important;
+  margin-bottom:9px!important;
+  border-bottom:1px solid #12344d!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceHead,.orbitCustomerChannelHead)>div:first-child{
+  min-width:0!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerKicker{
+  color:#55c8ee!important;
+  font-size:6.5px!important;
+  font-weight:850!important;
+  letter-spacing:.11em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceTitle,.orbitCustomerChannelTitle){
+  display:flex!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  margin-top:4px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceTitle,.orbitCustomerChannelTitle) h2{
+  margin:0!important;
+  color:#f0f6fb!important;
+  font-size:18px!important;
+  letter-spacing:-.02em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceHead,.orbitCustomerChannelHead) p{
+  margin:5px 0 0!important;
+  color:#7392a9!important;
+  font-size:8px!important;
+  line-height:1.45!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceHead,.orbitCustomerChannelHead) code{
+  color:#8bb9d4!important;
+  font-size:7.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceHeadMeta,.orbitCustomerChannelKey){
+  flex:0 0 auto!important;
+  display:grid!important;
+  justify-items:end!important;
+  gap:4px!important;
+  padding:8px 10px!important;
+  border:1px solid #153b55!important;
+  border-radius:6px!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceHeadMeta,.orbitCustomerChannelKey)>span{
+  color:#557893!important;
+  font-size:6px!important;
+  font-weight:800!important;
+  letter-spacing:.08em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerLicenceHeadMeta>b{
+  color:#dceaf4!important;
+  font-size:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerState{
+  min-height:22px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:2px 7px!important;
+  border:1px solid #294e66!important;
+  border-radius:999px!important;
+  background:#09263a!important;
+  color:#9cb6c8!important;
+  font-size:6.5px!important;
+  font-weight:800!important;
+  white-space:nowrap!important;
+  text-transform:capitalize!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerState.ready{
+  border-color:#176960!important;
+  background:#08342f!important;
+  color:#71e3d1!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerState.attention{
+  border-color:#77533b!important;
+  background:#33241a!important;
+  color:#e5b680!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerState.current{
+  border-color:#5943bd!important;
+  background:#211747!important;
+  color:#cbbdff!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerStatusDot{
+  width:7px!important;
+  height:7px!important;
+  flex:0 0 7px!important;
+  border-radius:50%!important;
+  background:#48677d!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerStatusDot.ready{
+  background:#3ddbc3!important;
+  box-shadow:0 0 8px rgba(61,219,195,.28)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerStatusDot.attention{background:#d79a58!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerStatusDot.neutral{background:#45667e!important}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerDetailGrid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:6px!important;
+  margin-bottom:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerDetailGrid>article{
+  min-height:66px!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:4px!important;
+  padding:9px!important;
+  border:1px solid #123650!important;
+  border-radius:6px!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerDetailGrid span{
+  color:#5a7d96!important;
+  font-size:6.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerDetailGrid b{
+  color:#dbe9f3!important;
+  font-size:8.5px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerDetailGrid small{
+  color:#62839c!important;
+  font-size:6.7px!important;
+  line-height:1.4!important;
+}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout{
+  min-height:72px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:14px!important;
+  margin-bottom:9px!important;
+  padding:10px 11px!important;
+  border:1px solid #2c536b!important;
+  border-radius:7px!important;
+  background:#082235!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout.warning{
+  border-color:#6b4b33!important;
+  background:#291e17!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout.info{
+  border-color:#294d70!important;
+  background:#071e34!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout>div{
+  display:grid!important;
+  gap:3px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout span{
+  color:#6fc9eb!important;
+  font-size:6px!important;
+  font-weight:850!important;
+  letter-spacing:.09em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout.warning span{color:#e3b078!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout b{
+  color:#e8f1f7!important;
+  font-size:9.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout p{
+  margin:0!important;
+  color:#7897ad!important;
+  font-size:7.5px!important;
+  line-height:1.45!important;
+}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerKeyReveal{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:8px!important;
+  margin-bottom:9px!important;
+  padding:11px!important;
+  border:1px solid #5c4ba7!important;
+  border-radius:7px!important;
+  background:#181633!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerKeyReveal>div:first-child{
+  display:grid!important;
+  gap:3px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerKeyReveal span{
+  color:#9b84f3!important;
+  font-size:6px!important;
+  font-weight:850!important;
+  letter-spacing:.09em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerKeyReveal b{
+  color:#f0edff!important;
+  font-size:10px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerKeyReveal p{
+  margin:0!important;
+  color:#968fbd!important;
+  font-size:7.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerKeyReveal code{
+  display:block!important;
+  overflow:auto!important;
+  padding:9px!important;
+  border:1px solid #302d6f!important;
+  border-radius:5px!important;
+  background:#080f20!important;
+  color:#eeeaff!important;
+  font-size:9px!important;
+  white-space:nowrap!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerKeyReveal>div:last-child{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceSection{
+  margin-top:8px!important;
+  overflow:hidden!important;
+  border:1px solid #123650!important;
+  border-radius:7px!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceSection>header{
+  min-height:52px!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  padding:9px 10px!important;
+  border-bottom:1px solid #12344d!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceSection>header>div{
+  display:grid!important;
+  gap:2px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceSection>header span{
+  color:#58bde5!important;
+  font-size:6px!important;
+  font-weight:820!important;
+  letter-spacing:.09em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceSection>header h3{
+  margin:0!important;
+  color:#e7f0f7!important;
+  font-size:10px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceSection>header p{
+  margin:2px 0 0!important;
+  color:#66869e!important;
+  font-size:7px!important;
+  line-height:1.4!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceSection>header strong{
+  min-width:24px!important;
+  height:22px!important;
+  display:grid!important;
+  place-items:center!important;
+  border:1px solid #244761!important;
+  border-radius:999px!important;
+  color:#9bb6c8!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceSection>header>a{
+  color:#73c9ed!important;
+  font-size:7.5px!important;
+  text-decoration:none!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerComponentGrid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:5px!important;
+  padding:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerComponentGrid>div{
+  min-height:46px!important;
+  display:grid!important;
+  grid-template-columns:8px minmax(0,1fr)!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:7px 8px!important;
+  border:1px solid #12344d!important;
+  border-radius:5px!important;
+  background:#031522!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerComponentGrid>div.enabled{
+  border-color:#195b59!important;
+  background:#052521!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerComponentGrid b{
+  display:block!important;
+  color:#dbe8f2!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerComponentGrid small{
+  display:block!important;
+  margin-top:2px!important;
+  color:#608199!important;
+  font-size:6.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerChannelAccess,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerInstallationList{
+  display:grid!important;
+  gap:5px!important;
+  padding:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license :is(.orbitCustomerChannelAccess,.orbitCustomerInstallationList)>div:not(.orbitCustomerEmpty){
+  min-height:46px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  padding:7px 8px!important;
+  border:1px solid #12344d!important;
+  border-radius:5px!important;
+  background:#031522!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerChannelAccess>div.available{
+  border-color:#17534f!important;
+  background:#05231f!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerChannelAccess>div.current{
+  border-color:#5941bd!important;
+  background:linear-gradient(90deg,#211747,#092039)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license :is(.orbitCustomerChannelAccess,.orbitCustomerInstallationList)>div>div{
+  min-width:0!important;
+  display:grid!important;
+  gap:2px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license :is(.orbitCustomerChannelAccess,.orbitCustomerInstallationList) b{
+  color:#dceaf4!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license :is(.orbitCustomerChannelAccess,.orbitCustomerInstallationList) small{
+  color:#64859d!important;
+  font-size:6.5px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerChannelAccess>div>span{
+  color:#7798ae!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerChannelAccess>div.current>span{color:#c6b7ff!important}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceActions{
+  min-height:82px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:14px!important;
+  margin-top:8px!important;
+  padding:10px 11px!important;
+  border:1px solid #173d57!important;
+  border-radius:7px!important;
+  background:#061b2b!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceActions>div:first-child{
+  display:grid!important;
+  gap:3px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceActions span{
+  color:#58bde5!important;
+  font-size:6px!important;
+  font-weight:820!important;
+  letter-spacing:.09em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceActions h3{
+  margin:0!important;
+  color:#e7f0f7!important;
+  font-size:10px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceActions p{
+  margin:0!important;
+  color:#66869e!important;
+  font-size:7px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceActions>div:last-child{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  justify-content:flex-end!important;
+  gap:6px!important;
+}
+
+/* Release-channel detail */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult{
+  min-height:62px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:12px!important;
+  margin-bottom:9px!important;
+  padding:9px 10px!important;
+  border:1px solid #3e4c74!important;
+  border-radius:6px!important;
+  background:#111b35!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult.pending{
+  border-color:#66522f!important;
+  background:#282016!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult.denied{
+  border-color:#693947!important;
+  background:#25151d!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult>div{
+  display:grid!important;
+  gap:2px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult span{
+  color:#9784e2!important;
+  font-size:6px!important;
+  font-weight:850!important;
+  letter-spacing:.09em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult.pending span{color:#ddb66f!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult.denied span{color:#ec8fa2!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult b{
+  color:#e3edf5!important;
+  font-size:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult p{
+  margin:0!important;
+  color:#748fa5!important;
+  font-size:7.5px!important;
+  line-height:1.45!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelActionPanel{
+  min-height:86px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:14px!important;
+  margin-top:8px!important;
+  padding:10px 11px!important;
+  border:1px solid #143a55!important;
+  border-radius:7px!important;
+  background:#041624!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelActionPanel>div:first-child{
+  display:grid!important;
+  gap:3px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelActionPanel span{
+  color:#58bde5!important;
+  font-size:6px!important;
+  font-weight:820!important;
+  letter-spacing:.09em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelActionPanel h3{
+  margin:0!important;
+  color:#e8f1f7!important;
+  font-size:10px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelActionPanel p{
+  margin:0!important;
+  max-width:680px!important;
+  color:#66869e!important;
+  font-size:7px!important;
+  line-height:1.45!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelActionPanel>div:last-child{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelRequest{
+  margin-top:8px!important;
+  overflow:hidden!important;
+  border:1px solid #4b3ca9!important;
+  border-radius:7px!important;
+  background:#0b1530!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelRequest>header{
+  min-height:68px!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  padding:10px 11px!important;
+  border-bottom:1px solid #2b3268!important;
+  background:#10183a!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelRequest>header>div{
+  display:grid!important;
+  gap:2px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelRequest>header span{
+  color:#9f86ff!important;
+  font-size:6px!important;
+  font-weight:850!important;
+  letter-spacing:.09em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelRequest h3{
+  margin:0!important;
+  color:#efeaff!important;
+  font-size:11px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelRequest p{
+  margin:1px 0 0!important;
+  color:#8c85b1!important;
+  font-size:7px!important;
+  line-height:1.45!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields{
+  display:grid!important;
+  grid-template-columns:180px minmax(0,1fr)!important;
+  gap:8px!important;
+  padding:10px 11px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields>.wide{
+  grid-column:1/-1!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields label{
+  display:grid!important;
+  gap:4px!important;
+  color:#98aac1!important;
+  font-size:7.5px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields label>span small{
+  color:#5c7791!important;
+  font-size:6px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields :is(select,textarea){
+  width:100%!important;
+  box-sizing:border-box!important;
+  border:1px solid #2a426b!important;
+  border-radius:5px!important;
+  background:#071528!important;
+  color:#e3edf8!important;
+  outline:none!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields select{
+  min-height:34px!important;
+  padding:0 8px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields textarea{
+  min-height:76px!important;
+  padding:8px!important;
+  resize:vertical!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields :is(select,textarea):focus{
+  border-color:#5d78d3!important;
+  box-shadow:0 0 0 2px rgba(93,120,211,.14)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelRequest>footer{
+  min-height:50px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  padding:8px 11px!important;
+  border-top:1px solid #2b3268!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelRequest>footer small{
+  color:#716d96!important;
+  font-size:6.5px!important;
+}
+
+/* Shared empty/loading states */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerEmpty,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerLoading{
+  min-height:120px!important;
+  display:grid!important;
+  align-content:center!important;
+  justify-items:start!important;
+  gap:6px!important;
+  padding:16px!important;
+  border:1px dashed #214963!important;
+  border-radius:7px!important;
+  background:#041624!important;
+  color:#7493aa!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerEmpty.compact{
+  min-height:0!important;
+  padding:10px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerEmpty>b,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerLoading b{
+  color:#dceaf4!important;
+  font-size:10px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerEmpty p,
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerLoading p{
+  margin:0!important;
+  color:#6d8ba2!important;
+  font-size:8px!important;
+  line-height:1.5!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerSpinner{
+  width:18px!important;
+  height:18px!important;
+  border:2px solid #1f4964!important;
+  border-top-color:#6f55df!important;
+  border-radius:50%!important;
+  animation:orbitCustomerSpin .8s linear infinite!important;
+}
+@keyframes orbitCustomerSpin{to{transform:rotate(360deg)}}
+
+/* Shared V6 customer confirmation */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmBackdrop{
+  position:fixed!important;
+  inset:0!important;
+  z-index:120000!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:18px!important;
+  background:rgba(1,7,13,.78)!important;
+  backdrop-filter:blur(4px)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmDialog{
+  width:min(430px,100%)!important;
+  padding:17px!important;
+  border:1px solid #2c526c!important;
+  border-radius:9px!important;
+  background:linear-gradient(180deg,#071d2e,#041522)!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.48)!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmKicker{
+  display:block!important;
+  color:#64c9ed!important;
+  font-size:6.5px!important;
+  font-weight:850!important;
+  letter-spacing:.11em!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmDialog h2{
+  margin:5px 0 6px!important;
+  color:#f0f6fb!important;
+  font-size:16px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmDialog>p{
+  margin:0!important;
+  color:#86a4b8!important;
+  font-size:9px!important;
+  line-height:1.55!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmBody{margin-top:11px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmActions{
+  display:flex!important;
+  justify-content:flex-end!important;
+  gap:6px!important;
+  margin-top:14px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmActions button{
+  min-height:34px!important;
+  padding:0 11px!important;
+  border-radius:6px!important;
+  font-size:8px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmActions button.danger{
+  border-color:#764052!important;
+  background:#351824!important;
+  color:#ff9fb5!important;
+}
+
+/* Compact button treatment inside the rebuilt authority workspaces */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicense,.orbitCustomerChannels) :where(button,.buttonlink){
+  min-height:32px!important;
+  padding:0 10px!important;
+  border-radius:5px!important;
+  font-size:7.5px!important;
+  font-weight:760!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicense,.orbitCustomerChannels) :where(button,.buttonlink):focus-visible{
+  outline:2px solid #63cef4!important;
+  outline-offset:2px!important;
+}
+
+@media(max-width:980px){
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicenceStats,.orbitCustomerChannelStats){
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceWorkspace,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelWorkspace{
+    grid-template-columns:220px minmax(0,1fr)!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerDetailGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:720px){
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels)>.v6c-context-hero{
+    min-height:0!important;
+    padding:15px!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels)>.v6c-context-hero h1{
+    font-size:21px!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar{
+    grid-template-columns:1fr!important;
+    gap:9px!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar>div:last-child{
+    justify-content:flex-start!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceWorkspace,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelWorkspace{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceRail,.orbitCustomerChannelRail){
+    position:static!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceList,.orbitCustomerChannelList){
+    grid-auto-flow:column!important;
+    grid-auto-columns:minmax(190px,72vw)!important;
+    max-height:none!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-snap-type:x proximity!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceChoice,.orbitCustomerChannelChoice){
+    scroll-snap-align:start!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceHead,.orbitCustomerChannelHead){
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.orbitCustomerLicenceHeadMeta,.orbitCustomerChannelKey){
+    justify-items:start!important;
+    justify-self:start!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCallout,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceActions,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelActionPanel,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestResult{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerLicenceActions>div:last-child,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerChannelActionPanel>div:last-child{
+    justify-content:flex-start!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-channels .orbitCustomerRequestFields>.wide{
+    grid-column:auto!important;
+  }
+}
+@media(max-width:460px){
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) :is(.orbitCustomerLicenceStats,.orbitCustomerChannelStats),
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerDetailGrid,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-license .orbitCustomerComponentGrid{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar>div:last-child{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] :is(.v6c-route-license,.v6c-route-channels) .orbitCustomerCommandbar :is(button,.buttonlink){
+    width:100%!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmActions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6ConfirmActions button{width:100%!important}
+}
+@media(prefers-reduced-motion:reduce){
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .orbitCustomerSpinner{animation:none!important}
+}
+/* END ORBITFS CUSTOMER AUTHORITY WORKSPACES 2026-10-07 */
