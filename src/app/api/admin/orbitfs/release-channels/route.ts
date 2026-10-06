@@ -12,14 +12,16 @@ export async function GET(req:Request){
   try{
     await requireOrbitAdmin(req);
     const db=licenseDb();
-    const [channels,profiles,customerRows,requests,remoteAccess,baseReleases,updateReleases]=await Promise.all([
+    const [channels,profiles,customerRows,requests,remoteAccess]=await Promise.all([
       authoritativeChannels(),
       db.from("user_profiles").select("id,display_name,company_name,status,role"),
       db.from("customers").select("id,auth_user_id,user_id,customer_number,name,email,status").order("name"),
       masterRequest("/api/v1/release-channels/access?status=pending",{method:"GET",cache:"no-store"},"billing"),
-      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET",cache:"no-store"},"billing"),
-      masterRequest("/api/v1/releases?product=orbitfs_base&type=base",{method:"GET",cache:"no-store"},"billing"),
-      masterRequest("/api/v1/releases?product=orbitfs_base&type=update",{method:"GET",cache:"no-store"},"billing")
+      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET",cache:"no-store"},"billing")
+    ]);
+    const [baseReleases,updateReleases]=await Promise.all([
+      masterRequest("/api/v1/releases?product=orbitfs_base&type=base",{method:"GET",cache:"no-store"},"billing").catch(()=>({releases:[]})),
+      masterRequest("/api/v1/releases?product=orbitfs_base&type=update",{method:"GET",cache:"no-store"},"billing").catch(()=>({releases:[]}))
     ]);
     if(profiles.error)throw profiles.error;
     if(customerRows.error)throw customerRows.error;
