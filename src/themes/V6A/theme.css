@@ -2804,3 +2804,258 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitInstall
   }
 }
 /* END ORBITFS INSTALLATIONS V6A WORKSPACE 2026-10-07 */
+
+/* ORBITFS PRODUCT CONNECTIONS V6A WORKSPACE 2026-10-07 */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionsPage{
+  display:grid!important;
+  gap:10px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStatus{
+  min-height:76px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,.8fr) minmax(420px,1.2fr)!important;
+  align-items:center!important;
+  gap:14px!important;
+  padding:12px 14px!important;
+  border:1px solid #153b55!important;
+  border-radius:8px!important;
+  background:linear-gradient(180deg,#061b2b,#041522)!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStatusMeta{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.35fr) minmax(170px,.65fr)!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStatusMeta>div{
+  min-height:48px!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:3px!important;
+  padding:8px 9px!important;
+  border:1px solid #123650!important;
+  border-radius:6px!important;
+  background:#031522!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStatusMeta span{
+  color:#5e819a!important;
+  font-size:6.5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStatusMeta b{
+  min-width:0!important;
+  color:#dceaf4!important;
+  font-size:8px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStats{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStats>article{
+  min-height:72px!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:4px!important;
+  padding:10px 11px!important;
+  border:1px solid #153a54!important;
+  border-radius:7px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStats span,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStats small{
+  color:#62849c!important;
+  font-size:6.7px!important;
+  line-height:1.4!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStats b{
+  color:#edf5fb!important;
+  font-size:13px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionsGrid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:9px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionPanel{
+  min-width:0!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionReadout,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductPolicyGrid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionReadout>div,
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductPolicyGrid>div{
+  min-height:58px!important;
+  display:grid!important;
+  align-content:center!important;
+  gap:4px!important;
+  padding:8px 9px!important;
+  border:1px solid #123650!important;
+  border-radius:6px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] :is(.orbitProductConnectionReadout,.orbitProductPolicyGrid) span{
+  color:#60829a!important;
+  font-size:6.5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] :is(.orbitProductConnectionReadout,.orbitProductPolicyGrid) b{
+  min-width:0!important;
+  color:#dce9f3!important;
+  font-size:8.2px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionEditor{
+  display:grid!important;
+  gap:8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionEditor label{
+  display:grid!important;
+  gap:5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionEditor label>span{
+  color:#9bb1c1!important;
+  font-size:7.5px!important;
+  font-weight:700!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionEditor label>small{
+  color:#60819a!important;
+  font-size:6.7px!important;
+  line-height:1.4!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionEditor input[readonly]{
+  opacity:.72!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionActions{
+  display:flex!important;
+  justify-content:flex-end!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+  margin-top:9px!important;
+  padding-top:9px!important;
+  border-top:1px solid #12344d!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductAuthorityList>div{
+  grid-template-columns:120px minmax(0,1fr) 55px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductCataloguePanel{
+  min-width:0!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingGrid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:6px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingGrid>article{
+  min-height:72px!important;
+  display:grid!important;
+  grid-template-columns:34px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:9px!important;
+  padding:9px!important;
+  border:1px solid #123650!important;
+  border-radius:6px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingGrid>article>div:nth-child(2){
+  min-width:0!important;
+  display:grid!important;
+  gap:2px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingGrid b{
+  color:#e1edf5!important;
+  font-size:8.7px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingGrid :is(span,small){
+  color:#6789a0!important;
+  font-size:6.8px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingState{
+  min-width:105px!important;
+  display:grid!important;
+  justify-items:end!important;
+  gap:3px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitOfficialConnectionList{
+  display:grid!important;
+  gap:5px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitOfficialConnectionList>div:not(.orbitReferenceEmpty){
+  min-height:52px!important;
+  display:grid!important;
+  grid-template-columns:12px minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:8px 9px!important;
+  border:1px solid #123650!important;
+  border-radius:6px!important;
+  background:#051827!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitOfficialConnectionList>div>div{
+  min-width:0!important;
+  display:grid!important;
+  gap:2px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitOfficialConnectionList b{
+  color:#dceaf4!important;
+  font-size:8.2px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitOfficialConnectionList small{
+  color:#60829a!important;
+  font-size:6.7px!important;
+  overflow-wrap:anywhere!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitOfficialConnectionList>div>span:last-child{
+  color:#6ed8c8!important;
+  font-size:6.8px!important;
+}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionFooter{
+  min-height:46px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  margin-top:8px!important;
+  padding-top:8px!important;
+  border-top:1px solid #12344d!important;
+  color:#6889a0!important;
+  font-size:7px!important;
+}
+@media(max-width:980px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStatus{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionsGrid{
+    grid-template-columns:1fr!important;
+  }
+}
+@media(max-width:640px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStatusMeta,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionReadout,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductPolicyGrid,
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingGrid{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionFooter{
+    align-items:flex-start!important;
+    flex-direction:column!important;
+  }
+}
+@media(max-width:460px){
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductConnectionStats{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingGrid>article{
+    grid-template-columns:34px minmax(0,1fr)!important;
+  }
+  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orbitProductMappingState{
+    grid-column:1/-1!important;
+    justify-items:start!important;
+  }
+}
+/* END ORBITFS PRODUCT CONNECTIONS V6A WORKSPACE 2026-10-07 */
