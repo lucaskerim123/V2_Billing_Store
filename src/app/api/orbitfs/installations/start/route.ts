@@ -31,18 +31,14 @@ export async function POST(req:Request){
     const status=canonicalLicenseStatus(authoritative);
     if(!isCanonicalLicenseUsable(status))throw Object.assign(new Error(`This OrbitFS licence is ${status}`),{status:403,code:"LICENCE_NOT_ACTIVE"});
 
-    const addonKeys=new Set(["orbitfs_mcp","orbitfs_apex","orbitfs_studio"]);
     const product=String(authoritative.product||authoritative.product_code||"").trim().toLowerCase();
     const components=authoritative.components&&typeof authoritative.components==="object"?authoritative.components:{};
-    const hasAddonEntitlement=addonKeys.has(product)||[...addonKeys].some((key)=>{
-      const value=(components as any)[key];
-      return value===true||value?.allowed===true||["enabled","active","licensed"].includes(String(value?.state||"").toLowerCase());
-    });
-    if(!hasAddonEntitlement)throw Object.assign(new Error("An active OrbitFS MCP, APEX or Studio licence is required before deploying the Shared Engine"),{status:403,code:"ENGINE_ADDON_LICENSE_REQUIRED"});
+    const baseComponent=(components as any).orbitfs_base??(components as any).orbitfs_panel;
+    const hasBaseEntitlement=product==="orbitfs_base"||baseComponent===true||baseComponent?.allowed===true||["enabled","active","licensed"].includes(String(baseComponent?.state||"").toLowerCase());
+    if(!hasBaseEntitlement)throw Object.assign(new Error("An active OrbitFS Base licence is required before starting Base deployment"),{status:403,code:"BASE_LICENSE_REQUIRED"});
 
-    // Inner deployment is the single customer environment. An Engine add-on
-    // entitlement authorizes bootstrap; plugin installation remains separately
-    // entitlement-gated by License Manager.
+    // Base deployment is authorized by the Base licence. Add-on entitlements are
+    // evaluated separately by License Manager and never gate access to this flow.
     const installation=await serviceRpc("service_ensure_orbitfs_inner_installation",{
       p_auth_user_id:user.id,
       p_binding_id:bindingId
