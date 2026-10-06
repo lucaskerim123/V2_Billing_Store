@@ -3,7 +3,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest,type MasterDeploymentResult} from "@/lib/master-api";
-import {billingOrbitfsConfig,configureVercel,resolveProductionUrl,ensureSelectedBaseVercelAliasOnDeployment,checkPublicPanelHealth,ensureStandardPanelProtection,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,ensureCustomerDatabaseRuntimeAccess,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
+import {billingOrbitfsConfig,configureVercel,resolveProductionUrl,refreshBasePanelUrlEnv,ensureSelectedBaseVercelAliasOnDeployment,checkPublicPanelHealth,ensureStandardPanelProtection,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,ensureCustomerDatabaseRuntimeAccess,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 import {errorMessage} from "@/lib/error-message";
@@ -608,6 +608,7 @@ async function applyBaseUpdatePatch(install:any,release:any,bundle:UpdateBundle,
   for(const file of patchFiles)merged.set(file.file,file);
   const mergedFiles=[...merged.values()].sort((a,b)=>a.file.localeCompare(b.file));
   validateDeployableBaseFiles(mergedFiles);
+  await refreshBasePanelUrlEnv(install);
   const deploymentFiles=baseVercelDeploymentFiles(mergedFiles);
   const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),deploymentFiles);
   const previousDeploymentId=String(install.vercel_deployment_id||"").trim()||null;
@@ -626,7 +627,9 @@ async function applyBaseUpdatePatch(install:any,release:any,bundle:UpdateBundle,
   const deploymentId=String(created.id||created.uid);
   const ready=await waitForReady(String(install.auth_user_id),deploymentId);
   if(String(ready?.readyState||ready?.state||"").toUpperCase()!=="READY")fail("Base patch deployment did not become ready",504);
-  const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url;
+  const selectedBaseAlias=await ensureSelectedBaseVercelAliasOnDeployment(install,deploymentId);
+  const productionUrl=selectedBaseAlias?`https://${selectedBaseAlias}`:await resolveProductionUrl(install,ready);
+  const deploymentUrl=productionUrl||(ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:install.deployment_url);
   return {deploymentId,deploymentUrl,previousDeploymentId,fileCount:deploymentFiles.length,patchFileCount:patchFiles.length,deleteCount:deletePaths.length};
 }
 
