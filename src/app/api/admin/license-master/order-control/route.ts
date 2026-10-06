@@ -44,8 +44,8 @@ export async function POST(req:Request){
       try{
         let remote:any;
         const currentMaster=licenseId?masterRows.find((x:any)=>String(x.id||x.license_id||"")===licenseId):null;
-        const authoritativeState=String(currentMaster?.status||"").trim().toLowerCase();
-        const shouldIssue=action==="reprovision" || (action==="activate" && (!licenseId || authoritativeState==="revoked" || authoritativeState==="expired"));
+        const authoritativeState=String(currentMaster?.canonical_status||currentMaster?.effective_status||currentMaster?.status||"").trim().toLowerCase();
+        const shouldIssue=action==="reprovision" || (action==="activate" && (!licenseId || authoritativeState==="terminated" || authoritativeState==="revoked" || authoritativeState==="expired"));
         if(shouldIssue){
           const product=String(binding.license_product_key||"").trim().toLowerCase();
           if(!product)throw new Error("License binding has no product key");
@@ -64,12 +64,12 @@ export async function POST(req:Request){
           results.push({bindingId:binding.id,previousLicenseId:licenseId||null,licenseId:newId,action,status:"ok",reprovisioned:true});
         }else{
           if(!licenseId)throw new Error("Binding has no License Master license id");
-          const masterAction=action==="terminate"?"revoke":action==="unsuspend"?"activate":action;
-          remote=await masterControl(licenseId,{action:masterAction,actorRef:"billing_store_order_control"});
-          const remoteState=masterAction==="revoke"?"revoked":masterAction==="suspend"?"suspended":"active";
+          const masterAction=action==="terminate"?"terminate":action==="unsuspend"?"activate":action==="suspend"?"restrict":action;
+          remote=await masterControl(licenseId,{action:masterAction,reason:String(body.reason||"").trim()||null,actorRef:"billing_store_order_control"});
+          const remoteState=masterAction==="terminate"?"revoked":masterAction==="restrict"?"suspended":"active";
           const now=new Date().toISOString();
           const patch:any={remote_state:remoteState,desired_state:remoteState,last_synced_at:now,last_sync_error:null,updated_at:now};
-          if(masterAction==="revoke"){patch.archived_at=now;patch.archive_reason=String(body.reason||"Order service termination")}
+          if(masterAction==="terminate"){patch.archived_at=now;patch.archive_reason=String(body.reason||"Order service termination")}
           const {error}=await licenseDb().from("license_bindings").update(patch).eq("id",binding.id);if(error)throw error;
           results.push({bindingId:binding.id,licenseId,action,status:"ok"});
         }
