@@ -41,9 +41,11 @@ test("suspension is reversible but termination requires explicit licence recover
 
 test("reconciliation restores an existing suspended licence instead of issuing a replacement",()=>{
   const source=readFileSync(new URL("src/lib/license-master-reconcile.ts",root),"utf8");
-  assert.match(source,/desired==="active"&&newLicenseId&&remote!=="active"/);
+  assert.match(source,/if\(desired==="active"\)/);
+  assert.match(source,/newLicenseId&&remote!=="active"/);
   assert.match(source,/masterControl\(newLicenseId,\{action:"activate"/);
   assert.match(source,/Terminated licence requires explicit recovery/);
+  assert.doesNotMatch(source,/desired==="active"&&\(remote!=="active"\|\|!newLicenseId\)/);
 });
 
 test("admin customer enforcement runs through the server enforcement endpoint",()=>{
