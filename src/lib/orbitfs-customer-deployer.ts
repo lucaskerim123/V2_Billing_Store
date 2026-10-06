@@ -7,6 +7,7 @@ import {billingOrbitfsConfig,configureVercel,resolveProductionUrl,refreshBasePan
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 import {errorMessage} from "@/lib/error-message";
+import {billingCustomerUserFilter} from "@/lib/billing-customer-identity.mjs";
 
 const MAX_FILES=5000,MAX_FILE_BYTES=25*1024*1024,MAX_TOTAL_BYTES=70*1024*1024;
 const ORBITFS_UPDATER_PROTOCOL=2;
@@ -943,7 +944,7 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
       ready_at:completedAt
     });
     if(history.error)throw history.error;
-    const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
+    const customerResult=await licenseDb().from("customers").select("id,auth_user_id,user_id,customer_number,name,email").or(billingCustomerUserFilter(String(install.auth_user_id))).limit(1).maybeSingle();
     const customer=customerResult.data||null;
     await masterExecuteDeployment({action:"base_update",phase:"completed",releaseId:String(release.id),installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:currentVersion,deploymentId:createdDeploymentId,deploymentUrl,projectId,projectName:install.vercel_project_name,componentState:{base:{version:String(release.version),status:"installed"}},components:{base:{version:String(release.version),status:"installed"}},customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
     await event(data,"base.update.completed","ok",`OrbitFS Base updated from ${currentVersion} to ${release.version}`,{releaseId:String(release.id),deploymentId:createdDeploymentId,projectId,databaseMigrations:migrations});
@@ -1245,7 +1246,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       const historyDeploymentUrl=basePatchResult?.deploymentUrl||engineResult?.hostUrl||null;
       const history=await licenseDb().from("orbitfs_installation_releases").insert({installation_id:install.id,auth_user_id:install.auth_user_id,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,source_commit:bundle.sourceCommit||expectedSource(release)||null,vercel_deployment_id:historyDeploymentId,deployment_url:historyDeploymentUrl,action:"update",release_type:"update",components,status:"ready",ready_at:appliedAt});
       if(history.error)throw history.error;
-      const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
+      const customerResult=await licenseDb().from("customers").select("id,auth_user_id,user_id,customer_number,name,email").or(billingCustomerUserFilter(String(install.auth_user_id))).limit(1).maybeSingle();
       const customer=customerResult.data||null;
       await masterExecuteDeployment({action:"update",phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,baseVersion:String(install.release_version||""),productVersion:String(install.release_version||""),previousVersion:install.release_version||null,deploymentId:historyDeploymentId,deploymentUrl:historyDeploymentUrl,projectId:install.vercel_project_id,projectName:install.vercel_project_name,componentState,components:componentState,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
       await event(data,"update.completed","ok",`OrbitFS Update ${release.version} applied to the existing deployment`,updateState);
@@ -1320,7 +1321,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();if(error)throw error;
   const history=await licenseDb().from("orbitfs_installation_releases").insert({installation_id:install.id,auth_user_id:install.auth_user_id,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,action,status:"ready",ready_at:completedAt});
   if(history.error)throw history.error;
-  const customerResult=await licenseDb().from("customers").select("id,customer_number,name,email").eq("auth_user_id",install.auth_user_id).maybeSingle();
+  const customerResult=await licenseDb().from("customers").select("id,auth_user_id,user_id,customer_number,name,email").or(billingCustomerUserFilter(String(install.auth_user_id))).limit(1).maybeSingle();
   const customer=customerResult.data||null;
   await masterExecuteDeployment({action,phase:"completed",releaseId:release.id,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel:requestedChannel,productVersion:String(release.version),previousVersion:previousVersion,deploymentId,deploymentUrl,projectId:install.vercel_project_id,projectName:install.vercel_project_name,customerIdentity:{customerId:customer?.id||null,customerNumber:customer?.customer_number||null,customerName:customer?.name||null,customerEmail:customer?.email||null,installationId:install.installation_id}});
   await event(data,action==="rollback"?"deployment.rollback.completed":"deployment.completed","ok",action==="rollback"?`Base rollback restored ${release.version} as fresh deployment ${deploymentId}`:`Vercel deployment ${deploymentId} is ready`,{action,releaseId:release.id,version:release.version,deploymentId,reason:rollbackReason||undefined,databaseMigrations:redeployMigrations});return data;
