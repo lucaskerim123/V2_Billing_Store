@@ -2,69 +2,76 @@
 import Link from "next/link";
 import {useEffect,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import "./mail-v6.css";
 
 async function readJson(r:Response){const t=await r.text();if(!t)return {};try{return JSON.parse(t)}catch{return {error:t||`Request failed (${r.status})`}}}
-const panel:any={background:'#fff',border:'1px solid #e1e6ef',borderRadius:16,padding:18};
-const muted:any={fontSize:13,opacity:.65};
-const headerLink:any={color:'#fff',textDecoration:'none',fontWeight:700};
 
 export default function MailHome(){
   const sb=createClient();
-  const [accounts,setAccounts]=useState<any[]>([]),[caps,setCaps]=useState<any>({}),[queueData,setQueueData]=useState<any>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[msg,setMsg]=useState('');
+  const [accounts,setAccounts]=useState<any[]>([]),[caps,setCaps]=useState<any>({}),[queueData,setQueueData]=useState<any>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[msg,setMsg]=useState("");
 
-  async function token(){const {data}=await sb.auth.getSession();return data.session?.access_token||''}
+  async function token(){const {data}=await sb.auth.getSession();return data.session?.access_token||""}
   async function load(){
-    setLoading(true);setError('');
+    setLoading(true);setError("");
     try{
-      const t=await token();if(!t){location.href='/login';return}
-      const r=await fetch('/api/mail/accounts',{headers:{Authorization:`Bearer ${t}`},cache:'no-store'});
-      const j:any=await readJson(r);if(!r.ok)throw new Error(j.error||'Could not load mail accounts.');
+      const t=await token();if(!t){location.href="/login";return}
+      const r=await fetch("/api/mail/accounts",{headers:{Authorization:`Bearer ${t}`},cache:"no-store"});
+      const j:any=await readJson(r);if(!r.ok)throw new Error(j.error||"Could not load mail accounts.");
       const nextCaps=j.capabilities||{};
       setAccounts(j.accounts||[]);setCaps(nextCaps);
       if(nextCaps.queueView){
-        const ar=await fetch('/api/mail/admin',{headers:{Authorization:`Bearer ${t}`},cache:'no-store'});
-        const aj:any=await readJson(ar);if(!ar.ok)throw new Error(aj.error||'Could not load Mail queue.');
+        const ar=await fetch("/api/mail/admin",{headers:{Authorization:`Bearer ${t}`},cache:"no-store"});
+        const aj:any=await readJson(ar);if(!ar.ok)throw new Error(aj.error||"Could not load Mail queue.");
         setQueueData(aj.queue||{summary:{},queue:[],stuck_logs:[]});
       }else setQueueData(null);
     }catch(e:any){setError(e.message)}finally{setLoading(false)}
   }
-  useEffect(()=>{load()},[]);
+  useEffect(()=>{void load()},[]);
 
   async function processQueueNow(){
-    setMsg('Processing queue…');
+    setMsg("Processing queue…");
     const t=await token();
-    const r=await fetch('/api/mail/admin',{method:'PUT',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify({action:'process_queue_now'})});
-    const j:any=await readJson(r);if(!r.ok){setMsg(j.error||'Queue processing failed.');return}
+    const r=await fetch("/api/mail/admin",{method:"PUT",headers:{Authorization:`Bearer ${t}`,"Content-Type":"application/json"},body:JSON.stringify({action:"process_queue_now"})});
+    const j:any=await readJson(r);if(!r.ok){setMsg(j.error||"Queue processing failed.");return}
     const q=j.queue||{};setMsg(`Queue processed: ${Number(q.sent||0)} sent, ${Number(q.failed||0)} failed.`);await load();
   }
 
   async function queueAction(queueAction:string,extra:any={}){
-    setMsg('Working…');
+    setMsg("Working…");
     const t=await token();
-    const r=await fetch('/api/mail/admin',{method:'PUT',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify({action:'queue',queueAction,...extra})});
-    const j:any=await readJson(r);if(!r.ok){setMsg(j.error||'Queue action failed.');return}
-    setMsg('Queue updated.');await load();
+    const r=await fetch("/api/mail/admin",{method:"PUT",headers:{Authorization:`Bearer ${t}`,"Content-Type":"application/json"},body:JSON.stringify({action:"queue",queueAction,...extra})});
+    const j:any=await readJson(r);if(!r.ok){setMsg(j.error||"Queue action failed.");return}
+    setMsg("Queue updated.");await load();
   }
 
   const canOpenConfig=!!(caps.admin||caps.settings||caps.templates);
-  return <main style={{minHeight:'100vh',background:'#f4f6fa',fontFamily:'Arial,sans-serif',color:'#172033'}}>
-    <header style={{background:'#111827',color:'#fff',padding:'20px 18px'}}><div style={{maxWidth:1280,margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'center',gap:14,flexWrap:'wrap'}}>
-      <div><h1 style={{margin:0,fontSize:24}}>OrbitFS Mail</h1><p style={{margin:'5px 0 0',opacity:.7}}>Your authorised mailboxes and Mail queue.</p></div>
-      <div style={{display:'flex',gap:16,alignItems:'center',flexWrap:'wrap'}}>{canOpenConfig&&<Link href="/mail/admin" style={headerLink}>Mail Config</Link>}<Link href="/admin" style={headerLink}>Back to Admin</Link></div>
-    </div></header>
-    <div style={{maxWidth:1280,margin:'0 auto',padding:'20px 16px 30px'}}>
-      {error&&<div style={{padding:14,border:'1px solid #f2b8b5',background:'#fff5f5',borderRadius:12,color:'#a52727',marginBottom:16}}>{error}</div>}
-      {msg&&<div style={{padding:12,background:'#eef4ff',borderRadius:10,marginBottom:14}}>{msg}</div>}
+  return <main className="mailV6">
+    <header className="mailV6Topbar">
+      <Link className="mailV6Brand" href="/admin"><span className="mailV6BrandMark">M</span><span className="mailV6BrandText"><b>OrbitFS Mail</b><span>Billing Store communications</span></span></Link>
+      <div className="mailV6TopSearch"><input aria-label="Search Mail" placeholder="Open a mailbox to search messages…"/><button type="button" disabled aria-label="Search available inside a mailbox">⌕</button></div>
+      <div className="mailV6TopActions">{canOpenConfig&&<Link href="/mail/admin">Mail Config</Link>}<Link href="/admin">Admin</Link><span className="mailV6StatusDot" aria-label="Mail system active"/></div>
+    </header>
 
-      <section style={{marginBottom:22}}><h2 style={{marginBottom:4}}>Mailboxes</h2><p style={{marginTop:0,opacity:.68}}>Only mailboxes your staff permissions allow are shown here.</p>
-        {loading?<p>Loading mailboxes…</p>:<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:14}}>{accounts.map(a=><Link key={a.id} href={`/mail/mailbox/${encodeURIComponent(a.address.split('@')[0])}`} style={{display:'block',padding:20,background:'#fff',border:'1px solid #e1e6ef',borderRadius:16,textDecoration:'none',color:'inherit',boxShadow:'0 2px 12px rgba(15,23,42,.05)'}}>
-          <small style={{opacity:.58,textTransform:'uppercase'}}>{a.kind||'shared'} mailbox</small><h3 style={{margin:'8px 0 5px',fontSize:20}}>{a.display_name}</h3><div style={{overflowWrap:'anywhere'}}>{a.address}</div>
-          <div style={{display:'flex',gap:8,marginTop:12,fontSize:12,opacity:.7,flexWrap:'wrap'}}><span>{a.can_send?'View + Send':'View only'}</span>{a.can_manage&&<span>· Config access</span>}</div><div style={{marginTop:18,fontWeight:700}}>Open mailbox →</div>
-        </Link>)}</div>}
-        {!loading&&!accounts.length&&!error&&<div style={panel}>No mailboxes are assigned to your account.</div>}
-      </section>
+    <div className="mailV6Shell">
+      <div className="mailV6TitleRow"><div><h1>Mail</h1><p>Your authorised OrbitFS mailboxes and the existing transactional delivery queue.</p></div></div>
+      <nav className="mailV6SectionTabs" aria-label="Mail sections"><Link className="active" href="/mail">Mailboxes & Queue</Link>{canOpenConfig&&<Link href="/mail/admin">Configuration</Link>}</nav>
 
-      {caps.queueView&&<section><div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'end',flexWrap:'wrap',marginBottom:10}}><div><h2 style={{margin:'0 0 4px'}}>Mail Queue</h2><p style={{margin:0,opacity:.68}}>Pending, processing, failed and stuck mail jobs.</p></div></div><div style={panel}>{loading&&!queueData?<p>Loading queue…</p>:<MailQueue data={queueData||{summary:{},queue:[],stuck_logs:[]}} reload={load} action={queueAction} processNow={processQueueNow} canManage={!!caps.queueManage}/>}</div></section>}
+      {error&&<div className="mailV6Notice error">{error}</div>}
+      {msg&&<div className="mailV6Notice">{msg}</div>}
+
+      <div className="mailV6HomeGrid">
+        <section className="mailV6Panel mailV6MailboxRail">
+          <div className="mailV6MailboxRailHeader"><h2>Mailboxes</h2><p>Only mailboxes allowed by your staff permissions appear here.</p></div>
+          {loading?<div className="mailV6Empty">Loading mailboxes…</div>:accounts.length?<div className="mailV6MailboxList">{accounts.map(a=><Link key={a.id} href={`/mail/mailbox/${encodeURIComponent(a.address.split("@")[0])}`} className="mailV6MailboxCard">
+            <small>{a.kind||"shared"} mailbox</small><strong>{a.display_name||a.address}</strong><span>{a.address}</span><em>{a.can_send?"View + Send":"View only"}{a.can_manage?" · Config access":""}</em>
+          </Link>)}</div>:!error&&<div className="mailV6Empty">No mailboxes are assigned to your account.</div>}
+        </section>
+
+        {caps.queueView?<section className="mailV6Panel mailV6QueuePanel">
+          <div className="mailV6QueueHead"><div><h2>Mail Queue</h2><p>Pending, processing, failed and stuck transactional mail jobs.</p></div></div>
+          {loading&&!queueData?<div className="mailV6Empty">Loading queue…</div>:<MailQueue data={queueData||{summary:{},queue:[],stuck_logs:[]}} reload={load} action={queueAction} processNow={processQueueNow} canManage={!!caps.queueManage}/>}
+        </section>:<section className="mailV6Panel mailV6QueuePanel"><div className="mailV6QueueHead"><div><h2>Mail Queue</h2><p>Your account does not have Mail queue permission.</p></div></div><div className="mailV6Empty">Queue controls are hidden by your current staff permissions.</div></section>}
+      </div>
     </div>
   </main>
 }
@@ -72,12 +79,13 @@ export default function MailHome(){
 function MailQueue({data,reload,action,processNow,canManage}:{data:any,reload:()=>Promise<void>,action:(name:string,extra?:any)=>Promise<void>,processNow:()=>Promise<void>,canManage:boolean}){
   const s=data.summary||{},rows=data.queue||[],stuck=data.stuck_logs||[];
   return <div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))',gap:8,marginBottom:12}}>{['pending','processing','failed','stuck'].map(k=><div key={k} style={{padding:10,border:'1px solid #e2e7ef',borderRadius:10,background:'#f8fafc'}}><small style={muted}>{k}</small><div style={{fontSize:18,fontWeight:800}}>{s[k]||0}</div></div>)}</div>
-    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}><button onClick={()=>reload()}>Refresh queue</button>{canManage&&<><button onClick={()=>processNow()}>Process queue now</button><button onClick={()=>action('retry_all')}>Retry stuck / failed</button><button onClick={()=>action('clear_failed')}>Clear exhausted / stuck</button><button onClick={()=>{if(confirm('Clear all non-sent items from the Mail queue? Sent delivery history will be kept.'))action('clear_queue')}}>Clear queue</button></>}</div>
-    {rows.length?<div>{rows.map((r:any)=><div key={r.id} style={{padding:'10px 0',borderBottom:'1px solid #edf0f5',display:'grid',gridTemplateColumns:'minmax(0,1fr) auto',gap:10}}>
-      <div style={{minWidth:0}}><div style={{display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}><b>{r.event_key}</b><span style={{fontSize:11,fontWeight:700,color:r.stuck?'#b45309':'#475569'}}>{r.stuck?'STUCK':String(r.state||'').toUpperCase()}</span></div><div style={muted}>{r.related_type} · {r.related_id}</div><div style={{...muted,marginTop:3}}>Attempts {r.attempts||0} · created {new Date(r.created_at).toLocaleString()} · next {r.next_attempt_at?new Date(r.next_attempt_at).toLocaleString():'—'}</div>{r.recipient&&<div style={muted}>{r.sender||'—'} → {r.recipient}</div>}{r.sent_at&&<div style={muted}>Sent {new Date(r.sent_at).toLocaleString()} · provider {r.provider_id||'—'}</div>}{(r.last_error||r.delivery_error)&&<div style={{fontSize:12,color:'#b42318',marginTop:4}}>{r.last_error||r.delivery_error}</div>}</div>
-      <div style={{display:'flex',gap:6,alignItems:'start',flexWrap:'wrap',justifyContent:'end'}}>{canManage&&r.state!=='sent'&&<button onClick={()=>action('retry',{outboxId:r.id})}>Retry</button>}{canManage&&r.state!=='sent'&&<button onClick={()=>action('clear',{outboxId:r.id})}>Clear</button>}</div>
-    </div>)}</div>:<p style={muted}>No queued mail events.</p>}
-    {stuck.length>0&&<div style={{marginTop:16}}><b>Stuck preparing delivery records</b><p style={muted}>These created a delivery record but never finalized. Clear them so they stop looking active.</p>{stuck.map((l:any)=><div key={l.id} style={{padding:'9px 0',borderBottom:'1px solid #edf0f5',display:'flex',justifyContent:'space-between',gap:10,alignItems:'center'}}><div><b>{l.subject}</b><div style={muted}>{l.sender} → {l.recipient} · created {new Date(l.created_at).toLocaleString()}</div></div>{canManage&&<button onClick={()=>action('clear_log',{logId:l.id})}>Clear</button>}</div>)}</div>}
+    <div className="mailV6QueueStats">{["pending","processing","failed","stuck"].map(k=><div className="mailV6QueueStat" key={k}><small>{k}</small><b>{s[k]||0}</b></div>)}</div>
+    <div className="mailV6QueueActions"><button type="button" onClick={()=>void reload()}>Refresh queue</button>{canManage&&<><button type="button" className="primary" onClick={()=>void processNow()}>Process queue now</button><button type="button" onClick={()=>void action("retry_all")}>Retry stuck / failed</button><button type="button" onClick={()=>void action("clear_failed")}>Clear exhausted / stuck</button></>}</div>
+    {rows.length?<div className="mailV6QueueList">{rows.map((r:any)=><div className="mailV6QueueRow" key={r.id}>
+      <div><div className="mailV6QueueRowMeta"><b>{r.event_key}</b><span className={`mailV6QueueState ${r.stuck?"stuck":""}`}>{r.stuck?"STUCK":String(r.state||"").toUpperCase()}</span></div><span>{r.related_type} · {r.related_id}</span><div className="mailV6QueueRowMeta"><small>Attempts {r.attempts||0}</small><small>Created {new Date(r.created_at).toLocaleString()}</small><small>Next {r.next_attempt_at?new Date(r.next_attempt_at).toLocaleString():"—"}</small></div>{r.recipient&&<small>{r.sender||"—"} → {r.recipient}</small>}{r.sent_at&&<small>Sent {new Date(r.sent_at).toLocaleString()} · provider {r.provider_id||"—"}</small>}{(r.last_error||r.delivery_error)&&<div className="mailV6QueueError">{r.last_error||r.delivery_error}</div>}</div>
+      <div className="mailV6QueueActions">{canManage&&r.state!=="sent"&&<><button type="button" onClick={()=>void action("retry",{outboxId:r.id})}>Retry</button><button type="button" onClick={()=>void action("clear",{outboxId:r.id})}>Clear</button></>}</div>
+    </div>)}</div>:<div className="mailV6Empty">No queued mail events.</div>}
+    {stuck.length>0&&<div style={{marginTop:16}}><div className="mailV6QueueHead"><div><h2>Stuck preparing records</h2><p>Delivery records that never finalized.</p></div></div><div className="mailV6QueueList">{stuck.map((l:any)=><div className="mailV6QueueRow" key={l.id}><div><b>{l.subject}</b><div className="mailV6QueueRowMeta"><small>{l.sender} → {l.recipient}</small><small>Created {new Date(l.created_at).toLocaleString()}</small></div></div>{canManage&&<div><button type="button" onClick={()=>void action("clear_log",{logId:l.id})}>Clear</button></div>}</div>)}</div></div>}
+    {canManage&&rows.some((r:any)=>r.state!=="sent")&&<div className="mailV6QueueActions" style={{marginTop:12}}><button type="button" className="danger" onClick={()=>{if(window.confirm("Clear all non-sent items from the Mail queue? Sent delivery history will be kept."))void action("clear_queue")}}>Clear queue</button></div>}
   </div>
 }
