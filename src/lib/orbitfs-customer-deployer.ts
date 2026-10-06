@@ -3,6 +3,7 @@ import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
 import {masterDownloadReleaseArtifact,masterExecuteDeployment,masterReleases,masterRequest,type MasterDeploymentResult} from "@/lib/master-api";
+import {releaseDatabasePackageReferences,releaseHasDatabasePackageContract,resolveReleaseDatabasePackage} from "@/lib/orbitfs-database-packages";
 import {billingOrbitfsConfig,configureVercel,resolveProductionUrl,refreshBasePanelUrlEnv,ensureSelectedBaseVercelAliasOnDeployment,checkPublicPanelHealth,ensureStandardPanelProtection,customerInstallationDbSecret,customerVercelCredentials,ensureVercelProject,ensureCustomerDatabaseRuntimeAccess,event,requireSystem,supabaseApi,vercelApi,type DeployAction} from "@/lib/orbitfs-deployment";
 import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
@@ -302,6 +303,61 @@ function managementRows(value:any):any[]{
   }
   return [];
 }
+async function resolveUpdateDatabaseMigrations(release:any,bundle:UpdateBundle,executionComponents:string[]){
+  if(!releaseHasDatabasePackageContract(release)){
+    const all=validateDatabaseContract(bundle);
+    const allowed=new Set(["shared",...executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(Boolean)]);
+    return {
+      migrations:all.filter(migration=>allowed.has(String(migration.component||"shared").toLowerCase())),
+      skippedByEntitlement:all.filter(migration=>!allowed.has(String(migration.component||"shared").toLowerCase())).map(migration=>migration.id),
+      source:"legacy-release-artifact" as const
+    };
+  }
+
+  const refs=releaseDatabasePackageReferences(release);
+  const allowedPackages=new Set(["engine-shared",...executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(value=>["mcp","apex","studio"].includes(value))]);
+  const selected=refs.filter(ref=>allowedPackages.has(ref.component));
+  if(!selected.some(ref=>ref.component==="engine-shared"))fail("Approved Update release is missing its Shared Engine database package",409,"UPDATE_DATABASE_PACKAGE_MISSING");
+  const skippedByEntitlement=refs.filter(ref=>!allowedPackages.has(ref.component)).map(ref=>`package:${ref.component}`);
+  const migrations:DatabaseMigration[]=[];
+  const seen=new Set<string>();
+  let total=0;
+
+  for(const ref of selected){
+    const resolved=await resolveReleaseDatabasePackage(release,ref.component);
+    const payload=resolved.payload;
+    const raw=Array.isArray(payload?.migrations)?payload.migrations:[];
+    if(Number(payload?.migrationCount)!==raw.length)fail(`Database package migration count mismatch: ${ref.component}`,422,"DATABASE_PACKAGE_MIGRATION_COUNT_MISMATCH");
+    const expectedComponent=ref.component==="engine-shared"?"shared":ref.component;
+    for(const migration of raw){
+      const id=String(migration?.id||"").trim();
+      const file=String(migration?.file||"").replaceAll("\\","/");
+      if(!/^[0-9A-Za-z][0-9A-Za-z._-]{0,127}$/.test(id)||seen.has(id))fail("Database package contains an invalid or duplicate migration id",422);
+      seen.add(id);
+      const match=file.match(/^supabase\/migrations\/(shared|apex|mcp|studio)\/(\d{14}_[A-Za-z0-9._-]+)\.sql$/);
+      if(!match||match[1]!==expectedComponent||String(migration?.component||"").trim().toLowerCase()!==expectedComponent||migration?.encoding!=="base64"||typeof migration?.data!=="string"){
+        fail(`Invalid ${ref.component} customer database migration: ${file||id}`,422);
+      }
+      const bytes=Buffer.from(migration.data,"base64");
+      total+=bytes.byteLength;
+      if(bytes.byteLength>2*1024*1024||total>8*1024*1024)fail("Customer database migration payload is too large",413);
+      const sha=checksum(bytes);
+      if(Number(migration.size)!==bytes.byteLength||String(migration.sha256||"").toLowerCase()!==sha)fail(`Customer database migration checksum mismatch: ${file}`,422);
+      const sqlText=bytes.toString("utf8");
+      if(/\b(?:begin|commit|rollback)\s*;/i.test(sqlText))fail(`Database migration contains unsupported explicit transaction control: ${file}`,422);
+      if(/\b(?:drop\s+table|drop\s+schema|truncate\s+(?:table\s+)?|alter\s+table[\s\S]{0,300}?drop\s+column)\b/i.test(sqlText))fail(`Destructive customer database migration is not permitted in an Update release: ${file}`,422);
+      const invalidSequenceTargets=invalidSqlSequenceTargets(sqlText);
+      if(invalidSequenceTargets.length)fail(`Update migration ${file} contains invalid setval() sequence target(s): ${invalidSequenceTargets.join(", ")}.`,422,"UPDATE_MIGRATION_SEQUENCE_TARGET_INVALID",false);
+      migrations.push({id,file,component:expectedComponent,encoding:"base64",data:migration.data,size:bytes.byteLength,sha256:sha});
+    }
+  }
+
+  if((bundle as any)?.releaseAnalysis?.flags?.schemaChanged===true&&!migrations.length){
+    fail("Update contains database/schema changes but no applicable License Manager database migration",422);
+  }
+  return {migrations,skippedByEntitlement,source:"license-manager-database-packages" as const};
+}
+
 function validateDatabaseContract(bundle:UpdateBundle){
   const database=(bundle as any).database;
   if(!database||typeof database!=="object"||Array.isArray(database))fail("Update Bundle database migration contract is missing",422);
@@ -331,10 +387,9 @@ function validateDatabaseContract(bundle:UpdateBundle){
   return normalized;
 }
 async function applyCustomerDatabaseMigrations(install:any,release:any,bundle:UpdateBundle,executionComponents:string[]){
-  const allMigrations=validateDatabaseContract(bundle);
-  const allowed=new Set(["shared",...executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(Boolean)]);
-  const migrations=allMigrations.filter(migration=>allowed.has(String(migration.component||"shared").toLowerCase()));
-  const skippedByEntitlement=allMigrations.filter(migration=>!allowed.has(String(migration.component||"shared").toLowerCase())).map(migration=>migration.id);
+  const resolved=await resolveUpdateDatabaseMigrations(release,bundle,executionComponents);
+  const migrations=resolved.migrations;
+  const skippedByEntitlement=resolved.skippedByEntitlement;
   if(!install.supabase_project_ref)fail("Customer Supabase project is not configured for database migrations",409);
   const project=String(install.supabase_project_ref);
   const query=async(sql:string)=>supabaseApi(String(install.auth_user_id),`/projects/${encodeURIComponent(project)}/database/query`,{method:"POST",body:JSON.stringify({query:sql})});
@@ -380,6 +435,33 @@ commit;`);
 }
 
 type BaseMigration={id:string;file:string;size:number;sha256:string;data:string};
+async function releaseBaseMigrationChain(release:any):Promise<BaseMigration[]|null>{
+  if(!releaseHasDatabasePackageContract(release))return null;
+  const resolved=await resolveReleaseDatabasePackage(release,"base");
+  const payload=resolved.payload;
+  const raw=Array.isArray(payload?.migrations)?payload.migrations:[];
+  if(Number(payload?.migrationCount)!==raw.length||!raw.length)fail("License Manager Base database package migration history is invalid",422,"BASE_DATABASE_PACKAGE_HISTORY_INVALID");
+  const seen=new Set<string>();
+  const chain:BaseMigration[]=raw.map((migration:any,index:number)=>{
+    const file=String(migration?.file||"").replaceAll("\\","/");
+    const match=file.match(/^supabase\/migrations\/(\d{14})_[A-Za-z0-9._-]+\.sql$/);
+    const id=match?.[1]||"";
+    if(!id||seen.has(id)||String(migration?.component||"").toLowerCase()!=="base"||migration?.encoding!=="base64"||typeof migration?.data!=="string"){
+      fail(`Invalid License Manager Base database migration: ${file||String(migration?.id||"")}`,422);
+    }
+    seen.add(id);
+    const bytes=Buffer.from(migration.data,"base64");
+    const sha=checksum(bytes);
+    if(Number(migration.size)!==bytes.byteLength||String(migration.sha256||"").toLowerCase()!==sha)fail(`Base database package migration checksum mismatch: ${file}`,422);
+    const sqlText=bytes.toString("utf8");
+    if(/\b(?:begin|commit|rollback)\s*;/i.test(sqlText))fail(`Base migration contains unsupported explicit transaction control: ${file}`,422);
+    const invalidSequenceTargets=invalidSqlSequenceTargets(sqlText);
+    if(invalidSequenceTargets.length)fail(`Base migration ${file} contains invalid setval() sequence target(s): ${invalidSequenceTargets.join(", ")}.`,422,"BASE_MIGRATION_SEQUENCE_TARGET_INVALID",false);
+    if(index>0&&id<=String(raw[index-1]?.file||"").match(/supabase\/migrations\/(\d{14})_/)?.[1]!)fail("Base migration ids must be strictly increasing",422);
+    return {id,file,size:bytes.byteLength,sha256:sha,data:migration.data};
+  });
+  return chain;
+}
 function packagedBaseMigrationEntries(files:Array<{file:string;data:string;sha256:string;size:number}>){
   return files.flatMap(file=>{
     const match=file.file.match(/^supabase\/migrations\/([0-9]{14})_[A-Za-z0-9._-]+\.sql$/);
@@ -429,12 +511,20 @@ async function currentBaseMigrationBaseline(currentRelease:any,target:BaseMigrat
   let declared=Array.isArray(source.databaseMigrations)?source.databaseMigrations:[];
   const manifestCountValid=Number.isInteger(count)&&count>0;
   const manifestLatestValid=/^[0-9]{14}$/.test(latest);
-  if(!manifestCountValid||!manifestLatestValid||declared.length<count){
+  const centralChain=await releaseBaseMigrationChain(currentRelease);
+  if(centralChain){
+    const packageCount=centralChain.length,packageLatest=centralChain.at(-1)?.id||"";
+    if(manifestCountValid&&count!==packageCount)fail("Installed Base release migration count does not match its License Manager database package",409);
+    if(manifestLatestValid&&latest!==packageLatest)fail("Installed Base release latest migration does not match its License Manager database package",409);
+    count=packageCount;
+    latest=packageLatest;
+    declared=centralChain;
+  }else if(!manifestCountValid||!manifestLatestValid||declared.length<count){
     const parsed=await readArtifact(currentRelease);
     if((parsed.root as any).format==="orbitfs-update-bundle-v3")fail("Installed Base release points to an Update Bundle",409);
     const pkg=parsed.root as Package;
     const files=validateFiles(pkg.files,"Installed Base package");
-    const chain=validateBaseMigrationChain(pkg,files);
+    const chain=(await releaseBaseMigrationChain(targetRelease))??validateBaseMigrationChain(pkg,files);
     const packageCount=chain.length,packageLatest=chain.at(-1)?.id||"";
     if(manifestCountValid&&count!==packageCount)fail("Installed Base release migration count does not match its immutable package",409);
     if(manifestLatestValid&&latest!==packageLatest)fail("Installed Base release latest migration does not match its immutable package",409);
@@ -1180,8 +1270,10 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(!appliesEngine&&engine)fail("Update contains an Engine payload without an Engine/addon target",422,"UPDATE_SCOPE_INVALID");
     if(engine)validateFiles((engine as Package).files,"Engine update payload");
 
-    const declaredMigrations=validateDatabaseContract(bundle);
-    const applicableMigrations=declaredMigrations.filter(migration=>String(migration.component||"shared")==="shared"||components.includes(String(migration.component||"").toLowerCase()));
+    const previewMigrations=releaseHasDatabasePackageContract(release)
+      ?(await resolveUpdateDatabaseMigrations(release,bundle,components)).migrations
+      :validateDatabaseContract(bundle).filter(migration=>String(migration.component||"shared")==="shared"||components.includes(String(migration.component||"").toLowerCase()));
+    const applicableMigrations=previewMigrations;
     await event(install,"update.started","info",`Applying OrbitFS Update ${release.version} to the existing deployment`,{releaseId:release.id,components,checksum:parsed.artifactSha256,databaseMigrationCount:applicableMigrations.length,skippedComponents});
 
     let basePatchResult:any=null;

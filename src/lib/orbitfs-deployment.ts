@@ -4,6 +4,7 @@ import {gunzipSync} from "node:zlib";
 import {licenseDb} from "@/lib/license-api";
 import {serviceRpc,userFromToken,userRpc} from "@/lib/paymentServer";
 import {masterDownloadReleaseArtifact,masterInstallationPanelDomain,masterReleases} from "@/lib/master-api";
+import {releaseHasDatabasePackageContract,resolveReleaseDatabasePackage} from "@/lib/orbitfs-database-packages";
 import {requireLicenseMasterForDeployment,requireLicenseMasterForMutation} from "@/lib/license-master-availability";
 
 const SUPABASE_API="https://api.supabase.com/v1";
@@ -416,6 +417,39 @@ async function releaseSchemaText(release:any){
     throw Object.assign(new Error(`Published Base release ${release?.version||""} does not contain the verified customer database snapshot required for automatic deployment. Publish a current Base release before initializing a customer database.`),{status:409});
   }
 
+  if(releaseHasDatabasePackageContract(release)){
+    const resolved=await resolveReleaseDatabasePackage(release,"base");
+    const payload=resolved.payload;
+    const snapshot=payload?.snapshot;
+    const migrations=Array.isArray(payload?.migrations)?payload.migrations:[];
+    if(!snapshot||snapshot.format!=="sql"||snapshot.file!==schemaPath||snapshot.encoding!=="base64"||typeof snapshot.data!=="string"){
+      throw Object.assign(new Error("License Manager Base database package is missing its fresh-install snapshot"),{status:422,code:"BASE_DATABASE_SNAPSHOT_MISSING"});
+    }
+    if(String(payload.databaseSchemaVersion||"")!==expectedSchemaVersion||Number(payload.migrationCount)!==expectedMigrationCount||migrations.length!==expectedMigrationCount){
+      throw Object.assign(new Error("License Manager Base database package metadata does not match the approved release"),{status:422,code:"BASE_DATABASE_PACKAGE_METADATA_MISMATCH"});
+    }
+    const latest=migrations.map((migration:any)=>{
+      const file=String(migration?.file||"").replaceAll("\\","/");
+      return file.match(/^supabase\/migrations\/(\d{14})_[A-Za-z0-9._-]+\.sql$/)?.[1]||"";
+    }).filter(Boolean).sort().at(-1)||"";
+    if(latest!==expectedLatestMigration){
+      throw Object.assign(new Error("License Manager Base database package migration history does not match the approved release"),{status:422,code:"BASE_DATABASE_PACKAGE_HISTORY_MISMATCH"});
+    }
+    const bytes=Buffer.from(snapshot.data,"base64");
+    if(bytes.byteLength<1||bytes.byteLength>SCHEMA_MAX_BYTES)throw Object.assign(new Error("License Manager Base database snapshot size is invalid"),{status:422});
+    const sha256=createHash("sha256").update(bytes).digest("hex");
+    if(sha256!==expectedSchemaHash||String(snapshot.sha256||"").toLowerCase()!==sha256||Number(snapshot.size)!==bytes.byteLength){
+      throw Object.assign(new Error("License Manager Base database snapshot checksum failed"),{status:422,code:"BASE_DATABASE_SNAPSHOT_CHECKSUM_FAILED"});
+    }
+    const sql=bytes.toString("utf8");
+    if(!["orbitfs_users","orbitfs_workspaces","orbitfs_workspace_members","orbitfs_files","orbitfs_settings","orbitfs_license","orbitfs_addons","orbitfs_audit_log"].every(name=>sql.includes(name))){
+      throw Object.assign(new Error("License Manager Base database snapshot is incomplete"),{status:422});
+    }
+    if(/\b(?:begin|commit|rollback)\s*;/i.test(sql))throw Object.assign(new Error("License Manager Base database snapshot contains unsupported explicit transaction control"),{status:422});
+    return {sql,sha256,source:"license-manager-database-package" as const,path:schemaPath,schemaVersion:expectedSchemaVersion,migrationCount:expectedMigrationCount,latestMigration:expectedLatestMigration};
+  }
+
+  // Compatibility only for published releases created before database package references.
   const artifact=await masterDownloadReleaseArtifact(String(release.id));
   if(artifact.bytes.byteLength>75*1024*1024)throw Object.assign(new Error("Base release artifact is too large"),{status:413});
   const artifactHash=createHash("sha256").update(artifact.bytes).digest("hex");

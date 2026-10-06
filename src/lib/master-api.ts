@@ -24,6 +24,12 @@ export async function masterLicenses(role:MasterRole="billing",customerExternalI
   const query=qs.toString();
   return masterRequest("/api/v1/license"+(query?"?"+query:""),{method:"GET",cache:"no-store"},role);
 }
+export async function masterDatabasePackage(id:string,role:MasterRole="deployer"){
+  const value=String(id||"").trim();
+  if(!/^[0-9a-f-]{36}$/i.test(value))throw Object.assign(new Error("Invalid License Manager database package id"),{status:400,code:"DATABASE_PACKAGE_ID_INVALID"});
+  return masterRequest(`/api/v1/database-packages/${encodeURIComponent(value)}`,{method:"GET",cache:"no-store"},role);
+}
+
 export async function masterReleases(product="orbitfs_base",channel="all",releaseType="all",role:MasterRole="billing",fresh=false,includeArchived=false){
   const qs=new URLSearchParams();
   const p=String(product||"").trim().toLowerCase();
