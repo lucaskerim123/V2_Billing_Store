@@ -157,7 +157,7 @@ export default function ReleaseChannelsAdmin(){
      {channels.map(c=>{
       const count=((data.access||[]) as Access[]).filter(a=>a.channel===c.channel).length;
       const itemUsage:ChannelUsage=data.releaseUsage?.[c.channel]||{};
-      return <button key={c.id||c.channel} type="button" className={"orbitReferenceRailCard "+(channel?.channel===c.channel?"active":"")} onClick={()=>setSelected(c.channel)}>
+      return <button key={c.id||c.channel} type="button" className={"orbitReferenceRailCard "+(channel?.channel===c.channel?"active":"")} onClick={()=>{setCreating(false);setSelected(c.channel)}}>
        <div className="orbitReferenceRailCardTop"><b>{c.label||c.channel}</b><span className={"orbitMiniState "+(c.enabled?"live":"")}>{c.enabled?"Enabled":"Disabled"}</span></div>
        <small className="orbitChannelSlug">{c.channel}</small>
        <div className="orbitReferenceRailMeta">
