@@ -184,7 +184,7 @@ export default function LicenseMasterSettings(){
    <section className="orbitAuthorityPanel orbitProductConnectionPanel">
     <div className="orbitAuthorityPanelHead"><div><p className="eyebrow">OFFICIAL CONNECTIONS</p><h2>Approved authority endpoints</h2><p>Resolved by Billing's License Manager configuration. These are not customer provider connections.</p></div><span>{officialConnections.length}</span></div>
     <div className="orbitOfficialConnectionList">
-     {officialConnections.length?officialConnections.map((row:any,index:number)=><div key={row.id||row.url||row.master_url||index}><span className={"orbitAuthorityDot "+(row.enabled===false?"":"online")} aria-hidden="true"/><div><b>{row.name||row.label||"Official License Manager"}</b><small className="orbitMono">{row.url||row.master_url||row.api_url||"Configured endpoint"}</small></div><span>{row.enabled===false?"Disabled":"Approved"}</span></div>):<div className="orbitReferenceEmpty compact"><span>No additional official endpoint records were returned.</span></div>}
+     {officialConnections.length?officialConnections.map((row:any,index:number)=><div key={row.id||row.base_url||index}><span className={"orbitAuthorityDot "+(row.enabled===false?"":"online")} aria-hidden="true"/><div><b>{row.label||"Official License Manager"}</b><small className="orbitMono">{row.base_url||"Configured endpoint"}</small></div><span>{row.enabled===false?"Disabled":"Approved"}</span></div>):<div className="orbitReferenceEmpty compact"><span>No additional official endpoint records were returned.</span></div>}
     </div>
    </section>
   </section>
