@@ -5,6 +5,7 @@ import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {expireStaleBaseOperations} from "@/lib/orbitfs-base-operations";
 import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 import {canonicalLicenseStatus} from "@/lib/license-status";
+import {billingCustomerUserFilter} from "@/lib/billing-customer-identity.mjs";
 
 export const dynamic="force-dynamic";
 const url=()=>String(process.env.NEXT_PUBLIC_SUPABASE_URL||"");
@@ -16,7 +17,7 @@ export async function GET(req:Request){
   const auth=await currentUser(req),user=auth.user,db=createClient(url(),key(),{auth:{persistSession:false,autoRefreshToken:false}}),q=(p:any)=>Promise.resolve(p).catch((error:any)=>({data:[],error:{message:error?.message||String(error)}}));
   const bootstrap=new URL(req.url).searchParams.get("view")==="bootstrap";
   const [customerResult,bindings,connections,installations,settings,masterAvailability]=await Promise.all([
-   q(db.from("customers").select("id,customer_number,name,email").eq("auth_user_id",user.id).maybeSingle()),
+   q(db.from("customers").select("id,auth_user_id,user_id,customer_number,name,email").or(billingCustomerUserFilter(user.id)).limit(1).maybeSingle()),
    q(db.from("license_bindings").select("*").eq("auth_user_id",user.id).is("archived_at",null).order("created_at",{ascending:false})),
    q(db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",user.id).order("updated_at",{ascending:false})),
    q(db.from("orbitfs_installations").select("*").eq("auth_user_id",user.id).order("created_at",{ascending:false})),
