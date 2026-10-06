@@ -44,6 +44,7 @@ export default function MyOrbitFS(){
   const [baseDomain,setBaseDomain]=useState("");
   const [baseDomainState,setBaseDomainState]=useState<any>(null);
   const [baseDomainAvailability,setBaseDomainAvailability]=useState<any>(null);
+  const [baseDomainDns,setBaseDomainDns]=useState<any>(null);
 
   async function authHeaders():Promise<Record<string,string>>{const {data:{session}}=await sb.auth.getSession();return session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{} }
   async function load(background=false,bootstrap=false){
@@ -300,6 +301,7 @@ export default function MyOrbitFS(){
       setBaseDomainMode(state?.mode==="custom"?"custom":state?.mode==="vercel"?"vercel":"generated");
       setBaseDomain(String(state?.domainName||""));
       setBaseDomainAvailability(null);
+      setBaseDomainDns(j.dns||null);
       return state;
     }catch(e:any){setMsg(e?.message||"Could not load Base domain settings.");return null}
     finally{setBusy("")}
@@ -314,6 +316,7 @@ export default function MyOrbitFS(){
     setBaseDomainMode(initialMode);
     setBaseDomain(String(saved?.domainName||(initialMode==="generated"?"":live)||""));
     setBaseDomainAvailability(null);
+    setBaseDomainDns(null);
     void loadBaseDomain();
   }
   async function checkBaseDomainAvailability(){
@@ -327,6 +330,20 @@ export default function MyOrbitFS(){
       return j.availability||null;
     }catch(e:any){setBaseDomainAvailability(null);setMsg(e?.message||"Could not check that Vercel address.");return null}
     finally{setBusy("")}
+  }
+  async function inspectBaseDomainDns(){
+    if(!install?.id||!baseDomain.trim())return null;
+    setBusy("base-domain-dns");
+    try{
+      const r=await fetch(`/api/orbitfs/installations/${install.id}/domain`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"dns",domain:baseDomain})}),j=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(apiError(j,"Could not load DNS requirements for this custom domain."));
+      setBaseDomainDns(j.dns||null);
+      return j.dns||null;
+    }catch(e:any){
+      setBaseDomainDns(null);
+      setMsg(e?.message||"Could not load DNS requirements for this custom domain.");
+      return null;
+    }finally{setBusy("")}
   }
   async function saveBaseDomain(){
     if(!install?.id)return;
@@ -348,6 +365,7 @@ export default function MyOrbitFS(){
       setBaseDomainMode(state?.mode==="custom"?"custom":state?.mode==="vercel"?"vercel":"generated");
       setBaseDomain(String(state?.domainName||""));
       setBaseDomainAvailability(j.availability||null);
+      setBaseDomainDns(j.dns||null);
       setMsg(state?.mode==="custom"&&state?.verified===false?`Custom domain ${state.domainName} is attached. Complete Vercel DNS verification; OrbitFS keeps the generated address active until verification succeeds.`:`Base Panel address updated to ${state?.effectiveUrl||state?.domainName||state?.generatedDomain||"the generated Vercel domain"}.`);
     }catch(e:any){setMsg(e?.message||"Could not update the Base domain.")}
     finally{setBusy("")}
@@ -499,20 +517,31 @@ export default function MyOrbitFS(){
           </div>
           {showBaseDomain&&<div className="form" style={{marginTop:10}}>
             <label>Address type
-              <select value={baseDomainMode} disabled={busy!==""} onChange={e=>{setBaseDomainMode(e.target.value as "generated"|"vercel"|"custom");setBaseDomainAvailability(null);if(e.target.value==="generated")setBaseDomain("");}}>
+              <select value={baseDomainMode} disabled={busy!==""} onChange={e=>{setBaseDomainMode(e.target.value as "generated"|"vercel"|"custom");setBaseDomainAvailability(null);setBaseDomainDns(null);if(e.target.value==="generated")setBaseDomain("");}}>
                 <option value="generated">Default generated Vercel domain</option>
                 <option value="vercel">Custom Vercel address</option>
                 <option value="custom">Custom domain</option>
               </select>
             </label>
             {baseDomainMode==="generated"?<div className="listrow"><div><b>https://{install.vercel_project_name}.vercel.app</b><span>Stable generated address for this Base project.</span></div><span className="state ready">AVAILABLE</span></div>:<label>{baseDomainMode==="vercel"?"Custom Vercel address":"Custom domain"}
-              <input value={baseDomain} autoComplete="off" placeholder={baseDomainMode==="vercel"?"my-orbitfs.vercel.app":"orbitfs.example.com"} onChange={e=>{setBaseDomain(e.target.value);setBaseDomainAvailability(null)}}/>
+              <input value={baseDomain} autoComplete="off" placeholder={baseDomainMode==="vercel"?"my-orbitfs.vercel.app":"orbitfs.example.com"} onChange={e=>{setBaseDomain(e.target.value);setBaseDomainAvailability(null);setBaseDomainDns(null)}}/>
               <small className="muted">{baseDomainMode==="vercel"?"Enter any valid .vercel.app name, check whether it is free, then save it.":"OrbitFS attaches this domain to the existing Base project. Vercel may require DNS verification before it becomes the active Panel URL."}</small>
             </label>}
             {baseDomainMode==="vercel"&&baseDomainAvailability&&<p className="inlineStatus"><b>{baseDomainAvailability.available?"Available":"Unavailable"}:</b> {baseDomainAvailability.domain}{baseDomainAvailability.available?(baseDomainAvailability.attached?" is already attached to this Base deployment.":" can be claimed by this Base deployment."):" is already in use on Vercel."}</p>}
             {baseDomainState?.mode==="custom"&&baseDomainState?.verified===false&&<p className="inlineStatus">Custom domain <b>{baseDomainState.domainName}</b> is attached but still needs Vercel DNS verification. The generated Vercel address remains active until verification succeeds.</p>}
+            {baseDomainMode==="custom"&&<div className="panel" style={{marginTop:10,padding:12}}>
+              <div className="panelTitle" style={{marginBottom:8}}>
+                <div><p className="eyebrow">DNS REQUIREMENTS</p><h3 style={{margin:0}}>Custom domain DNS</h3><p className="muted">Exact DNS values are requested from Vercel for this hostname. Add them at the DNS provider that currently hosts the domain, then refresh verification.</p></div>
+                {baseDomainDns&&<span className={"state "+(baseDomainDns.configured?"ready":"waiting")}>{baseDomainDns.configured?"CONFIGURED":"ACTION REQUIRED"}</span>}
+              </div>
+              {baseDomainDns?.records?.length?<div style={{display:"grid",gap:8}}>
+                {baseDomainDns.records.map((record:any,index:number)=><div className="listrow" key={String(record.type)+"-"+String(record.name)+"-"+index}><div><b>{String(record.type||"DNS").toUpperCase()} · {record.name}</b><span style={{wordBreak:"break-all"}}>{record.value}</span>{record.reason&&<small className="muted">{record.reason}</small>}</div><span>{record.purpose==="ownership"?"VERIFY":"ROUTE"}</span></div>)}
+                {baseDomainDns.nameservers?.length>0&&<div className="listrow"><div><b>Nameservers</b><span style={{wordBreak:"break-all"}}>{baseDomainDns.nameservers.join(" · ")}</span></div><span>OPTION</span></div>}
+              </div>:<p className="inlineStatus">{baseDomainDns?.configError?"Vercel did not return exact DNS records yet. "+baseDomainDns.configError:"Enter the custom hostname, then choose Check DNS. Once the domain is attached, Vercel ownership-verification TXT records will also appear here when required."}</p>}
+            </div>}
             <div className="controllerActions">
               {baseDomainMode==="vercel"&&<button className="secondary" type="button" disabled={busy!==""||!baseDomain.trim()} onClick={()=>void checkBaseDomainAvailability()}>{busy==="base-domain-check"?"Checking…":"Check availability"}</button>}
+              {baseDomainMode==="custom"&&<button className="secondary" type="button" disabled={busy!==""||!baseDomain.trim()} onClick={()=>void inspectBaseDomainDns()}>{busy==="base-domain-dns"?"Checking DNS…":"Check DNS"}</button>}
               <button type="button" disabled={busy!==""||(baseDomainMode!=="generated"&&!baseDomain.trim())} onClick={()=>void saveBaseDomain()}>{busy==="base-domain-save"?"Saving…":"Save address"}</button>
               <a className="buttonlink secondary" href={vercelProjectConsoleUrl} target="_blank" rel="noreferrer">Open Vercel ↗</a>
             </div>
