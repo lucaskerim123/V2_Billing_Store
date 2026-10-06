@@ -48,7 +48,7 @@ export default function MailHome(){
   return <main className="mailV6">
     <header className="mailV6Topbar">
       <Link className="mailV6Brand" href="/admin"><span className="mailV6BrandMark">M</span><span className="mailV6BrandText"><b>OrbitFS Mail</b><span>Billing Store communications</span></span></Link>
-      <div className="mailV6TopSearch"><input aria-label="Search Mail" placeholder="Open a mailbox to search messages…"/><button type="button" disabled aria-label="Search available inside a mailbox">⌕</button></div>
+      <div className="mailV6TopSearch"><input aria-label="Search Mail" placeholder="Open a mailbox to search messages…" readOnly/><button type="button" disabled aria-label="Search available inside a mailbox">⌕</button></div>
       <div className="mailV6TopActions">{canOpenConfig&&<Link href="/mail/admin">Mail Config</Link>}<Link href="/admin">Admin</Link><span className="mailV6StatusDot" aria-label="Mail system active"/></div>
     </header>
 
