@@ -12,12 +12,14 @@ export async function GET(req:Request){
   try{
     await requireOrbitAdmin(req);
     const db=licenseDb();
-    const [channels,profiles,customerRows,requests,remoteAccess]=await Promise.all([
+    const [channels,profiles,customerRows,requests,remoteAccess,baseReleases,updateReleases]=await Promise.all([
       authoritativeChannels(),
       db.from("user_profiles").select("id,display_name,company_name,status,role"),
       db.from("customers").select("id,auth_user_id,user_id,customer_number,name,email,status").order("name"),
       masterRequest("/api/v1/release-channels/access?status=pending",{method:"GET",cache:"no-store"},"billing"),
-      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET",cache:"no-store"},"billing")
+      masterRequest("/api/v1/release-channels/access?view=access",{method:"GET",cache:"no-store"},"billing"),
+      masterRequest("/api/v1/releases?product=orbitfs_base&type=base",{method:"GET",cache:"no-store"},"billing"),
+      masterRequest("/api/v1/releases?product=orbitfs_base&type=update",{method:"GET",cache:"no-store"},"billing")
     ]);
     if(profiles.error)throw profiles.error;
     if(customerRows.error)throw customerRows.error;
@@ -49,11 +51,24 @@ export async function GET(req:Request){
       return {...request,user_id:String(customer?.id||"")};
     });
 
+    const usage:Record<string,{base:{total:number;published:number};update:{total:number;published:number}}>= {};
+    const countRelease=(row:any,type:"base"|"update")=>{
+      const channel=String(row?.channel||"stable").trim().toLowerCase()||"stable";
+      if(!usage[channel])usage[channel]={base:{total:0,published:0},update:{total:0,published:0}};
+      usage[channel][type].total+=1;
+      if(String(row?.status||"").toLowerCase()==="published")usage[channel][type].published+=1;
+    };
+    const baseRows=Array.isArray(baseReleases?.releases)?baseReleases.releases:(Array.isArray(baseReleases)?baseReleases:[]);
+    const updateRows=Array.isArray(updateReleases?.releases)?updateReleases.releases:(Array.isArray(updateReleases)?updateReleases:[]);
+    baseRows.forEach((row:any)=>countRelease(row,"base"));
+    updateRows.forEach((row:any)=>countRelease(row,"update"));
+
     return Response.json({
       channels,
       access:authoritativeAccess,
       customers,
       requests:authoritativeRequests,
+      releaseUsage:usage,
       authority:"license_manager",
       mirrored:false
     },{headers:{"cache-control":"no-store"}});
