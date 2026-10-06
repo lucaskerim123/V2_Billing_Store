@@ -4,6 +4,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase";
 import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
+import V6ConfirmDialog from "@/components/V6ConfirmDialog";
 
 type Release={
   id?:string;releaseId?:string;version?:string;title?:string;description?:string;
@@ -22,6 +23,7 @@ type UpdateProgress={
 };
 type Stage=1|2|3|4|5;
 type UpdateMode="update"|"rollback";
+type ConfirmState={kind:"install"|"repair"|"rollback";title:string;description:string;confirmLabel:string;danger?:boolean}|null;
 const stages:{id:Stage;title:string;description:string}[]=[
   {id:1,title:"Installation",description:"Check your installed Base."},
   {id:2,title:"Channel / Update",description:"Choose an authorized published Update."},
@@ -56,6 +58,7 @@ export default function OrbitFSUpdateReleaseSystem(){
   const [progressIssue,setProgressIssue]=useState("");
   const [rollbackReason,setRollbackReason]=useState("");
   const [recoveryOpen,setRecoveryOpen]=useState(false);
+  const [confirmState,setConfirmState]=useState<ConfirmState>(null);
   const requestInFlight=useRef(false);
   const completionReported=useRef("");
   const statusInitialised=useRef(false);
@@ -262,11 +265,19 @@ export default function OrbitFSUpdateReleaseSystem(){
     finally{setBusy("")}
   }
 
-  async function beginInstall(){
+  async function beginInstall(actionConfirmed=false){
     if(!canInstall||!selected||!install)return;
     const version=versionOf(selected),releaseId=idOf(selected);
     if(!confirmed){setMessage("Review and confirm the Update before installing.");setStage(3);return}
-    if(!window.confirm("Install published OrbitFS Update v"+version+" from "+channel+"?"))return;
+    if(!actionConfirmed){
+      setConfirmState({
+        kind:"install",
+        title:"Install Update v"+version+"?",
+        description:"Install the published Update from "+channel+" through the existing verified Update workflow. Actual execution progress will be recorded and shown on this page.",
+        confirmLabel:"Install Update"
+      });
+      return;
+    }
     setProgressTarget(releaseId);setProgressMode("update");setProgress(null);setAttemptStartedAt(Date.now());
     completionReported.current="";setStage(4);setBusy("update");setMessage("");
     requestInFlight.current=true;
@@ -289,9 +300,17 @@ export default function OrbitFSUpdateReleaseSystem(){
     }finally{requestInFlight.current=false;setBusy("")}
   }
 
-  async function repairAppliedUpdate(){
+  async function repairAppliedUpdate(actionConfirmed=false){
     if(!install||!appliedPublishedRelease||!canRepairAppliedUpdate)return;
-    if(!window.confirm("Repair installed Update v"+appliedVersion+"? This re-applies the same verified Update through the existing update workflow."))return;
+    if(!actionConfirmed){
+      setConfirmState({
+        kind:"repair",
+        title:"Repair Update v"+appliedVersion+"?",
+        description:"Re-apply the same published and verified Update through the existing Update workflow. This does not create a second release or bypass License Manager authorization.",
+        confirmLabel:"Repair Update"
+      });
+      return;
+    }
     const releaseId=idOf(appliedPublishedRelease);
     setProgressTarget(releaseId);setProgressMode("update");setProgress(null);setAttemptStartedAt(Date.now());
     completionReported.current="";setStage(4);setBusy("repair-update");setMessage("");
@@ -315,11 +334,20 @@ export default function OrbitFSUpdateReleaseSystem(){
     }finally{requestInFlight.current=false;setBusy("")}
   }
 
-  async function rollback(){
+  async function rollback(actionConfirmed=false){
     if(!install||!appliedVersion||rollbackUnavailable||busy)return;
     const reason=rollbackReason.trim();
     if(!reason){setMessage("Enter a rollback reason before proceeding.");return}
-    if(!window.confirm("Roll back installed Update v"+appliedVersion+"? Forward-compatible database migrations will remain applied."))return;
+    if(!actionConfirmed){
+      setConfirmState({
+        kind:"rollback",
+        title:"Roll back Update v"+appliedVersion+"?",
+        description:"The installed Update will be rolled back through the authorised recovery workflow. Forward-compatible database migrations remain applied.",
+        confirmLabel:"Roll back Update",
+        danger:true
+      });
+      return;
+    }
     const releaseId=String(applied?.releaseId||"");
     setProgressTarget(releaseId);setProgressMode("rollback");setProgress(null);setAttemptStartedAt(Date.now());setStage(4);
     setBusy("rollback");setMessage("");completionReported.current="";
@@ -593,5 +621,21 @@ export default function OrbitFSUpdateReleaseSystem(){
       <div><p className="eyebrow">NEED HELP?</p><h2>Update support</h2><p>Need help with a release, update failure or recovery?</p></div>
       <Link className="buttonlink secondary" href="/portal/support">Contact support ↗</Link>
     </section>
+  <V6ConfirmDialog
+    open={Boolean(confirmState)}
+    title={confirmState?.title||""}
+    description={confirmState?.description||""}
+    confirmLabel={confirmState?.confirmLabel||"Confirm"}
+    danger={confirmState?.danger===true}
+    busy={Boolean(busy)}
+    onCancel={()=>setConfirmState(null)}
+    onConfirm={()=>{
+      const kind=confirmState?.kind;
+      setConfirmState(null);
+      if(kind==="install")void beginInstall(true);
+      if(kind==="repair")void repairAppliedUpdate(true);
+      if(kind==="rollback")void rollback(true);
+    }}
+  />
   </main>;
 }
