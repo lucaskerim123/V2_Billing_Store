@@ -72,5 +72,17 @@ export async function masterExecuteDeployment(input:any):Promise<MasterDeploymen
 export async function masterInstallationDetails(installationId:string,licenseId?:string|null){const qs=new URLSearchParams({installation_id:String(installationId||"").trim()});if(licenseId)qs.set("license_id",String(licenseId).trim());return masterRequest(`/api/v1/deployer?${qs.toString()}`,{method:"GET",cache:"no-store"},"deployer");}
 export async function masterInstallations(limit=250,currentOnly=false){const value=Math.min(500,Math.max(1,Number(limit)||250));const qs=new URLSearchParams({limit:String(value)});if(currentOnly)qs.set("current_only","true");return masterRequest(`/api/v1/installations?${qs.toString()}`,{method:"GET",cache:"no-store"},"deployer");}
 export async function masterInstallationControl(input:any){return masterRequest("/api/v1/installations/control",{method:"POST",body:JSON.stringify(input)},"deployer");}
+export async function masterInstallationPanelDomain(installationId:string,licenseId?:string|null){
+  const qs=new URLSearchParams({installation_id:String(installationId||"").trim()});
+  if(licenseId)qs.set("license_id",String(licenseId).trim());
+  return masterRequest(`/api/v1/installations/domain?${qs.toString()}`,{method:"GET",cache:"no-store"},"deployer");
+}
+export async function masterAuthorizeInstallationPanelDomain(input:any){
+  return masterRequest("/api/v1/installations/domain",{method:"POST",body:JSON.stringify({...input,action:"authorize"})},"deployer");
+}
+export async function masterRecordInstallationPanelDomain(input:any){
+  return masterRequest("/api/v1/installations/domain",{method:"POST",body:JSON.stringify({...input,action:"record"})},"deployer");
+}
+
 export async function masterInstallationLifecycle(input:any){return masterRequest("/api/v1/installations/lifecycle",{method:"POST",body:JSON.stringify(input)},"deployer");}
 export const licensingAuthority="orbitfs-license-master-v2";
