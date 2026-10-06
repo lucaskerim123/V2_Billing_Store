@@ -35,7 +35,7 @@ export async function GET(req:Request){
       .map((row:any)=>String(row?.license_id||"").trim())
       .filter((licenseId:string)=>licenseId.length>0)
   )];
-  const masterLicenseResult=(customerNumber||linkedLicenseIds.length)?await masterLicenses("billing",customerNumber,linkedLicenseIds).catch(()=>({licenses:[]})):{licenses:[]};
+  const masterLicenseResult=(customerNumber||linkedLicenseIds.length)?await masterLicenses("billing",customerNumber,linkedLicenseIds).catch((error:any)=>{throw Object.assign(new Error(`License Manager licence lookup failed: ${error?.message||String(error)}`),{status:502,code:"LICENSE_LOOKUP_FAILED"})}):{licenses:[]};
   const channelAccess=["stable"];
   const installationRows=installations.data||[],masterLicensesRows=masterLicenseResult?.licenses||[];
   const preferredInstall=installationRows.find((x:any)=>String(x.component_key||"")==="orbitfs_base")||installationRows[0]||null;
