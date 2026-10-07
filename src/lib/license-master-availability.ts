@@ -1,5 +1,5 @@
 import {licenseDb} from "@/lib/license-api";
-import {masterPulseState} from "@/lib/master-api";
+import {masterHealthState,masterPulseState} from "@/lib/master-api";
 
 type FulfillmentMode="automatic"|"manual"|"paused";
 
@@ -32,21 +32,37 @@ export async function getLicenseMasterAvailability(){
     return {reachable:true,restricted:true,reason:"store_maintenance",authority:null,pulseRevision:0,configuredMode,effectiveMode:"manual" as FulfillmentMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,updateDeploymentAvailable:false,rollbackAvailable:false,notice:storeMaintenanceMessage,storeMaintenance:true};
   }
   try{
-    const pulse=await masterPulseState();
-    const authority=pulse?.authority||{};
+    const health=await masterHealthState();
+    if(!health?.reachable){
+      const effectiveMode:FulfillmentMode=configuredMode==="paused"?"paused":configuredMode==="manual"?"manual":pauseUnreachable?"manual":"automatic";
+      return {reachable:false,restricted:true,reason:"unreachable",authority:null,health,pulseRevision:0,configuredMode,effectiveMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,updateDeploymentAvailable:false,rollbackAvailable:false,notice,error:String(health?.error||"License Manager unavailable")};
+    }
+    let pulse:any={};
+    if(health.external_authority_online!==false){
+      try{pulse=await masterPulseState()}catch{}
+    }
+    const authority={
+      system_enabled:health.external_authority_online!==false,
+      licensing_enabled:health.licensing_enabled!==false,
+      release_system_enabled:health.capabilities?.releases!==false,
+      deployment_enabled:health.capabilities?.deployment!==false,
+      maintenance_mode:Boolean(health.maintenance_mode),
+      ...(pulse?.authority||{})
+    };
     const restricted=!authority.system_enabled||!authority.licensing_enabled||Boolean(authority.maintenance_mode);
     const reason=Boolean(authority.maintenance_mode)?"maintenance":!authority.system_enabled?"api_disabled":!authority.licensing_enabled?"licensing_disabled":"online";
     const effectiveMode:FulfillmentMode=configuredMode==="paused"?"paused":configuredMode==="manual"?"manual":restricted&&pauseRestricted?"manual":"automatic";
     const releaseAuthorityAvailable=!restricted&&authority.release_system_enabled!==false;
     const deploymentAuthorityAvailable=!restricted&&authority.deployment_enabled!==false;
-    const baseDeploymentAvailable=deploymentAuthorityAvailable&&authority.base_deployment_enabled!==false;
-    const updateDeploymentAvailable=deploymentAuthorityAvailable&&authority.update_deployment_enabled!==false;
-    const rollbackAvailable=deploymentAuthorityAvailable&&authority.rollback_enabled!==false;
-    return {reachable:true,restricted,reason,authority,pulseRevision:Number(pulse?.pulse_revision||0),configuredMode,effectiveMode,automaticFulfillmentAllowed:!restricted&&effectiveMode==="automatic",manualFulfillmentAllowed:!restricted&&effectiveMode!=="paused",releaseAuthorityAvailable,deploymentAuthorityAvailable,baseDeploymentAvailable,updateDeploymentAvailable,rollbackAvailable,notice:restricted?notice:null};
-  }catch(error:any){
+    const baseDeploymentAvailable=deploymentAuthorityAvailable&&(pulse?.authority?.base_deployment_enabled!==false);
+    const updateDeploymentAvailable=deploymentAuthorityAvailable&&(pulse?.authority?.update_deployment_enabled!==false);
+    const rollbackAvailable=deploymentAuthorityAvailable&&(pulse?.authority?.rollback_enabled!==false);
+    return {reachable:true,restricted,reason,authority,health,pulseRevision:Number(pulse?.pulse_revision||health?.pulse_revision||0),configuredMode,effectiveMode,automaticFulfillmentAllowed:!restricted&&effectiveMode==="automatic",manualFulfillmentAllowed:!restricted&&effectiveMode!=="paused",releaseAuthorityAvailable,deploymentAuthorityAvailable,baseDeploymentAvailable,updateDeploymentAvailable,rollbackAvailable,notice:restricted?notice:null};
+    }catch(error:any){
     const effectiveMode:FulfillmentMode=configuredMode==="paused"?"paused":configuredMode==="manual"?"manual":pauseUnreachable?"manual":"automatic";
-    return {reachable:false,restricted:true,reason:"unreachable",authority:null,pulseRevision:0,configuredMode,effectiveMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,updateDeploymentAvailable:false,rollbackAvailable:false,notice,error:String(error?.message||"License Master unavailable")};
+    return {reachable:false,restricted:true,reason:"unreachable",authority:null,pulseRevision:0,configuredMode,effectiveMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,updateDeploymentAvailable:false,rollbackAvailable:false,notice,error:String(error?.message||"License Manager unavailable")};
   }
+}
 }
 
 
