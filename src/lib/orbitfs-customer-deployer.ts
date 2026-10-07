@@ -650,14 +650,16 @@ async function applyUpdateBaseDatabaseMigrations(install:any,release:any){
   if(!installedReleaseId)fail("Installed Base release identity is missing for Base database migration planning",409,"BASE_MIGRATION_BASELINE_MISSING");
   const currentRelease=await exactRelease(installedReleaseId);
   const chain=await releaseBaseMigrationChain(release);
-  if(!chain||!chain.length)fail("Approved Base-targeted Update is missing its Base database package migration chain",409,"UPDATE_BASE_DATABASE_PACKAGE_MISSING");
-  const files=chain.map(migration=>({file:migration.file,data:migration.data,size:migration.size,sha256:migration.sha256}));
+  const migrations=chain?.length
+    ? chain
+    : fail("Approved Base-targeted Update is missing its Base database package migration chain",409,"UPDATE_BASE_DATABASE_PACKAGE_MISSING");
+  const files=migrations.map(migration=>({file:migration.file,data:migration.data,size:migration.size,sha256:migration.sha256}));
   const packageView={
     version:String(release.version||""),
     files,
-    databaseMigrationCount:chain.length,
-    databaseLatestMigration:chain.at(-1)?.id||"",
-    databaseMigrations:chain.map(migration=>({id:migration.id,file:migration.file,size:migration.size,sha256:migration.sha256}))
+    databaseMigrationCount:migrations.length,
+    databaseLatestMigration:migrations.at(-1)?.id||"",
+    databaseMigrations:migrations.map(migration=>({id:migration.id,file:migration.file,size:migration.size,sha256:migration.sha256}))
   } as Package;
   return applyBaseDatabaseMigrations(install,currentRelease,release,packageView,files);
 }
