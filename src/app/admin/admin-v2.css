@@ -852,6 +852,213 @@ html[data-admin-theme="v2"] .setupProviderRow.active {
   box-shadow: inset 3px 0 var(--v2-accent);
 }
 
+
+html[data-admin-theme="v2"] .gatewaySetupWorkspace {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  overflow: hidden;
+  align-items: start;
+}
+html[data-admin-theme="v2"] .setupProviderRail {
+  min-width: 0;
+  padding: 12px;
+}
+html[data-admin-theme="v2"] .gatewayRailHead {
+  padding: 4px 4px 10px;
+}
+html[data-admin-theme="v2"] .setupProviderRow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 10px;
+  text-align: left;
+  background: transparent;
+}
+html[data-admin-theme="v2"] .setupProviderRow > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+html[data-admin-theme="v2"] .setupProviderRow span,
+html[data-admin-theme="v2"] .setupProviderRow b {
+  overflow-wrap: anywhere;
+}
+html[data-admin-theme="v2"] .setupProviderBody {
+  min-width: 0;
+  padding: 0 20px 20px;
+}
+html[data-admin-theme="v2"] .setupHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--v2-border);
+}
+html[data-admin-theme="v2"] .setupHero > div {
+  min-width: 0;
+}
+html[data-admin-theme="v2"] .setupStateLarge {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--v2-border);
+  background: var(--v2-surface-2);
+  color: var(--v2-text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+}
+html[data-admin-theme="v2"] .setupStateLarge.ready {
+  border-color: var(--v2-success);
+  background: var(--v2-success-soft);
+  color: var(--v2-success);
+}
+html[data-admin-theme="v2"] .setupSection {
+  display: grid;
+  gap: 14px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--v2-border);
+}
+html[data-admin-theme="v2"] .setupSection:last-of-type {
+  border-bottom: 0;
+}
+html[data-admin-theme="v2"] .setupSectionHead,
+html[data-admin-theme="v2"] .secretFieldHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+html[data-admin-theme="v2"] .setupSection h3 {
+  margin: 0 0 4px;
+  color: var(--v2-text);
+  font-size: 15px;
+}
+html[data-admin-theme="v2"] .secretGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+html[data-admin-theme="v2"] .secretField {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-bg);
+}
+html[data-admin-theme="v2"] .secretFieldHead > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+html[data-admin-theme="v2"] .secretInputRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+html[data-admin-theme="v2"] .secretInputRow input {
+  min-width: 0;
+  width: 100%;
+}
+html[data-admin-theme="v2"] .setupChoiceRow,
+html[data-admin-theme="v2"] .currencyPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+html[data-admin-theme="v2"] .webhookCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-bg);
+}
+html[data-admin-theme="v2"] .webhookCard > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+html[data-admin-theme="v2"] .webhookCard code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+html[data-admin-theme="v2"] .setupChecklist {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+html[data-admin-theme="v2"] .setupChecklist > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-bg);
+}
+html[data-admin-theme="v2"] .setupChecklist > div.done {
+  border-color: rgba(16,185,129,.45);
+  background: var(--v2-success-soft);
+}
+@media (max-width: 980px) {
+  html[data-admin-theme="v2"] .gatewaySetupWorkspace {
+    grid-template-columns: 1fr;
+  }
+  html[data-admin-theme="v2"] .setupProviderRail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--v2-border);
+  }
+  html[data-admin-theme="v2"] .gatewayRailHead {
+    grid-column: 1 / -1;
+  }
+  html[data-admin-theme="v2"] .setupProviderRow {
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-radius-sm);
+  }
+}
+@media (max-width: 680px) {
+  html[data-admin-theme="v2"] .adminShell {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  html[data-admin-theme="v2"] .adminTop,
+  html[data-admin-theme="v2"] .setupHero,
+  html[data-admin-theme="v2"] .setupSectionHead,
+  html[data-admin-theme="v2"] .webhookCard {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  html[data-admin-theme="v2"] .setupProviderRail,
+  html[data-admin-theme="v2"] .secretGrid,
+  html[data-admin-theme="v2"] .setupChecklist {
+    grid-template-columns: 1fr;
+  }
+  html[data-admin-theme="v2"] .setupProviderBody {
+    padding: 0 12px 14px;
+  }
+  html[data-admin-theme="v2"] .secretInputRow {
+    grid-template-columns: 1fr;
+  }
+  html[data-admin-theme="v2"] .secretInputRow button,
+  html[data-admin-theme="v2"] .setupSection > .inlineActions > *,
+  html[data-admin-theme="v2"] .webhookCard .inlineActions > *,
+  html[data-admin-theme="v2"] .adminTop .inlineActions > * {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ---- Staff system ---- */
 html[data-admin-theme="v2"] .staffMemberCard {
   border: 1px solid var(--v2-border);
