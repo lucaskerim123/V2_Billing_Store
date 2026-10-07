@@ -10,7 +10,30 @@ export default function InvoicePayments({params}:{params:Promise<{id:string}>}){
  const [inv,setInv]=useState<any>(),[payments,setPayments]=useState<any[]>([]),[amount,setAmount]=useState(""),[method,setMethod]=useState("manual"),[ref,setRef]=useState(""),[msg,setMsg]=useState("");
  async function load(){const {data:i}=await sb.from("invoices").select("*").eq("id",id).single();if(!i)return;const {data:p}=await sb.from("invoice_payments").select("*").eq("invoice_id",id).order("created_at",{ascending:false});setInv(i);setPayments(p||[]);setAmount(Math.max(0,(Number(i.total_cents)-Number(i.paid_cents||0))/100).toFixed(2))}
  useEffect(()=>{load()},[id]);
- async function record(){const cents=Math.round(Number(amount||0)*100);if(cents<=0){setMsg("Enter a payment amount greater than zero.");return}const {error}=await sb.rpc("admin_record_invoice_payment",{p_invoice_id:id,p_amount_cents:cents,p_method:method,p_reference:ref||null});setMsg(error?.message||"Payment recorded.");if(!error){setRef("");load()}}
+ async function record(){
+  const cents=Math.round(Number(amount||0)*100);
+  if(cents<=0){setMsg("Enter a payment amount greater than zero.");return}
+  setMsg("");
+  const {error}=await sb.rpc("admin_record_invoice_payment",{p_invoice_id:id,p_amount_cents:cents,p_method:method,p_reference:ref||null});
+  if(error){setMsg(error.message);return}
+  setRef("");
+  const {data:updated,error:invoiceError}=await sb.from("invoices").select("id,order_id,status,paid_cents,total_cents").eq("id",id).single();
+  if(invoiceError){setMsg("Payment recorded, but the updated invoice could not be reloaded: "+invoiceError.message);await load();return}
+  const fullyPaid=String(updated?.status||"").toLowerCase()==="paid"||Number(updated?.paid_cents||0)>=Number(updated?.total_cents||0);
+  if(fullyPaid&&updated?.order_id){
+   try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw new Error("Administrator session expired before fulfilment.");
+    const response=await fetch("/api/admin/license-master/fulfill",{method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({orderId:String(updated.order_id)})});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||result?.ok===false)throw new Error(result?.error||result?.reason||"License fulfilment did not complete.");
+    setMsg(result?.skipped?"Payment recorded. Fulfilment queued: "+String(result.reason||"waiting for License Manager")+".":"Payment recorded and licence fulfilment completed.");
+   }catch(e:any){
+    setMsg("Payment recorded, but licence fulfilment failed: "+String(e?.message||e));
+   }
+  }else setMsg("Payment recorded.");
+  await load();
+ }
  if(!inv)return <main className="adminShell">Loading payments…</main>;
  const due=Math.max(0,Number(inv.total_cents)-Number(inv.paid_cents||0));
  return <main className="adminShell invoiceAdminPage"><header className="adminTop"><div><p className="eyebrow">INVOICE PAYMENTS</p><h1>{inv.invoice_number}</h1><p className="muted">Record manual payments and review the complete payment history for this invoice.{!inv.order_id?" This is a standalone invoice with no linked order.":""}</p></div><div className="inlineActions"><Link href={`/admin/customers/${inv.auth_user_id}`}>Open customer →</Link>{inv.order_id&&<Link href={`/admin/orders/${inv.order_id}`}>Open order →</Link>}</div></header>
