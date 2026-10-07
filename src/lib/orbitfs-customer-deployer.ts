@@ -315,10 +315,12 @@ async function resolveUpdateDatabaseMigrations(release:any,bundle:UpdateBundle,e
   }
 
   const refs=releaseDatabasePackageReferences(release);
-  const allowedPackages=new Set(["engine-shared",...executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(value=>["mcp","apex","studio"].includes(value))]);
+  const engineTargets=executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(value=>["mcp","apex","studio"].includes(value));
+  if(!engineTargets.length)return {migrations:[],skippedByEntitlement:[],source:"license-manager-database-packages" as const};
+  const allowedPackages=new Set(["engine-shared",...engineTargets]);
   const selected=refs.filter(ref=>allowedPackages.has(ref.component));
   if(!selected.some(ref=>ref.component==="engine-shared"))fail("Approved Update release is missing its Shared Engine database package",409,"UPDATE_DATABASE_PACKAGE_MISSING");
-  const skippedByEntitlement=refs.filter(ref=>!allowedPackages.has(ref.component)).map(ref=>`package:${ref.component}`);
+  const skippedByEntitlement=refs.filter(ref=>ref.component!=="base"&&!allowedPackages.has(ref.component)).map(ref=>`package:${ref.component}`);
   const migrations:DatabaseMigration[]=[];
   const seen=new Set<string>();
   let total=0;
@@ -642,6 +644,22 @@ commit;`);
     await event(install,"base.database.migration.completed","ok",`Base migration ${migration.id} applied`,{releaseId:targetRelease.id,file:migration.file,sha256:migration.sha256});
   }
   return {baseline:baseline.count,target:chain.length,required:Math.max(0,chain.length-baseline.count),seeded,applied,skipped,ids};
+}
+async function applyUpdateBaseDatabaseMigrations(install:any,release:any){
+  const installedReleaseId=String(install.release_id||"").trim();
+  if(!installedReleaseId)fail("Installed Base release identity is missing for Base database migration planning",409,"BASE_MIGRATION_BASELINE_MISSING");
+  const currentRelease=await exactRelease(installedReleaseId);
+  const chain=await releaseBaseMigrationChain(release);
+  if(!chain||!chain.length)fail("Approved Base-targeted Update is missing its Base database package migration chain",409,"UPDATE_BASE_DATABASE_PACKAGE_MISSING");
+  const files=chain.map(migration=>({file:migration.file,data:migration.data,size:migration.size,sha256:migration.sha256}));
+  const packageView={
+    version:String(release.version||""),
+    files,
+    databaseMigrationCount:chain.length,
+    databaseLatestMigration:chain.at(-1)?.id||"",
+    databaseMigrations:chain.map(migration=>({id:migration.id,file:migration.file,size:migration.size,sha256:migration.sha256}))
+  } as Package;
+  return applyBaseDatabaseMigrations(install,currentRelease,release,packageView,files);
 }
 async function deploymentDiagnostics(userId:string,id:string){
   try{
@@ -1270,8 +1288,12 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(!appliesEngine&&engine)fail("Update contains an Engine payload without an Engine/addon target",422,"UPDATE_SCOPE_INVALID");
     if(engine)validateFiles((engine as Package).files,"Engine update payload");
 
+    if(appliesBase&&releaseHasDatabasePackageContract(release)){
+      const baseChain=await releaseBaseMigrationChain(release);
+      if(!baseChain||!baseChain.length)fail("Approved Base-targeted Update is missing its Base database package",409,"UPDATE_BASE_DATABASE_PACKAGE_MISSING");
+    }
     const previewMigrations=releaseHasDatabasePackageContract(release)
-      ?(await resolveUpdateDatabaseMigrations(release,bundle,components)).migrations
+      ?(await resolveUpdateDatabaseMigrations(release,bundle,engineComponents)).migrations
       :validateDatabaseContract(bundle).filter(migration=>String(migration.component||"shared")==="shared"||components.includes(String(migration.component||"").toLowerCase()));
     const applicableMigrations=previewMigrations;
     await event(install,"update.started","info",`Applying OrbitFS Update ${release.version} to the existing deployment`,{releaseId:release.id,components,checksum:parsed.artifactSha256,databaseMigrationCount:applicableMigrations.length,skippedComponents});
@@ -1282,7 +1304,16 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     let engineAttempted=false;
     let databaseResult:any=null;
     try{
-      databaseResult=await applyCustomerDatabaseMigrations(install,release,bundle,components);
+      if(releaseHasDatabasePackageContract(release)){
+        let baseDatabaseResult:any=null;
+        let engineDatabaseResult:any=null;
+        if(appliesBase)baseDatabaseResult=await applyUpdateBaseDatabaseMigrations(install,release);
+        if(appliesEngine)engineDatabaseResult=await applyCustomerDatabaseMigrations(install,release,bundle,engineComponents);
+        else engineDatabaseResult={required:0,applied:0,skipped:0,ids:[],skippedByEntitlement:[]};
+        databaseResult={base:baseDatabaseResult,engine:engineDatabaseResult};
+      }else{
+        databaseResult=await applyCustomerDatabaseMigrations(install,release,bundle,components);
+      }
       await event(install,"update.database.completed","ok","Update database migration check completed",{releaseId:release.id,releaseVersion:release.version,databaseMigrations:databaseResult});
 
       if(panel){
