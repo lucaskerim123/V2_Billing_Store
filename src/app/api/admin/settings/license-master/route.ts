@@ -1,4 +1,4 @@
-import {masterProducts,masterRequest,masterPulseState} from "@/lib/master-api";
+import {masterHealthState,masterProducts,masterRequest,masterPulseState} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 import {requireOrbitDeploymentAdmin} from "@/lib/orbitfs-deployment-auth";
 import {clearMasterApiCache,getMasterApiUrl,getOfficialMasterApiConnections,requireOfficialMasterApiUrl} from "@/lib/license-master-config";
@@ -11,15 +11,21 @@ export async function GET(req:Request){
  try{
   await requireOrbitDeploymentAdmin(req);
   const db=licenseDb();
-  const [{data,error},products,local,pulse,officialConnections]=await Promise.all([
+  const [{data,error},local,officialConnections,health]=await Promise.all([
    db.from("license_master_connection").select("id,master_url,enabled,last_tested_at,last_success_at,last_error,updated_at").order("updated_at",{ascending:false}).limit(1).maybeSingle(),
-   masterProducts(),localMappings(),masterPulseState(),getOfficialMasterApiConnections(true)
+   localMappings(),getOfficialMasterApiConnections(true),masterHealthState()
   ]);
   if(error)throw error;
+  let products:any={products:[]},pulse:any={};
+  if(health?.reachable&&health?.external_authority_online!==false){
+   const [productsResult,pulseResult]=await Promise.allSettled([masterProducts(),masterPulseState()]);
+   if(productsResult.status==="fulfilled")products=productsResult.value;
+   if(pulseResult.status==="fulfilled")pulse=pulseResult.value;
+  }
   const rows=Array.isArray(products?.products)?products.products:[];
   const by=new Map(rows.map((p:any)=>[String(p.code||p.slug||"").toLowerCase(),p]));
   const connections=canonicalProducts.map(code=>({code,master:by.get(code)||null,local:local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code)||null,connected:Boolean(by.get(code)&&local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code&&p.license_api_mode==="master"&&p.license_api_enabled!==false))}));
-  return Response.json({connection:data||null,configuredUrl:await getMasterApiUrl(),masterPanelUrl:process.env.LICENSE_MASTER_ADMIN_URL||"https://panel.incendiarynetworks.cc",connections,masterProducts:rows,pulse,officialConnections},{headers:{"cache-control":"no-store"}});
+  return Response.json({connection:data||null,configuredUrl:await getMasterApiUrl(),masterPanelUrl:process.env.LICENSE_MASTER_ADMIN_URL||"https://panel.incendiarynetworks.cc",connections,masterProducts:rows,pulse,health,officialConnections},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:cleanError(e)},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}})}
 }
 
