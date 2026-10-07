@@ -22,5 +22,14 @@ assert(
   deployer.includes("engineDatabaseResult=await applyCustomerDatabaseMigrations"),
   "Database release contract failed: Update execution must apply Base and Engine database packages through their correct paths."
 );
+assert(
+  deployer.indexOf("verifiedEngineConnection=await updaterConnection(install)") < deployer.indexOf("engineDatabaseResult=await applyCustomerDatabaseMigrations"),
+  "Database release contract failed: Engine/addon database migrations must require an Inner-Deployer-verified Shared Engine Host first."
+);
+assert(
+  deployer.includes('provenance:"inner-deployer-v1"') &&
+  deployer.includes('"update.engine.preflight"'),
+  "Database release contract failed: Shared Engine provenance and preflight audit must remain explicit."
+);
 
 console.log("Billing database release contract checks passed.");
