@@ -60,8 +60,8 @@ export async function resolveReleaseDatabasePackage(release:any,component:Releas
   if(Number(record.databaseSchemaVersion)!==reference.databaseSchemaVersion||String(record.sha256||"").toLowerCase()!==reference.sha256||String(record.sourceCommit||"").toLowerCase()!==reference.sourceCommit){
     packageError("License Manager database package metadata does not match the approved release reference","DATABASE_PACKAGE_REFERENCE_MISMATCH");
   }
-  if(String(record.status||"").toLowerCase()!=="current"){
-    packageError("Approved release database package is not current in License Manager","DATABASE_PACKAGE_NOT_CURRENT",409);
+  if(!["current","superseded"].includes(String(record.status||"").toLowerCase())){
+    packageError("Approved release database package is not an immutable published package in License Manager","DATABASE_PACKAGE_NOT_PUBLISHED",409);
   }
   if(payload.format!=="orbitfs-customer-database-package-v1"||String(payload.component||"").toLowerCase()!==reference.component||Number(payload.databaseSchemaVersion)!==reference.databaseSchemaVersion||String(payload.sourceCommit||"").toLowerCase()!==reference.sourceCommit){
     packageError("License Manager database package payload does not match its registry record","DATABASE_PACKAGE_PAYLOAD_MISMATCH");
