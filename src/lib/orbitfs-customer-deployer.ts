@@ -1288,6 +1288,21 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(!appliesEngine&&engine)fail("Update contains an Engine payload without an Engine/addon target",422,"UPDATE_SCOPE_INVALID");
     if(engine)validateFiles((engine as Package).files,"Engine update payload");
 
+    let verifiedEngineConnection:any=null;
+    if(appliesEngine){
+      verifiedEngineConnection=await updaterConnection(install);
+      await event(install,"update.engine.preflight","ok","Inner Deployer provenance and Shared Engine Host connection verified before addon database changes",{
+        releaseId:release.id,
+        releaseVersion:release.version,
+        components:engineComponents,
+        provenance:"inner-deployer-v1",
+        engineProjectId:verifiedEngineConnection.engineProjectId,
+        engineProjectName:verifiedEngineConnection.engineProjectName,
+        engineHostUrl:verifiedEngineConnection.engineHostUrl,
+        engineDeploymentId:verifiedEngineConnection.engineDeploymentId||null
+      });
+    }
+
     if(appliesBase&&releaseHasDatabasePackageContract(release)){
       const baseChain=await releaseBaseMigrationChain(release);
       if(!baseChain||!baseChain.length)fail("Approved Base-targeted Update is missing its Base database package",409,"UPDATE_BASE_DATABASE_PACKAGE_MISSING");
@@ -1324,8 +1339,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       }
 
       if(engine){
-        await event(install,"update.engine.preflight","ok","Updater connection is verified from the Inner-Deployer-created Shared Engine Host",{releaseId:release.id,releaseVersion:release.version,components:engineComponents,executor:"orbitfs-updater-v2"});
-        await event(install,"update.engine.started","info","Updater is applying the Shared Engine Host/addon payload directly",{releaseId:release.id,releaseVersion:release.version,components:engineComponents});
+        await event(install,"update.engine.started","info","Updater is applying the Shared Engine Host/addon payload after verified Inner Deployer preflight",{releaseId:release.id,releaseVersion:release.version,components:engineComponents,engineProjectId:verifiedEngineConnection?.engineProjectId||null,engineHostUrl:verifiedEngineConnection?.engineHostUrl||null});
         engineAttempted=true;
         engineResult=await applyEngineUpdatePayload(install,release,bundle,engine,requestedChannel,engineComponents);
         await event(install,"update.engine.completed","ok","Shared Engine Host/addon update completed",{releaseId:release.id,releaseVersion:release.version,engineDeploymentId:engineResult?.deploymentId||null});
