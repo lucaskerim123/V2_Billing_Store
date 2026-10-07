@@ -72,13 +72,17 @@ export default function LicenseMasterSettings(){
  const connections=Array.isArray(data?.connections)?data.connections:[];
  const masterProducts=Array.isArray(data?.masterProducts)?data.masterProducts:[];
  const pulse=data?.pulse||{};
- const authority=pulse?.authority||{};
+ const health=data?.health||{};
+ const authority={system_enabled:health.external_authority_online!==false,licensing_enabled:health.licensing_enabled!==false,maintenance_mode:Boolean(health.maintenance_mode),release_system_enabled:health.capabilities?.releases!==false,deployment_enabled:health.capabilities?.deployment!==false,...(pulse?.authority||{})};
  const policy=pulse?.runtime_policy||{};
  const officialConnections=Array.isArray(data?.officialConnections)?data.officialConnections:[];
  const panelUrl=String(data?.masterPanelUrl||"https://panel.incendiarynetworks.cc").replace(/\/+$/,"");
  const masterSettings=panelUrl+"/settings";
  const connectedCount=connections.filter((row:any)=>row.connected).length;
- const authorityOnline=authority.system_enabled!==false&&authority.licensing_enabled!==false&&!authority.maintenance_mode&&!connection.last_error;
+ const apiReachable=health?.reachable!==false&&Boolean(data);
+ const authorityOnline=apiReachable&&authority.system_enabled!==false&&authority.licensing_enabled!==false&&!authority.maintenance_mode;
+ const authorityState=!apiReachable?"Offline / unreachable":authority.maintenance_mode?"Maintenance mode":authority.system_enabled===false?"API disabled":authority.licensing_enabled===false?"Licensing disabled":"Online";
+ const authorityDetail=!apiReachable?(health?.error||connection.last_error||"License Manager cannot be reached from Billing."):authority.maintenance_mode?"License Manager is reachable but maintenance mode is active.":authority.system_enabled===false?"License Manager is reachable but its external API authority is switched off.":authority.licensing_enabled===false?"License Manager is reachable but licence issuance is switched off.":"Billing is linked to the live License Manager API.";
  const releaseOnline=authority.release_system_enabled!==false;
  const deploymentOnline=authority.deployment_enabled!==false;
 
@@ -105,10 +109,10 @@ export default function LicenseMasterSettings(){
   <section className="orbitProductConnectionStatus">
    <div className="orbitAuthorityState">
     <span className={"orbitAuthorityDot "+(authorityOnline?"online":"")} aria-hidden="true"/>
-    <div><small>BILLING → LICENSE MANAGER</small><b>{authorityOnline?"Connected":"Needs attention"}</b><span>{connection.last_error||"Billing is using the configured authoritative API."}</span></div>
+    <div><small>BILLING → LICENSE MANAGER</small><b>{authorityState}</b><span>{authorityDetail}</span></div>
    </div>
    <div className="orbitProductConnectionStatusMeta">
-    <div><span>API</span><b className="orbitMono">{data?.configuredUrl||connection.master_url||"Not configured"}</b></div>
+    <div><span>API</span><b>{apiReachable?"Linked":"Not linked"}</b><small className="orbitMono">{data?.configuredUrl||connection.master_url||"Not configured"}</small></div>
     <div><span>Last success</span><b>{connection.last_success_at?new Date(connection.last_success_at).toLocaleString():"Not recorded"}</b></div>
    </div>
   </section>
@@ -143,7 +147,7 @@ export default function LicenseMasterSettings(){
    </section>
 
    <section className="orbitAuthorityPanel orbitProductConnectionPanel">
-    <div className="orbitAuthorityPanelHead"><div><p className="eyebrow">LIVE AUTHORITY</p><h2>Technical system state</h2><p>Read from License Manager. Billing does not expose duplicate authority switches.</p></div><span className={"orbitMiniState "+(authorityOnline?"live":"")}>{authorityOnline?"Online":"Restricted"}</span></div>
+    <div className="orbitAuthorityPanelHead"><div><p className="eyebrow">LIVE AUTHORITY</p><h2>Technical system state</h2><p>Read directly from License Manager. Billing does not expose duplicate authority switches.</p></div><span className={"orbitMiniState "+(authorityOnline?"live":"")}>{authorityState}</span></div>
     <div className="orbitAuthorityCapabilityList orbitProductAuthorityList">
      <div><b>System API</b><span>External technical authority API</span><strong>{authority.system_enabled===false?"OFF":"ON"}</strong></div>
      <div><b>Licensing</b><span>Validation, issuance and entitlements</span><strong>{authority.licensing_enabled===false?"OFF":"ON"}</strong></div>
