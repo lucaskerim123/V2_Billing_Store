@@ -36,10 +36,16 @@ function smartRegionCode(value:string){
 
 export async function billingOrbitfsConfig(){
   const {data,error}=await licenseDb().from("orbitfs_release_system_settings")
-    .select("enabled,maintenance_mode,maintenance_message,customer_deploy_enabled,customer_updates_enabled,customer_rollbacks_enabled,allow_existing_supabase_project,allow_create_supabase_project,supabase_oauth_enabled,vercel_oauth_enabled,supabase_client_id,vercel_client_id,default_supabase_region,panel_project_prefix,health_path,schema_version")
+    .select("enabled,maintenance_mode,maintenance_message,customer_deploy_enabled,customer_updates_enabled,customer_rollbacks_enabled,allow_existing_supabase_project,allow_create_supabase_project,supabase_oauth_enabled,vercel_oauth_enabled,supabase_client_id,vercel_client_id,vercel_install_url,supabase_scopes,default_supabase_region,panel_project_prefix,health_path,schema_version")
     .eq("id","primary").single();
   if(error)throw error;
-  return data;
+  return {
+    ...data,
+    supabase_client_id:String(process.env.ORBITFS_SUPABASE_CLIENT_ID||data?.supabase_client_id||"").trim()||null,
+    vercel_client_id:String(process.env.ORBITFS_VERCEL_CLIENT_ID||data?.vercel_client_id||"").trim()||null,
+    vercel_install_url:String(process.env.ORBITFS_VERCEL_INSTALL_URL||data?.vercel_install_url||"").trim()||null,
+    supabase_scopes:String(process.env.ORBITFS_SUPABASE_SCOPES||data?.supabase_scopes||"").trim()||null
+  };
 }
 export async function requireSystem(capability:"deploy"|"base_update"|"update"|"rollback"="deploy"){
   const config=await billingOrbitfsConfig();
@@ -343,7 +349,12 @@ export async function consumeOAuthState(state:string,provider:"supabase"|"vercel
   await db.from("orbitfs_oauth_states").update({consumed_at:new Date().toISOString()}).eq("state_hash",data.state_hash);return data;
 }
 
-async function releaseSecret(key:string){return serviceRpc("service_orbitfs_release_secret",{p_key:key}) as Promise<string|null>}
+async function releaseSecret(key:string){
+  const envKey=key==="supabase_client_secret"?"ORBITFS_SUPABASE_CLIENT_SECRET":key==="vercel_client_secret"?"ORBITFS_VERCEL_CLIENT_SECRET":"";
+  const envValue=envKey?String(process.env[envKey]||"").trim():"";
+  if(envValue)return envValue;
+  return serviceRpc("service_orbitfs_release_secret",{p_key:key}) as Promise<string|null>;
+ }
 async function providerSecret(userId:string,provider:string,key:"access_token"|"refresh_token"){return serviceRpc("service_orbitfs_provider_secret",{p_user_id:userId,p_provider:provider,p_key:key}) as Promise<string|null>}
 async function installationSecret(id:string,key:"db_secret"|"db_password"){return serviceRpc("service_orbitfs_installation_secret",{p_installation_id:id,p_key:key}) as Promise<string|null>}
 async function storeInstallationSecret(id:string,key:"db_secret"|"db_password",value:string){await serviceRpc("service_store_orbitfs_installation_secret",{p_installation_id:id,p_key:key,p_value:value})}
