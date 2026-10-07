@@ -12,6 +12,23 @@ function masterPath(path:string){const clean=path.startsWith("/")?path:`/${path}
 async function fetchWithTimeout(url:string,init:RequestInit,role:MasterRole="billing"){const cfg=requireConfig(role);const headers=new Headers(init.headers);headers.set("authorization",`Bearer ${cfg.value}`);const controller=init.signal?null:new AbortController();const timer=controller?setTimeout(()=>controller.abort(),timeoutMs()):null;try{return await fetch(url,{...init,headers,signal:init.signal||controller?.signal});}catch(error){if(error instanceof Error&&error.name==="AbortError")throw new Error(`License Master request timed out after ${timeoutMs()}ms`);throw new Error(`License Master connection failed: ${error instanceof Error?error.message:String(error)}`);}finally{if(timer)clearTimeout(timer);}}
 export async function masterRequest(path:string,init:RequestInit={},role:MasterRole="billing"){const headers=new Headers(init.headers);if(!headers.has("content-type")&&init.body)headers.set("content-type","application/json");const method=String(init.method||"GET").toUpperCase();const fetchInit:RequestInit={...init,headers};if(method==="GET"&&getCacheSeconds()>0&&fetchInit.cache!=="no-store")(fetchInit as any).next={revalidate:getCacheSeconds()};else fetchInit.cache="no-store";const base=await configuredMasterApiBase();const response=await fetchWithTimeout(`${base}${masterPath(path)}`,fetchInit,role);const text=await response.text();let data:any={};try{data=text?JSON.parse(text):{};}catch{data={error:text||"License Master returned an invalid response"};}if(!response.ok){const code=String(data?.code||"").trim(),message=errorMessage(data?.error??data?.message??data?.detail??code,`License Master request failed (${response.status})`);throw Object.assign(new Error(code&&message!==code?`${message} (${code})`:message),{status:response.status,code:code||undefined});}return data;}
 
+export async function masterHealthState(){
+  const base=await configuredMasterApiBase();
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs());
+  try{
+    const response=await fetch(`${base}${masterPath("/api/v1/license/health")}`,{method:"GET",cache:"no-store",signal:controller.signal});
+    const text=await response.text();
+    let data:any={};
+    try{data=text?JSON.parse(text):{};}catch{data={ok:false,error:text||"License Manager health returned an invalid response"};}
+    if(!response.ok&&response.status!==503)throw Object.assign(new Error(errorMessage(data?.error??data?.message??data?.code,`License Manager health failed (${response.status})`)),{status:response.status,code:data?.code});
+    return {...data,reachable:true,httpStatus:response.status};
+  }catch(error:any){
+    if(error instanceof Error&&error.name==="AbortError")return {ok:false,reachable:false,authority_reason:"unreachable",error:`License Manager health timed out after ${timeoutMs()}ms`};
+    return {ok:false,reachable:false,authority_reason:"unreachable",error:error instanceof Error?error.message:String(error)};
+  }finally{clearTimeout(timer);}
+}
+
 export async function masterProducts(role:MasterRole="billing"){
   return masterRequest("/api/v1/products",{method:"GET"},role);
 }
