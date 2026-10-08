@@ -8,7 +8,9 @@ export async function POST(req:Request){
     if(!s.supabase_oauth_enabled)throw Object.assign(new Error("Supabase customer connection is disabled"),{status:503});
     if(!s.supabase_client_id)throw Object.assign(new Error("OrbitFS Supabase OAuth App is not configured"),{status:503});
     const body=await req.json().catch(()=>({}));
-    const state=await createOAuthState(user.id,"supabase",body.installationId||null,"/portal/orbitfs");
+    const requestedReturnPath=String(body.returnPath||"/portal/orbitfs").trim();
+    const returnPath=/^\/portal\/orbitfs(?:\/(?:base|releases|license|channels))?$/.test(requestedReturnPath)?requestedReturnPath:"/portal/orbitfs";
+    const state=await createOAuthState(user.id,"supabase",body.installationId||null,returnPath);
     const redirect=await orbitfsStoreUrl("/api/orbitfs/oauth/supabase/callback",req.url);
     const u=new URL("https://api.supabase.com/v1/oauth/authorize");
     u.searchParams.set("client_id",s.supabase_client_id);
