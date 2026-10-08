@@ -793,8 +793,13 @@ export async function ensureVercelProject(install:any){
   try{
     project=await vercelApi(install.auth_user_id,"/v11/projects",{method:"POST",body:JSON.stringify({name,framework:"sveltekit",ssoProtection:{deploymentType:"prod_deployment_urls_and_all_previews"}})});
   }catch(error:any){
-    const message=String(error?.message||"");
-    if(!message.includes("409"))throw error;
+    if(Number(error?.status)===403){
+      const target=teamId?`Vercel team ${teamId}`:"the selected personal/default Vercel account";
+      throw Object.assign(new Error(
+        `Vercel denied permission to create the OrbitFS project in ${target}. A connection that can list projects is not necessarily allowed to create them. In Base Deployment Step 1, select the Vercel account/team with project-creation permission and connect a Full Account Access token scoped to it, then retry Step 5. The initialized Supabase database does not need to be reset.`
+      ),{status:403,code:"VERCEL_PROJECT_CREATE_FORBIDDEN",retryable:false});
+    }
+    if(Number(error?.status)!==409)throw error;
     project=await vercelApi(install.auth_user_id,`/v9/projects/${encodeURIComponent(name)}`,{method:"GET"});
   }
   const projectId=String(project?.id||"").trim();
