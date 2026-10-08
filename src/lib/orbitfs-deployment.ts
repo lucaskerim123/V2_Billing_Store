@@ -552,7 +552,11 @@ export async function initializeSupabaseDatabase(install:any,releaseId?:string){
   const safe=(value:string)=>value.replaceAll("'","''");
   const dbSecretSha256=createHash("sha256").update(dbSecret).digest("hex");
   const baseMigrationId=`base-schema-${effectiveSchema}-${schemaAsset.sha256.slice(0,16)}`;
-  const runtimeSql=`insert into private.orbitfs_runtime_secret(id,secret_sha256,updated_at) values (true,'${safe(dbSecretSha256)}',now()) on conflict (id) do update set secret_sha256=excluded.secret_sha256,updated_at=now();
+  const runtimeSql=`-- The current Base runtime validator reads private.orbitfs_runtime_secrets (plural).
+-- Its service-only setter synchronizes the authoritative secret and previous-key grace.
+select public.orbitfs_set_runtime_secret('${safe(dbSecretSha256)}',3600);
+-- Keep the legacy singleton in sync only for older Base consumers; it is not runtime authority.
+insert into private.orbitfs_runtime_secret(id,secret_sha256,updated_at) values (true,'${safe(dbSecretSha256)}',now()) on conflict (id) do update set secret_sha256=excluded.secret_sha256,updated_at=now();
 create table if not exists public.orbitfs_schema_migrations (
   migration_id text primary key,
   sha256 text not null,
@@ -591,7 +595,33 @@ insert into storage.buckets(id,name,public,file_size_limit) values ('orbitfs-fil
   ].join("\n");
   const installSql=`BEGIN;\n${legacyRlsCompatPrelude}\n${sql}\n${legacyRlsCompatCleanup}\n${runtimeSql}\nCOMMIT;`;
   try{
-    await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/database/query`,{method:"POST",body:JSON.stringify({query:installSql})});
+    const queryPath=`/projects/${install.supabase_project_ref}/database/query`;
+    // A previous attempt can commit the immutable Base snapshot and then fail
+    // during the HTTP runtime-secret preflight. Never replay that snapshot into
+    // a customer database when its exact migration is already recorded.
+    const existsResult=await supabaseApi(install.auth_user_id,queryPath,{method:"POST",body:JSON.stringify({query:"select to_regclass('public.orbitfs_schema_migrations') is not null as migration_table_exists;"})});
+    const existsRow=Array.isArray(existsResult)?existsResult[0]:existsResult?.data?.[0]||existsResult?.result?.[0]||existsResult;
+    let existingBaseMigration:any=null;
+    if(existsRow?.migration_table_exists===true){
+      const previous=await supabaseApi(install.auth_user_id,queryPath,{method:"POST",body:JSON.stringify({query:`select migration_id,sha256,source_file,release_id,release_version from public.orbitfs_schema_migrations where migration_id='${safe(baseMigrationId)}' limit 1;`})});
+      existingBaseMigration=Array.isArray(previous)?previous[0]||null:previous?.data?.[0]||previous?.result?.[0]||null;
+    }
+    if(existingBaseMigration&&(
+      String(existingBaseMigration.sha256)!==schemaAsset.sha256||
+      String(existingBaseMigration.source_file)!==schemaAsset.path||
+      String(existingBaseMigration.release_id)!==String(release.id)||
+      String(existingBaseMigration.release_version)!==String(release.version)
+    ))throw Object.assign(new Error("Existing Base migration identity does not match the published snapshot. Database initialization was stopped to preserve customer data."),{status:409,code:"BASE_DATABASE_SNAPSHOT_CONFLICT"});
+    if(existingBaseMigration){
+      // Restore the runtime credential only. The snapshot, storage and migration
+      // history were already committed by the earlier attempt.
+      const restored=await supabaseApi(install.auth_user_id,queryPath,{method:"POST",body:JSON.stringify({query:`select public.orbitfs_set_runtime_secret('${safe(dbSecretSha256)}',3600) as updated;`})});
+      const restoredRow=Array.isArray(restored)?restored[0]:restored?.data?.[0]||restored?.result?.[0]||restored;
+      if(restoredRow?.updated!==true)throw Object.assign(new Error("Customer database runtime-secret registration returned an unexpected result."),{status:502,code:"CUSTOMER_DATABASE_SECRET_SYNC_FAILED"});
+      await event(install,"database.runtime_secret_resynchronized","info","Reused the matching Base schema and synchronized its runtime secret",{releaseId:String(release.id),releaseVersion:String(release.version),migrationId:baseMigrationId});
+    }else{
+      await supabaseApi(install.auth_user_id,queryPath,{method:"POST",body:JSON.stringify({query:installSql})});
+    }
   }catch(e:any){
     const message=String(e?.message||"Database initialization failed");
     await licenseDb().from("orbitfs_installations").update({state:"preparing_database",last_error:message}).eq("id",install.id);
