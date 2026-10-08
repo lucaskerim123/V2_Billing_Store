@@ -4,6 +4,7 @@ const read=(path)=>readFileSync(path,"utf8");
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
 
 const deployer=read("src/lib/orbitfs-customer-deployer.ts");
+const deployment=read("src/lib/orbitfs-deployment.ts");
 const operations=read("src/lib/orbitfs-base-operations.ts");
 const explicitRoute=read("src/app/api/orbitfs/installations/[id]/base/[action]/route.ts");
 const legacyRoute=read("src/app/api/orbitfs/installations/[id]/deploy/route.ts");
@@ -80,6 +81,22 @@ assert(
   legacyRoute.includes('runBaseLifecycleOperation') &&
   legacyRoute.includes('legacy-${randomUUID()}'),
   "Base lifecycle invariant failed: legacy compatibility route must still be safely ledgered."
+);
+
+assert(
+  deployment.includes('code:"VERCEL_PROJECT_CREATE_FORBIDDEN"') &&
+  deployment.includes('if(Number(error?.status)===403)'),
+  "Base lifecycle invariant failed: project-creation 403 must identify the Vercel permission problem."
+);
+assert(
+  portal.includes('teamId:vercelTeamId||null') &&
+  portal.includes('Replace Vercel token without resetting Base') &&
+  portal.includes('Fix Vercel connection →'),
+  "Base lifecycle invariant failed: project-creation recovery must preserve Base database and permit a Vercel team/token correction."
+);
+assert(
+  !portal.includes('Full API access validated.'),
+  "Base lifecycle invariant failed: listing Vercel projects must not be presented as proof of project creation permission."
 );
 
 console.log("Base lifecycle contract checks passed.");
