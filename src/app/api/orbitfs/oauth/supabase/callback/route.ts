@@ -12,7 +12,7 @@ export async function GET(req:Request){
     const state=await consumeOAuthState(stateValue,"supabase");
     stateRecord=state;
     returnPath=state.return_path||returnPath;
-    const s=await billingOrbitfsConfig(),secret=String(process.env.ORBITFS_SUPABASE_CLIENT_SECRET||await serviceRpc("service_orbitfs_release_secret",{p_key:"supabase_client_secret"})||"");
+    const s=await billingOrbitfsConfig(),secret=String(await serviceRpc("service_orbitfs_release_secret",{p_key:"supabase_client_secret"})||process.env.ORBITFS_SUPABASE_CLIENT_SECRET||"");
     if(!s.supabase_client_id||!secret)throw new Error("OrbitFS Supabase OAuth App is not configured");
     const redirect=await orbitfsStoreUrl("/api/orbitfs/oauth/supabase/callback",req.url);
     const form=new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:redirect});

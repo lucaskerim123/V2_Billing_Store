@@ -41,10 +41,10 @@ export async function billingOrbitfsConfig(){
   if(error)throw error;
   return {
     ...data,
-    supabase_client_id:String(process.env.ORBITFS_SUPABASE_CLIENT_ID||data?.supabase_client_id||"").trim()||null,
-    vercel_client_id:String(process.env.ORBITFS_VERCEL_CLIENT_ID||data?.vercel_client_id||"").trim()||null,
-    vercel_install_url:String(process.env.ORBITFS_VERCEL_INSTALL_URL||data?.vercel_install_url||"").trim()||null,
-    supabase_scopes:String(process.env.ORBITFS_SUPABASE_SCOPES||data?.supabase_scopes||"").trim()||null
+    supabase_client_id:String(data?.supabase_client_id||process.env.ORBITFS_SUPABASE_CLIENT_ID||"").trim()||null,
+    vercel_client_id:String(data?.vercel_client_id||process.env.ORBITFS_VERCEL_CLIENT_ID||"").trim()||null,
+    vercel_install_url:String(data?.vercel_install_url||process.env.ORBITFS_VERCEL_INSTALL_URL||"").trim()||null,
+    supabase_scopes:String(data?.supabase_scopes||process.env.ORBITFS_SUPABASE_SCOPES||"").trim()||null
   };
 }
 export async function requireSystem(capability:"deploy"|"base_update"|"update"|"rollback"="deploy"){

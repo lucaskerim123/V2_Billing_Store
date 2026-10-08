@@ -25,6 +25,7 @@ const sections:Section[]=[
  ]},
  {title:"Licensing, operations & access",description:"License Manager connectivity, staff access, messaging, alerts and account enforcement.",cards:[
   {title:"API Connections",description:"Select the official OrbitFS API used by Billing. URLs must exactly match the License Manager registry.",href:"/admin/settings/api-connections",badge:"API",tags:["Authority","Registry","Health"]},
+  {title:"Deployment providers",description:"Configure the Billing-owned Supabase and Vercel OAuth apps used by the customer deployer.",href:"/admin/settings/deployment-providers",badge:"Deployer",tags:["Supabase","Vercel","OAuth"]},
   {title:"Licence commerce policy",description:"Billing-side enforcement triggers and customer Licence Controller permissions. License Manager remains authoritative for licence state.",href:"/admin/settings/licensing",badge:"Policy",tags:["Enforcement","Customer controls","Grace"]},
   {title:"Staff System",description:"Staff identities, groups, primary roles and exact inherited permission maps.",href:"/admin/settings/staff",badge:"Access",tags:["Staff","Groups","Permissions"]},
   {title:"Permission map",description:"Inspect and maintain administrative permission definitions used by staff groups.",href:"/admin/settings/permissions",badge:"Permissions",tags:["RBAC","Capabilities","Audit"]},
