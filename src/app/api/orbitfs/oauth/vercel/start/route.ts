@@ -11,8 +11,8 @@ export async function POST(req:Request){
     const s=await requireSetupSystem();
     if(!s.vercel_oauth_enabled)throw Object.assign(new Error("Vercel customer connection is disabled"),{status:503});
     if(!s.vercel_client_id)throw Object.assign(new Error("OrbitFS Vercel App client ID is not configured"),{status:503});
-    const secret=String(process.env.ORBITFS_VERCEL_CLIENT_SECRET||await serviceRpc("service_orbitfs_release_secret",{p_key:"vercel_client_secret"})||"");
-    if(!secret)throw Object.assign(new Error("OrbitFS Vercel App client secret is not configured"),{status:503});
+    const secret=String(await serviceRpc("service_orbitfs_release_secret",{p_key:"vercel_client_secret"})||process.env.ORBITFS_VERCEL_CLIENT_SECRET||"").trim();
+    if(!secret)throw Object.assign(new Error("OrbitFS Vercel App client secret is not saved. Save it in Admin → System settings → Deployment providers before connecting."),{status:503});
     const body=await req.json().catch(()=>({}));
     const requestedReturnPath=String(body.returnPath||"/portal/orbitfs").trim();
     const returnPath=/^\/portal\/orbitfs(?:\/(?:base|releases|license|channels))?$/.test(requestedReturnPath)?requestedReturnPath:"/portal/orbitfs";

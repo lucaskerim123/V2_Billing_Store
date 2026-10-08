@@ -95,7 +95,7 @@ export default function DeploymentProviderSettings(){
      <label>OAuth scopes<input value={form.supabase_scopes} onChange={e=>setForm({...form,supabase_scopes:e.target.value})} placeholder="projects.read projects.write organizations.read"/></label>
      <label>Callback URL<input readOnly value={supabaseCallback}/><small>Add this exact callback URL to the Supabase OAuth application.</small></label>
     </div>
-    {data?.supabase_client_secret_configured&&<button className="secondary" type="button" onClick={()=>void removeSecret("supabase")} disabled={!!busy}>Remove stored Supabase secret</button>}
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}><button type="button" onClick={()=>void save()} disabled={!!busy}>{busy==="save"?"Saving…":"Save Supabase settings"}</button>{data?.supabase_client_secret_configured&&<button className="secondary" type="button" onClick={()=>void removeSecret("supabase")} disabled={!!busy}>Remove stored Supabase secret</button>}</div>
    </section>
    <section className="panel">
     <div className="panelTitle"><div><p className="eyebrow">VERCEL OAUTH APP</p><h2>Vercel customer connection</h2><p className="muted">Customers authorize their own Vercel account/team so the deployer can create and update their OrbitFS project.</p></div><span className={verReady?"state ready":"state waiting"}>{verReady?"READY":"SETUP"}</span></div>
@@ -106,7 +106,7 @@ export default function DeploymentProviderSettings(){
      <label>Install URL<input value={form.vercel_install_url} onChange={e=>setForm({...form,vercel_install_url:e.target.value})} placeholder="https://vercel.com/integrations/..."/></label>
      <label>Callback URL<input readOnly value={vercelCallback}/><small>Add this exact callback URL to the Vercel Integration / OAuth application.</small></label>
     </div>
-    {data?.vercel_client_secret_configured&&<button className="secondary" type="button" onClick={()=>void removeSecret("vercel")} disabled={!!busy}>Remove stored Vercel secret</button>}
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}><button type="button" onClick={()=>void save()} disabled={!!busy}>{busy==="save"?"Saving…":"Save Vercel settings"}</button>{data?.vercel_client_secret_configured&&<button className="secondary" type="button" onClick={()=>void removeSecret("vercel")} disabled={!!busy}>Remove stored Vercel secret</button>}</div>
    </section>
   </div>
   <section className="panel" style={{marginTop:16}}><div className="panelTitle"><div><p className="eyebrow">SAVE & APPLY</p><h2>Customer deployer credentials</h2><p className="muted">Client IDs and provider settings are stored in Billing configuration. Client secrets are stored in Supabase Vault and never returned to the Admin Portal.</p></div></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" onClick={()=>void save()} disabled={!!busy}>{busy==="save"?"Saving…":"Save deployment provider settings"}</button><button className="secondary" type="button" onClick={()=>void load()} disabled={!!busy}>Discard unsaved changes</button></div></section>

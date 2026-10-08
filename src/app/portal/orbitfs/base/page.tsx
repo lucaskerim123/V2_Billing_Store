@@ -93,13 +93,17 @@ export default function MyOrbitFS(){
     else if(connected==="vercel")setMsg("Vercel account connected. Checking deployment setup…");
     void (async()=>{
       const snapshot=await load(false,false);
-      if(connected==="supabase"&&!callbackError){
+      if(callbackError){
+        setMsg(callbackError);
+        setSiteStep(1);
+        setViewedPrimaryStage(1);
+      }else if(connected==="supabase"){
         setViewedPrimaryStage(1);
         setCurrentStep(2);
         setSiteStep(2);
-        await loadSupabase();
-        setMsg("Supabase account connected. Choose an existing project or create a new one.");
-      }else if(connected==="vercel"&&!callbackError){
+        const loaded=await loadSupabase();
+        if(loaded)setMsg("Supabase account connected. Choose an existing project or create a new one.");
+      }else if(connected==="vercel"){
         const installations=Array.isArray(snapshot?.installations)?snapshot.installations:[];
         const connectedSupabase=(Array.isArray(snapshot?.connections)?snapshot.connections:[]).some((row:any)=>row?.provider==="supabase"&&row?.status==="connected");
         const hasDatabaseProject=installations.some((row:any)=>Boolean(row?.supabase_project_ref));
@@ -218,7 +222,7 @@ export default function MyOrbitFS(){
       setMsg(`Published releases refreshed for ${selectedChannel}.`);
     }finally{setBusy("")}
   }
-  async function loadSupabase(){setBusy("resources");const r=await fetch("/api/orbitfs/providers/supabase",{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok)return setMsg(apiError(j,"Could not load your Supabase projects."));setResources(j);const first=j.organizations?.[0];if(!newProject.organizationSlug&&first)setNewProject(current=>({...current,organizationSlug:first.slug||first.id||""}))}
+  async function loadSupabase(){setBusy("resources");const r=await fetch("/api/orbitfs/providers/supabase",{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));setBusy("");if(!r.ok){setMsg(apiError(j,"Could not load your Supabase projects."));return false}setResources(j);const first=j.organizations?.[0];if(!newProject.organizationSlug&&first)setNewProject(current=>({...current,organizationSlug:first.slug||first.id||""}));return true}
   async function supabaseAction(action:"select"|"create"){if(!install)return;setBusy(action);const body=action==="select"?{action,installationId:install.id,projectRef:selectedProject}:{action,installationId:install.id,...newProject},r=await fetch("/api/orbitfs/providers/supabase",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify(body)}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?`Your Supabase project was ${action==="select"?"selected":"created"}.`:apiError(j,"Supabase project action failed."));if(r.ok){setResources(undefined);setSiteStep(null);await load()}}
   async function initialize(confirmed=false){if(!install||!selectedRelease)return;if(!selectedReleaseMatchesInstalled&&install.release_version&&install.release_id&&!confirmed){askConfirm({title:"Initialize a different Base release?",description:"This replaces the current installation release identity with the selected published Base release before deployment continues.",confirmLabel:"Initialize release",danger:true},()=>void initialize(true));return}setBusy("init");const r=await fetch(`/api/orbitfs/installations/${install.id}/initialize`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({releaseId:String(selectedRelease.id)})}),j=await r.json().catch(()=>({}));setBusy("");setMsg(r.ok?"OrbitFS database initialized. Licence activation happens after deployment in the Base first-time installer.":apiError(j,"Database initialization failed."));if(r.ok){setSiteStep(null);await load()}}
   async function connectVercelOAuth(){if(!install)return;setBusy("vercel-oauth");try{const r=await fetch("/api/orbitfs/oauth/vercel/start",{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({installationId:install.id,returnPath:"/portal/orbitfs/base"})}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not connect Vercel."));location.href=j.url}catch(e:any){setMsg(e?.message||"Could not connect Vercel.");setBusy("")}}
