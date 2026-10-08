@@ -74,12 +74,14 @@ export default function MyOrbitFS(){
     if(!background)setLoading(true);
     try{
       const headers=await authHeaders();
-      if(!headers.Authorization){setMsg("Your session has expired. Please sign in again.");return}
+      if(!headers.Authorization){setMsg("Your session has expired. Please sign in again.");return null}
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
       try{
         const r=await fetch("/api/orbitfs/status"+(bootstrap?"?view=bootstrap":""),{headers,cache:"no-store",signal:controller.signal}),j=await r.json().catch(()=>({}));
-        if(r.ok){setD(j);setMsg("")}else setMsg(apiError(j,"Could not load My OrbitFS."));
-      }catch(e:any){setMsg(e?.name==="AbortError"?"My OrbitFS status request timed out. Please retry.":e?.message||"Could not load My OrbitFS.")}
+        if(r.ok){setD(j);setMsg("");return j}
+        setMsg(apiError(j,"Could not load My OrbitFS."));
+        return null;
+      }catch(e:any){setMsg(e?.name==="AbortError"?"My OrbitFS status request timed out. Please retry.":e?.message||"Could not load My OrbitFS.");return null}
       finally{clearTimeout(timer)}
     }finally{if(!background)setLoading(false)}
   }
@@ -88,11 +90,26 @@ export default function MyOrbitFS(){
     const connected=params.get("connected"),callbackError=params.get("error");
     if(callbackError)setMsg(callbackError);
     else if(connected==="supabase")setMsg("Supabase account connected. Loading your projects…");
-    else if(connected==="vercel")setMsg("Vercel account connected.");
-    void load(false,false).finally(()=>{
-      if(connected==="supabase"&&!callbackError)setMsg("Supabase account connected. Choose an existing project or create a new one.");
+    else if(connected==="vercel")setMsg("Vercel account connected. Checking deployment setup…");
+    void (async()=>{
+      const snapshot=await load(false,false);
+      if(connected==="supabase"&&!callbackError){
+        setViewedPrimaryStage(1);
+        setCurrentStep(2);
+        setSiteStep(2);
+        await loadSupabase();
+        setMsg("Supabase account connected. Choose an existing project or create a new one.");
+      }else if(connected==="vercel"&&!callbackError){
+        const installations=Array.isArray(snapshot?.installations)?snapshot.installations:[];
+        const connectedSupabase=(Array.isArray(snapshot?.connections)?snapshot.connections:[]).some((row:any)=>row?.provider==="supabase"&&row?.status==="connected");
+        const hasDatabaseProject=installations.some((row:any)=>Boolean(row?.supabase_project_ref));
+        setViewedPrimaryStage(2);
+        setCurrentStep(4);
+        setSiteStep(connectedSupabase&&hasDatabaseProject?3:connectedSupabase?2:1);
+        setMsg(connectedSupabase&&hasDatabaseProject?"Vercel connected. Continue with the Base release.":connectedSupabase?"Vercel connected. Choose your Supabase project next.":"Vercel connected. Connect Supabase to continue.");
+      }
       if(connected||callbackError)window.history.replaceState({},document.title,window.location.pathname);
-    });
+    })();
   },[]);
 
   const eligibleBindings=(d?.bindings||[]).filter(usableLicence),bases=eligibleBindings.filter(hasBase),existingInstallation=(d?.installations||[]).find((x:any)=>bases.some((candidate:any)=>String(candidate.id)===String(x.license_binding_id)))||((d?.installations||[]).find((x:any)=>String(x?.component_key||"")==="orbitfs_base")),binding=(existingInstallation?bases.find((candidate:any)=>String(candidate.id)===String(existingInstallation.license_binding_id)):null)||bases[0]||null,install=(d?.installations||[]).find((x:any)=>String(x.license_binding_id)===String(binding?.id))||(binding?null:existingInstallation)||null,supabase=(d?.connections||[]).find((x:any)=>x.provider==="supabase"&&x.status==="connected"),vercelConnection=(d?.connections||[]).find((x:any)=>x.provider==="vercel"&&x.status==="connected"),vercelApiReady=vercelConnection?.metadata?.api_ready===true,vercelTeams=Array.isArray(vercelConnection?.metadata?.teams)?vercelConnection.metadata.teams:[],settings=d?.settings||{},history=(d?.releases||[]).filter((x:any)=>x.installation_id===install?.id),events=(d?.events||[]).filter((x:any)=>x.installation_id===install?.id);
