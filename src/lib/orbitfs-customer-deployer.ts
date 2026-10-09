@@ -444,6 +444,7 @@ async function releaseBaseMigrationChain(release:any):Promise<BaseMigration[]|nu
   const raw=Array.isArray(payload?.migrations)?payload.migrations:[];
   if(Number(payload?.migrationCount)!==raw.length||!raw.length)fail("License Manager Base database package migration history is invalid",422,"BASE_DATABASE_PACKAGE_HISTORY_INVALID");
   const seen=new Set<string>();
+  let previousId="";
   const chain:BaseMigration[]=raw.map((migration:any,index:number)=>{
     const file=String(migration?.file||"").replaceAll("\\","/");
     const match=file.match(/^supabase\/migrations\/(\d{14})_[A-Za-z0-9._-]+\.sql$/);
@@ -459,7 +460,8 @@ async function releaseBaseMigrationChain(release:any):Promise<BaseMigration[]|nu
     if(/\b(?:begin|commit|rollback)\s*;/i.test(sqlText))fail(`Base migration contains unsupported explicit transaction control: ${file}`,422);
     const invalidSequenceTargets=invalidSqlSequenceTargets(sqlText);
     if(invalidSequenceTargets.length)fail(`Base migration ${file} contains invalid setval() sequence target(s): ${invalidSequenceTargets.join(", ")}.`,422,"BASE_MIGRATION_SEQUENCE_TARGET_INVALID",false);
-    if(index>0&&id<=String(raw[index-1]?.file||"").match(/supabase\/migrations\/(\d{14})_/)?.[1]!)fail("Base migration ids must be strictly increasing",422);
+    if(index>0&&id<=previousId)fail("Base migration ids must be strictly increasing",422);
+    previousId=id;
     return {id,file,size:bytes.byteLength,sha256:sha,data:migration.data};
   });
   return chain;
