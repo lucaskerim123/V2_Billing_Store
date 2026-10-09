@@ -97,7 +97,7 @@ export default function OrbitFSUpdateReleaseDeployer(){
  }
  async function reviewAction(action:"validate"|"approve"|"reject",confirmedReason=""){
   if(!selected)return;
-  let reason=confirmedReason.trim();
+  const reason=confirmedReason.trim();
   if(action==="reject"&&!reason){
    setConfirmReason("");
    setConfirmState({
