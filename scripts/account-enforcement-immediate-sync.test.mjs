@@ -10,9 +10,9 @@ function loadStateModule(){
   assert.equal(existsSync(url),true,"account enforcement state module must exist");
   const source=readFileSync(url,"utf8");
   const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  const module={exports:{}};
-  new Function("exports","module","require",compiled)(module.exports,module,()=>{throw new Error("account-enforcement-state.ts must stay dependency-free")});
-  return module.exports;
+  const loadedModule={exports:{}};
+  new Function("exports","module","require",compiled)(loadedModule.exports,loadedModule,()=>{throw new Error("account-enforcement-state.ts must stay dependency-free")});
+  return loadedModule.exports;
 }
 
 test("account enforcement maps to canonical License Manager controls",()=>{
