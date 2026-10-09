@@ -25,8 +25,10 @@ export default function V6ConfirmDialog({
   const cancelRef=useRef<HTMLButtonElement|null>(null);
   const cancelHandlerRef=useRef(onCancel);
   const busyRef=useRef(busy);
-  cancelHandlerRef.current=onCancel;
-  busyRef.current=busy;
+  useEffect(()=>{
+    cancelHandlerRef.current=onCancel;
+    busyRef.current=busy;
+  },[onCancel,busy]);
 
   useEffect(()=>{
     if(!open)return;
