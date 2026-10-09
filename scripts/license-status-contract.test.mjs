@@ -6,9 +6,9 @@ import ts from 'typescript';
 function load(){
   const source=readFileSync(new URL('../src/lib/license-status.ts',import.meta.url),'utf8');
   const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  const module={exports:{}};
-  new Function('exports','module','require',compiled)(module.exports,module,()=>{throw new Error('license-status.ts must stay dependency-free')});
-  return module.exports;
+  const loadedModule={exports:{}};
+  new Function('exports','module','require',compiled)(loadedModule.exports,loadedModule,()=>{throw new Error('license-status.ts must stay dependency-free')});
+  return loadedModule.exports;
 }
 
 const {canonicalLicenseStatus,canonicalAccountStatus,canonicalComponentStatus,isCanonicalLicenseUsable}=load();
