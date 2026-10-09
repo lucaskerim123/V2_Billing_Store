@@ -22,6 +22,7 @@ jobs:
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: team_W3fS0X03YCjNkD2BoqRj6Uld
+      VERCEL_SCOPE: retroreview12-8045
       VERCEL_PROJECT_ID: prj_3ARdg4cRikU2OiMeZjZDvQ3JuEZd
       VERCEL_CLI_VERSION: 59.23.1
       SUPABASE_PROJECT_ID: hdwijbdxmpwlltnfrbsc
@@ -135,7 +136,7 @@ jobs:
 
       - name: Pull production configuration without deploying
         if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN" --scope="$VERCEL_SCOPE"
 
       - name: Resolve authoritative Supabase public build configuration
         if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
@@ -191,7 +192,7 @@ jobs:
 
       - name: Build quick-deploy artifact without deploying
         if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
-        run: vercel build --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+        run: vercel build --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_SCOPE"
 
       - name: Verify quick-deploy artifact locally
         if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
@@ -223,7 +224,7 @@ jobs:
           set -euo pipefail
           deployment_url="$(vercel deploy --prebuilt --archive=tgz --prod --yes \
             --token="$VERCEL_TOKEN" \
-            --scope="$VERCEL_ORG_ID" \
+            --scope="$VERCEL_SCOPE" \
             --meta "githubCommitSha=${{ steps.source.outputs.commit }}" \
             --meta "githubCommitRef=${{ steps.source.outputs.branch }}" \
             --meta "githubOrg=lucaskerim123" \
