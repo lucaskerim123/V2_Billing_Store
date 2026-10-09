@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  security-events: read
 
 concurrency:
   group: store-ci-${{ github.workflow }}-${{ github.ref }}
