@@ -43,7 +43,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   }
   const id=String(orderId||"").trim();if(!id)throw new Error("Order ID is required");
   const db=licenseDb();
-  const {data:order,error:orderError}=await db.from("orders").select("id,order_number,auth_user_id,status,payment_status,fulfillment_status").eq("id",id).maybeSingle();
+  const {data:order,error:orderError}=await db.from("orders").select("id,order_number,auth_user_id,status,payment_status,fulfillment_status,updated_at").eq("id",id).maybeSingle();
   if(orderError)throw orderError;if(!order)return {ok:false,skipped:true,reason:"order_not_found"};
   const status=String(order.status||"").toLowerCase(),paid=String(order.payment_status||"").toLowerCase().startsWith("paid");
   if(!paid||status!=="active")return {ok:false,skipped:true,reason:status==="pending_approval"?"order_pending_approval":"order_not_accepted"};
@@ -61,6 +61,22 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   if(baseBindingError)throw baseBindingError;
   let baseBinding:any=existingBaseBinding||null;
   if(hasAddon&&!hasBase&&!baseBinding?.license_id)throw new Error("OrbitFS Base is required before any OrbitFS add-on can be fulfilled");
+  // Claim the order with a conditional database update before calling the external
+  // licence API. A competing request cannot acquire the same order concurrently.
+  const priorState=String(order.fulfillment_status||"").toLowerCase();
+  const staleBefore=new Date(Date.now()-10*60*1000).toISOString();
+  if(priorState==="fulfilled")return {ok:true,skipped:true,reason:"already_fulfilled",orderId:id};
+  if(priorState==="processing"&&String(order.updated_at||"")>=staleBefore)
+    return {ok:true,skipped:true,reason:"already_processing",orderId:id};
+  const claim=await db.from("orders")
+    .update({fulfillment_status:"processing",updated_at:new Date().toISOString()})
+    .eq("id",id)
+    .eq("fulfillment_status",order.fulfillment_status)
+    .eq("updated_at",order.updated_at)
+    .select("id").maybeSingle();
+  if(claim.error)throw claim.error;
+  if(!claim.data)return {ok:true,skipped:true,reason:"already_processing",orderId:id};
+
   const results=[];let fulfilled=0,failed=0;
   const orderedItems=[...normalizedItems].sort((a:any,b:any)=>Number(b.license_product_key==="orbitfs_base")-Number(a.license_product_key==="orbitfs_base"));
   for(const item of orderedItems){
