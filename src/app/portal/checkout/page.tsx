@@ -60,6 +60,21 @@ export default function CheckoutPage(){
     location.href=body.url;
   }
 
+  async function fulfillPaidOrder(orderId:string){
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw new Error("Authentication expired. Sign in to complete licence fulfillment.");
+    const response=await fetch("/api/admin/license-master/fulfill",{
+      method:"POST",
+      headers:{authorization:"Bearer "+session.access_token,"content-type":"application/json"},
+      body:JSON.stringify({orderId}),
+      cache:"no-store"
+    });
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||result?.ok===false||(result?.skipped&&result?.reason!=="already_fulfilled"))
+      throw new Error(String(result?.error||result?.reason||"Licence fulfillment has not completed"));
+    return result;
+  }
+
   async function checkout(){
     if(!cart?.item_count||busy)return;
     setBusy(true);
@@ -74,6 +89,9 @@ export default function CheckoutPage(){
     void Promise.allSettled([sendCustomerEvent("order.created",data?.order_id),sendCustomerEvent("invoice.created",data?.invoice_id)]);
 
     if(data?.paid){
+      setMessage("Payment confirmed. Contacting License Manager…");
+      try{await fulfillPaidOrder(String(data.order_id))}
+      catch(error:any){setMessage("Order paid. Licence fulfilment is pending: "+String(error?.message||error));}
       void Promise.allSettled([sendCustomerEvent("order.paid",data?.order_id),sendCustomerEvent("invoice.paid",data?.invoice_id)]);
       if(data?.contains_gifts){
         setMessage("Order completed. Delivering gift…");
