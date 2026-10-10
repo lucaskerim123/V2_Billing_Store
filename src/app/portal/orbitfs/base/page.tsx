@@ -7,6 +7,7 @@ import {createClient} from "@/lib/supabase";
 import {trackCustomerActivity} from "@/lib/customer-activity";
 import {errorMessage} from "@/lib/error-message";
 import {isCanonicalLicenseUsable} from "@/lib/license-status";
+import {usePermissions} from "@/lib/usePermissions";
 import V6ConfirmDialog from "@/components/V6ConfirmDialog";
 
 const hasBase=(b:any)=>b?.license_product_key==="orbitfs_base"||!!b?.components?.orbitfs_base||!!b?.components?.orbitfs_panel;
@@ -16,6 +17,7 @@ const workingStates=new Set(["configuring","deploying","updating"]);
 type BaseConfirmState={title:string;description:string;confirmLabel:string;danger?:boolean;reasonRequired?:boolean}|null;
 
 export default function MyOrbitFS(){
+  const {role:staffRole,can:canStaff,ready:staffAccessReady}=usePermissions();
   const apiError=(payload:any,fallback:string)=>errorMessage(payload?.error??payload?.message??payload,fallback);
   const sb=useMemo(()=>createClient(),[]),pollCount=useRef(0);
   const [d,setD]=useState<any>();
@@ -798,7 +800,7 @@ export default function MyOrbitFS(){
 
 
       {install&&panelReady&&<div className="portalOverviewBottom"><details className="panel" open><summary className="panelTitle orbitBaseSummary"><div><p className="eyebrow">BASE DEPLOYMENT HISTORY</p><h2>Installed & rollback history</h2></div><span>{visibleBaseHistory.length}</span></summary>{visibleBaseHistory.length?visibleBaseHistory.map((r:any,index:number)=><div className="listrow" key={r.id}><div><b>{r.release_version} · {index===0?"Installed current":"Previous deployment"}</b><span>{r.deployment_url||"deployment record"} · release {String(r.release_id||"").slice(0,8)}…</span></div><span className={"state "+(index===0?"ready":"waiting")}>{index===0?"INSTALLED":"ROLLBACK"}</span></div>):<p className="muted">No successful Base deployments yet.</p>}{olderBaseHistory.length>0&&<details className="orbitBaseOperations"><summary className="orbitBaseSummary">Older Base history · {olderBaseHistory.length}</summary><div className="orbitBaseHistoryList">{olderBaseHistory.map((r:any)=><div className="listrow" key={r.id}><div><b>{r.release_version}</b><span>{r.action} · retained for audit</span></div><span>{new Date(r.created_at).toLocaleString()}</span></div>)}</div></details>}</details><details className="panel"><summary className="panelTitle orbitBaseSummary"><div><p className="eyebrow">ACTIVITY</p><h2>Setup activity</h2></div><span>{events.length}</span></summary>{events.length?events.slice(0,20).map((e:any)=><div className="listrow" key={e.id}><div><b>{label(e.event_type)}</b><span>{e.message||e.status}</span></div><span>{new Date(e.created_at).toLocaleString()}</span></div>):<p className="muted">No setup activity yet.</p>}</details></div>}
-    </>:<section className="panel"><div className="panelTitle"><div><p className="eyebrow">MY ORBITFS</p><h2>OrbitFS access pending</h2><p className="muted">Licensing and release access are provided by the Master service.</p></div></div></section>}
+    </>:<section className="panel"><div className="panelTitle"><div><p className="eyebrow">MY ORBITFS</p><h2>{staffAccessReady&&staffRole&&staffRole!=="user"?"OrbitFS staff access":"OrbitFS access pending"}</h2><p className="muted">{staffAccessReady&&staffRole&&staffRole!=="user"?"Your staff account does not need a personal customer licence to access its authorised administration tools. Customer installation and deployment still require License Manager authorisation.":"Licensing and release access are provided by the Master service."}</p>{staffAccessReady&&staffRole&&staffRole!=="user"&&canStaff("admin.access")&&<Link className="buttonlink secondary" href="/admin/orbitfs/base-deployment">Open Base deployment administration →</Link>}</div></div></section>}
 
     {binding&&<section className="orbitV5Support" aria-label="Deployment support">
       <div><p className="eyebrow">NEED HELP?</p><b>Need a hand with your installation?</b><span>Support can help with configuration or a failed deployment.</span></div>
