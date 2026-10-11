@@ -1,6 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
-export const TRUSTED_MASTER_BOOTSTRAP_URL = "https://incendiarynetworks.cc/api/v1";
+// Fallback Billing never bootstraps a different License Manager authority.
+ // The separate Vercel environment variable makes the service URL explicit.
+export const TRUSTED_MASTER_BOOTSTRAP_URL = (() => {
+  const configured = String(process.env.LICENSE_MASTER_URL || "https://lm.incendiarynetworks.cc/api/v1").trim();
+  if (configured !== "https://lm.incendiarynetworks.cc/api/v1") {
+    throw new Error("Fallback Billing LICENSE_MASTER_URL must be https://lm.incendiarynetworks.cc/api/v1");
+  }
+  return configured;
+})();
 export const DEFAULT_MASTER_API_URL = TRUSTED_MASTER_BOOTSTRAP_URL;
 
 function validMasterUrl(value: string) {
@@ -9,7 +17,7 @@ function validMasterUrl(value: string) {
     const host = u.hostname.toLowerCase();
     if (
       u.protocol !== "https:" ||
-      (host!=="incendiarynetworks.cc"&&!host.endsWith(".incendiarynetworks.cc")) ||
+      host!=="lm.incendiarynetworks.cc" ||
       u.pathname.replace(/\/+$/, "") !== "/api/v1" ||
       u.username ||
       u.password ||
@@ -56,7 +64,7 @@ export async function getOfficialMasterApiConnections(force=false){
   }catch{}
   if(!connections.length)connections=[{
     service_key:"license_manager",
-    label:"Primary License Manager API",
+    label:"Fallback License Manager API",
     base_url:TRUSTED_MASTER_BOOTSTRAP_URL,
     allowed_clients:["billing_store"],
     enabled:true,
