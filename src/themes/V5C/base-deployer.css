@@ -313,3 +313,148 @@ html[data-orbitfs-theme="V5C"] .orbitZipDeployer details>summary{color:#d9ebf4!i
   html[data-orbitfs-theme="V5C"] .orbitSiteControl .orbitZipControlPanel{padding:10px!important}
   html[data-orbitfs-theme="V5C"] .orbitSiteControl .portalOverviewBottom{padding:0 10px 12px!important}
 }
+
+/* Compact setup / expanded operational console. Presentation only:
+   all actions, endpoints, permission checks and confirmation dialogs remain mounted. */
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer:not(.orbitZipDeployed){
+  width:min(100%,860px)!important;max-width:860px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployer.orbitZipDeployed{
+  width:min(100%,1440px)!important;max-width:1440px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipInstalling .orbitV5Hero{
+  padding:20px 22px!important;min-height:0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipInstalling .orbitV5FlowCards{
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:6px!important;margin:8px 14px 12px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipInstalling .orbitV5FlowCard{
+  min-width:0!important;padding:10px 7px!important;
+  border-radius:8px!important;line-height:1.3!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipInstalling .orbitInstallerWorkspace,
+html[data-orbitfs-theme="V5C"] .orbitZipInstalling .orbitV5Requirements{
+  padding:15px 17px!important;margin:7px 0!important;border-radius:10px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipInstalling .orbitV5StepActions{
+  display:flex!important;justify-content:flex-end!important;
+  padding:10px 0!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipControlPanel{
+  padding:24px!important;display:grid!important;gap:16px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipControlTop{
+  display:flex!important;justify-content:space-between!important;
+  flex-wrap:wrap!important;gap:18px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipControlTopActions{
+  display:flex!important;flex-wrap:wrap!important;gap:8px!important;
+  align-items:center!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipOverviewStats{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitPrimaryActionBar{
+  display:flex!important;justify-content:space-between!important;
+  align-items:center!important;gap:18px!important;flex-wrap:wrap!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipTechnicalDetails,
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipLifecyclePanel{
+  border-radius:10px!important;
+}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipControlDomain{
+  overflow-wrap:anywhere!important;
+}
+@media(max-width:900px){
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipOverviewStats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media(max-width:600px){
+  html[data-orbitfs-theme="V5C"] .orbitZipInstalling .orbitV5FlowCards{
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;overflow-x:auto!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipInstalling .orbitV5FlowCard{
+    font-size:10px!important;overflow-wrap:anywhere!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipOverviewStats{
+    grid-template-columns:1fr!important;
+  }
+  html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitZipControlPanel{
+    padding:12px!important;
+  }
+}
+
+/* Live Base operations — actual status and events; no simulated percentages */
+html[data-orbitfs-theme="V5C"] .orbitLiveConsole{
+  display:grid;gap:13px;padding:19px 21px;margin:12px 0;
+  border:1px solid #286072;border-radius:13px;
+  background:linear-gradient(145deg,#092430,#0b1c2b);color:#eaf4fa;
+}
+html[data-orbitfs-theme="V5C"] .orbitLiveConsoleHeading{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+}
+html[data-orbitfs-theme="V5C"] .orbitLiveConsoleHeading h3{font-size:20px;line-height:1.2;margin:5px 0 6px}
+html[data-orbitfs-theme="V5C"] .orbitLiveConsoleHeading p{font-size:13px;color:#a6c3d1;margin:0;line-height:1.55}
+html[data-orbitfs-theme="V5C"] .orbitLiveTrack{
+  position:relative;height:7px;overflow:hidden;border-radius:999px;
+  background:#234556;border:1px solid #2c5668;
+}
+html[data-orbitfs-theme="V5C"] .orbitLiveTrack>span{
+  display:block;height:100%;width:100%;background:#397285;transform:scaleX(0);transform-origin:left;
+}
+html[data-orbitfs-theme="V5C"] .orbitLiveTrack.complete>span{transform:scaleX(1);background:#53d7b3}
+html[data-orbitfs-theme="V5C"] .orbitLiveTrack.failed>span{transform:scaleX(1);background:#d56a77}
+html[data-orbitfs-theme="V5C"] .orbitLiveTrack.running>span{
+  width:40%;background:linear-gradient(90deg,transparent,#5edbd6,transparent);
+  animation:orbitProgressSweep 1.8s ease-in-out infinite;transform:translateX(-110%);
+}
+@keyframes orbitProgressSweep{to{transform:translateX(360%)}}
+@media(prefers-reduced-motion:reduce){
+  html[data-orbitfs-theme="V5C"] .orbitLiveTrack.running>span{animation:none;transform:none;width:100%;background:#397285}
+}
+html[data-orbitfs-theme="V5C"] .orbitLiveMeta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;color:#acc6d4}
+html[data-orbitfs-theme="V5C"] .orbitLiveMeta b{color:#edf8ff}
+html[data-orbitfs-theme="V5C"] .orbitLiveActivity{display:grid;gap:0;border-top:1px solid #244658;padding-top:10px;max-height:240px;overflow:auto}
+html[data-orbitfs-theme="V5C"] .orbitLiveActivity>b{font-size:12px;letter-spacing:.04em;margin-bottom:6px}
+html[data-orbitfs-theme="V5C"] .orbitLiveActivity>p{font-size:12px;color:#a6c3d1}
+html[data-orbitfs-theme="V5C"] .orbitLiveActivityRow{display:grid;grid-template-columns:minmax(110px,.6fr) minmax(0,1.4fr);gap:12px;padding:9px 0;border-bottom:1px solid #203f51;font-size:12px}
+html[data-orbitfs-theme="V5C"] .orbitLiveActivityRow small{font-size:12px;color:#aac2d1;overflow-wrap:anywhere}
+html[data-orbitfs-theme="V5C"] .orbitLiveError{padding:10px 12px;border:1px solid #86475b;border-radius:8px;background:#341d2b;color:#ffd7dd;font-size:12px;overflow-wrap:anywhere}
+html[data-orbitfs-theme="V5C"] .orbitLiveConsole>button{justify-self:start}
+html[data-orbitfs-theme="V5C"] .orbitZipDeployed .orbitLiveConsole{margin:0 0 14px}
+@media(max-width:650px){
+ html[data-orbitfs-theme="V5C"] .orbitLiveConsole{padding:14px}
+ html[data-orbitfs-theme="V5C"] .orbitLiveActivityRow{grid-template-columns:1fr;gap:2px}
+}
+
+html[data-orbitfs-theme="V5C"] .orbitUpdateBusy{
+  display:flex;align-items:center;gap:14px;padding:16px 20px;
+  background:#0b2a36;border-bottom:1px solid #285667;color:#eaf4fa;
+}
+html[data-orbitfs-theme="V5C"] .orbitUpdateBusy strong{display:block;font-size:14px}
+html[data-orbitfs-theme="V5C"] .orbitUpdateBusy p{font-size:12px;line-height:1.45;color:#a9c8d4;margin:4px 0 0}
+html[data-orbitfs-theme="V5C"] .orbitUpdateBusySpinner{
+  display:block;width:27px;height:27px;flex:none;border:3px solid #30596b;
+  border-top-color:#5edbd6;border-radius:50%;animation:orbitBusySpin .85s linear infinite;
+}
+@keyframes orbitBusySpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){html[data-orbitfs-theme="V5C"] .orbitUpdateBusySpinner{animation:none;border-color:#5edbd6}}
+
+/* Approved customer operations layout, reusing the installed OrbitFS V5C theme */
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsole{gap:22px!important;background:var(--o12-bg,#07121b)!important}
+html[data-orbitfs-theme="V5C"] .orbitPremiumControlHeader{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;padding:10px 2px 22px;border-bottom:1px solid var(--o12-line,#25465a)}
+html[data-orbitfs-theme="V5C"] .orbitPremiumControlHeader h1{font-size:clamp(25px,3.4vw,38px);letter-spacing:-.03em;margin:5px 0 8px;line-height:1.12}
+html[data-orbitfs-theme="V5C"] .orbitPremiumControlHeader p{font-size:13px;line-height:1.6;margin:0;max-width:570px}
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsoleNav{display:flex;align-items:center;gap:7px;flex-wrap:wrap;border-bottom:1px solid var(--o12-line,#25465a);padding:0 0 15px}
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsoleNav a{color:var(--o12-muted,#a9c2d1);border:1px solid var(--o12-line,#25465a);text-decoration:none;font-size:12px;font-weight:650;padding:10px 14px;border-radius:8px;background:var(--o12-panel,#0c1f2c);transition:background .15s ease,color .15s ease}
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsoleNav a:hover,
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsoleNav a:focus-visible{background:var(--o12-panel-raised,#112938);color:#fff;outline:2px solid var(--o12-cyan,#51d4d8);outline-offset:2px}
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsole [id^="orbit-control-"]{scroll-margin-top:110px}
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsole .orbitZipControlTop{padding:12px 0!important}
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsole .orbitZipControlTop h2{font-size:clamp(21px,2.5vw,29px)!important}
+html[data-orbitfs-theme="V5C"] .orbitPremiumConsole .orbitZipOverviewStats{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+@media(max-width:950px){html[data-orbitfs-theme="V5C"] .orbitPremiumConsole .orbitZipOverviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){html[data-orbitfs-theme="V5C"] .orbitPremiumConsole .orbitZipOverviewStats{grid-template-columns:1fr!important}html[data-orbitfs-theme="V5C"] .orbitPremiumConsoleNav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}html[data-orbitfs-theme="V5C"] .orbitPremiumConsoleNav a{text-align:center;padding:10px 8px}}

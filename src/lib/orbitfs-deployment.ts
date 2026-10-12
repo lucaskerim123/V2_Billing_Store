@@ -34,17 +34,27 @@ function smartRegionCode(value:string){
   return "americas";
 }
 
+export function fallbackBillingOAuthMode(){return process.env.VERCEL_PROJECT_PRODUCTION_URL==="orbitfs-billing-fallback.vercel.app" || process.env.ORBITFS_BILLING_MODE==="fallback" || process.env.VERCEL_PROJECT_ID==="prj_BZNKPOm5pTcMdD4QrOXPOqpE7Imq";}
+export async function billingOAuthSecret(provider:"supabase"|"vercel"){
+ const key=(fallbackBillingOAuthMode()?"fallback_":"")+provider+"_client_secret";
+ const value=await serviceRpc("service_orbitfs_release_secret",{p_key:key});
+ return String(value||(fallbackBillingOAuthMode()?"":process.env[provider==="supabase"?"ORBITFS_SUPABASE_CLIENT_SECRET":"ORBITFS_VERCEL_CLIENT_SECRET"])||"").trim();
+}
 export async function billingOrbitfsConfig(){
   const {data,error}=await licenseDb().from("orbitfs_release_system_settings")
     .select("enabled,maintenance_mode,maintenance_message,customer_deploy_enabled,customer_updates_enabled,customer_rollbacks_enabled,allow_existing_supabase_project,allow_create_supabase_project,supabase_oauth_enabled,vercel_oauth_enabled,supabase_client_id,vercel_client_id,vercel_install_url,supabase_scopes,default_supabase_region,panel_project_prefix,health_path,schema_version")
     .eq("id","primary").single();
   if(error)throw error;
+  const fallback=fallbackBillingOAuthMode();
+  const {data:modeSettings,error:modeError}=fallback?await licenseDb().rpc("service_orbitfs_fallback_oauth_settings"):{data:null,error:null};
+  if(modeError)throw new Error("Fallback OAuth settings migration is required: "+modeError.message);
   return {
     ...data,
-    supabase_client_id:String(data?.supabase_client_id||process.env.ORBITFS_SUPABASE_CLIENT_ID||"").trim()||null,
-    vercel_client_id:String(data?.vercel_client_id||process.env.ORBITFS_VERCEL_CLIENT_ID||"").trim()||null,
-    vercel_install_url:String(data?.vercel_install_url||process.env.ORBITFS_VERCEL_INSTALL_URL||"").trim()||null,
-    supabase_scopes:String(data?.supabase_scopes||process.env.ORBITFS_SUPABASE_SCOPES||"").trim()||null
+    ...(fallback?modeSettings:{}),
+    supabase_client_id:String((fallback?modeSettings?.supabase_client_id:data?.supabase_client_id)||(fallback?"":process.env.ORBITFS_SUPABASE_CLIENT_ID)||"").trim()||null,
+    vercel_client_id:String((fallback?modeSettings?.vercel_client_id:data?.vercel_client_id)||(fallback?"":process.env.ORBITFS_VERCEL_CLIENT_ID)||"").trim()||null,
+    vercel_install_url:String((fallback?modeSettings?.vercel_install_url:data?.vercel_install_url)||(fallback?"":process.env.ORBITFS_VERCEL_INSTALL_URL)||"").trim()||null,
+    supabase_scopes:String((fallback?modeSettings?.supabase_scopes:data?.supabase_scopes)||(fallback?"":process.env.ORBITFS_SUPABASE_SCOPES)||"").trim()||null
   };
 }
 export async function requireSystem(capability:"deploy"|"base_update"|"update"|"rollback"="deploy"){
@@ -373,7 +383,7 @@ async function supabaseAccessToken(userId:string){
   const conn=await connection(userId,"supabase");if(!conn||conn.status!=="connected")throw Object.assign(new Error("Customer Supabase account is not connected"),{status:409});
   let token=await providerSecret(userId,"supabase","access_token");if(!token)throw Object.assign(new Error("Supabase connection token is missing"),{status:409});
   if(conn.token_expires_at&&new Date(conn.token_expires_at).getTime()<Date.now()+60000){
-    const refresh=await providerSecret(userId,"supabase","refresh_token"),s=await billingOrbitfsConfig(),secret=await releaseSecret("supabase_client_secret");
+    const refresh=await providerSecret(userId,"supabase","refresh_token"),s=await billingOrbitfsConfig(),secret=await billingOAuthSecret("supabase");
     if(!refresh||!s.supabase_client_id||!secret)throw Object.assign(new Error("Supabase connection needs to be reconnected"),{status:409});
     const form=new URLSearchParams({grant_type:"refresh_token",refresh_token:refresh});
     const basic=Buffer.from(`${s.supabase_client_id}:${secret}`).toString("base64");

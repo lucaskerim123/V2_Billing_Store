@@ -1,22 +1,22 @@
 import {licenseDb} from "@/lib/license-api";
 import {createHmac} from "node:crypto";
-import {consumeOAuthState,billingOrbitfsConfig,saveProviderConnection} from "@/lib/orbitfs-deployment";
+import {consumeOAuthState,billingOrbitfsConfig,billingOAuthSecret,saveProviderConnection} from "@/lib/orbitfs-deployment";
 import {serviceRpc} from "@/lib/paymentServer";
-import {orbitfsStoreOrigin,orbitfsStoreUrl} from "@/lib/site-origin";
+import {orbitfsProviderOAuthOrigin,orbitfsProviderOAuthUrl} from "@/lib/site-origin";
 
 function pkceVerifier(state:string,secret:string){return createHmac("sha256",secret).update(`orbitfs-vercel:${state}`).digest("base64url")}
 
 export async function GET(req:Request){
   const u=new URL(req.url);let returnPath="/portal/orbitfs",storeOrigin="";
   try{
-    storeOrigin=await orbitfsStoreOrigin(req.url);
+    storeOrigin=await orbitfsProviderOAuthOrigin(req.url);
     const code=u.searchParams.get("code")||"",stateValue=u.searchParams.get("state")||"";
     if(!code)throw new Error(u.searchParams.get("error_description")||u.searchParams.get("error")||"Vercel authorization did not return a code");
     const state=await consumeOAuthState(stateValue,"vercel");
     returnPath=state.return_path||returnPath;
-    const s=await billingOrbitfsConfig(),secret=String(await serviceRpc("service_orbitfs_release_secret",{p_key:"vercel_client_secret"})||process.env.ORBITFS_VERCEL_CLIENT_SECRET||"");
+    const s=await billingOrbitfsConfig(),secret=await billingOAuthSecret("vercel");
     if(!s.vercel_client_id||!secret)throw new Error("OrbitFS Vercel App is not configured");
-    const redirect=await orbitfsStoreUrl("/api/orbitfs/oauth/vercel/callback",req.url);
+    const redirect=await orbitfsProviderOAuthUrl("/api/orbitfs/oauth/vercel/callback",req.url);
     const form=new URLSearchParams({grant_type:"authorization_code",client_id:s.vercel_client_id,client_secret:secret,code,code_verifier:pkceVerifier(stateValue,secret),redirect_uri:redirect});
     const r=await fetch("https://api.vercel.com/login/oauth/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded",accept:"application/json"},body:form});
     if(!r.ok)throw new Error(`Vercel token exchange failed: ${await r.text()}`);
