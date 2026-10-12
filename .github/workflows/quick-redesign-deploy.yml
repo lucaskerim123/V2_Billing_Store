@@ -36,6 +36,12 @@ jobs:
           EXPECTED_GITHUB_PROFILE: primary
         run: |
           set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$GITHUB_REF" = "refs/heads/main"
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Manual standby preparation approved for this repository only."
+            exit 0
+          fi
           response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 https://dev.incendiarynetworks.cc/api/github-profile)"
           active="$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(String(x.profile||""))' "$response")"
           echo "Active GitHub profile: $active"
@@ -223,6 +229,11 @@ jobs:
           EXPECTED_GITHUB_PROFILE: primary
         run: |
           set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$GITHUB_REF" = "refs/heads/main"
+            echo "Manual standby service deployment allowed before cutover."
+            exit 0
+          fi
           response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 --max-time 15 https://dev.incendiarynetworks.cc/api/github-profile)"
           active="$(node -e 'const value=JSON.parse(process.argv[1]);process.stdout.write(String(value.profile||""))' "$response")"
           if [ "$active" != "$EXPECTED_GITHUB_PROFILE" ]; then
