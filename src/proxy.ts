@@ -10,6 +10,7 @@ const SOURCES=[
 ] as const;
 
 export async function proxy(request:NextRequest){
+  if(request.nextUrl.pathname==='/api/handover-health')return NextResponse.json({ready:true},{headers:{'cache-control':'no-store'}});
   let confirmed=false;
   for(const source of SOURCES){
     try{
