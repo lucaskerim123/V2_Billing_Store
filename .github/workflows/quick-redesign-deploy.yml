@@ -216,6 +216,20 @@ jobs:
           echo "Deployment: ${{ steps.existing.outputs.url }}"
           echo "Reused existing deployment: true"
 
+      - name: Recheck active profile immediately before production deployment
+        if: steps.profile.outputs.deploy == 'true'
+        shell: bash
+        env:
+          EXPECTED_GITHUB_PROFILE: primary
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --retry 2 --retry-delay 2 --max-time 15 https://dev.incendiarynetworks.cc/api/github-profile)"
+          active="$(node -e 'const value=JSON.parse(process.argv[1]);process.stdout.write(String(value.profile||""))' "$response")"
+          if [ "$active" != "$EXPECTED_GITHUB_PROFILE" ]; then
+            echo "::error::Production deployment blocked: active profile is $active, repository requires $EXPECTED_GITHUB_PROFILE."
+            exit 1
+          fi
+
       - name: Deploy validated quick artifact to production
         id: deploy
         if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
