@@ -84,41 +84,13 @@ export async function requireOfficialMasterApiUrl(value:string){
   return normalized;
 }
 
-let cachedUrl = TRUSTED_MASTER_BOOTSTRAP_URL;
-let cachedAt = 0;
-
+// The selected family is fixed in this deployed Billing application.
+// The other API is visible as an option in admin settings only, never
+// substituted as a runtime authority from shared database preference.
 export async function getMasterApiUrl() {
-  // Source family is fixed at build time; never let a shared DB preference\n  // redirect Main Billing to a paused Fallback API.\n  return TRUSTED_MASTER_BOOTSTRAP_URL;\n}\n\nexport function clearMasterApiCache(){\n  registryCache=null;\n  cachedAt=0;\n}\n\n/* Legacy superseded:\n  const now = Date.now();\n  if (now - cachedAt < 5_400_000) return cachedUrl;
-
-  const official=await getOfficialMasterApiConnections();
-  const allowed=new Set(official.map(row=>row.base_url));
-  let resolved=TRUSTED_MASTER_BOOTSTRAP_URL;
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-  if (supabaseUrl && serviceKey) {
-    try {
-      const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-      const { data } = await sb
-        .from("license_master_connection")
-        .select("master_url,enabled,updated_at")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const saved=data?.enabled!==false&&data?.master_url?validMasterUrl(String(data.master_url)):null;
-      if(saved&&allowed.has(saved))resolved=saved;
-    } catch {
-      // Use the trusted official registry/default.
-    }
-  }
-
-  cachedUrl=resolved;
-  cachedAt=now;
-  return cachedUrl;
+  return TRUSTED_MASTER_BOOTSTRAP_URL;
 }
 
 export function clearMasterApiCache(){
   registryCache=null;
-  cachedAt=0;
 }
-\n*/\n
