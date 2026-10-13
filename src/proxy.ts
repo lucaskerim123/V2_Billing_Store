@@ -4,10 +4,8 @@ import {NextResponse} from 'next/server';
 // Billings must not operate independently of License Manager's shared
 // authoritative mode. Fail closed, including for API and server actions.
 const FAMILY='main';
-const SOURCES=[
-  'https://incendiarynetworks.cc/api/v1/source-configuration',
-  'https://lm.incendiarynetworks.cc/api/v1/source-configuration',
-] as const;
+// Never contact the other family's API during ordinary requests.
+const SOURCES=['https://incendiarynetworks.cc/api/v1/source-configuration'] as const;
 
 export async function proxy(request:NextRequest){
   if(request.nextUrl.pathname==='/api/handover-health')return NextResponse.json({ready:true},{headers:{'cache-control':'no-store'}});
