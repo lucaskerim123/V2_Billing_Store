@@ -25,7 +25,7 @@ export async function GET(req:Request){
   const rows=Array.isArray(products?.products)?products.products:[];
   const by=new Map(rows.map((p:any)=>[String(p.code||p.slug||"").toLowerCase(),p]));
   const connections=canonicalProducts.map(code=>({code,master:by.get(code)||null,local:local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code)||null,connected:Boolean(by.get(code)&&local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code&&p.license_api_mode==="master"&&p.license_api_enabled!==false))}));
-  return Response.json({connection:data||null,configuredUrl:await getMasterApiUrl(),masterPanelUrl:process.env.LICENSE_MASTER_ADMIN_URL||"https://lm.incendiarynetworks.cc",connections,masterProducts:rows,pulse,health,officialConnections},{headers:{"cache-control":"no-store"}});
+  return Response.json({connection:data||null,configuredUrl:await getMasterApiUrl(),masterPanelUrl:"https://panel.incendiarynetworks.cc",apiOptions:[{label:"Main API",value:"https://incendiarynetworks.cc/api/v1"},{label:"Fallback API",value:"https://lm.incendiarynetworks.cc/api/v1"}],selectedMode:"main",connections,masterProducts:rows,pulse,health,officialConnections},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:cleanError(e)},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}})}
 }
 
@@ -35,6 +35,7 @@ export async function POST(req:Request){
   const db=licenseDb(),body=await req.json().catch(()=>({})),action=String(body.action||"test").toLowerCase();
   if(action==="save"){
    const requested=String(body.masterUrl||"").trim();
+   if(requested!=="https://incendiarynetworks.cc/api/v1")return Response.json({error:"Main Billing is permanently bound to Main API. Fallback is available only after the system mode switches."},{status:409});
    const masterUrl=await requireOfficialMasterApiUrl(requested);
    const now=new Date().toISOString(),{data:row}=await db.from("license_master_connection").select("id").order("updated_at",{ascending:false}).limit(1).maybeSingle();
    if(row)await db.from("license_master_connection").update({master_url:masterUrl,enabled:true,updated_at:now,last_error:null}).eq("id",row.id);else await db.from("license_master_connection").insert({master_url:masterUrl,enabled:true,last_error:null});
