@@ -137,7 +137,7 @@ export default function LicenseMasterSettings(){
      <div><span>Last successful test</span><b>{connection.last_success_at?new Date(connection.last_success_at).toLocaleString():"Not tested"}</b></div>
      <div><span>Last error</span><b>{connection.last_error||"None"}</b></div>
     </div>:<div className="orbitProductConnectionEditor">
-     <label><span>License Manager API</span><input value={masterUrl} onChange={event=>setMasterUrl(event.target.value)} placeholder="https://example.com/api/v1"/><small>Only an approved official License Manager endpoint is accepted by the server.</small></label>
+     <label><span>License Manager API</span><select value={masterUrl} onChange={event=>setMasterUrl(event.target.value)}>{(data?.apiOptions||[]).map((option:any)=><option key={option.value} value={option.value} disabled={option.value!==data?.configuredUrl}>{option.label} — {option.value}{option.value!==data?.configuredUrl?" (inactive mode)":""}</option>)}</select><small>The selected production mode determines the active API. Fallback API cannot be activated from Main Billing.</small></label>
      <label><span>Manager UI</span><input readOnly value={panelUrl}/><small>Read-only navigation target supplied by Billing configuration.</small></label>
     </div>}
 
