@@ -1,5 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
-
 // Main Billing never bootstraps a different License Manager authority.
  // The separate Vercel environment variable makes the service URL explicit.
 export const TRUSTED_MASTER_BOOTSTRAP_URL = (() => {
