@@ -1,11 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Fallback Billing never bootstraps a different License Manager authority.
+// Main Billing never bootstraps a different License Manager authority.
  // The separate Vercel environment variable makes the service URL explicit.
 export const TRUSTED_MASTER_BOOTSTRAP_URL = (() => {
-  const configured = String(process.env.LICENSE_MASTER_URL || "https://lm.incendiarynetworks.cc/api/v1").trim();
-  if (configured !== "https://lm.incendiarynetworks.cc/api/v1") {
-    throw new Error("Fallback Billing LICENSE_MASTER_URL must be https://lm.incendiarynetworks.cc/api/v1");
+  const configured = String(process.env.LICENSE_MASTER_URL || "https://incendiarynetworks.cc/api/v1").trim();
+  if (configured !== "https://incendiarynetworks.cc/api/v1") {
+    throw new Error("Main Billing LICENSE_MASTER_URL must be https://incendiarynetworks.cc/api/v1");
   }
   return configured;
 })();
@@ -17,7 +17,7 @@ function validMasterUrl(value: string) {
     const host = u.hostname.toLowerCase();
     if (
       u.protocol !== "https:" ||
-      host!=="lm.incendiarynetworks.cc" ||
+      host!=="incendiarynetworks.cc" ||
       u.pathname.replace(/\/+$/, "") !== "/api/v1" ||
       u.username ||
       u.password ||
@@ -64,7 +64,7 @@ export async function getOfficialMasterApiConnections(force=false){
   }catch{}
   if(!connections.length)connections=[{
     service_key:"license_manager",
-    label:"Fallback License Manager API",
+    label:"Main License Manager API",
     base_url:TRUSTED_MASTER_BOOTSTRAP_URL,
     allowed_clients:["billing_store"],
     enabled:true,
@@ -88,8 +88,7 @@ let cachedUrl = TRUSTED_MASTER_BOOTSTRAP_URL;
 let cachedAt = 0;
 
 export async function getMasterApiUrl() {
-  const now = Date.now();
-  if (now - cachedAt < 5_400_000) return cachedUrl;
+  // Source family is fixed at build time; never let a shared DB preference\n  // redirect Main Billing to a paused Fallback API.\n  return TRUSTED_MASTER_BOOTSTRAP_URL;\n}\n\nexport function clearMasterApiCache(){\n  registryCache=null;\n  cachedAt=0;\n}\n\n/* Legacy superseded:\n  const now = Date.now();\n  if (now - cachedAt < 5_400_000) return cachedUrl;
 
   const official=await getOfficialMasterApiConnections();
   const allowed=new Set(official.map(row=>row.base_url));
@@ -122,3 +121,4 @@ export function clearMasterApiCache(){
   registryCache=null;
   cachedAt=0;
 }
+\n*/\n
