@@ -34,7 +34,8 @@ function smartRegionCode(value:string){
   return "americas";
 }
 
-export function fallbackBillingOAuthMode(){return process.env.VERCEL_PROJECT_PRODUCTION_URL==="orbitfs-billing-fallback.vercel.app" || process.env.ORBITFS_BILLING_MODE==="fallback" || process.env.VERCEL_PROJECT_ID==="prj_BZNKPOm5pTcMdD4QrOXPOqpE7Imq";}
+// Repository family is immutable: provider credentials cannot cross modes.
+export function fallbackBillingOAuthMode(){return false;}
 export async function billingOAuthSecret(provider:"supabase"|"vercel"){
  const key=(fallbackBillingOAuthMode()?"fallback_":"")+provider+"_client_secret";
  const value=await serviceRpc("service_orbitfs_release_secret",{p_key:key});
