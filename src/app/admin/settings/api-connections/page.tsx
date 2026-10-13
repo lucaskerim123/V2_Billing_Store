@@ -20,14 +20,13 @@ export default function ApiConnectionsSettings(){
 
   <section className="panel"><div className="panelTitle"><div><p className="eyebrow">ACTIVE TECHNICAL AUTHORITY</p><h2>License Manager API</h2><p className="muted">This endpoint supplies licensing, release and deployment authority. Billing remains commerce/frontend only.</p></div><span className={connection?.last_error?"state waiting":"state ready"}>{connection?.last_error?"ERROR":"OFFICIAL"}</span></div>
    <div className="form">
-    <label>Official API URL<input list="official-master-apis" value={masterUrl} onChange={e=>setMasterUrl(e.target.value)} placeholder="https://incendiarynetworks.cc/api/v1"/></label>
-    <datalist id="official-master-apis">{official.map((x:any)=><option key={x.base_url} value={x.base_url}>{x.label}</option>)}</datalist>
+    <label>License Manager API<select value={masterUrl} onChange={e=>setMasterUrl(e.target.value)}>{(data?.apiOptions||[]).map((x:any)=><option key={x.value} value={x.value} disabled={x.value!==data?.configuredUrl}>{x.label} — {x.value}{x.value!==data?.configuredUrl?" (inactive mode)":""}</option>)}</select></label>
     <label>Selected endpoint<input readOnly value={selected?.label||"Not an enabled official endpoint"}/></label>
     <label>Allowed use<input readOnly value="Billing → License Manager technical APIs"/></label>
     <label>Last successful test<input readOnly value={connection?.last_success_at?new Date(connection.last_success_at).toLocaleString():"Not tested"}/></label>
    </div>
    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}><button className="buttonlink" onClick={save} disabled={busy||!masterUrl}>{busy?"Saving…":"Save official API"}</button><button className="buttonlink secondary" onClick={()=>{if(official[0]?.base_url)setMasterUrl(official[0].base_url)}} disabled={!official.length}>Use recommended</button></div>
-   <p className="muted" style={{marginTop:10}}>You can paste/type a URL, but Billing will only save it when it exactly matches an enabled <code>billing_store</code> License Manager endpoint from the official registry.</p>
+   <p className="muted" style={{marginTop:10}}>Main Billing uses Main API automatically. Fallback API is shown for visibility but remains unavailable until the central source switch activates Fallback Billing.</p>
   </section>
 
   <section className="panel"><div className="panelTitle"><div><p className="eyebrow">LICENSE MANAGER REGISTRY</p><h2>Approved endpoints</h2><p className="muted">Read live from <code>/api/v1/api-connections</code>. This list is controlled in License Manager.</p></div><span className="state ready">{official.length} AVAILABLE</span></div>
