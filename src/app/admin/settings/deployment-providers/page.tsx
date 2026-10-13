@@ -19,7 +19,7 @@ export default function DeploymentProviderSettings(){
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
  const [callbackOrigin,setCallbackOrigin]=useState("");
- const [profile,setProfile]=useState<"main"|"fallback">("main");
+ const [profile]=useState<"main"|"fallback">("main");
  const [form,setForm]=useState({supabase_oauth_enabled:true,vercel_oauth_enabled:true,supabase_client_id:"",vercel_client_id:"",vercel_install_url:"",supabase_scopes:"",supabase_client_secret:"",vercel_client_secret:""});
 
  function hydrate(snapshot:Snapshot){
@@ -86,7 +86,7 @@ export default function DeploymentProviderSettings(){
 
  return <main className="adminShell settingsCompact">
   <header className="adminTop"><div><p className="eyebrow">MY ORBITFS · CUSTOMER DEPLOYER</p><h1>Deployment providers</h1><p className="muted">Configure the Billing-owned OAuth applications used to connect each customer&apos;s Supabase and Vercel accounts. License Manager still owns deployment authorization and release state.</p></div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><Link className="buttonlink secondary" href="/admin/settings">System settings</Link><button className="secondary" type="button" onClick={()=>void load()} disabled={!!busy}>{busy==="load"?"Refreshing…":"Refresh"}</button></div></header>
-  <section className="panel" style={{marginTop:12,display:"flex",gap:12,alignItems:"center"}}><strong>Saved OAuth profile</strong><button className={profile==="main"?"":"secondary"} type="button" disabled={!!busy} onClick={()=>setProfile("main")}>Main</button><button className={profile==="fallback"?"":"secondary"} type="button" disabled={!!busy} onClick={()=>setProfile("fallback")}>Fallback</button><span>Each profile retains independent client IDs and Vault secrets. The storefront selects its profile automatically.</span></section>
+  <section className="panel" style={{marginTop:12}}><strong>Main OAuth configuration</strong><p className="muted">This Billing deployment edits only its own provider credentials and callback origins. The other mode is managed from its own Billing deployment.</p></section>
   {message&&<p className="inlineStatus">{message}</p>}{error&&<p className="inlineStatus" style={{borderColor:"crimson"}}>{error}</p>}
   <section className="panel" style={{marginTop:16}}><div className="panelTitle"><div><h2>OAuth callback domain — {profile==="fallback"?"Fallback":"Main"}</h2><p className="muted">Edit the Billing domain here. Both provider callback URLs below update automatically. Save settings to apply the change to future sign-ins.</p></div></div><div className="form"><label>Billing OAuth domain<input type="url" value={callbackOrigin} onChange={e=>setCallbackOrigin(e.target.value)} placeholder={profile==="fallback"?"https://billing.incendiarynetworks.cc":"https://orbitfsstore.vercel.app"} autoComplete="url"/></label></div></section>
   <section className="settingsRuntimeStrip" aria-label="Provider status">
