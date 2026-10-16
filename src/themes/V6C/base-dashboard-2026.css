@@ -152,3 +152,49 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 :is(.ob26Metric,.ob26Card,.ob26Providers,.ob26Header,.ob26ActionBar,.ob26Monitor) :is(p,small,span,b,strong,a,button,label){font-size:inherit;line-height:1.45}
 @media(max-width:950px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipControlGrid{grid-template-columns:1fr!important}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipReleaseControls{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:640px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .portalOverviewBottom,html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipReleaseControls{grid-template-columns:1fr!important}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .ob26Instance{padding:15px!important}}
+
+
+/* Explicitly supersede the V6C compact-demo Base rules that had 6-8px type
+   and a grid-only main. Both installation and installed states use this design. */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026{
+  display:flex!important;flex-direction:column!important;grid-template-columns:none!important;
+  align-items:stretch!important;gap:18px!important;
+  max-width:1320px!important;width:100%!important;margin:0 auto!important;
+  padding:clamp(12px,2.5vw,30px)!important;font-size:14px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .panel{
+  padding:18px!important;border-radius:13px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 :is(.panelTitle,.orbitV5Hero,.orbitV5Flow,.orbitInstallerWorkspace,.orbitV5ReviewGrid,.orbitV5Failure,.orbitV5Support,.orbitZipReleaseControls,.orbitZipControlRows,.orbitLiveConsole) :is(p,small,label,span){
+  font-size:13px!important;line-height:1.55!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 :is(.panelTitle,.orbitV5Hero,.orbitV5Flow,.orbitInstallerWorkspace,.orbitV5Failure,.ob26ProviderGrid,.ob26Header,.ob26Monitor) :is(h2,h3){
+  font-size:19px!important;line-height:1.28!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .orbitV5Hero h1{font-size:clamp(26px,4vw,36px)!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .ob26Header h1{font-size:clamp(29px,3.5vw,42px)!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 :is(button,.buttonlink){
+  font-size:13px!important;line-height:1.35!important;min-height:40px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 :is(input:not([type=checkbox]),select,textarea){
+  min-height:42px!important;font-size:14px!important;padding:9px 12px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .orbitV5FlowCards{
+  display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;grid-auto-flow:row!important;grid-auto-columns:auto!important;overflow:visible!important;gap:9px!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .orbitV5FlowCard :is(b,small){
+  font-size:13px!important;line-height:1.4!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .ob26Metric small{font-size:11px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .ob26Metric strong{font-size:18px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .ob26Metric span{font-size:12px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .ob26Nav a{font-size:13px!important}
+@media(max-width:950px){
+ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .orbitV5FlowCards{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:640px){
+ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026{padding:12px!important;gap:12px!important}
+ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .orbitV5FlowCards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .orbitZipReleaseControls{grid-template-columns:1fr!important}
+ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .ob26Metric strong{font-size:16px!important}
+}
