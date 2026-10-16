@@ -315,7 +315,7 @@ async function resolveUpdateDatabaseMigrations(release:any,bundle:UpdateBundle,e
   }
 
   const refs=releaseDatabasePackageReferences(release);
-  const engineTargets=executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(value=>["mcp","apex","studio"].includes(value));
+  const engineTargets=executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(value=>["engine-shared","mcp","apex","studio"].includes(value));
   if(!engineTargets.length)return {migrations:[],skippedByEntitlement:[],source:"license-manager-database-packages" as const};
   const allowedPackages=new Set(["engine-shared",...engineTargets]);
   const selected=refs.filter(ref=>allowedPackages.has(ref.component));
@@ -1241,7 +1241,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     const parsed=await readArtifact(release);
     if((parsed.root as any).format!=="orbitfs-update-bundle-v3")fail("Published Update release is not an OrbitFS Update Bundle v3",422);
     const bundle=parsed.root as UpdateBundle;
-    const allowedUpdateComponents=new Set(["base","apex","mcp","studio"]);
+    const allowedUpdateComponents=new Set(["base","engine-shared","apex","mcp","studio"]);
     const normalizeComponent=(value:unknown)=>{
       const component=String(value||"").trim().toLowerCase();
       return component==="orbitfs_base"||component==="core"?"base":component==="orbitfs_mcp"?"mcp":component==="orbitfs_apex"?"apex":component==="orbitfs_studio"?"studio":component;
