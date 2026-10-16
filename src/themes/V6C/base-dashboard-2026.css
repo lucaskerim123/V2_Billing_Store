@@ -1,0 +1,154 @@
+
+/* Dedicated 2026 Base deployment console. Deliberately independent of V5C/V6C
+   page-level Base CSS. Customer theme tokens are inherited, not redefined. */
+.orbitBase2026{--ob-bg:#061827;--ob-surface:#091e30;--ob-raised:#0d283d;--ob-border:#224459;--ob-text:#eff7ff;--ob-muted:#a0b8ca;--ob-accent:#5ec9ff;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:18px!important;min-width:0!important;max-width:1320px!important;width:100%!important;padding:clamp(12px,2.5vw,30px)!important;margin:auto!important;box-sizing:border-box!important;color:var(--ob-text);font-size:14px!important;line-height:1.5!important}
+.orbitBase2026 *, .orbitBase2026 *:before,.orbitBase2026 *:after{box-sizing:border-box}
+.orbitBase2026 :is(h1,h2,h3,p,small,span,strong,b,div,a,label,summary){overflow-wrap:anywhere}
+.orbitBase2026 :is(h1,h2,h3){letter-spacing:-.025em;line-height:1.22}
+.orbitBase2026 :is(p,small){line-height:1.55}
+.orbitBase2026 :is(button,.buttonlink){min-height:40px;min-width:0;max-width:100%;padding:10px 15px;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:normal;text-align:center;border-radius:9px;border:1px solid #30607e;background:#11344e;color:#eff8ff;font:inherit;font-size:13px;font-weight:650;line-height:1.3;cursor:pointer;text-decoration:none}
+.orbitBase2026 :is(button,.buttonlink):hover:not(:disabled){background:#165174;border-color:#60bada}
+.orbitBase2026 :is(button,.buttonlink):disabled{opacity:.55;cursor:not-allowed}
+.orbitBase2026 :is(input:not([type=checkbox]),select,textarea){width:100%;max-width:100%;min-height:42px;background:#071725;color:#e7f7ff;border:1px solid #31617b;border-radius:8px;padding:10px 12px;font:inherit;font-size:14px}
+.orbitBase2026 label{color:#d7ebfa;display:grid;gap:6px;font-size:13px}
+.orbitBase2026 :is(button,a,input,select,summary,textarea):focus-visible{outline:2px solid #65dcff;outline-offset:2px}
+.orbitBase2026 .eyebrow,.orbitBase2026 .ob26Kicker{display:block;margin:0 0 7px;font-size:11px!important;font-weight:800!important;letter-spacing:.12em;color:var(--ob-accent);text-transform:uppercase;line-height:1.3!important}
+.orbitBase2026 .muted{color:var(--ob-muted)!important;font-size:13px!important}
+.orbitBase2026 .panel,.orbitBase2026 .ob26MainPanel,.orbitBase2026 .ob26Card,.orbitBase2026 .ob26Header,.orbitBase2026 .ob26Monitor{border:1px solid var(--ob-border)!important;border-radius:14px!important;background:linear-gradient(165deg,#092033,#061725)!important;box-shadow:none!important;min-width:0!important}
+.orbitBase2026 .panel{padding:18px!important}
+.orbitBase2026 .panelTitle{display:flex!important;flex-wrap:wrap!important;align-items:flex-start!important;justify-content:space-between!important;gap:12px!important;min-width:0}
+.orbitBase2026 .panelTitle h2{margin:0;color:#eff7ff;font-size:19px!important}
+.orbitBase2026 .panelTitle p{font-size:13px!important}
+.orbitBase2026 .state{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex-shrink:0;max-width:100%;border-radius:999px!important;padding:6px 10px!important;border:1px solid #3a5265!important;background:#102a3e!important;color:#cfdfed!important;font-size:11px!important;line-height:1.2!important;font-weight:700!important;white-space:normal}
+.orbitBase2026 .state.ready{color:#8ee7ca!important;background:#0c3935!important;border-color:#216f5c!important}
+.orbitBase2026 .state.current{color:#b8d7ff!important;background:#173756!important;border-color:#416daa!important}
+.orbitBase2026 .state.waiting{color:#ffd2ac!important;background:#40291f!important;border-color:#865c40!important}
+.orbitBase2026 .inlineStatus{font-size:13px!important;line-height:1.55!important;padding:12px 14px!important;border-radius:10px!important;overflow-wrap:anywhere}
+.orbitBase2026 .orbitInstallerMessage{margin:0}
+.orbitBase2026 .ob26Header{padding:clamp(18px,3vw,30px)!important;background:radial-gradient(640px 240px at 90% 0%,rgba(64,130,212,.18),transparent),linear-gradient(135deg,#102642,#071a2d)!important}
+.orbitBase2026 .ob26HeaderMain{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.orbitBase2026 .ob26Header h1{font-size:clamp(28px,3.2vw,42px)!important;margin:4px 0 10px;color:white}
+.orbitBase2026 .ob26Header p{font-size:14px!important;margin:0;color:var(--ob-muted)!important;max-width:64ch}
+.orbitBase2026 .ob26HeaderActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.orbitBase2026 .ob26HeaderActions .ob26Primary,.orbitBase2026 .ob26ActionControls .orbitHeroAction{background:linear-gradient(105deg,#5136c5,#2765b9)!important;color:white!important;border-color:#6458c6!important}
+.orbitBase2026 .ob26Snapshot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:20px 0 0}
+.orbitBase2026 .ob26Metric{background:#061a2a;border:1px solid #27455d;border-radius:10px;padding:15px;min-width:0}
+.orbitBase2026 .ob26Metric small{display:block;color:#8bacc6;font-size:11px!important;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.orbitBase2026 .ob26Metric strong{display:block;margin:5px 0;color:#fff;font-size:18px!important;line-height:1.3;overflow-wrap:anywhere}
+.orbitBase2026 .ob26Metric span{display:block;color:#9bb8ca;font-size:12px!important}
+.orbitBase2026 .ob26Nav{display:flex!important;gap:6px!important;align-items:stretch!important;overflow-x:auto!important;flex-wrap:wrap!important;scrollbar-width:thin;padding:10px!important;margin:0!important;border:1px solid var(--ob-border)!important;border-radius:12px!important;background:#071b2b!important}
+.orbitBase2026 .ob26Nav a{padding:9px 13px!important;border-radius:7px!important;color:#b7d0e3!important;text-decoration:none;font-size:13px!important;line-height:1.35!important;white-space:nowrap!important;border:1px solid transparent}
+.orbitBase2026 .ob26Nav a:hover,.orbitBase2026 .ob26Nav a:focus{background:#12415d!important;border-color:#287399!important;color:#fff!important}
+.orbitBase2026 .ob26MainPanel{display:grid!important;gap:17px!important;padding:0!important;border:0!important;background:transparent!important}
+.orbitBase2026 .ob26Instance{display:flex!important;flex-wrap:wrap!important;gap:20px!important;align-items:center!important;justify-content:space-between!important;padding:20px!important;border:1px solid var(--ob-border)!important;border-radius:13px!important;background:#0a2031!important}
+.orbitBase2026 .ob26InstanceIdentity{min-width:0;flex:1 1 270px}
+.orbitBase2026 .ob26InstanceIdentity h2{font-size:22px!important;margin:0 0 7px!important;overflow-wrap:anywhere}
+.orbitBase2026 .ob26InstanceActions{display:flex!important;flex:0 1 auto!important;gap:8px!important;flex-wrap:wrap!important;align-items:center!important}
+.orbitBase2026 .orbitZipControlDomain{display:grid;gap:5px;font-size:13px!important;overflow-wrap:anywhere}
+.orbitBase2026 .orbitZipControlDomain a{color:#6bd5ff!important;text-decoration:underline}
+.orbitBase2026 .orbitZipControlDomain small{color:#8cabc1;font-size:11px!important}
+.orbitBase2026 .ob26Providers{display:grid!important;gap:16px!important;padding:20px!important;border-radius:14px!important;background:linear-gradient(140deg,#0c263a,#091b2b)!important;border:1px solid var(--ob-border)!important}
+.orbitBase2026 .ob26SectionHead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;align-items:center}
+.orbitBase2026 .ob26SectionHead h2{margin:0;font-size:20px!important}
+.orbitBase2026 .ob26SectionHead p{margin:5px 0 0;color:var(--ob-muted);font-size:13px!important}
+.orbitBase2026 .ob26ProviderGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.orbitBase2026 .ob26Card{padding:18px!important;display:grid!important;align-content:start!important;gap:13px!important}
+.orbitBase2026 .ob26CardHead{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.orbitBase2026 .ob26CardHead h3{font-size:18px!important;margin:0}
+.orbitBase2026 .ob26Card dl{display:grid;grid-template-columns:120px minmax(0,1fr);gap:9px;margin:0;font-size:13px!important}
+.orbitBase2026 .ob26Card dt{color:#8daec5}
+.orbitBase2026 .ob26Card dd{min-width:0;margin:0;color:#e5f4ff;overflow-wrap:anywhere}
+.orbitBase2026 .ob26Actions{display:flex!important;gap:8px!important;flex-wrap:wrap!important;align-items:center!important}
+.orbitBase2026 .ob26Verified{margin:0!important;padding:10px 12px;border:1px solid #1a5f5b;border-radius:8px;color:#a2edda;font-size:12px!important}
+.orbitBase2026 .ob26Verified.error{border-color:#84533c;background:#3c261f;color:#ffcdad}
+.orbitBase2026 .ob26CredentialEdit{padding:13px;border:1px solid #2d5268;border-radius:9px;background:#091927}
+.orbitBase2026 .ob26CredentialEdit>summary{font-size:13px!important;font-weight:700;cursor:pointer;color:#c5e4f6}
+.orbitBase2026 .ob26CredentialFields{display:grid;gap:12px;padding-top:13px}
+.orbitBase2026 .ob26CredentialFields p{font-size:12px!important;color:#a5bfd2}
+.orbitBase2026 .ob26CredentialFields a{color:#84dcff}
+.orbitBase2026 .orbitZipControlPanel .orbitPremiumControlHeader{display:none}
+.orbitBase2026 :is(.orbitBaseDomainPanel,.orbitZipReleaseSection,.orbitZipTechnicalDetails,.orbitZipLifecyclePanel){width:100%;max-width:100%;min-width:0;margin:0!important}
+.orbitBase2026 .orbitBaseDomainPanel{display:grid!important;gap:15px!important}
+.orbitBase2026 .orbitBaseDomainTitle{font-size:16px!important;overflow-wrap:anywhere}
+.orbitBase2026 .orbitBaseDomainActions,.orbitBase2026 .controllerActions{display:flex!important;gap:8px!important;flex-wrap:wrap!important;align-items:center}
+.orbitBase2026 .orbitBaseDomainForm{display:grid!important;gap:14px!important}
+.orbitBase2026 .orbitBaseDnsRecords{display:grid;gap:8px}
+.orbitBase2026 .orbitBaseDnsRecords .listrow{min-width:0}
+.orbitBase2026 .ob26ActionBar{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:15px!important;padding:20px!important;border:1px solid #38569a!important;border-radius:13px!important;background:linear-gradient(118deg,#1b2456,#0a2c42)!important}
+.orbitBase2026 .ob26ActionCopy{display:grid!important;gap:5px!important;min-width:0;flex:1 1 250px}
+.orbitBase2026 .ob26ActionCopy small{color:#91c0ed!important;font-size:10px!important;font-weight:700!important;letter-spacing:.12em}
+.orbitBase2026 .ob26ActionCopy b{color:#fff!important;font-size:19px!important}
+.orbitBase2026 .ob26ActionCopy span{color:#bed2e4!important;font-size:13px!important;line-height:1.6!important}
+.orbitBase2026 .ob26ActionControls{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:9px!important}
+.orbitBase2026 .orbitZipReleaseControls{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr)) auto!important;align-items:end!important;gap:12px!important}
+.orbitBase2026 .orbitZipReleaseControls label{display:grid!important;gap:7px!important;font-size:13px!important}
+.orbitBase2026 .orbitZipReleaseControls :is(select,button){height:auto!important;min-height:42px!important;width:100%!important;font-size:13px!important}
+.orbitBase2026 .orbitZipReleaseMeta{display:flex!important;flex-wrap:wrap!important;justify-content:space-between!important;gap:8px!important;font-size:12px!important;color:#9ab8cf!important}
+.orbitBase2026 .orbitZipControlRows{display:grid!important;gap:9px!important}
+.orbitBase2026 .orbitZipControlRows>div{display:flex!important;gap:8px!important;justify-content:space-between!important;flex-wrap:wrap!important;border-bottom:1px solid #23445a!important;padding:9px 0!important}
+.orbitBase2026 .orbitZipControlRows :is(span,b){font-size:13px!important;line-height:1.5!important;overflow-wrap:anywhere}
+.orbitBase2026 .orbitZipControlRows span{color:#94afc5!important}
+.orbitBase2026 .orbitZipTechnicalDetails,.orbitBase2026 .orbitZipLifecyclePanel{padding:18px!important;border:1px solid var(--ob-border)!important;border-radius:13px!important;background:#091f32!important}
+.orbitBase2026 details summary{cursor:pointer!important}
+.orbitBase2026 .orbitZipTechnicalDetails>summary,.orbitBase2026 .orbitZipLifecyclePanel>summary{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:12px!important}
+.orbitBase2026 .orbitZipTechnicalDetails>summary b,.orbitBase2026 .orbitZipLifecyclePanel>summary b{font-size:17px!important}
+.orbitBase2026 .orbitZipControlGrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;margin-top:16px!important}
+.orbitBase2026 .orbitZipControlSection{min-width:0!important}
+.orbitBase2026 .orbitZipLifecycleRows{display:grid!important;gap:12px!important;margin-top:16px}
+.orbitBase2026 .orbitZipLifecycleRows>div{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:15px!important;padding:13px!important;border:1px solid #2b445c!important;border-radius:10px!important}
+.orbitBase2026 .orbitZipLifecycleRows>div>div{flex:1 1 240px;display:grid;gap:6px}
+.orbitBase2026 .orbitZipLifecycleRows span{font-size:13px!important}
+.orbitBase2026 .orbitZipDangerButton{border-color:#985557!important;color:#ffd9db!important;background:#402225!important}
+.orbitBase2026 .orbitZipUninstallOptions{display:grid;gap:12px;margin-top:14px}
+.orbitBase2026 .orbitZipUninstallOptions label{display:flex!important;align-items:start;gap:12px!important}
+.orbitBase2026 .listrow{display:flex!important;justify-content:space-between!important;align-items:center!important;flex-wrap:wrap!important;gap:12px!important;padding:12px 0!important;border-bottom:1px solid #204059!important;min-width:0}
+.orbitBase2026 .listrow>div{flex:1 1 180px;min-width:0;display:grid;gap:4px}
+.orbitBase2026 .listrow :is(span,b){font-size:13px!important;overflow-wrap:anywhere}
+.orbitBase2026 .ob26Monitor{padding:12px 18px!important}
+.orbitBase2026 .ob26Monitor>summary{list-style:none;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;flex-wrap:wrap!important;font-size:13px!important}
+.orbitBase2026 .ob26Monitor>summary::-webkit-details-marker{display:none}
+.orbitBase2026 .ob26Monitor>summary b{font-size:15px!important}
+.orbitBase2026 .ob26Monitor>summary small{font-size:12px!important;color:#a6bfd1}
+.orbitBase2026 .ob26Monitor[open] .orbitLiveConsole{margin-top:15px;border-top:1px solid #2b475c;padding-top:15px}
+.orbitBase2026 .orbitLiveConsole{width:100%;min-width:0;display:grid!important;gap:11px!important;font-size:13px!important}
+.orbitBase2026 .orbitLiveConsole h3{font-size:17px!important}
+.orbitBase2026 .orbitLiveConsoleHeading{display:flex!important;flex-wrap:wrap!important;justify-content:space-between!important;gap:12px!important}
+.orbitBase2026 .orbitLiveTrack{min-height:6px;background:#1c3952;border-radius:999px;overflow:hidden}
+.orbitBase2026 .orbitLiveActivity{display:grid!important;gap:8px!important;min-width:0}
+.orbitBase2026 .orbitLiveActivityRow{display:grid!important;grid-template-columns:minmax(0,190px) minmax(0,1fr)!important;gap:10px!important;padding:7px 0!important;border-bottom:1px solid #1a3a4f!important;font-size:12px!important}
+.orbitBase2026 .orbitLiveActivityRow :is(span,small){font-size:12px!important;overflow-wrap:anywhere}
+.orbitBase2026 .orbitLiveError,.orbitBase2026 .orbitBaseStatusError{padding:11px!important;border-radius:9px!important;border:1px solid #8c5340!important;background:#35231f!important;color:#ffd4bf!important;font-size:12px!important}
+.orbitBase2026 .orbitBaseStatusPanel{display:none!important}
+.orbitBase2026 .portalOverviewBottom{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;min-width:0!important}
+.orbitBase2026 .portalOverviewBottom>details{min-width:0}
+.orbitBase2026 .orbitV5Support{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:wrap!important;gap:15px!important;padding:18px!important;border:1px solid var(--ob-border)!important;border-radius:12px!important;background:#0a1d30!important}
+.orbitBase2026 .orbitV5Support>div{display:grid;gap:4px;min-width:0}
+.orbitBase2026 .orbitV5Support :is(b,span){font-size:13px!important}
+.orbitBase2026 .ob26LegacyStats{display:none!important}
+.orbitBase2026 .orbitUpdateBusy{position:static!important;display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:12px!important;padding:15px!important;border:1px solid #3b70a3!important;border-radius:12px!important;background:#112c49!important;font-size:13px!important}
+.orbitBase2026 .orbitUpdateBusy p{font-size:13px!important}
+.orbitBase2026 .orbitV5Hero,.orbitBase2026 .orbitV5Start,.orbitBase2026 .orbitV5Flow,.orbitBase2026 .orbitV5SingleWorkspace{min-width:0!important;max-width:100%!important}
+.orbitBase2026 .orbitV5FlowCards{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important}
+.orbitBase2026 .orbitV5FlowCard{min-width:0!important}
+.orbitBase2026 .orbitV5FlowCard b{font-size:13px!important}
+.orbitBase2026 .orbitV5FlowCard small{font-size:11px!important}
+.orbitBase2026 .orbitInstallerWorkspace{min-width:0!important}
+.orbitBase2026 .orbitInstallerWorkspace .form{display:grid;gap:14px!important}
+.orbitBase2026 .orbitV5Connections{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:13px!important}
+.orbitBase2026 .orbitV5FlowCard,.orbitBase2026 .orbitInstallerWorkspace{font-size:13px!important}
+.orbitBase2026 .orbitV5StepActions{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+@media(max-width:950px){.orbitBase2026 .ob26Snapshot{grid-template-columns:repeat(2,minmax(0,1fr))}.orbitBase2026 .ob26ProviderGrid,.orbitBase2026 .orbitZipControlGrid{grid-template-columns:1fr!important}.orbitBase2026 .orbitV5FlowCards{grid-template-columns:repeat(3,minmax(0,1fr))!important}.orbitBase2026 .orbitZipReleaseControls{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:640px){.orbitBase2026{padding:12px!important;gap:12px!important;font-size:13px!important}.orbitBase2026 .ob26Header{padding:17px!important}.orbitBase2026 .ob26Header h1{font-size:29px!important}.orbitBase2026 .ob26HeaderActions{width:100%;justify-content:flex-start}.orbitBase2026 .ob26HeaderActions :is(button,a){flex:1 1 125px}.orbitBase2026 .ob26Snapshot{gap:8px}.orbitBase2026 .ob26Metric{padding:12px}.orbitBase2026 .ob26Metric strong{font-size:16px!important}.orbitBase2026 .ob26Metric small,.orbitBase2026 .ob26Metric span{font-size:11px!important}.orbitBase2026 .ob26Nav{flex-wrap:nowrap!important}.orbitBase2026 .ob26Nav a{white-space:nowrap!important}.orbitBase2026 .ob26Instance,.orbitBase2026 .ob26Providers{padding:15px!important}.orbitBase2026 .ob26InstanceActions{width:100%;justify-content:flex-start}.orbitBase2026 .ob26InstanceActions :is(button,a){flex:1 1 125px}.orbitBase2026 .ob26Card{padding:14px!important}.orbitBase2026 .ob26Card dl{grid-template-columns:90px minmax(0,1fr)}.orbitBase2026 .ob26Actions>*{flex:1 1 135px}.orbitBase2026 .ob26ActionBar{padding:15px!important}.orbitBase2026 .ob26ActionControls{width:100%}.orbitBase2026 .ob26ActionControls>button{flex:1 1 180px}.orbitBase2026 .orbitZipReleaseControls{grid-template-columns:1fr!important}.orbitBase2026 .orbitZipReleaseControls>.orbitZipRefreshButton{width:100%!important}.orbitBase2026 .portalOverviewBottom{grid-template-columns:1fr!important}.orbitBase2026 .orbitLiveActivityRow{grid-template-columns:1fr!important;gap:3px!important}.orbitBase2026 .orbitV5FlowCards{grid-template-columns:repeat(2,minmax(0,1fr))!important}.orbitBase2026 .orbitV5Connections{grid-template-columns:1fr!important}.orbitBase2026 .ob26Monitor>summary{align-items:start}.orbitBase2026 .orbitV5ReviewGrid{grid-template-columns:1fr!important}}
+/* V6C deliberately shipped compact demo-only Base overrides. This console outranks
+   those selectors without changing other customer routes or themes. */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026{font-size:14px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .ob26MainPanel{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:16px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .ob26Instance{display:flex!important;flex-wrap:wrap!important;gap:15px!important;padding:20px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .ob26InstanceActions{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipReleaseControls{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr)) auto!important;gap:12px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipReleaseMeta{display:flex!important;justify-content:space-between!important;gap:10px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipControlGrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .portalOverviewBottom{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 :is(.ob26Metric,.ob26Card,.ob26Providers,.ob26Header,.ob26ActionBar,.ob26Monitor) :is(p,small,span,b,strong,a,button,label){font-size:inherit;line-height:1.45}
+@media(max-width:950px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipControlGrid{grid-template-columns:1fr!important}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipReleaseControls{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:640px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .portalOverviewBottom,html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .orbitZipReleaseControls{grid-template-columns:1fr!important}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBase2026 .ob26Instance{padding:15px!important}}

@@ -389,7 +389,13 @@ async function supabaseAccessToken(userId:string){
     const form=new URLSearchParams({grant_type:"refresh_token",refresh_token:refresh});
     const basic=Buffer.from(`${s.supabase_client_id}:${secret}`).toString("base64");
     const r=await fetch("https://api.supabase.com/v1/oauth/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded",accept:"application/json",authorization:`Basic ${basic}`},body:form});
-    if(!r.ok)throw Object.assign(new Error(`Supabase token refresh failed: ${await r.text()}`),{status:502});
+    if(!r.ok){
+      const detail=await r.text();
+      const invalidClient=/Unrecognized.client_id|invalid.client|invalid_client/i.test(detail);
+      throw Object.assign(new Error(invalidClient
+        ?"Supabase OAuth application rejected the configured client ID. An OrbitFS administrator must verify the Supabase OAuth client ID and matching secret, then you can reconnect Supabase from Base Management → Connections. Your customer database has not been removed."
+        :`Supabase token refresh failed: ${detail}`),{status:invalidClient?409:502,code:invalidClient?"SUPABASE_OAUTH_CLIENT_INVALID":"SUPABASE_TOKEN_REFRESH_FAILED"});
+    }
     const j=await r.json();await saveProviderConnection(userId,"supabase",j,conn.metadata||{});token=j.access_token;
   }
   return token;
