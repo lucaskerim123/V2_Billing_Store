@@ -94,58 +94,18 @@ jobs:
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
           echo "Quick Deploy source: $TARGET_BRANCH @ $commit"
 
-      - name: Reuse an existing production deployment for this commit
-        if: steps.profile.outputs.deploy == 'true'
-        id: existing
-        shell: bash
-        env:
-          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
-        run: |
-          set -euo pipefail
-          response_file="$(mktemp)"
-          trap 'rm -f "$response_file"' EXIT
-          status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
-            --header "Authorization: Bearer $VERCEL_TOKEN" \
-            "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&target=production&limit=100&teamId=$VERCEL_ORG_ID")"
-          if [ "$status" != "200" ]; then
-            echo "::error::Could not inspect existing Vercel production deployments (HTTP $status)."
-            cat "$response_file"
-            exit 1
-          fi
-          existing_url="$(node - "$response_file" "$SOURCE_COMMIT" <<'NODE'
-          const fs=require('fs');
-          const [file,sha]=process.argv.slice(2);
-          const body=JSON.parse(fs.readFileSync(file,'utf8'));
-          const rows=Array.isArray(body.deployments)?body.deployments:[];
-          const match=rows.find((row)=>{
-            const meta=row&&row.meta&&typeof row.meta==='object'?row.meta:{};
-            const state=String(row?.readyState||row?.state||'').toUpperCase();
-            return state==='READY' && String(meta.githubCommitSha||'')===sha && row?.url;
-          });
-          if(match)process.stdout.write(String(match.url).startsWith('http')?String(match.url):'https://'+String(match.url));
-          NODE
-          )"
-          if [ -n "$existing_url" ]; then
-            echo "reuse=true" >> "$GITHUB_OUTPUT"
-            echo "url=$existing_url" >> "$GITHUB_OUTPUT"
-            echo "Existing READY production deployment already represents $SOURCE_COMMIT: $existing_url"
-          else
-            echo "reuse=false" >> "$GITHUB_OUTPUT"
-            echo "No READY production deployment found for $SOURCE_COMMIT; a new deployment is required."
-          fi
-
       - name: Install pinned Vercel CLI
-        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
+        if: ${{ steps.profile.outputs.deploy == 'true' }}
         run: |
           npm install --global "vercel@$VERCEL_CLI_VERSION"
           vercel --version
 
       - name: Pull production configuration without deploying
-        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
+        if: ${{ steps.profile.outputs.deploy == 'true' }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN" --scope="$VERCEL_SCOPE"
 
       - name: Resolve authoritative Supabase public build configuration
-        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
+        if: ${{ steps.profile.outputs.deploy == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -184,7 +144,7 @@ jobs:
           echo "Resolved public build configuration from confirmed Supabase project $SUPABASE_PROJECT_ID."
 
       - name: Verify pulled production project identity
-        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
+        if: ${{ steps.profile.outputs.deploy == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -197,11 +157,11 @@ jobs:
           NODE
 
       - name: Build quick-deploy artifact without deploying
-        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
+        if: ${{ steps.profile.outputs.deploy == 'true' }}
         run: vercel build --prod --yes --token="$VERCEL_TOKEN" --scope="$VERCEL_SCOPE"
 
       - name: Verify quick-deploy artifact locally
-        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
+        if: ${{ steps.profile.outputs.deploy == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -212,15 +172,6 @@ jobs:
           const config=JSON.parse(fs.readFileSync('.vercel/output/config.json','utf8'));
           if(Number(config.version)!==3) throw new Error('Unexpected Vercel Build Output API version');
           NODE
-
-      - name: Report reused production deployment
-        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse == 'true') }}
-        run: |
-          echo "Quick deployment not required."
-          echo "Branch: ${{ steps.source.outputs.branch }}"
-          echo "Commit: ${{ steps.source.outputs.commit }}"
-          echo "Deployment: ${{ steps.existing.outputs.url }}"
-          echo "Reused existing deployment: true"
 
       - name: Recheck active profile immediately before production deployment
         if: steps.profile.outputs.deploy == 'true'
@@ -243,7 +194,7 @@ jobs:
 
       - name: Deploy validated quick artifact to production
         id: deploy
-        if: ${{ steps.profile.outputs.deploy == 'true' && (steps.existing.outputs.reuse != 'true') }}
+        if: ${{ steps.profile.outputs.deploy == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
