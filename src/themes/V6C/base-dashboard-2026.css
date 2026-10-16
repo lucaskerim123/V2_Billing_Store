@@ -198,3 +198,28 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route
  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .orbitZipReleaseControls{grid-template-columns:1fr!important}
  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitBase2026 .ob26Metric strong{font-size:16px!important}
 }
+
+/* Base v7: true top-menu pages, not an anchor-navigation scroll stack. */
+.orbitBasePages .ob26TopNav{display:flex!important;align-items:center!important;justify-content:flex-start!important;flex-wrap:nowrap!important;gap:7px!important;overflow-x:auto!important;scrollbar-width:thin!important;max-width:100%!important;padding:10px!important;margin:0!important}
+.orbitBasePages .ob26TopNav a{flex:0 0 auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:41px!important;padding:9px 13px!important;font-size:13px!important;color:#bed9ed!important;border:1px solid transparent!important;border-radius:8px!important;white-space:nowrap!important}
+.orbitBasePages .ob26TopNav a.active,.orbitBasePages .ob26TopNav a[aria-current="page"]{background:linear-gradient(135deg,#4930a8,#143964)!important;border-color:#6654d0!important;color:#fff!important;font-weight:750!important}
+.orbitBasePages .ob26Summary{margin-top:15px!important;border:1px solid #2c536d!important;border-radius:10px!important;background:#081d30!important}
+.orbitBasePages .ob26Summary>summary{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:10px!important;padding:15px 18px!important;color:#e9f6ff!important;cursor:pointer!important;list-style:none!important}
+.orbitBasePages .ob26Summary>summary::-webkit-details-marker{display:none}
+.orbitBasePages .ob26Summary>summary>span:first-child{font-size:15px!important;font-weight:750!important}
+.orbitBasePages .ob26Summary>summary>small{flex:1 1 220px;color:#a5c1d6!important;font-size:12px!important}
+.orbitBasePages .ob26Summary>summary>span:last-child{margin-left:auto;color:#95b9d4;font-size:17px!important}
+.orbitBasePages .ob26Summary[open]>summary>span:last-child{transform:rotate(180deg)}
+.orbitBasePages .ob26Summary .ob26Snapshot{margin:0!important;padding:0 14px 14px!important}
+.orbitBasePages .ob26MainPanel{display:flex!important;flex-direction:column!important;gap:16px!important}
+.orbitBasePages .ob26MainPanel>.ob26Providers,.orbitBasePages .ob26MainPanel>.orbitBaseDomainPanel,.orbitBasePages .ob26MainPanel>.orbitZipReleaseWorkspace,.orbitBasePages .ob26MainPanel>.ob26ActionBar,.orbitBasePages .ob26MainPanel>.orbitZipTechnicalDetails,.orbitBasePages .ob26MainPanel>.orbitZipLifecyclePanel,.orbitBasePages .ob26MainPanel>.ob26Instance{width:100%!important;max-width:100%!important}
+.orbitBasePages .ob26MainPanel>.ob26SectionHead{padding:13px 2px!important}
+.orbitBasePages .ob26RefreshWarning{margin:0!important;border:1px solid #876b3e!important;background:#33291b!important;color:#ffe1a2!important}
+.orbitBasePages .ob26LastFailure{border-color:#7e5141!important}
+.orbitBasePages .orbitZipTechnicalDetails[open],.orbitBasePages .orbitZipLifecyclePanel[open]{display:block!important}
+.orbitBasePages .ob26Monitor{margin:0!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBasePages.orbitfsBaseV3 .ob26TopNav{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:7px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBasePages.orbitfsBaseV3 .ob26MainPanel{display:flex!important;flex-direction:column!important;gap:16px!important}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBasePages.orbitfsBaseV3 .ob26Summary .ob26Snapshot{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:11px!important}
+@media(max-width:950px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitBasePages.orbitfsBaseV3 .ob26Summary .ob26Snapshot{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:640px){.orbitBasePages .ob26TopNav{padding:8px!important}.orbitBasePages .ob26TopNav a{font-size:12px!important;padding:9px 12px!important}.orbitBasePages .ob26Summary>summary{padding:12px!important}.orbitBasePages .ob26Summary .ob26Snapshot{padding:0 10px 10px!important}}
