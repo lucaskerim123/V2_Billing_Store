@@ -618,7 +618,7 @@ export default function OrbitFSUpdateReleaseSystem(){
         <h2>{progressMode==="rollback"?"Rolling back installed Update":"Installing OrbitFS Update"}</h2>
         <p>{progressMode==="rollback"?"Using the existing authorized rollback workflow. Database migrations remain applied.":"The steps below reflect actual execution events, not estimated percentages."}</p>
         <small className="muted">LIVE · refreshes every 60 seconds{progress?.lastCheckedAt?" · last checked "+dateLabel(progress.lastCheckedAt):""}</small>
-        </div><span className={"state "+(failedEvent?"waiting":completedEvent?"ready":"current")}>{failedEvent?"NEEDS ATTENTION":completedEvent?"COMPLETE":"IN PROGRESS"}</span></div>
+        </div><span className="state current">IN PROGRESS</span></div>
       <div className="orbitV5UpdateTimeline">
         {phases.map((phase,index)=>{
           const status=phaseStatus(trackedEvents,phase.start,phase.end);
@@ -628,10 +628,9 @@ export default function OrbitFSUpdateReleaseSystem(){
           </div>;
         })}
       </div>
-      {failedEvent&&<div className="orbitV5UpdateWarning"><b>Update operation needs attention</b><p>{failedEvent.message}</p></div>}
       {progressIssue&&<p className="orbitV5UpdateHint">{progressIssue} Progress can be refreshed without restarting the operation.</p>}
       {!trackedEvents.length&&<p className="orbitV5UpdateHint">Waiting for the server to validate the selected release and report its first event.</p>}
-      <details className="orbitV5UpdateActivity" open={Boolean(failedEvent)}>
+      <details className="orbitV5UpdateActivity">
         <summary>Execution events ({trackedEvents.length})</summary>
         {trackedEvents.length?<ol>{trackedEvents.slice(0,15).map(event=><li key={event.id}>
           <span>{dateLabel(event.createdAt)||"Recorded"}</span><p>{event.message}</p>
@@ -639,8 +638,6 @@ export default function OrbitFSUpdateReleaseSystem(){
       </details>
       <div className="orbitV5UpdateActions">
         <button type="button" className="secondary" disabled={!install?.id} onClick={()=>void refreshProgress(String(install.id))}>Refresh progress</button>
-        {!busy&&(failedEvent||completedEvent||progressIssue)&&<button type="button" className="secondary" onClick={()=>{setStage(2);navigate("catalog")}}>Return to Update selection</button>}
-        {completedEvent&&!busy&&<button type="button" onClick={()=>{void load(true);setStage(5);navigate("installed")}}>View completed Update →</button>}
       </div>
     </section>}
 
