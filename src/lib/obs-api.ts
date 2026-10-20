@@ -1,6 +1,6 @@
 import {createHash,randomBytes,timingSafeEqual} from "node:crypto";
 import {createClient} from "@supabase/supabase-js";
-export const OBS_SCOPES=["customers.read","orders.read","invoices.read","payments.read","licenses.link"] as const;
+export const OBS_SCOPES=["customers.read","customers.write","orders.read","orders.write","invoices.read","invoices.write","payments.read","payments.write","licenses.link","billing.override","billing.admin"] as const;
 export type ObsScope=typeof OBS_SCOPES[number];
 export const obsDb=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",process.env.SUPABASE_SERVICE_ROLE_KEY||"",{auth:{persistSession:false,autoRefreshToken:false}});
 const hash=(token:string)=>createHash("sha256").update(token).digest("hex");
@@ -9,7 +9,7 @@ export async function authorizeObs(req:Request,scope:ObsScope){
  const key=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
  if(!/^OBS-[A-Za-z0-9_-]{43}$/.test(key))return null;
  const {data,error}=await obsDb().from("orbitfs_billing_api_keys").select("id,name,scopes,status,key_hash").eq("key_hash",hash(key)).eq("status","active").maybeSingle();
- if(error||!data||!Array.isArray(data.scopes)||!data.scopes.includes(scope))return null;
+ if(error||!data||!Array.isArray(data.scopes)||!(data.scopes.includes(scope)||data.scopes.includes("billing.admin")))return null;
  const expected=Buffer.from(data.key_hash,"hex"),actual=Buffer.from(hash(key),"hex");
  return expected.length===actual.length&&timingSafeEqual(expected,actual)?{id:data.id,name:data.name}:null;
 }
