@@ -22,7 +22,11 @@ export async function obsAdmin(req:Request){
  const db=obsDb();const {data:{user},error}=await db.auth.getUser(bearer);
  if(error||!user)return null;
  const {data:access,error:accessError}=await createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"",{global:{headers:{Authorization:"Bearer "+bearer}},auth:{persistSession:false}}).rpc("get_my_staff_access");
- if(accessError||access?.is_staff!==true||!(access?.permissions?.all===true||["superadmin","owner"].includes(String(access?.primary_role||"").toLowerCase())))return null;
+ if(accessError||access?.is_staff!==true)return null;
+ const {data:profile,error:profileError}=await db.from("user_profiles").select("role").eq("id",user.id).maybeSingle();
+ if(profileError)return null;
+ const privileged=profile?.role==="superadmin"||access?.permissions?.all===true||access?.permissions?.["license_api.manage"]===true;
+ if(!privileged)return null;
  return user;
 }
 export async function storeObsKey(name:string,scopes:ObsScope[],actor:string,target_profile:ObsProfile){
