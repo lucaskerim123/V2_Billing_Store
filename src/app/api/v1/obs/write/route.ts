@@ -24,6 +24,18 @@ export async function POST(req:Request){
   });
   return error?json({error:error.message},409):json(data);
  }
+ if(action==="adjust_amounts"&&resource==="invoices"){
+  const id=String(body.id||"");
+  const values=body.values;
+  if(!uuid.test(id)||!values||typeof values!=="object"||Array.isArray(values))return json({error:"Invoice adjustment requires a valid invoice UUID and amounts"},400);
+  const keys=["subtotal_cents","discount_cents","tax_cents","total_cents"];
+  if(Object.keys(values).length!==4||!keys.every(k=>Number.isSafeInteger(values[k])&&values[k]>=0&&values[k]<=100000000000))return json({error:"All four nonnegative integer amount fields are required"},400);
+  const input=Object.fromEntries(keys.map(k=>[k,values[k]]));
+  const {data,error}=await db.rpc("obs_adjust_invoice",{
+   p_key_id:actor.id,p_profile:profile,p_invoice_id:id,p_values:input,p_reason:reason
+  });
+  return error?json({error:error.message},409):json(data);
+ }
  if(action!=="update")return json({error:"Unsupported action for resource"},400);
  const id=String(body.id||"");
  const changes=body.changes;
