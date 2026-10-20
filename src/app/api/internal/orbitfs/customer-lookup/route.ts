@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import {authorizeObs} from "@/lib/obs-api";
 import {masterLicenses} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 import {canonicalLicenseStatus} from "@/lib/license-status";
@@ -75,7 +76,7 @@ export async function GET(req:Request){
 }
 
 export async function POST(req:Request){
- if(!authorized(req))return Response.json({error:"UNAUTHORIZED"},{status:401});
+ if(!authorized(req)&&!await authorizeObs(req,'licenses.link'))return Response.json({error:"UNAUTHORIZED"},{status:401});
  try{
   const body:any=await req.json().catch(()=>({}));
   const action=String(body.action||"").trim().toLowerCase();
