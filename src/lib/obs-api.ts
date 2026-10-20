@@ -6,10 +6,10 @@ export const obsDb=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",pro
 const hash=(token:string)=>createHash("sha256").update(token).digest("hex");
 export type ObsProfile="main"|"fallback"|"both";
 export const obsProfile=():Exclude<ObsProfile,"both">=>"main";
-export const createObsToken=()=>"OBS-"+randomBytes(32).toString("base64url");
+export const createObsToken=()=>"obs_"+randomBytes(32).toString("base64url");
 export async function authorizeObs(req:Request,scope:ObsScope){
  const key=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
- if(!/^OBS-[A-Za-z0-9_-]{43}$/.test(key))return null;
+ if(!/^(?:obs_|OBS-)[A-Za-z0-9_-]{43}$/.test(key))return null;
  const {data,error}=await obsDb().from("orbitfs_billing_api_keys").select("id,name,scopes,status,key_hash,target_profile").eq("key_hash",hash(key)).eq("status","active").maybeSingle();
  if(error||!data||!Array.isArray(data.scopes)||!(data.scopes.includes(scope)||data.scopes.includes("billing.admin")))return null;
  const profile=obsProfile();if(data.target_profile!=="both"&&data.target_profile!==profile)return null;
@@ -18,11 +18,11 @@ export async function authorizeObs(req:Request,scope:ObsScope){
 }
 export async function obsAdmin(req:Request){
  const bearer=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
- if(!bearer||bearer.startsWith("OBS-"))return null;
+ if(!bearer||/^(?:obs_|OBS-)/.test(bearer))return null;
  const db=obsDb();const {data:{user},error}=await db.auth.getUser(bearer);
  if(error||!user)return null;
  const {data:access,error:accessError}=await createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"",{global:{headers:{Authorization:"Bearer "+bearer}},auth:{persistSession:false}}).rpc("get_my_staff_access");
- if(accessError||!access?.permissions?.all)return null;
+ if(accessError||access?.is_staff!==true||!(access?.permissions?.all===true||["superadmin","owner"].includes(String(access?.primary_role||"").toLowerCase())))return null;
  return user;
 }
 export async function storeObsKey(name:string,scopes:ObsScope[],actor:string,target_profile:ObsProfile){
