@@ -43,21 +43,22 @@ async function findCustomer(identity:string){
 }
 async function snapshot(identity:string){
  const db=licenseDb(),customer=await findCustomer(identity);
- if(!customer)return {customer:null,profile:null,orders:[],orderItems:[],bindings:[],installations:[],providerConnections:[]};
+ if(!customer)return {customer:null,profile:null,orders:[],orderItems:[],invoices:[],bindings:[],installations:[],providerConnections:[]};
  const userId=String(customer.auth_user_id||customer.user_id||"").trim();
- if(!userId)return {customer,profile:null,orders:[],orderItems:[],bindings:[],installations:[],providerConnections:[]};
- const [profile,orders,bindings,installations,providerConnections]=await Promise.all([
+ if(!userId)return {customer,profile:null,orders:[],orderItems:[],invoices:[],bindings:[],installations:[],providerConnections:[]};
+ const [profile,orders,invoices,bindings,installations,providerConnections]=await Promise.all([
   db.from("user_profiles").select("*").eq("id",userId).maybeSingle(),
   db.from("orders").select("*").eq("auth_user_id",userId).order("created_at",{ascending:false}).limit(50),
+  db.from("invoices").select("id,invoice_number,order_id,status,total_cents,due_at,created_at,currency").eq("auth_user_id",userId).order("created_at",{ascending:false}).limit(50),
   db.from("license_bindings").select("*").eq("auth_user_id",userId).is("archived_at",null).order("created_at",{ascending:false}),
   db.from("orbitfs_installations").select("*").eq("auth_user_id",userId).order("created_at",{ascending:false}),
   db.from("orbitfs_provider_connections").select("id,provider,status,provider_account_id,provider_account_name,team_id,scopes,token_expires_at,connected_at,refreshed_at,last_error,metadata").eq("auth_user_id",userId).order("refreshed_at",{ascending:false})
  ]);
- for(const row of [profile,orders,bindings,installations,providerConnections])if(row.error)throw row.error;
+ for(const row of [profile,orders,invoices,bindings,installations,providerConnections])if(row.error)throw row.error;
  const orderRows=orders.data||[],orderIds=orderRows.map((x:any)=>x.id).filter(Boolean);
  const orderItems=orderIds.length?await db.from("order_items").select("*").in("order_id",orderIds).order("id"):{data:[],error:null} as any;
  if(orderItems.error)throw orderItems.error;
- return {customer,profile:profile.data||null,orders:orderRows,orderItems:orderItems.data||[],bindings:bindings.data||[],installations:installations.data||[],providerConnections:providerConnections.data||[]};
+ return {customer,profile:profile.data||null,orders:orderRows,orderItems:orderItems.data||[],invoices:invoices.data||[],bindings:bindings.data||[],installations:installations.data||[],providerConnections:providerConnections.data||[]};
 }
 
 export async function GET(req:Request){
