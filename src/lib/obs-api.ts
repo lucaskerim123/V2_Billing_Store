@@ -5,12 +5,7 @@ export type ObsScope=typeof OBS_SCOPES[number];
 export const obsDb=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",process.env.SUPABASE_SERVICE_ROLE_KEY||"",{auth:{persistSession:false,autoRefreshToken:false}});
 const hash=(token:string)=>createHash("sha256").update(token).digest("hex");
 export type ObsProfile="main"|"fallback"|"both";
-export const obsProfile=():Exclude<ObsProfile,"both">=>{
- const value=String(process.env.ORBITFS_GITHUB_PROFILE||process.env.GITHUB_PROFILE||process.env.NEXT_PUBLIC_GITHUB_PROFILE||"").trim().toLowerCase();
- if(["main","primary"].includes(value))return "main";
- if(["fallback","secondary"].includes(value))return "fallback";
- throw new Error("OBS API requires explicit Billing deployment profile configuration.");
-};
+export const obsProfile=():Exclude<ObsProfile,"both">=>"main";
 export const createObsToken=()=>"OBS-"+randomBytes(32).toString("base64url");
 export async function authorizeObs(req:Request,scope:ObsScope){
  const key=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
