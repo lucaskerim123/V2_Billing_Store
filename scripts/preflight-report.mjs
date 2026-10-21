@@ -32,6 +32,7 @@ run("Whitespace / patch integrity","git",["diff","--check"]);
 run("Base lifecycle contract","node",["scripts/check-base-lifecycle-contract.mjs"]);
 run("Canonical licence status contract","node",["--test","scripts/license-status-contract.test.mjs"]);
 run("Immediate account enforcement contract","node",["--test","scripts/account-enforcement-immediate-sync.test.mjs"]);
+run("Fallback source-mode guard", "node", ["--test","scripts/fallback-proxy.test.mjs"]);
 run("Theme package validation",npm,["run","theme:validate"]);
 run("Lint",npm,["run","lint"]);
 run("Typecheck",npm,["run","typecheck"]);

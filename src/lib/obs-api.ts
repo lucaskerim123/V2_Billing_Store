@@ -5,7 +5,7 @@ export type ObsScope=typeof OBS_SCOPES[number];
 export const obsDb=()=>createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",process.env.SUPABASE_SERVICE_ROLE_KEY||"",{auth:{persistSession:false,autoRefreshToken:false}});
 const hash=(token:string)=>createHash("sha256").update(token).digest("hex");
 export type ObsProfile="main"|"fallback"|"both";
-export const obsProfile=():Exclude<ObsProfile,"both">=>"main";
+export const obsProfile=():Exclude<ObsProfile,"both">=>"fallback";
 export const createObsToken=()=>"obs_"+randomBytes(32).toString("base64url");
 export async function authorizeObs(req:Request,scope:ObsScope){
  const key=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
