@@ -213,8 +213,8 @@ export default function MyOrbitFS({section="overview"}:{section?:BaseManagementS
   useEffect(()=>{if(selectedRelease?.id&&!selectedReleaseId)setSelectedReleaseId(String(selectedRelease.id))},[selectedRelease?.id,selectedReleaseId]);
   useEffect(()=>{if(vercelConnection?.team_id!==undefined&&vercelConnection?.team_id!==null&&!vercelTeamId)setVercelTeamId(String(vercelConnection.team_id))},[vercelConnection?.team_id]);
   useEffect(()=>{
-    if(!install?.id)return;
     const live=working||deploymentRequestActive;
+    if(!install?.id||!live)return;
     let requestRunning=false;
     let cancelled=false;
     async function refreshVisible(){
@@ -225,7 +225,7 @@ export default function MyOrbitFS({section="overview"}:{section?:BaseManagementS
       catch{if(!cancelled&&live)setMsg("Could not refresh live deployment progress. Retrying automatically.")}
       finally{requestRunning=false}
     }
-    const timer=setInterval(()=>void refreshVisible(),live?15000:60000);
+    const timer=setInterval(()=>void refreshVisible(),15000);
     const onFocus=()=>void refreshVisible();
     const onVisibility=()=>{if(document.visibilityState==="visible")void refreshVisible()};
     window.addEventListener("focus",onFocus);

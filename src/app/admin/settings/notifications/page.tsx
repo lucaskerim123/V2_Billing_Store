@@ -1,0 +1,3 @@
+"use client";
+import NotificationPreferences from "@/components/NotificationPreferences";
+export default function AdminNotificationSettings(){return <main className="adminShell" style={{maxWidth:850}}><header className="adminTop"><div><p className="eyebrow">ADMIN · PERSONAL PREFERENCES</p><h1>My notifications</h1><p className="muted">Operational notifications remain accessible regardless of quiet settings.</p></div></header><NotificationPreferences surface="admin"/></main>;}

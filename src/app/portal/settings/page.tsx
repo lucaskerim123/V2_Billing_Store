@@ -3,6 +3,7 @@
 import {FormEvent,useEffect,useState} from "react";
 import {createClient} from "@/lib/supabase";
 import {trackCustomerActivity} from "@/lib/customer-activity";
+import NotificationPreferences from "@/components/NotificationPreferences";
 
 const money=(cents:any)=>new Intl.NumberFormat("en-AU",{style:"currency",currency:"AUD"}).format(Number(cents||0)/100);
 type Tab="profile"|"billing"|"wallet"|"preferences"|"security";
@@ -121,6 +122,7 @@ export default function Settings(){
    {tab==="billing"&&<section className="panel accountSettingsCard"><div className="settingsSectionHead"><div><p className="eyebrow">BILLING</p><h2>Billing details</h2><p className="muted">These fields are the canonical customer billing details used on invoices.</p></div></div><div className="form"><label>Address line 1<input value={profile.address_line1||""} onChange={e=>setProfile({...profile,address_line1:e.target.value})}/></label><label>Address line 2<input value={profile.address_line2||""} onChange={e=>setProfile({...profile,address_line2:e.target.value})}/></label><div className="two"><label>City<input value={profile.city||""} onChange={e=>setProfile({...profile,city:e.target.value})}/></label><label>State / region<input value={profile.state_region||""} onChange={e=>setProfile({...profile,state_region:e.target.value})}/></label></div><div className="two"><label>Postcode<input value={profile.postal_code||""} onChange={e=>setProfile({...profile,postal_code:e.target.value})}/></label><label>Country code<input value={profile.country_code||""} onChange={e=>setProfile({...profile,country_code:e.target.value.toUpperCase()})} placeholder="AU"/></label></div><div className="billingPreview"><small>INVOICE PREVIEW</small><b>{[profile.first_name,profile.last_name].filter(Boolean).join(" ")||profile.display_name||"Customer"}</b>{profile.company_name&&<span>{profile.company_name}</span>}<span>{customerId}</span><span>{[profile.address_line1,profile.address_line2,profile.city,profile.state_region,profile.postal_code,profile.country_code].filter(Boolean).join(", ")||"No billing address set"}</span></div></div></section>}
 
    {tab==="preferences"&&<>
+    <NotificationPreferences surface="portal"/>
     <details className="panel accountSettingsCard mailSettingsAccordion">
      <summary className="mailSettingsHeading"><div><p className="eyebrow">PREFERENCES</p><h2>Appearance</h2><span className="muted">Theme and colour settings</span></div><span className="mailSettingsChevron" aria-hidden="true">⌄</span></summary>
      <div className="form mailSettingsPanelBody" style={{maxWidth:560}}><div className="two"><label>Theme<select value={prefs.theme||"system"} onChange={e=>setPrefs({...prefs,theme:e.target.value})}><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></label><label>Accent<select value={prefs.accent||"blue"} onChange={e=>setPrefs({...prefs,accent:e.target.value})}><option value="blue">Blue</option><option value="violet">Violet</option><option value="green">Green</option><option value="orange">Orange</option></select></label></div></div>

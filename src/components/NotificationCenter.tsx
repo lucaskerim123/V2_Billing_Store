@@ -66,6 +66,10 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
   const [userId,setUserId]=useState("");
   const [realtimeEnabled,setRealtimeEnabled]=useState(true);
   const [panelStyle,setPanelStyle]=useState<CSSProperties>({});
+  const [interruptPrefs,setInterruptPrefs]=useState({do_not_disturb:false,quiet_start:"",quiet_end:"",muted_categories:[] as string[],allow_critical_override:true});
+  const [clock,setClock]=useState(()=>Date.now());
+  useEffect(()=>{if(!userId)return;const refresh=async()=>{const {data}=await sb.from("notification_preferences").select("do_not_disturb,quiet_start,quiet_end,muted_categories,allow_critical_override").eq("user_id",userId).eq("surface",surface).maybeSingle();if(data)setInterruptPrefs({do_not_disturb:!!data.do_not_disturb,quiet_start:String(data.quiet_start||"").slice(0,5),quiet_end:String(data.quiet_end||"").slice(0,5),muted_categories:Array.isArray(data.muted_categories)?data.muted_categories:[],allow_critical_override:data.allow_critical_override!==false});else setInterruptPrefs({do_not_disturb:false,quiet_start:"",quiet_end:"",muted_categories:[],allow_critical_override:true})};window.addEventListener("orbitfs-notification-preferences-updated",refresh);return()=>window.removeEventListener("orbitfs-notification-preferences-updated",refresh)},[sb,userId,surface]);
+  useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),60000);return()=>clearInterval(timer)},[]);
 
   const load=useCallback(async(limit=40)=>{
     const {data,error:e}=await sb.rpc("notification_feed",{p_surface:surface,p_limit:limit});
@@ -82,6 +86,8 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
       const {data:{user}}=await sb.auth.getUser();
       if(!user||cancelled){setConfigReady(true);return}
       setUserId(user.id);
+      const {data:preferences}=await sb.from("notification_preferences").select("do_not_disturb,quiet_start,quiet_end,muted_categories,allow_critical_override").eq("user_id",user.id).eq("surface",surface).maybeSingle();
+      if(preferences)setInterruptPrefs({do_not_disturb:!!preferences.do_not_disturb,quiet_start:String(preferences.quiet_start||"").slice(0,5),quiet_end:String(preferences.quiet_end||"").slice(0,5),muted_categories:Array.isArray(preferences.muted_categories)?preferences.muted_categories:[],allow_critical_override:preferences.allow_critical_override!==false});
 
       const settingsResult=await sb.rpc("orbitfs_alert_client_settings");
       const cfg:ClientSettings=settingsResult.error?{enabled:true,realtime_enabled:true,feed_limit:40}:settingsResult.data as ClientSettings;
@@ -119,14 +125,11 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
     const channel=sb.channel(`orbitfs-notifications-${surface}-${userId}`)
       .on("postgres_changes",{event:"*",schema:"public",table:"notifications",filter:`recipient_user_id=eq.${userId}`},payload=>{
         const row=(payload.new&&Object.keys(payload.new).length?payload.new:payload.old) as Record<string,any>;
-        if(!row?.surface||row.surface===surface)refresh();
+        if(!row?.surface||row.surface===surface){refresh();window.dispatchEvent(new Event("orbitfs-notifications-changed"))}
       })
       .subscribe();
-    const onFocus=()=>void load(feedLimit);
-    window.addEventListener("focus",onFocus);
     return()=>{
       if(refreshTimer)clearTimeout(refreshTimer);
-      window.removeEventListener("focus",onFocus);
       void sb.removeChannel(channel);
     };
   },[sb,surface,userId,configReady,systemEnabled,realtimeEnabled,feedLimit,load]);
@@ -229,7 +232,13 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
   }
 
 
-  const directBanners=items.filter(n=>n.metadata?.manual===true&&(notificationKind(n)==="alert"||notificationKind(n)==="announcement")&&!n.acknowledged_at).slice(0,3);
+  const currentTime=new Date(clock);
+  const nowMinute=currentTime.getHours()*60+currentTime.getMinutes();
+  const asMinute=(value:string)=>{const [h,m]=value.split(":").map(Number);return Number.isFinite(h)&&Number.isFinite(m)?h*60+m:-1};
+  const quietStart=asMinute(interruptPrefs.quiet_start),quietEnd=asMinute(interruptPrefs.quiet_end);
+  const withinQuietHours=quietStart>=0&&quietEnd>=0&&quietStart!==quietEnd&&(quietStart<quietEnd?nowMinute>=quietStart&&nowMinute<quietEnd:nowMinute>=quietStart||nowMinute<quietEnd);
+  const interruptionsMuted=interruptPrefs.do_not_disturb||withinQuietHours;
+  const directBanners=items.filter(n=>n.metadata?.manual===true&&(notificationKind(n)==="alert"||notificationKind(n)==="announcement")&&!n.acknowledged_at&&(!(interruptionsMuted||interruptPrefs.muted_categories.includes(n.category))||n.metadata?.override_dnd===true||(n.severity==="error"&&interruptPrefs.allow_critical_override))).slice(0,3);
 
   if(!configReady||!systemEnabled)return null;
 

@@ -1,5 +1,9 @@
-const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
-const SUPABASE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||'';
+function env(value:string|undefined){
+ const s=String(value||"").trim();
+ return s.length>1&&((s.startsWith('"')&&s.endsWith('"'))||(s.startsWith("'")&&s.endsWith("'")))?s.slice(1,-1).trim():s;
+}
+const SUPABASE_URL=env(process.env.NEXT_PUBLIC_SUPABASE_URL).replace(/\/+$/,"");
+const SUPABASE_KEY=env(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 export async function userFromToken(token:string){
  const r=await fetch(`${SUPABASE_URL}/auth/v1/user`,{headers:{apikey:SUPABASE_KEY,authorization:`Bearer ${token}`}});
  if(!r.ok)throw new Error('Unauthorized'); return r.json();
@@ -9,7 +13,7 @@ export async function userRpc(token:string,name:string,body:any={}){
  if(!r.ok)throw new Error(await r.text()); return r.json();
 }
 export async function serviceRpc(name:string,body:any={}){
- const key=process.env.SUPABASE_SERVICE_ROLE_KEY;if(!key)throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+ const key=env(process.env.SUPABASE_SECRET_KEY)||env(process.env.SUPABASE_SERVICE_ROLE_KEY);if(!key)throw new Error('A Supabase server credential is not configured');
  const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:key,authorization:`Bearer ${key}`,'content-type':'application/json'},body:JSON.stringify(body)});
  if(!r.ok)throw new Error(await r.text()); return r.json();
 }

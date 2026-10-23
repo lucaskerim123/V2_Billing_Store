@@ -1,3 +1,5 @@
+import {randomBytes,createHash} from "node:crypto";
+import {sendAutomation} from "@/lib/transactional-server";
 import {createClient} from "@supabase/supabase-js";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
@@ -20,6 +22,15 @@ async function context(req:Request){
 function cleanPermissions(v:any){const out:Record<string,boolean>={};if(v&&typeof v==="object")for(const [k,x] of Object.entries(v))if(typeof x==="boolean")out[k]=x;return out}
 function slugify(v:string){return v.trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)}
 async function audit(db:any,userId:string,action:string,targetType:string,targetId:string,detail:any){try{await db.from("admin_audit_log").insert({actor_id:userId,action,target_type:targetType,target_id:targetId,detail})}catch{}}
+async function staffNotice(userId:string,eventType:string,title:string,message:string,surface:"admin"|"portal"="admin",severity:"info"|"warning"|"error"="info"){
+ try{
+ const key=process.env.SUPABASE_SERVICE_ROLE_KEY;if(!url||!key)return;
+ const service=createClient(url,key,{auth:{persistSession:false}});
+ const {error}=await service.rpc("notification_emit",{p_recipient_user_id:userId,p_surface:surface,p_category:"staff",p_event_type:eventType,p_title:title,p_message:message,p_severity:severity,p_source_type:"staff_access",p_source_id:userId,p_action_url:surface==="admin"?"/admin/settings/staff/members":"/portal/settings",p_metadata:{kind:"notification"},p_dedupe_key:eventType+":"+userId+":"+Date.now()});
+ if(error)console.error("[staff/notifications] Delivery failed:",error.message);
+ }catch(error){console.error("[staff/notifications] Error:",error)}
+}
+
 
 export async function GET(req:Request){
   try{
@@ -58,6 +69,7 @@ export async function POST(req:Request){
       const target=String(body.user_id||"");if(!target)return Response.json({error:"Missing staff member."},{status:400});
       const {error}=await db.rpc("admin_remove_staff_member",{p_user_id:target});
       if(error)return Response.json({error:error.message},{status:400});
+      await staffNotice(target,"staff.access.removed","Staff access removed","Your staff access has been removed. Your customer account remains active.","portal","warning");
       return Response.json({ok:true});
     }
 
@@ -95,6 +107,8 @@ export async function POST(req:Request){
       if(existing.slug!=="superadmin"&&String(body.name||"").trim())patch.name=String(body.name).trim();
       const {data,error}=await db.from("staff_groups").update(patch).eq("id",id).select().single();if(error)return Response.json({error:error.message},{status:400});
       await audit(db,user.id,"staff.group_updated","staff_group",id,{slug:existing.slug,permission_count:Object.values(permissions).filter(Boolean).length});
+      const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if(key){const service=createClient(url,key,{auth:{persistSession:false}});const {data:assigned}=await service.from("staff_member_groups").select("user_id").eq("group_id",id);for(const uid of new Set((assigned||[]).map((member:any)=>String(member.user_id))))await staffNotice(uid,"staff.group.permissions_updated","Staff group permissions changed","Your assigned staff group permissions have been updated.","admin","warning");}
       return Response.json({ok:true,group:data});
     }
 
@@ -106,16 +120,43 @@ export async function POST(req:Request){
     if(groupRows.some((g:any)=>g.slug==="superadmin")&&!allowed(access,"settings.permissions"))return Response.json({error:"Only permission administrators can assign Superadmin."},{status:403});
 
     let target=String(body.existing_user_id||body.user_id||"");
-    if(!target){
+    // New staff membership must be accepted by email, never granted on invitation.
+    const {data:existingStaff}=target?await db.from("staff_members").select("user_id").eq("user_id",target).maybeSingle():{data:null};
+    if(!existingStaff){
       if(!(allowed(access,"staff.invite")||allowed(access,"settings.permissions")))return Response.json({error:"Staff invite permission required."},{status:403});
-      const email=String(body.email||"").trim().toLowerCase(),first=String(body.first_name||"").trim(),last=String(body.last_name||"").trim();
-      if(!email||!first||!last)return Response.json({error:"First name, last name and email are required for a new staff user."},{status:400});
-      const invite=await fetch(`${url}/functions/v1/admin-invite-staff`,{method:"POST",headers:{authorization:`Bearer ${token}`,apikey:publicKey,"content-type":"application/json"},body:JSON.stringify({email,first_name:first,last_name:last})});
-      const ij=await invite.json().catch(()=>({}));
-      if(!invite.ok||!ij.user_id)return Response.json({error:ij.error||"Could not invite staff user."},{status:invite.status||400});
-      target=String(ij.user_id);
+      const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if(!serviceKey)return Response.json({error:"Staff invitation service is not configured."},{status:503});
+      const service=createClient(url,serviceKey,{auth:{persistSession:false}});
+      let email=String(body.email||"").trim().toLowerCase();
+      if(target){
+        const {data:existing,error:lookupError}=await service.auth.admin.getUserById(target);
+        if(lookupError||!existing?.user?.email)return Response.json({error:"Customer account not found."},{status:404});
+        email=existing.user.email.toLowerCase();
+      }
+      if(!email||!email.includes("@"))return Response.json({error:"Valid recipient email required."},{status:400});
+      const tokenValue=randomBytes(32).toString("hex");
+      const tokenHash=createHash("sha256").update(tokenValue).digest("hex");
+      const requestedDepartments=[...new Set<string>((Array.isArray(body.department_ids)?body.department_ids:[]).map(String).filter(Boolean))];
+      const primaryDepartment=requestedDepartments.includes(String(body.primary_department_id||""))?String(body.primary_department_id):requestedDepartments[0]||null;
+      const {data:pending,error:pendingError}=await service.from("staff_invitations").insert({
+        email,user_id:target||null,token_hash:tokenHash,group_ids:requestedGroups,
+        primary_group_id:requestedGroups.includes(String(body.primary_group_id||""))?String(body.primary_group_id):requestedGroups[0],
+        title:String(body.title||""),staff_notes:String(body.staff_notes||""),
+        department_ids:requestedDepartments,primary_department_id:primaryDepartment,created_by:user.id
+      }).select("id").single();
+      if(pendingError||!pending)return Response.json({error:pendingError?.message||"Unable to create invitation."},{status:400});
+      try{
+        const origin=new URL(req.url).origin;
+        const invitationUrl=`${origin}/portal/staff-invite?token=${encodeURIComponent(tokenValue)}`;
+        const delivery=await sendAutomation("staff.invite",email,{invite_url:invitationUrl},"staff_invitation",pending.id);
+        if("skipped" in delivery && delivery.skipped)throw new Error("Staff invite automation was skipped; no email was sent.");
+      }catch(e:any){
+        await service.from("staff_invitations").delete().eq("id",pending.id);
+        return Response.json({error:e?.message||"Invitation email failed."},{status:502});
+      }
+      await audit(db,user.id,"staff.invitation_sent","staff_invitation",pending.id,{email,group_count:requestedGroups.length});
+      return Response.json({ok:true,pending:true,message:"Invitation emailed. Staff permissions activate only after acceptance."});
     }
-
     const requestedDepartments:string[]=[...new Set<string>((Array.isArray(body.department_ids)?body.department_ids:[]).map((x:any)=>String(x)).filter(Boolean))];
     let departmentName="";
     if(requestedDepartments.length){
@@ -137,6 +178,7 @@ export async function POST(req:Request){
     if(error)return Response.json({error:error.message},{status:400});
     const {error:departmentSaveError}=await db.rpc("admin_set_staff_departments",{p_user_id:target,p_department_ids:requestedDepartments});
     if(departmentSaveError)return Response.json({error:departmentSaveError.message},{status:400});
+    await staffNotice(target,"staff.permissions.changed","Staff permissions updated","Your staff groups or permissions were updated.","admin",groupRows.some((g:any)=>g.slug==="superadmin")?"warning":"info");
     return Response.json({ok:true,id:target,result:data,department_ids:requestedDepartments});
   }catch(e:any){return Response.json({error:e.message||"Staff operation failed."},{status:e.status||500})}
 }

@@ -28,7 +28,8 @@ export default function LoginPage(){
   try{localStorage.removeItem("orbitfs_account_blocked");sessionStorage.removeItem("orbitfs_account_blocked")}catch{}
   // The canonical cookie was set by the API; a full navigation ensures both
   // browser and server components see the new sessions before portal guards run.
-  window.location.assign("/portal");
+  const next=new URLSearchParams(window.location.search).get("next");
+  window.location.assign(next?.startsWith("/portal/staff-invite?token=")&&!next.startsWith("//")?next:"/portal");
  }
  async function resendVerification(){if(!unverifiedEmail)return;setMessage("Sending a new verification email…");const r=await fetch("/api/auth/email-verification/resend",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:unverifiedEmail})});const d=await r.json().catch(()=>({}));setMessage(d.message||"If the account still needs verification, a new email has been sent.")}
  return <main className="orbitAuthPage orbitAuthCustomer">

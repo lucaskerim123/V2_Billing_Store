@@ -34,7 +34,7 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
    setEnforcement(normalized);return true;
   }
   async function loadInitial(){
-   const {data:{user}}=await sb.auth.getUser();if(!user){location.href="/login";return}
+   const {data:{user}}=await sb.auth.getUser();if(!user){const next=path.startsWith("/portal/staff-invite")?`?next=${encodeURIComponent(location.pathname+location.search)}`:"";location.href="/login"+next;return}
    const [{data:p},{data:s},{data:staff},{data:enf},{data:bannerRows}]=await Promise.all([
     sb.from("user_profiles").select("display_name,first_name").eq("id",user.id).single(),
     sb.from("app_settings").select("key,value").eq("category","identity"),

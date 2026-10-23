@@ -246,7 +246,7 @@ export default function OrbitFSUpdateReleaseSystem(){
   },[install?.id,refreshProgress]);
 
   useEffect(()=>{
-    if(stage!==4||!install?.id)return;
+    if(stage!==4||!install?.id||(!progressTarget&&!requestInFlight.current))return;
     let active=true;
     const tick=async()=>{
       if(!active)return;

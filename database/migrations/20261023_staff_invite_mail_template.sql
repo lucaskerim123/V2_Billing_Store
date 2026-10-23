@@ -1,0 +1,6 @@
+insert into public.mail_templates(template_key,name,category,subject,text_body,html,from_account,enabled)
+values('staff_invite_accept','Staff invitation acceptance','system','OrbitFS staff invitation','You have been invited to join the OrbitFS staff team.\n\nAccept your invitation: {{invite_url}}\n\nSign in using the invited email address or create your customer account first. Access is not granted until you accept. This invitation expires after 7 days.\n\nThis is a non-monitored email account. Replies will not be read.',null,'info@orbitfs.cc',true)
+on conflict(template_key) do update set subject=excluded.subject,text_body=excluded.text_body,from_account=excluded.from_account,enabled=true;
+insert into public.mail_automations(event_key,name,category,description,template_key,enabled,variables)
+values('staff.invite','Staff invitation','system','Email-only invitation requiring signed-in acceptance','staff_invite_accept',true,'["invite_url"]'::jsonb)
+on conflict(event_key) do update set template_key=excluded.template_key,enabled=true;

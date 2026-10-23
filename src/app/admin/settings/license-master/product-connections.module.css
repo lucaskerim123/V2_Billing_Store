@@ -1,0 +1,93 @@
+/* Product Connections: isolate responsive layout from legacy admin/theme overrides. */
+.responsive {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+.responsive :global(.orbitReferenceHero),
+.responsive :global(.orbitProductConnectionStatus),
+.responsive :global(.orbitProductConnectionStats),
+.responsive :global(.orbitProductConnectionsGrid),
+.responsive :global(.orbitAuthorityPanel),
+.responsive :global(.orbitProductCataloguePanel) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.responsive :global(.orbitReferenceHero),
+.responsive :global(.orbitAuthorityPanelHead),
+.responsive :global(.orbitProductConnectionStatus),
+.responsive :global(.orbitProductConnectionReadout),
+.responsive :global(.orbitProductConnectionFooter) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+.responsive :global(.orbitProductConnectionsGrid) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.responsive :global(.orbitProductConnectionStats) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px;
+}
+.responsive :global(.orbitProductConnectionStats) > *,
+.responsive :global(.orbitProductConnectionStatus) > *,
+.responsive :global(.orbitProductConnectionReadout) > *,
+.responsive :global(.orbitProductConnectionsGrid) > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.responsive :global(.orbitProductConnectionReadout) > div,
+.responsive :global(.orbitProductConnectionStatusMeta) > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.responsive :global(.orbitAuthorityPanel),
+.responsive :global(.orbitProductConnectionStats) > article,
+.responsive :global(.orbitProductConnectionStatus) {
+  padding: 16px;
+}
+.responsive :global(.orbitAuthorityPanel) *,
+.responsive :global(.orbitProductConnectionStatus) *,
+.responsive :global(.orbitProductConnectionStats) * {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.responsive :global(.orbitProductConnectionEditor) select,
+.responsive :global(.orbitProductConnectionEditor) input {
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+}
+@media (max-width: 767px) {
+  .responsive {
+    padding-inline: 12px;
+  }
+  .responsive :global(.orbitReferenceHero),
+  .responsive :global(.orbitAuthorityPanelHead),
+  .responsive :global(.orbitProductConnectionStatus),
+  .responsive :global(.orbitProductConnectionFooter) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .responsive :global(.orbitReferenceHeroActions),
+  .responsive :global(.orbitProductConnectionActions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .responsive :global(.orbitProductConnectionStats) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

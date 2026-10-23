@@ -44,6 +44,7 @@ export default function OrbitFSAlertSystemPage(){
   const [loading,setLoading]=useState(true);
   const [options,setOptions]=useState<AlertOptions|null>(null);
   const [kind,setKind]=useState<AlertKind>("notification");
+  const [overrideDnd,setOverrideDnd]=useState(false);
   const [severity,setSeverity]=useState<Severity>("info");
   const [audience,setAudience]=useState<Audience>("selected");
   const [title,setTitle]=useState("");
@@ -135,13 +136,13 @@ export default function OrbitFSAlertSystemPage(){
       p_message:message.trim(),
       p_severity:severity,
       p_action_url:linksEnabled&&actionUrl.trim()?actionUrl.trim():null,
-      p_conditions:cleanConditions(conditions)
+      p_conditions:{...cleanConditions(conditions),override_dnd:overrideDnd}
     });
     setSending(false);
     if(error){setStatus(error.message);return}
     const sent=Number(data?.sent||0);
     setStatus(sent>0?`Dispatch recorded for ${sent} recipient${sent===1?"":"s"}. Check the recipient notification bell or banner to verify display.`:"No notifications were delivered. Check the selected audience and filters.");
-    if(sent>0){setTitle("");setMessage("");setActionUrl("");}setPreview(null);setConfirmSend(false);
+    if(sent>0){window.dispatchEvent(new Event("orbitfs-notifications-changed"));setTitle("");setMessage("");setActionUrl("");}setPreview(null);setConfirmSend(false);
   }
 
   if(loading)return <main className={styles.shell}><section className={styles.card}>Loading OrbitFS Alert System…</section></main>;
@@ -170,6 +171,7 @@ export default function OrbitFSAlertSystemPage(){
           <label><span>Severity / template</span><select value={severity} onChange={e=>setSeverity(e.target.value as Severity)}><option value="info">Info — neutral grey</option><option value="success">✓ Success — green</option><option value="warning">⚠ Warning — yellow</option><option value="error">! Critical / error — red</option></select></label>
           <label><span>Audience</span><select value={audience} onChange={e=>{setAudience(e.target.value as Audience);setPreview(null);setConfirmSend(false);setStatus("")}}><option value="selected">Selected people</option><option value="customers">Customers</option><option value="staff">Active staff</option><option value="everyone">Everyone</option></select></label>
         </div>
+        {(kind==="alert"||kind==="announcement")&&<label style={{display:"flex",alignItems:"center",gap:8,margin:"7px 0",fontSize:11}}><input type="checkbox" style={{width:14,height:14,margin:0}} checked={overrideDnd} onChange={e=>{setOverrideDnd(e.target.checked);setPreview(null);setConfirmSend(false)}}/><span>Override silent / Do Not Disturb for this banner</span></label>}
         <label><span>Title</span><input maxLength={160} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Alert title"/></label>
         <label><span>Message <em>{message.length}/{maxMessage}</em></span><textarea rows={6} maxLength={maxMessage} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Message shown to matching recipients"/></label>
         {linksEnabled&&<label><span>Open path <em>optional</em></span><input value={actionUrl} onChange={e=>setActionUrl(e.target.value)} placeholder="/portal/... or /admin/..."/></label>}

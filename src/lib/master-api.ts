@@ -1,3 +1,4 @@
+import {notifyRecordedDeployment} from "@/lib/authoritative-deployment-notices";
 import {getMasterApiUrl} from "@/lib/license-master-config";
 import {errorMessage} from "@/lib/error-message";
 
@@ -106,7 +107,13 @@ export type MasterDeploymentResult={
   execution?:string;
 };
 export async function masterExecuteDeployment(input:any):Promise<MasterDeploymentResult>{
-  return await masterRequest("/api/v1/deployer",{method:"POST",body:JSON.stringify({...input,phase:input.phase||"authorize"})},"deployer") as MasterDeploymentResult;
+  const result=await masterRequest("/api/v1/deployer",{method:"POST",body:JSON.stringify({...input,phase:input.phase||"authorize"})},"deployer") as MasterDeploymentResult;
+  // Communication is non-authoritative and cannot affect deployment execution/results.
+  if(["completed","failed"].includes(String(input.phase||""))&&result.ok!==false&&result.recorded===true){
+    try{await notifyRecordedDeployment(input)}
+    catch(error){console.error("[orbitfs/deployment-notifications] Confirmed result report but delivery failed",error)}
+  }
+  return result;
 }
 export async function masterInstallationDetails(installationId:string,licenseId?:string|null){const qs=new URLSearchParams({installation_id:String(installationId||"").trim()});if(licenseId)qs.set("license_id",String(licenseId).trim());return masterRequest(`/api/v1/deployer?${qs.toString()}`,{method:"GET",cache:"no-store"},"deployer");}
 export async function masterInstallations(limit=250,currentOnly=false){const value=Math.min(500,Math.max(1,Number(limit)||250));const qs=new URLSearchParams({limit:String(value)});if(currentOnly)qs.set("current_only","true");return masterRequest(`/api/v1/installations?${qs.toString()}`,{method:"GET",cache:"no-store"},"deployer");}
