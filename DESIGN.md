@@ -162,7 +162,7 @@ License Controller and Release Channels are operational customer workspaces, not
 
 ## V6 Customer and Admin System
 
-V6 is the compact OrbitFS product interface derived from the supplied 12ui ZIP and maintained with the Frontend Design Premium consistency contract.
+V6 uses one OrbitFS product identity across customer and Admin surfaces. V6C retains its existing customer visual references; V6A is independently maintained from the current OrbitFS storefront/customer product language and must not use the 12ui Admin styling.
 
 ### North Star
 
@@ -193,14 +193,14 @@ These remain separate pages and share the same step navigation. Each decision re
 V6A is an Admin presentation layer over the existing V5A backend, permissions, routes and data ownership. It must not duplicate business state or introduce new technical authority.
 
 Canonical V6A shell:
-- compact top navigation,
-- compact contextual sub-navigation,
-- maximum working canvas approximately 1280px,
-- 8px panel radius,
-- 6px control radius,
-- 32–34px standard controls,
-- 23px page headings,
-- 7–9px utility/control copy where the existing application uses compact desktop density,
+- permanent main navigation row with Home, Billing, Customers, Support, Products, OrbitFS and System,
+- permanent contextual submenu on its own row below the main navigation,
+- maximum working canvas approximately 1540px for Admin workspaces,
+- 10px default panel radius,
+- 7px control radius,
+- 36px standard controls,
+- 26px page headings,
+- 10–12px utility/control copy for dense Admin metadata and controls,
 - one obvious primary action per decision region,
 - neutral secondary actions,
 - visually separated danger actions.
@@ -235,19 +235,19 @@ Public/customer/Admin theme selectors must stay scoped to their runtime surface;
 
 ### North star
 
-V6A should feel like a focused operations console: compact, fast to scan, structured, and calm. It follows the same dark navy / purple / cyan family as V6C without copying customer-facing layouts into staff workflows.
+V6A should feel like the staff side of the same OrbitFS product customers already use: dark navy foundations, cyan/teal interaction colour, crisp blue-grey borders, readable density and flat operational surfaces. It must be recognisably OrbitFS without copying customer layouts into staff workflows or carrying forward the previous V6A/12ui treatment.
 
-Use the supplied 12ui design package and the V6C visual family for proportion, density, colour relationships and control treatment. Admin information density is intentionally higher than the customer portal.
+Use the current OrbitFS storefront/customer product language for palette, typography, borders, control treatment and spacing rhythm, while keeping Admin information density higher than customer-facing pages. V6A must not import, copy or visually depend on 12ui Admin styling.
 
 ### Admin layout
 
-- Global top bar: 58px class, compact horizontal navigation, small utility controls, circular account menu.
-- Context/sub-navigation: short, readable and route-specific.
-- Content canvas: approximately 1280px maximum where a bounded width improves scanning; data-heavy workspaces may use the available width.
+- Global top bar: a dedicated brand + main navigation row with Home, Billing, Customers, Support, Products, OrbitFS and System.
+- Context/sub-navigation: a permanently separate second row showing only the active main section's real pages. Navigation does not collapse into dropdown groups on desktop.
+- Content canvas: approximately 1540px maximum for the Admin workspace; narrower bounded regions are used only when the task itself benefits from them.
 - Headings are operational, not marketing-sized.
 - Default panels use one border, minimal/no shadow and 6–8px radii.
-- Forms use 32–34px controls with explicit labels and visible focus states.
-- Primary actions use the purple V6 brand treatment; secondary actions use navy outlines; destructive actions stay visually separated and quiet until confirmation.
+- Forms use 36px-class controls with explicit labels and visible focus states.
+- Primary actions use the cyan/teal OrbitFS interaction treatment; secondary actions use navy outlines; destructive actions stay visually separated and quiet until confirmation.
 
 ### Settings
 

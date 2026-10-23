@@ -140,8 +140,8 @@ export default function OrbitFSAlertSystemPage(){
     setSending(false);
     if(error){setStatus(error.message);return}
     const sent=Number(data?.sent||0);
-    setStatus(`Sent to ${sent} recipient${sent===1?"":"s"}.`);
-    setTitle("");setMessage("");setActionUrl("");setPreview(null);setConfirmSend(false);
+    setStatus(sent>0?`Dispatch recorded for ${sent} recipient${sent===1?"":"s"}. Check the recipient notification bell or banner to verify display.`:"No notifications were delivered. Check the selected audience and filters.");
+    if(sent>0){setTitle("");setMessage("");setActionUrl("");}setPreview(null);setConfirmSend(false);
   }
 
   if(loading)return <main className={styles.shell}><section className={styles.card}>Loading OrbitFS Alert System…</section></main>;
@@ -165,9 +165,9 @@ export default function OrbitFSAlertSystemPage(){
     <div className={styles.grid}>
       <section className={styles.card}>
         <div className={styles.sectionHead}><div><span>01</span><h2>Alert content</h2></div><small>Choose what recipients will see</small></div>
-        <div className={styles.typeGrid}>{enabledKinds.map(k=><button type="button" key={k.value} onClick={()=>changeKind(k.value)} className={kind===k.value?styles.activeType:""}><b>{k.label}</b><span>{k.help}</span></button>)}</div>
+        <label><span>Message type</span><select value={kind} onChange={e=>changeKind(e.target.value as AlertKind)}>{enabledKinds.map(k=><option key={k.value} value={k.value}>{k.label} — {["alert","announcement"].includes(k.value)?"Persistent banner":"Notification bell"}</option>)}</select></label>
         <div className={styles.twoCols}>
-          <label><span>Severity</span><select value={severity} onChange={e=>setSeverity(e.target.value as Severity)}><option value="info">Info</option><option value="success">Success</option><option value="warning">Warning</option><option value="error">Critical / error</option></select></label>
+          <label><span>Severity / template</span><select value={severity} onChange={e=>setSeverity(e.target.value as Severity)}><option value="info">Info — neutral grey</option><option value="success">✓ Success — green</option><option value="warning">⚠ Warning — yellow</option><option value="error">! Critical / error — red</option></select></label>
           <label><span>Audience</span><select value={audience} onChange={e=>{setAudience(e.target.value as Audience);setPreview(null);setConfirmSend(false);setStatus("")}}><option value="selected">Selected people</option><option value="customers">Customers</option><option value="staff">Active staff</option><option value="everyone">Everyone</option></select></label>
         </div>
         <label><span>Title</span><input maxLength={160} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Alert title"/></label>

@@ -20,6 +20,8 @@ type NotificationRow={
   action_url?:string|null;
   metadata?:Record<string,any>|null;
   read_at?:string|null;
+  acknowledged_at?:string|null;
+  saved_at?:string|null;
   created_at:string;
 };
 
@@ -51,6 +53,8 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
   useEffect(()=>{setMounted(true)},[]);
   const [sb]=useState(()=>createClient());
   const [open,setOpen]=useState(false);
+  const [expanded,setExpanded]=useState<NotificationRow|null>(null);
+  const [deleting,setDeleting]=useState<string|null>(null);
   const [loading,setLoading]=useState(true);
   const [items,setItems]=useState<NotificationRow[]>([]);
   const [unread,setUnread]=useState(0);
@@ -103,6 +107,7 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
   },[sb,surface,load]);
 
   useEffect(()=>{setOpen(false)},[pathname]);
+  useEffect(()=>{if(!open)return;const onEscape=(event:KeyboardEvent)=>{if(event.key==="Escape"){setExpanded(null);setOpen(false)}};document.addEventListener("keydown",onEscape);return()=>document.removeEventListener("keydown",onEscape)},[open]);
 
   useEffect(()=>{
     if(!configReady||!systemEnabled||!realtimeEnabled||!userId)return;
@@ -135,11 +140,13 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
       const offsetLeft=viewport?.offsetLeft??0;
       const offsetTop=viewport?.offsetTop??0;
       const mobile=width<=760;
-      const panelWidth=mobile?Math.max(0,width-12):Math.min(460,Math.max(320,width-20));
-      const panelHeight=mobile?Math.min(620,Math.max(260,Math.floor(height*.76))):Math.min(720,Math.max(260,height-70));
-      const left=mobile?offsetLeft+6:offsetLeft+Math.max(10,width-panelWidth-10);
-      const top=mobile?offsetTop+Math.max(6,height-panelHeight-6):offsetTop+58;
-      setPanelStyle({position:"fixed",top:Math.round(top),left:Math.round(left),right:"auto",bottom:"auto",width:Math.round(panelWidth),height:mobile?Math.round(panelHeight):undefined,maxHeight:Math.round(panelHeight)});
+      const anchor=rootRef.current?.getBoundingClientRect();
+      const panelWidth=Math.min(mobile?340:370,Math.max(220,width-16));
+      const panelHeight=Math.min(420,Math.max(200,height-90));
+      const left=Math.max(offsetLeft+8,Math.min((anchor?.right??width)-panelWidth,offsetLeft+width-panelWidth-8));
+      const below=(anchor?.bottom??50)+7;
+      const top=below+panelHeight<=offsetTop+height-8?below:Math.max(offsetTop+8,(anchor?.top??50)-panelHeight-7);
+      setPanelStyle({position:"fixed",top:Math.round(top),left:Math.round(left),right:"auto",bottom:"auto",width:Math.round(panelWidth),height:Math.round(panelHeight),maxHeight:Math.round(panelHeight),zIndex:100000});
     };
     syncPanelToVisualViewport();
     const viewport=window.visualViewport;
@@ -153,14 +160,24 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
       window.removeEventListener("resize",syncPanelToVisualViewport);
       window.removeEventListener("scroll",syncPanelToVisualViewport,true);
     };
-  },[open,mounted]);
+  },[open,mounted,surface]);
 
   useEffect(()=>{
     if(!open)return;
     const close=(e:PointerEvent)=>{if(!rootRef.current?.contains(e.target as Node)&&!panelRef.current?.contains(e.target as Node))setOpen(false)};
     document.addEventListener("pointerdown",close);
     return()=>document.removeEventListener("pointerdown",close);
-  },[open]);
+  },[open,surface]);
+
+  function closePanel(){
+    setOpen(false);
+    setExpanded(null);
+  }
+
+  function togglePortalPanel(){
+    void load(feedLimit);
+    setOpen(current=>!current);
+  }
 
   async function openNotification(n:NotificationRow){
     if(!n.read_at){
@@ -169,7 +186,7 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
       const {error:markError}=await sb.rpc("notification_mark_read",{p_notification_id:n.id,p_read:true});
       if(markError){setError(markError.message);void load(feedLimit);return;}
     }
-    setOpen(false);
+    closePanel();
     if(n.action_url)router.push(n.action_url);
   }
 
@@ -182,23 +199,66 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
     if(e){setError(e.message);void load(feedLimit)}
   }
 
+  async function acknowledgeNotification(n:NotificationRow){
+    if(n.acknowledged_at)return;
+    const now=new Date().toISOString();
+    const wasUnread=!n.read_at;
+    setItems(v=>v.map(x=>x.id===n.id?{...x,read_at:x.read_at||now,acknowledged_at:now}:x));
+    if(wasUnread)setUnread(v=>Math.max(0,v-1));
+    const {error:e}=await sb.rpc("notification_acknowledge",{p_notification_id:n.id,p_acknowledged:true});
+    if(e){setError(e.message);void load(feedLimit)}
+  }
+
+  async function deleteNotification(n:NotificationRow){
+    if(deleting)return;
+    setDeleting(n.id);
+    const {error:deleteError}=await sb.rpc("notification_delete",{p_notification_id:n.id});
+    setDeleting(null);
+    if(deleteError){setError(deleteError.message);return}
+    setItems(current=>current.filter(item=>item.id!==n.id));
+    if(!n.read_at)setUnread(current=>Math.max(0,current-1));
+    if(expanded?.id===n.id)setExpanded(null);
+  }
+
+  async function toggleSaved(n:NotificationRow){
+    const next=!n.saved_at;
+    const now=new Date().toISOString();
+    setItems(v=>v.map(x=>x.id===n.id?{...x,saved_at:next?now:null}:x));
+    const {error:e}=await sb.rpc("notification_set_saved",{p_notification_id:n.id,p_saved:next});
+    if(e){setError(e.message);void load(feedLimit)}
+  }
+
+
+  const directBanners=items.filter(n=>n.metadata?.manual===true&&(notificationKind(n)==="alert"||notificationKind(n)==="announcement")&&!n.acknowledged_at).slice(0,3);
+
   if(!configReady||!systemEnabled)return null;
 
   return <div ref={rootRef} className={styles.root} data-surface={surface} data-compact={compact?"true":"false"}>
-    <button className={styles.trigger} type="button" aria-label={`Open ${surface} notifications`} aria-expanded={open} onPointerDown={event=>event.stopPropagation()} onClick={()=>setOpen(current=>{const next=!current;if(next)void load(feedLimit);return next})}>
+    <button className={styles.trigger} type="button" aria-label={`Open ${surface} notifications`} aria-expanded={open} aria-haspopup={surface==="admin"?"dialog":undefined} aria-controls={surface==="admin"?"admin-notification-popover":undefined} onClick={togglePortalPanel}>
       <span className={styles.icon}><BellIcon/></span>
       <span className={styles.triggerText}>Notifications</span>
       {unread>0&&<span className={styles.badge}>{unread>99?"99+":unread}</span>}
     </button>
-    {open&&mounted&&createPortal(<section ref={panelRef} data-surface={surface} className={styles.panel} style={panelStyle} aria-label={surface==="admin"?"Admin notifications":"Customer notifications"}>
+    {mounted&&directBanners.length>0&&createPortal(<aside aria-label="Important OrbitFS messages" style={{position:"fixed",top:surface==="admin"?86:78,right:16,zIndex:99990,width:"min(420px,calc(100vw - 32px))",display:"grid",gap:8,pointerEvents:"none"}}>{directBanners.map(n=>{const bannerSeverity=n.severity==="error"?"error":n.severity==="warning"?"warning":n.severity==="success"?"success":"info";const theme={info:{background:"#29333e",border:"#8b98a6",text:"#f2f3f5",mark:"●"},success:{background:"#153b2c",border:"#39b979",text:"#d7ffe9",mark:"✓"},warning:{background:"#403116",border:"#e1ac36",text:"#fff0bd",mark:"⚠"},error:{background:"#5b1927",border:"#ff5266",text:"#fff0f2",mark:"!"}}[bannerSeverity];return <div role="alert" key={n.id} style={{pointerEvents:"auto",background:bannerSeverity==="warning"?"repeating-linear-gradient(135deg,#403116,#403116 12px,#493819 12px,#493819 16px)":theme.background,border:"2px solid "+theme.border,borderLeft:"7px solid "+theme.border,borderRadius:10,padding:14,boxShadow:"0 15px 45px #0009",color:theme.text}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"start",gap:12}}><div><small style={{fontWeight:800,letterSpacing:1}}>{theme.mark+" "+(notificationKind(n)==="alert"?"ALERT":"ANNOUNCEMENT")}</small><h3 style={{margin:"5px 0",fontSize:15}}>{n.title}</h3></div><button type="button" onClick={()=>void acknowledgeNotification(n)} aria-label={"Dismiss "+n.title} style={{background:"transparent",color:theme.text,border:"1px solid currentColor",borderRadius:6,padding:"4px 9px",cursor:"pointer"}}>Dismiss ×</button></div>{n.message&&<p style={{fontSize:12,lineHeight:1.5,margin:"7px 0"}}>{n.message}</p>}{n.action_url&&<button type="button" onClick={()=>void openNotification(n)} style={{border:0,background:"transparent",color:theme.text,padding:0,fontWeight:700,cursor:"pointer"}}>Open details →</button>}</div>})}</aside>,document.body)}
+    {surface==="admin"&&open&&mounted&&createPortal(<section
+      id="admin-notification-popover"
+      ref={panelRef}
+      style={panelStyle}
+      data-surface="admin"
+      className={styles.panel}
+      role="dialog"
+      aria-label="Admin notifications"
+    >
       <header className={styles.header}>
         <div><small>{surface==="admin"?"ORBITFS ALERT SYSTEM":"CUSTOMER PORTAL"}</small><h2>Notifications</h2></div>
         <div className={styles.headerActions}>
-          {surface==="admin"&&canSend&&<button className={styles.headerButton} type="button" onClick={()=>{setOpen(false);router.push("/admin/alerts")}}>Alert System</button>}
+          {surface==="admin"&&<button className={styles.headerButton} type="button" onClick={closePanel} aria-label="Close notifications">Close ✕</button>}
+          {surface==="admin"&&canSend&&<button className={styles.headerButton} type="button" onClick={()=>{closePanel();router.push("/admin/alerts")}}>Alert System</button>}
           <button className={styles.headerButton} type="button" onClick={()=>void load(feedLimit)}>Refresh</button>
           <button className={styles.markAll} type="button" onClick={markAllRead} disabled={unread===0}>Mark all read</button>
         </div>
       </header>
+      {error&&<div role="alert" style={{margin:"10px 12px",padding:"12px",border:"1px solid #c95162",background:"#421b24",color:"#ffe1e5",borderRadius:8,fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}><b>Notification action failed</b><div>{error}</div><button type="button" onClick={()=>{setError("");void load(feedLimit)}} style={{marginTop:8,padding:"6px 10px",borderRadius:6}}>Retry</button></div>}
       <div className={styles.list}>
         {loading&&<p className={styles.empty}>Loading notifications…</p>}
         {!loading&&error&&<div className={styles.error}><b>Notifications unavailable</b><span>{error}</span><button type="button" onClick={()=>void load(feedLimit)}>Retry</button></div>}
@@ -206,17 +266,69 @@ export default function NotificationCenter({surface,compact=false}:{surface:Surf
         {!loading&&!error&&items.map(n=>{
           const kind=notificationKind(n);
           const criticalAlert=kind==="alert"&&n.severity==="error";
-          return <button key={n.id} type="button" className={`${styles.item} ${!n.read_at?styles.unread:""} ${criticalAlert?styles.criticalAlert:""}`} data-kind={kind} data-severity={n.severity} onClick={()=>void openNotification(n)}>
-            <span className={styles.typeMark} aria-hidden="true">{kindMarks[kind]}</span>
-            <span className={styles.copy}>
-              <span className={styles.labels}><span className={styles.kindLabel}>{kindLabels[kind]}</span><span className={styles.severityLabel}>{severityLabels[n.severity]}</span>{criticalAlert&&<span className={styles.criticalLabel}>Requires attention</span>}</span>
-              <span className={styles.itemTop}><b>{n.title}</b><small>{prettyTime(n.created_at)}</small></span>
-              {n.message&&<span className={styles.message}>{n.message}</span>}
-              {n.action_url&&<span className={styles.openHint}>Open details →</span>}
-            </span>
-          </button>;
+          return <article key={n.id} className={`${styles.item} ${!n.read_at?styles.unread:""} ${criticalAlert?styles.criticalAlert:""}`} data-kind={kind} data-severity={n.severity} data-acknowledged={n.acknowledged_at?"true":"false"} data-saved={n.saved_at?"true":"false"}>
+            <button type="button" className={styles.itemOpen} onClick={()=>setExpanded(n)} aria-label={"More details: "+n.title}>
+              <span className={styles.typeMark} aria-hidden="true">{kindMarks[kind]}</span>
+              <span className={styles.copy}>
+                <span className={styles.labels}><span className={styles.kindLabel}>{kindLabels[kind]}</span><span className={styles.severityLabel}>{severityLabels[n.severity]}</span>{criticalAlert&&<span className={styles.criticalLabel}>Requires attention</span>}{n.acknowledged_at&&<span className={styles.ackLabel}>Acknowledged</span>}{n.saved_at&&<span className={styles.savedLabel}>Saved</span>}</span>
+                <span className={styles.itemTop}><b>{n.title}</b><small>{prettyTime(n.created_at)}</small></span>
+                {n.message&&<span className={styles.message}>{n.message.length>110?n.message.slice(0,110)+"…":n.message}</span>}
+                {n.action_url&&<span className={styles.openHint}>Open details →</span>}
+              </span>
+            </button>
+            <div className={styles.itemActions}><button type="button" className={styles.detailsAction} onClick={()=>setExpanded(n)}>Details</button><button type="button" className={styles.deleteAction} disabled={deleting===n.id} onClick={()=>void deleteNotification(n)}>{deleting===n.id?"Deleting…":"Delete"}</button>
+              <button type="button" className={styles.saveAction} onClick={()=>void toggleSaved(n)}>{n.saved_at?"Unsave":"Save"}</button>
+              {!n.acknowledged_at&&<button type="button" className={styles.ackAction} onClick={()=>void acknowledgeNotification(n)}>Acknowledge</button>}
+              {n.acknowledged_at&&<span className={styles.retentionNote}>{n.saved_at?"Saved — kept until unsaved":"Deletes 3 days after acknowledgement"}</span>}
+            </div>
+          </article>;
         })}
       </div>
     </section>,document.body)}
+    {surface==="portal"&&open&&mounted&&createPortal(<section
+      ref={panelRef}
+      data-surface="portal"
+      className={styles.panel}
+      style={panelStyle}
+      role="dialog"
+      aria-label="Customer notifications"
+    >
+      <header className={styles.header}>
+        <div><small>CUSTOMER PORTAL</small><h2>Notifications</h2></div>
+        <div className={styles.headerActions}>
+          <button className={styles.headerButton} type="button" onClick={closePanel} aria-label="Close notifications">Close ✕</button>
+          
+          <button className={styles.headerButton} type="button" onClick={()=>void load(feedLimit)}>Refresh</button>
+          <button className={styles.markAll} type="button" onClick={markAllRead} disabled={unread===0}>Mark all read</button>
+        </div>
+      </header>
+      {error&&<div role="alert" style={{margin:"10px 12px",padding:"12px",border:"1px solid #c95162",background:"#421b24",color:"#ffe1e5",borderRadius:8,fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}><b>Notification action failed</b><div>{error}</div><button type="button" onClick={()=>{setError("");void load(feedLimit)}} style={{marginTop:8,padding:"6px 10px",borderRadius:6}}>Retry</button></div>}
+      <div className={styles.list}>
+        {loading&&<p className={styles.empty}>Loading notifications…</p>}
+        {!loading&&error&&<div className={styles.error}><b>Notifications unavailable</b><span>{error}</span><button type="button" onClick={()=>void load(feedLimit)}>Retry</button></div>}
+        {!loading&&!error&&items.length===0&&<p className={styles.empty}>No notifications yet.</p>}
+        {!loading&&!error&&items.map(n=>{
+          const kind=notificationKind(n);
+          const criticalAlert=kind==="alert"&&n.severity==="error";
+          return <article key={n.id} className={`${styles.item} ${!n.read_at?styles.unread:""} ${criticalAlert?styles.criticalAlert:""}`} data-kind={kind} data-severity={n.severity} data-acknowledged={n.acknowledged_at?"true":"false"} data-saved={n.saved_at?"true":"false"}>
+            <button type="button" className={styles.itemOpen} onClick={()=>setExpanded(n)} aria-label={"More details: "+n.title}>
+              <span className={styles.typeMark} aria-hidden="true">{kindMarks[kind]}</span>
+              <span className={styles.copy}>
+                <span className={styles.labels}><span className={styles.kindLabel}>{kindLabels[kind]}</span><span className={styles.severityLabel}>{severityLabels[n.severity]}</span>{criticalAlert&&<span className={styles.criticalLabel}>Requires attention</span>}{n.acknowledged_at&&<span className={styles.ackLabel}>Acknowledged</span>}{n.saved_at&&<span className={styles.savedLabel}>Saved</span>}</span>
+                <span className={styles.itemTop}><b>{n.title}</b><small>{prettyTime(n.created_at)}</small></span>
+                {n.message&&<span className={styles.message}>{n.message.length>110?n.message.slice(0,110)+"…":n.message}</span>}
+                {n.action_url&&<span className={styles.openHint}>Open details →</span>}
+              </span>
+            </button>
+            <div className={styles.itemActions}><button type="button" className={styles.detailsAction} onClick={()=>setExpanded(n)}>Details</button><button type="button" className={styles.deleteAction} disabled={deleting===n.id} onClick={()=>void deleteNotification(n)}>{deleting===n.id?"Deleting…":"Delete"}</button>
+              <button type="button" className={styles.saveAction} onClick={()=>void toggleSaved(n)}>{n.saved_at?"Unsave":"Save"}</button>
+              {!n.acknowledged_at&&<button type="button" className={styles.ackAction} onClick={()=>void acknowledgeNotification(n)}>Acknowledge</button>}
+              {n.acknowledged_at&&<span className={styles.retentionNote}>{n.saved_at?"Saved — kept until unsaved":"Deletes 3 days after acknowledgement"}</span>}
+            </div>
+          </article>;
+        })}
+      </div>
+    </section>,document.body)}
+    {expanded&&mounted&&createPortal(<div className={styles.detailBackdrop} onPointerDown={e=>{if(e.target===e.currentTarget)setExpanded(null)}}><section className={styles.detailDialog} role="dialog" aria-modal="true" aria-label={"Notification details: "+expanded.title}><header><div><small>{kindLabels[notificationKind(expanded)]} · {severityLabels[expanded.severity]}</small><h2>{expanded.title}</h2><small>{prettyTime(expanded.created_at)}</small></div><button type="button" onClick={()=>setExpanded(null)}>Close ×</button></header><p>{expanded.message||"No further details."}</p><footer>{expanded.action_url&&<button type="button" onClick={()=>{void openNotification(expanded);setExpanded(null)}}>Open link →</button>}<button type="button" className={styles.deleteAction} disabled={deleting===expanded.id} onClick={()=>void deleteNotification(expanded)}>Delete</button>{!expanded.acknowledged_at&&<button type="button" onClick={()=>{void acknowledgeNotification(expanded);setExpanded(null)}}>Acknowledge</button>}</footer></section></div>,document.body)}
   </div>;
 }

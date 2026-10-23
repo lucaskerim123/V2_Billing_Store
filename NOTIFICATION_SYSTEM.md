@@ -7,6 +7,17 @@ OrbitFS uses one central `public.notifications` backend with two UI surfaces:
 
 Both surfaces use `src/components/NotificationCenter.tsx`. Notifications are stored per recipient, support unread/read state, deep links, Supabase Realtime updates and RLS so users can only read their own records.
 
+## Persistence lifecycle
+
+- Closing the panel, tab, browser, signing out or restarting the device does not remove a notification; notification state is server-side.
+- Opening a notification sets `read_at` only. Reading is not acknowledgement.
+- Acknowledging sets `acknowledged_at` and also marks the notification read.
+- An acknowledged notification is retained for 3 days, then permanently deleted by the retention cleanup.
+- Saving sets `saved_at`; saved notifications are excluded from automatic deletion.
+- Unsaving restores the normal acknowledgement retention rule.
+- Deduplicated events that become active again reset acknowledgement so a newly reactivated event cannot remain silently acknowledged.
+
+
 ## Admin-authored notifications
 
 Administrators with `notifications.send` can compose directly from the Admin notification centre. Manual sends use the same notification stream as system events rather than creating a second messaging system.

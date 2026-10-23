@@ -46,6 +46,16 @@ Approved request without an authoritative grant remains a pending synchronizatio
 
 Base Deployment and Update Release System consume the same enabled customer-visible channel definitions. Customer-facing access must never be duplicated into a separate Base-only or Update-only channel authority.
 
+## V6A Admin navigation
+
+The Admin shell uses two permanent navigation rows.
+
+- Main navigation contains Home, Billing, Customers, Support, Products, OrbitFS and System, subject to the current staff member's permissions.
+- The second row contains the real pages for the active main section. Section navigation is not hidden inside dropdown groups.
+- Mail, customer Portal access, notification controls, source status and account controls are utilities, not primary navigation.
+- Create actions remain direct page actions or direct context shortcuts only where the destination is a real supported workflow.
+- Route changes preserve the same shell and update the active main section and submenu state without changing business behavior.
+
 ## OrbitFS Admin operational surfaces
 
 ### Installations

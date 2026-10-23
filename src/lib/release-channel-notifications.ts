@@ -21,6 +21,7 @@ async function insertNotification(input:{
     metadata:{kind:"notification",...(input.metadata||{})},
     dedupe_key:input.dedupeKey||null,
     read_at:null,
+    acknowledged_at:null,
     archived_at:null,
     created_at:new Date().toISOString()
   };

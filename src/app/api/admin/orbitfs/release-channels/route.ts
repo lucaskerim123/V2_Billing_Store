@@ -98,6 +98,7 @@ export async function POST(req:Request){
           channel,
           label,
           description:String(body.description||""),
+          version_prefix:body.version_prefix,
           enabled:body.enabled!==false,
           customer_visible:body.customer_visible!==false,
           access_mode:body.access_mode==="open"?"open":"closed",

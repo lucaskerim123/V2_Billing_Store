@@ -9,7 +9,7 @@ type Release={
  artifactName?:string;artifactRunId?:number|null;checksum?:string;publishedAt?:string|null;updatedAt?:string|null;billingPresentation?:boolean;
  validation?:{status?:string;checks?:Array<{key?:string;ok?:boolean;message?:string}>}|null;
 };
-type ReleaseChannel={id?:string;channel:string;label?:string;enabled?:boolean;customer_visible?:boolean};
+type ReleaseChannel={id?:string;channel:string;label?:string;version_prefix?:string;enabled?:boolean;customer_visible?:boolean};
 
 const workingStatus=(value?:string)=>["queued","running","in_progress","processing","validating","reviewing"].includes(String(value||"").toLowerCase());
 const failedStatus=(value?:string)=>["failed","failure","error","rejected"].includes(String(value||"").toLowerCase());
@@ -18,6 +18,7 @@ export default function BaseDeploymentAdmin(){
  const sb=useMemo(()=>createClient(),[]);
  const [releases,setReleases]=useState<Release[]>([]);
  const [channels,setChannels]=useState<ReleaseChannel[]>([]);
+ const displayVersion=(r:Release)=>`${channels.find(c=>c.channel===r.channel)?.version_prefix??""}${String(r.version||"").replace(/^v(?=\d)/i,"")}`;
  const [selectedId,setSelectedId]=useState("");
  const [targetChannel,setTargetChannel]=useState("");
  const [loading,setLoading]=useState(true);
@@ -200,13 +201,13 @@ export default function BaseDeploymentAdmin(){
    <div className="orbitSplit">
     <div className="orbitReleaseQueue">
      {queue.length?queue.map(r=><button key={r.id} type="button" className={"orbitReleaseRow "+(selected?.id===r.id?"selected":"")} onClick={()=>{setSelectedId(r.id);setPipelineError(null)}}>
-      <div><b>v{r.version}</b><span>{r.title||"Base release"} · {r.channel||"stable"} · Attempt {r.attempt||1} · package r{r.revision||1}</span></div>
+      <div><b>{displayVersion(r)}</b><span>{r.title||"Base release"} · {r.channel||"stable"} · Attempt {r.attempt||1} · package r{r.revision||1}</span></div>
       <div className="orbitRowMeta"><span className={r.validation?.status==="passed"?"state ready":"state"}>{r.validation?.status||"validation pending"}</span><span className={r.reviewStatus==="approved"?"state ready":"state"}>{r.reviewStatus||"review pending"}</span></div>
      </button>):<div className="orbitEmptyCompact">No Base releases are waiting for review.</div>}
     </div>
 
     <div className="orbitReviewPane">
-     {selected?<><div className="orbitReviewTop"><div><small>SELECTED RELEASE · Attempt {selected.attempt||1} · package r{selected.revision||1}</small><h3>v{selected.version}</h3></div><span className={portalPublished?"state ready":"state"}>{portalPublished?"Published":selected.status||"pending"}</span></div>
+     {selected?<><div className="orbitReviewTop"><div><small>SELECTED RELEASE · Attempt {selected.attempt||1} · package r{selected.revision||1}</small><h3>{displayVersion(selected)}</h3></div><span className={portalPublished?"state ready":"state"}>{portalPublished?"Published":selected.status||"pending"}</span></div>
       <div className="orbitFactGrid">
        <div><span>Validation</span><b>{selected.validation?.status||"Not run"}</b></div>
        <div><span>Review</span><b>{selected.reviewStatus||"Pending"}</b></div>
@@ -244,7 +245,7 @@ export default function BaseDeploymentAdmin(){
    <div className="orbitPanelHead"><div><p className="eyebrow">RELEASE HISTORY</p><h2>Published Base releases</h2></div><span className="orbitCount">{published.length}</span></div>
    <div className="orbitHistoryTable">
     {published.map(r=><div className="orbitHistoryRow" key={r.id}>
-     <div><b>v{r.version}</b><span>{r.title||"Base release"}</span></div>
+     <div><b>{displayVersion(r)}</b><span>{r.title||"Base release"}</span></div>
      <span>{r.channel||"stable"}</span>
      <span>{r.publishedAt?new Date(r.publishedAt).toLocaleString():"Published"}</span>
      <div className="orbitRowActions"><button className="orbitAction orbitActionSecondary" onClick={()=>beginEdit(r)}>Edit</button><button className="orbitAction orbitActionQuiet" onClick={()=>{setSelectedId(r.id);setPipelineError(null)}}>View</button>{r.status==="published"&&<button className="orbitAction orbitActionDanger" disabled={busy==="unpublish:"+r.id} onClick={()=>void unpublishBase(r)}>{busy==="unpublish:"+r.id?"Unpublishing…":"Unpublish"}</button>}{r.status==="withdrawn"&&<><button className="orbitAction orbitActionPrimary" disabled={busy!==""} onClick={()=>void republishBase(r)}>Republish</button>{r.billingPresentation&&<button className="orbitAction orbitActionDanger" disabled={busy!==""} onClick={()=>void deleteBillingCopy(r)}>Delete Billing copy</button>}<button className="orbitAction orbitActionDanger" disabled={busy!==""} onClick={()=>void returnToDev(r)}>Return to Dev</button></>}</div>
@@ -255,7 +256,7 @@ export default function BaseDeploymentAdmin(){
 
   {editing&&selected&&<div className="orbitModalBackdrop" onMouseDown={()=>setEditing(false)}>
    <div className="orbitModal" onMouseDown={e=>e.stopPropagation()}>
-    <div className="orbitPanelHead"><div><p className="eyebrow">CUSTOMER PRESENTATION</p><h2>Edit v{selected.version}</h2></div><button className="orbitAction orbitActionQuiet" onClick={()=>setEditing(false)}>Close</button></div>
+    <div className="orbitPanelHead"><div><p className="eyebrow">CUSTOMER PRESENTATION</p><h2>Edit {displayVersion(selected)}</h2></div><button className="orbitAction orbitActionQuiet" onClick={()=>setEditing(false)}>Close</button></div>
     <label>Title<input value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})}/></label>
     <label>Description<textarea rows={3} value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})}/></label>
     <label>Changelog<textarea rows={6} value={draft.changelog} onChange={e=>setDraft({...draft,changelog:e.target.value})}/></label>

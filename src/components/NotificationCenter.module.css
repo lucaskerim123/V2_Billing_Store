@@ -355,3 +355,112 @@
   touch-action:manipulation!important;
 }
 /* End notification portal hardening 2026-10-06 */
+
+
+/* Notification acknowledgement + saved retention controls. */
+.item{
+  padding:0!important;
+  display:block!important;
+}
+.itemOpen{
+  width:100%;
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  padding:12px 14px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+.itemOpen:hover{background:rgba(35,65,96,.22)}
+.itemActions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:6px;
+  min-height:34px;
+  padding:0 12px 9px 54px;
+}
+.itemActions button{
+  min-height:27px;
+  padding:5px 8px;
+  border:1px solid #315173;
+  border-radius:7px;
+  background:#10253a;
+  color:#bad3ec;
+  font-size:9px;
+  font-weight:800;
+  cursor:pointer;
+}
+.itemActions button:hover{background:#17334f;border-color:#426f9a}
+.ackAction{
+  border-color:#376b5b!important;
+  background:#123128!important;
+  color:#9fe3ca!important;
+}
+.ackAction:hover{background:#194236!important}
+.saveAction{min-width:48px}
+.ackLabel,.savedLabel{
+  display:inline-flex;
+  align-items:center;
+  min-height:18px;
+  padding:2px 6px;
+  border-radius:99px;
+  font-size:8px;
+  line-height:1;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:900;
+}
+.ackLabel{border:1px solid #45627e;background:#16283a;color:#9ab3ca}
+.savedLabel{border:1px solid #7767bc;background:#241e46;color:#cfc7ff}
+.retentionNote{
+  margin-right:auto;
+  color:#7891a8;
+  font-size:8px;
+  line-height:1.35;
+}
+.item[data-acknowledged="true"]:not([data-saved="true"]){
+  opacity:.78;
+}
+.item[data-saved="true"]{
+  box-shadow:inset 3px 0 #7665d9;
+}
+.criticalAlert .itemActions{
+  padding-left:64px;
+}
+@media(max-width:760px){
+  .itemOpen{padding:10px}
+  .itemActions{padding:0 9px 9px 46px;flex-wrap:wrap}
+  .criticalAlert .itemActions{padding-left:53px}
+  .retentionNote{width:100%;order:3;margin:0}
+}
+
+/* Compact anchored notification dropdown shared as behaviour, themed by surface. */
+.panel[data-surface="admin"],.panel[data-surface="portal"]{min-width:0!important;max-width:calc(100vw - 16px)!important;min-height:0!important;border-radius:10px!important;box-shadow:0 18px 45px #0009!important}
+.panel .header{padding:9px 11px!important;gap:6px!important}
+.panel .header h2{font-size:13px!important}
+.panel .headerActions{gap:4px!important;flex-wrap:wrap}
+.panel .headerButton,.panel .markAll{font-size:9px!important;min-height:26px!important;padding:4px 6px!important}
+.panel .itemOpen{padding:8px 10px!important;gap:8px!important}
+.panel .itemTop b{font-size:11px!important}
+.panel .itemTop small{font-size:8px!important}
+.panel .message{font-size:10px!important}
+.panel .typeMark{width:24px!important;height:24px!important;flex-basis:24px!important;font-size:12px!important}
+.panel .itemActions,.panel .criticalAlert .itemActions{padding:0 9px 6px!important;gap:4px!important;min-height:0!important}
+.panel .itemActions button{font-size:9px!important;min-height:25px!important;padding:3px 7px!important}
+.panel .criticalAlert{margin:4px!important;width:calc(100% - 8px)!important;padding:0!important}
+.panel .retentionNote{display:none}
+.panel .deleteAction{border-color:#8a4452!important;color:#ffbcc7!important;background:#321924!important}
+.detailBackdrop{position:fixed;inset:0;z-index:100010;display:grid;place-items:center;padding:16px;background:#0009}
+.detailDialog{width:min(560px,100%);max-height:min(680px,calc(100dvh - 32px));overflow:auto;background:#0c1d2b;border:1px solid #35647d;border-radius:12px;color:#e8f2fb;box-shadow:0 24px 80px #000b;padding:18px}
+.detailDialog header{display:flex;justify-content:space-between;align-items:start;gap:12px;border-bottom:1px solid #29485b;padding-bottom:12px}
+.detailDialog h2{margin:5px 0;font-size:18px}
+.detailDialog small{color:#9cb7c8;font-size:10px}
+.detailDialog p{white-space:pre-wrap;line-height:1.6;font-size:13px;overflow-wrap:anywhere}
+.detailDialog footer{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap}
+.detailDialog button{cursor:pointer;border:1px solid #3f6680;border-radius:6px;padding:7px 10px;color:#e8f2fb;background:#15354a;font-size:11px}
+.detailDialog .deleteAction{border-color:#92394c;background:#411c2a;color:#ffc9d1}

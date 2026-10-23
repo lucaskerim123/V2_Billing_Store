@@ -9,6 +9,7 @@ type Channel={
  channel:string;
  label:string;
  description?:string;
+ version_prefix?:string;
  enabled:boolean;
  customer_visible:boolean;
  access_mode:string;
@@ -33,12 +34,12 @@ export default function ReleaseChannelsAdmin(){
  const [selected,setSelected]=useState("");
  const [query,setQuery]=useState("");
  const [creating,setCreating]=useState(false);
- const [newChannel,setNewChannel]=useState({channel:"",label:"",description:"",access_mode:"closed"});
+ const [newChannel,setNewChannel]=useState({channel:"",label:"",description:"",version_prefix:"",access_mode:"closed"});
  const [confirmAction,setConfirmAction]=useState<null|{title:string;description:string;confirmLabel:string;danger?:boolean;body:any;success:string}>(null);
  const [busy,setBusy]=useState("");
  const [message,setMessage]=useState("");
  const [error,setError]=useState("");
- const [policy,setPolicy]=useState({label:"",description:"",enabled:true,customer_visible:true,access_mode:"closed",access_request_enabled:false,self_join_enabled:false,sort_order:100});
+ const [policy,setPolicy]=useState({label:"",description:"",version_prefix:"",enabled:true,customer_visible:true,access_mode:"closed",access_request_enabled:false,self_join_enabled:false,sort_order:100});
 
  async function auth(){
   const {data:{session}}=await sb.auth.getSession();
@@ -92,6 +93,7 @@ export default function ReleaseChannelsAdmin(){
   setPolicy({
    label:channel.label||channel.channel,
    description:channel.description||"",
+   version_prefix:channel.version_prefix||"",
    enabled:channel.enabled!==false,
    customer_visible:channel.customer_visible!==false,
    access_mode:channel.access_mode==="open"?"open":"closed",
@@ -99,7 +101,7 @@ export default function ReleaseChannelsAdmin(){
    self_join_enabled:channel.self_join_enabled===true,
    sort_order:Number(channel.sort_order||100)
   });
- },[channel?.channel,channel?.label,channel?.description,channel?.enabled,channel?.customer_visible,channel?.access_mode,channel?.access_request_enabled,channel?.self_join_enabled,channel?.sort_order]);
+ },[channel?.channel,channel?.label,channel?.description,channel?.version_prefix,channel?.enabled,channel?.customer_visible,channel?.access_mode,channel?.access_request_enabled,channel?.self_join_enabled,channel?.sort_order]);
 
  const customers:Customer[]=(data.customers||[]).filter((u:Customer)=>{
   const q=query.trim().toLowerCase();
@@ -122,6 +124,7 @@ export default function ReleaseChannelsAdmin(){
    channel:key,
    label:newChannel.label.trim(),
    description:newChannel.description.trim(),
+   version_prefix:newChannel.version_prefix.trim().toLowerCase(),
    enabled:true,
    customer_visible:true,
    access_mode:newChannel.access_mode==="open"?"open":"closed",
@@ -129,7 +132,7 @@ export default function ReleaseChannelsAdmin(){
    self_join_enabled:false,
    sort_order:Math.max(100,...channels.map(c=>Number(c.sort_order||0)))+10
   },"Release channel created in License Manager.");
-  setNewChannel({channel:"",label:"",description:"",access_mode:"closed"});
+  setNewChannel({channel:"",label:"",description:"",version_prefix:"",access_mode:"closed"});
  }
 
  return <main className="orbitAdminPage orbitReferencePage orbitReleaseChannelsReference orbitPhaseOne">
@@ -161,7 +164,7 @@ export default function ReleaseChannelsAdmin(){
       const itemUsage:ChannelUsage=data.releaseUsage?.[c.channel]||{};
       return <button key={c.id||c.channel} type="button" className={"orbitReferenceRailCard "+(channel?.channel===c.channel?"active":"")} onClick={()=>{setCreating(false);setSelected(c.channel)}}>
        <div className="orbitReferenceRailCardTop"><b>{c.label||c.channel}</b><span className={"orbitMiniState "+(c.enabled?"live":"")}>{c.enabled?"Enabled":"Disabled"}</span></div>
-       <small className="orbitChannelSlug">{c.channel}</small>
+       <small className="orbitChannelSlug">{c.channel} · prefix {c.version_prefix||"(none)"}</small>
        <div className="orbitReferenceRailMeta">
         <span>{channelPolicy(c)}</span>
         <span>{usageLabel(itemUsage)}</span>
@@ -181,6 +184,7 @@ export default function ReleaseChannelsAdmin(){
      </div>
      <div className="orbitChannelPolicyGrid">
       <label><span>Channel key</span><input value={newChannel.channel} onChange={e=>setNewChannel(v=>({...v,channel:e.target.value}))} placeholder="customer-acme"/><small>Lowercase letters, numbers, underscore or hyphen. Max 32 characters.</small></label>
+      <label><span>Version prefix</span><input maxLength={2} value={newChannel.version_prefix} onChange={e=>setNewChannel(v=>({...v,version_prefix:e.target.value.replace(/[^a-z]/gi,"").slice(0,2).toLowerCase()}))} placeholder="dv"/><small>Up to two letters; e.g. dv1.5.</small></label>
       <label><span>Access mode</span><select value={newChannel.access_mode} onChange={e=>setNewChannel(v=>({...v,access_mode:e.target.value}))}><option value="closed">Closed / assigned</option><option value="open">Open</option></select></label>
       <label className="wide"><span>Label</span><input value={newChannel.label} onChange={e=>setNewChannel(v=>({...v,label:e.target.value}))} placeholder="Customer Acme"/></label>
       <label className="wide"><span>Description</span><textarea rows={3} value={newChannel.description} onChange={e=>setNewChannel(v=>({...v,description:e.target.value}))} placeholder="What this channel is for and who should receive it."/></label>
@@ -215,6 +219,7 @@ export default function ReleaseChannelsAdmin(){
       </div>
       <div className="orbitChannelPolicyGrid">
        <label><span>Label</span><input value={policy.label} onChange={e=>setPolicy({...policy,label:e.target.value})}/></label>
+       <label><span>Version prefix</span><input maxLength={2} value={policy.version_prefix} onChange={e=>setPolicy({...policy,version_prefix:e.target.value.replace(/[^a-z]/gi,"").slice(0,2).toLowerCase()})}/><small>Example: {policy.version_prefix}1.5</small></label>
        <label><span>Sort order</span><input type="number" min="0" value={policy.sort_order} onChange={e=>setPolicy({...policy,sort_order:Number(e.target.value||0)})}/></label>
        <label className="wide"><span>Description</span><textarea rows={3} value={policy.description} onChange={e=>setPolicy({...policy,description:e.target.value})}/></label>
        <label><span>Access mode</span><select value={policy.access_mode} onChange={e=>setPolicy({...policy,access_mode:e.target.value})}><option value="open">Open</option><option value="closed">Closed</option></select></label>
