@@ -183,7 +183,7 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
 
  return <main className="adminShell">
   <header className="adminTop"><div><p className="eyebrow">CUSTOMER CONTROL</p><h1>{[p.first_name,p.last_name].map((name:string|undefined)=>String(name||"").trim()).filter(Boolean).join(" ")||p.display_name||p.name||p.username||"Customer"}</h1><p className="muted">{p.customer_number||"Customer"} · {p.email||"No email"}{p.username?` · @${p.username}`:""} · {p.email_verified_at?"verified":"unverified"} · {canonicalStatusLabel(accountStatus)}</p></div></header>
-  <nav className={`recordTabs ${ui.tabs}`} aria-label="Customer sections">{tabs.map(([k,l])=><button className={tab===k?"active":""} onClick={()=>setTab(k)} key={k}>{l}</button>)}</nav>
+  <nav className={`recordTabs ${ui.tabs}`} aria-label="Customer sections">{tabs.map(([k,l])=><button type="button" aria-current={tab===k?"page":undefined} className={tab===k?"active":""} onClick={()=>setTab(k)} key={k}>{l}</button>)}</nav>
 
   {tab==="general"&&<div className={ui.workspace}>
    <section className={ui.overview} aria-label="Customer account summary">
