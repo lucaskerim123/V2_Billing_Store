@@ -1601,7 +1601,6 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layou
 @media(max-width:1020px){
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6BrandText small{display:none}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6BrandText b{max-width:120px}
-  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6UtilityLink[href="/mail"]{display:none}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6ContextLabel{display:none}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6ContextBar{grid-template-columns:minmax(0,1fr) auto}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .v3MetricStrip{grid-template-columns:repeat(3,minmax(0,1fr))!important}
@@ -1619,7 +1618,6 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layou
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6Brand{grid-area:brand}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6Utilities{grid-area:utils}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6MainNav{grid-area:nav;border-top:1px solid rgba(13,73,99,.6);padding-top:5px}
-  html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6UtilityLink{display:none}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6ContextActions{display:none}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV6ContextBar{grid-template-columns:1fr}
   html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layout:not([data-admin-v6a-exempt="true"]) .adminV6Content>:where(.adminShell,.orbitAdminPage,.licenseControllerPage,.settingsPage,.portalPage){
