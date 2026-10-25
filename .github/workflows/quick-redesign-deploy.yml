@@ -198,13 +198,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          deployment_url="$(vercel deploy --prebuilt --archive=tgz --prod --yes \
+          # Return the deployment URL immediately, then track its actual state.
+          # Vercel can BLOCK a deployment for private-repo collaboration policy;
+          # waiting in the CLI previously exhausted the entire 20-minute job.
+          if ! deployment_url="$(timeout 8m vercel deploy --prebuilt --archive=tgz --prod --yes --no-wait \
             --token="$VERCEL_TOKEN" \
             --scope="$VERCEL_SCOPE" \
             --meta "githubCommitSha=${{ steps.source.outputs.commit }}" \
             --meta "githubCommitRef=${{ steps.source.outputs.branch }}" \
             --meta "githubOrg=lucaskerim123" \
-            --meta "githubRepo=V2_Billing_Store")"
+            --meta "githubRepo=V2_Billing_Store")"; then
+            echo "::error::Vercel submission failed or exceeded 8 minutes. Inspect Vercel before retrying to avoid duplicate production deployments."
+            exit 1
+          fi
           case "$deployment_url" in
             https://*) ;;
             *)
@@ -212,6 +218,34 @@ jobs:
               exit 1
               ;;
           esac
+          # Only READY is success. BLOCKED is commonly caused by an unlinked
+          # private GitHub commit author on Vercel Hobby projects.
+          deployment_host="${deployment_url#https://}"
+          deployment_host="${deployment_host%%/*}"
+          for attempt in $(seq 1 36); do
+            response="$(curl --fail --silent --show-error --retry 2 --max-time 15 \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/$deployment_host?teamId=$VERCEL_ORG_ID")" || {
+              echo "::error::Could not inspect submitted Vercel deployment. Verify its state manually before retrying."
+              exit 1
+            }
+            state="$(node -e 'const d=JSON.parse(process.argv[1]); process.stdout.write(String(d.readyState||d.state||"UNKNOWN"))' "$response")"
+            echo "Vercel deployment state: $state (attempt $attempt/36)"
+            case "$state" in
+              READY) break ;;
+              BLOCKED)
+                echo "::error::Vercel BLOCKED this production deployment. Check Vercel project collaboration / connected GitHub identity for private repository lucaskerim123/V2_Billing_Store."
+                exit 1 ;;
+              ERROR|CANCELED)
+                echo "::error::Vercel deployment ended in state $state."
+                exit 1 ;;
+              *) sleep 10 ;;
+            esac
+          done
+          test "$state" = "READY" || {
+            echo "::error::Vercel deployment is not READY after six minutes. Inspect its status before retrying."
+            exit 1
+          }
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
           echo "Quick deployment completed."
           echo "Branch: ${{ steps.source.outputs.branch }}"
