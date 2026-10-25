@@ -314,7 +314,24 @@ export default function MyOrbitFS({section="overview"}:{section?:BaseManagementS
       setReleaseRefreshWarning("");
       setSelectedReleaseId("");
       setReleaseConfirmed(false);
-      setD(verified);
+      // Refresh Releases is catalog-only. It must not replace the complete
+      // account/authority snapshot (which is separately checked by mutations).
+      setD((current:any)=>current?{
+        ...current,
+        publishedReleases:verified.publishedReleases,
+        latestRelease:verified.latestRelease,
+        latestBase:verified.latestBase,
+        latestUpdate:verified.latestUpdate,
+        baseUpdateAvailable:verified.baseUpdateAvailable,
+        baseUpdateStatus:verified.baseUpdateStatus,
+        base:verified.base,
+        releaseDiscoveryAvailable:verified.releaseDiscoveryAvailable,
+        baseReleaseDiscoveryByChannel:verified.baseReleaseDiscoveryByChannel,
+        channelDiscoveryError:verified.channelDiscoveryError,
+        updateReleaseDiscoveryAvailable:verified.updateReleaseDiscoveryAvailable,
+        updateReleaseDiscoveryByChannel:verified.updateReleaseDiscoveryByChannel,
+        updateReleaseDiscoveryError:verified.updateReleaseDiscoveryError
+      }:verified);
       setMsg(`Published Base releases verified for ${String(install.release_channel||selectedChannel)}.`);
     }finally{setBusy("")}
   }
