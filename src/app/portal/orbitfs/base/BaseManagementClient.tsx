@@ -108,6 +108,20 @@ export default function MyOrbitFS({section="overview"}:{section?:BaseManagementS
             }
             setReleaseRefreshWarning("");
           }
+          // A successful HTTP status can still contain an unavailable authority
+          // snapshot. Keep previously verified customer/release data visible, but
+          // use the CURRENT restrictive flags: never enable deployment from cache.
+          if(j?.settings?.license_authority_reason==="unreachable"||j?.settings?.license_authority_reason==="billing_database_unavailable"){
+            setD((previous:any)=>previous?{
+              ...previous,
+              settings:{...previous.settings,...j.settings,enabled:false,license_authority_available:false,release_authority_available:false,deployment_authority_available:false,customer_deploy_enabled:false,customer_base_updates_enabled:false},
+              releaseDiscoveryAvailable:false,
+              baseReleaseDiscoveryByChannel:j.baseReleaseDiscoveryByChannel||{},
+              channelDiscoveryError:j.channelDiscoveryError||"License Manager status temporarily unavailable."
+            }:j);
+            setReleaseRefreshWarning("License Manager could not be verified. Last loaded account and release details are retained for display; deployment and release actions remain disabled.");
+            return j;
+          }
           setD(j);if(!background&&!bootstrap)setMsg("");return j
         }
         setMsg(apiError(j,"Could not load My OrbitFS."));
