@@ -36,7 +36,10 @@ export async function masterHealthState(){
     const text=await response.text();
     let data:any={};
     try{data=text?JSON.parse(text):{};}catch{data={ok:false,error:text||"License Manager health returned an invalid response"};}
-    if(!response.ok&&response.status!==503)throw Object.assign(new Error(errorMessage(data?.error??data?.message??data?.code,`License Manager health failed (${response.status})`)),{status:response.status,code:data?.code});
+    // HTTP 503 (including SOURCE_MODE_UNVERIFIED and DATABASE_UNAVAILABLE)
+    // is not evidence that the licensing authority is operational.
+    if(!response.ok)return {...data,ok:false,reachable:false,httpStatus:response.status,error:errorMessage(data?.error??data?.message??data?.code,`License Manager health failed (${response.status})`)};
+    if(data?.ok!==true||data?.service!=="license-manager")return {ok:false,reachable:false,httpStatus:response.status,error:"License Manager health response was not verified"};
     return {...data,reachable:true,httpStatus:response.status};
   }catch(error:any){
     if(error instanceof Error&&error.name==="AbortError")return {ok:false,reachable:false,authority_reason:"unreachable",error:`License Manager health timed out after ${timeoutMs()}ms`};
