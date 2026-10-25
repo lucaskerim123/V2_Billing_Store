@@ -100,8 +100,20 @@ export default function MyOrbitFS({section="overview"}:{section?:BaseManagementS
             const channel=String(j?.installations?.find((row:any)=>row.component_key==="orbitfs_base")?.release_channel||"stable");
             if(j?.baseReleaseDiscoveryByChannel?.[channel]?.available!==true){
               setD((current:any)=>{
-                if(current?.baseReleaseDiscoveryByChannel?.[channel]?.available!==true)return j;
-                return {...j,publishedReleases:current.publishedReleases,baseReleaseDiscoveryByChannel:current.baseReleaseDiscoveryByChannel,releaseDiscoveryAvailable:false};
+                if(current?.baseReleaseDiscoveryByChannel?.[channel]?.available!==true){
+                  return current?{...j,bindings:current.bindings,installations:current.installations,connections:current.connections,customer:current.customer,releaseDiscoveryAvailable:false}:j;
+                }
+                return {...j,
+                  // Release discovery failure must not erase a previously verified
+                  // account/binding snapshot and send the customer to access pending.
+                  bindings:current.bindings,
+                  installations:current.installations,
+                  connections:current.connections,
+                  customer:current.customer,
+                  publishedReleases:current.publishedReleases,
+                  baseReleaseDiscoveryByChannel:current.baseReleaseDiscoveryByChannel,
+                  releaseDiscoveryAvailable:false
+                };
               });
               setReleaseRefreshWarning("Base release discovery could not be verified. Displaying the last successful catalog; updates are disabled until a successful refresh.");
               return j;
