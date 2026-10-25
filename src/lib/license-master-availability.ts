@@ -32,7 +32,13 @@ export async function getLicenseMasterAvailability(){
     return {reachable:true,restricted:true,reason:"store_maintenance",authority:null,pulseRevision:0,configuredMode,effectiveMode:"manual" as FulfillmentMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,updateDeploymentAvailable:false,rollbackAvailable:false,notice:storeMaintenanceMessage,storeMaintenance:true};
   }
   try{
-    const health=await masterHealthState();
+    // Health is read-only. Retry a transient 503/timeout once before
+    // classifying the remote authority as unreachable. No fail-open:
+    // a second failed read still blocks all mutations and deployments.
+    let health=await masterHealthState();
+    if(!health?.reachable){
+      health=await masterHealthState();
+    }
     if(!health?.reachable){
       const effectiveMode:FulfillmentMode=configuredMode==="paused"?"paused":configuredMode==="manual"?"manual":pauseUnreachable?"manual":"automatic";
       return {reachable:false,restricted:true,reason:"unreachable",authority:null,health,pulseRevision:0,configuredMode,effectiveMode,automaticFulfillmentAllowed:false,manualFulfillmentAllowed:false,releaseAuthorityAvailable:false,deploymentAuthorityAvailable:false,baseDeploymentAvailable:false,updateDeploymentAvailable:false,rollbackAvailable:false,notice,error:String(health?.error||"License Manager unavailable")};
