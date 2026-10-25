@@ -305,3 +305,25 @@ button,.buttonlink{transition:transform .14s,filter .14s,background .14s,border-
 .orbitDeliveryMessage{margin:0!important;padding:7px 9px!important;font-size:10px!important}
 @media(max-width:760px){.orbitDeliveryControls{display:grid;grid-template-columns:1fr 1fr}.orbitGateButton{width:100%;justify-content:flex-start}.orbitDeliveryBarHead>div{display:grid;gap:1px}}
 @media(max-width:420px){.orbitDeliveryControls{grid-template-columns:1fr}}
+
+
+/* V6a admin operational density — shared primitives, theme-aware */
+.adminShell{min-width:0}
+.adminShell .adminTop{gap:12px;flex-wrap:wrap;padding-bottom:12px}
+.adminShell .adminTop h1{font-size:clamp(20px,2.3vw,28px);line-height:1.2;margin:3px 0 7px}
+.adminShell .adminTop .muted{font-size:12px;line-height:1.45}
+.adminShell>.stats{gap:9px;margin:12px 0}
+.adminShell>.stats article{min-width:0;min-height:68px;padding:12px 14px;border-radius:9px}
+.adminShell>.stats article strong{font-size:clamp(17px,2vw,23px)}
+.adminShell>.stats article small{font-size:10px;letter-spacing:.045em}
+.adminShell>.stats article span{font-size:11px}
+.adminShell .panelTitle{gap:10px;flex-wrap:wrap}
+.adminShell .panelTitle h2{font-size:16px;line-height:1.3}
+.adminShell .filterBar,.adminShell .customerControlBar{gap:8px;align-items:center}
+.adminShell .filterBar input,.adminShell .filterBar select,.adminShell .customerControlBar input,.adminShell .customerControlBar select{min-height:34px;font-size:12px;padding:7px 10px;min-width:0}
+.adminShell .inlineActions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.adminShell .inlineActions button,.adminShell .inlineActions .buttonlink,.adminShell .adminTop .buttonlink,.adminShell .adminTop button{width:auto;min-height:33px;padding:7px 12px;font-size:12px;line-height:1.3}
+.adminShell .panel{min-width:0}
+.adminShell :is(button,input,select,textarea,a):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:700px){.adminShell>.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.adminShell .filterBar,.adminShell .customerControlBar{flex-wrap:wrap}.adminShell .filterBar .searchInput,.adminShell .customerControlBar .searchInput{flex:1 1 100%}}
+@media(prefers-reduced-motion:reduce){.adminShell *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
