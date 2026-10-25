@@ -1,0 +1,27 @@
+/* OrbitFS Billing Store V6a — compact customer workspace. Uses current theme variables. */
+.workspace{display:grid;gap:14px}
+.overview{display:flex;flex-wrap:wrap;gap:8px}
+.overview>div{min-width:125px;flex:0 1 170px;padding:10px 14px;border:1px solid var(--border,rgba(143,190,207,.22));background:var(--panel,rgba(16,56,76,.65));border-radius:8px;display:grid;gap:4px}
+.overview span{font-size:11px;color:var(--muted,#a1b6c1);letter-spacing:.025em}
+.overview strong{font-size:18px;font-weight:650;line-height:1.2}
+.columns{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,1fr);align-items:start;gap:12px}
+.profile,.compactPanel{min-width:0;margin:0!important;padding:14px!important}
+.sectionHead{display:flex;justify-content:space-between;align-items:start;margin-bottom:12px}
+.sectionHead h2,.compactPanel h2{font-size:15px;line-height:1.3;margin:0 0 5px}
+.sectionHead p,.compactPanel>p{font-size:12px;margin:0 0 10px}
+.compactForm,.sidePanels,.balanceForm{display:grid;gap:12px}
+.fieldGrid,.notesGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 12px}
+.fieldGrid label,.notesGrid label,.balanceForm label{display:grid;gap:4px;min-width:0}
+.fieldGrid label span,.notesGrid label span,.balanceForm label span,.accountType span{font-size:11px;color:var(--muted,#a1b6c1)}
+.fieldGrid input,.notesGrid textarea,.balanceForm input{box-sizing:border-box;width:100%;min-width:0;min-height:34px;padding:7px 10px;font-size:12px;border-radius:6px}
+.notesGrid textarea{min-height:72px;resize:vertical}
+.wide{grid-column:span 2}
+.accountType{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border,rgba(143,190,207,.2));border-bottom:1px solid var(--border,rgba(143,190,207,.2));padding:8px 0;font-size:12px}
+.formFooter{display:flex;justify-content:flex-end}
+.formFooter button,.actions button{width:auto!important;min-height:32px;padding:6px 13px!important;font-size:12px!important;flex:0 0 auto}
+.actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.sidePanels{gap:10px}
+.tabs{display:flex;gap:5px;flex-wrap:wrap}
+.tabs button{width:auto!important;padding:7px 12px!important;min-height:32px;font-size:12px}
+@media(max-width:850px){.columns{grid-template-columns:minmax(0,1fr)}.sidePanels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.sidePanels>section:last-child{grid-column:1/-1}}
+@media(max-width:530px){.fieldGrid,.notesGrid,.sidePanels{grid-template-columns:minmax(0,1fr)}.wide,.sidePanels>section:last-child{grid-column:auto}.overview>div{flex:1 1 90px;min-width:0;padding:9px}.overview strong{font-size:15px}.profile,.compactPanel{padding:11px!important}}
