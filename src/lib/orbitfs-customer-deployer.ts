@@ -1,5 +1,6 @@
 import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
 import {selectApplicableUpdateTargets} from "@/lib/orbitfs-update-targets.mjs";
+import {composeBaseReleaseFiles} from "@/lib/base-update-patches.mjs";
 import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
@@ -720,7 +721,7 @@ async function applyBaseUpdatePatch(install:any,release:any,bundle:UpdateBundle,
   // Reconstruct the complete active Base from the immutable full Base
   // artifact followed by every successful Update patch. Starting from the
   // original Base for each Update would silently discard earlier patches.
-  const merged=new Map(current.files.map(file=>[file.file,file]));
+  const previousPatches:Array<{files:any[];deletePaths:string[]}>=[];
   const patchChain=Array.isArray(install.metadata?.baseUpdater?.patchChain)
     ?install.metadata.baseUpdater.patchChain:[];
   if(patchChain.length>100)fail("Base update patch history exceeds safe replay limit",409,"BASE_UPDATE_PATCH_CHAIN_LIMIT");
@@ -738,12 +739,9 @@ async function applyBaseUpdatePatch(install:any,release:any,bundle:UpdateBundle,
     const priorPatch=priorBundle.payloads.panel;
     const previousFiles=Array.isArray(priorPatch.files)&&priorPatch.files.length?validateFiles(priorPatch.files,"Previous Base update patch"):[];
     const previousDeletes=Array.isArray(priorPatch.deletePaths)?priorPatch.deletePaths.map((value:any)=>String(value||"").trim()):[];
-    for(const file of previousDeletes)merged.delete(file);
-    for(const file of previousFiles)merged.set(file.file,file);
+    previousPatches.push({files:previousFiles,deletePaths:previousDeletes});
   }
-  for(const file of deletePaths)merged.delete(file);
-  for(const file of patchFiles)merged.set(file.file,file);
-  const mergedFiles=[...merged.values()].sort((a,b)=>a.file.localeCompare(b.file));
+  const mergedFiles=composeBaseReleaseFiles(current.files,previousPatches,{files:patchFiles,deletePaths});
   validateDeployableBaseFiles(mergedFiles);
   await refreshBasePanelUrlEnv(install);
   const deploymentFiles=baseVercelDeploymentFiles(mergedFiles);
