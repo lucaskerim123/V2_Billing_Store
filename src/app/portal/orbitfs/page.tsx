@@ -3,6 +3,8 @@
 import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
+import BaseManagement from "./base/BaseManagementClient";
+import UpdateManagement from "./releases/UpdateReleaseClient";
 
 type StatusTone="ready"|"warning"|"offline"|"neutral";
 type StatusItem={label:string;value:string;detail:string;tone:StatusTone};
@@ -17,6 +19,7 @@ export default function MyOrbitFSHome(){
   const [data,setData]=useState<any>(null);
   const [loading,setLoading]=useState(true);
   const [message,setMessage]=useState("");
+  const [activePanel,setActivePanel]=useState<"base"|"updates">("base");
 
   async function load(){
     setLoading(true);setMessage("");
@@ -98,22 +101,19 @@ export default function MyOrbitFSHome(){
       <div className="v6c-orbit-landing-art" aria-hidden="true"><i/><b/><span/></div>
     </section>
 
-    <section className="v6c-orbit-primary-grid" aria-label="Installation and updates">
-      {!installed ? <Link className="v6c-orbit-destination primary" href="/portal/orbitfs/base">
-        <span className="v6c-destination-number">01</span>
-        <div><small>FIRST INSTALLATION</small><h2>Install OrbitFS Base</h2><p>Connect providers and install the approved full Base release. Shared Engine and add-ons are optional; the updater works with Base alone.</p></div>
-        <b>Open Base Deployer →</b>
-      </Link> : <>
-        <Link className="v6c-orbit-destination primary" href="/portal/orbitfs/base">
-          <span className="v6c-destination-number">01</span>
-          <div><small>BASE INSTALLATION</small><h2>Manage installed Base</h2><p>Base {String(install?.release_version||"installed")} · {stateLabel(install?.state)}. Manage configuration, deployment health and installed-system controls.</p></div>
-          <b>Manage Base →</b>
-        </Link>
-        <Link className="v6c-orbit-destination primary update" href="/portal/orbitfs/releases">
-          <span className="v6c-destination-number">02</span>
-          <div><small>UPDATER</small><h2>Base and component updates</h2><p>Check for published Base patches, Shared Engine and installed add-on updates. Only authorised applicable components will be deployed, on manual action.</p></div>
-          <b>Check updates →</b>
-        </Link>
+    <section aria-label="OrbitFS installation and update controls" className="space-y-4">
+      {loading?<div className="rounded-xl border p-4" role="status">Checking installed Base and update availability…</div>:<>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+          <div>
+            <h2 className="text-lg font-semibold">{installed?"Installed OrbitFS control panel":"First installation — Base Deployer"}</h2>
+            <p className="text-sm">{installed?"Manage Base and its optional Shared Engine/add-ons from the same page. Changes deploy only after manual authorisation.":"Install Base first. Its independent updater remains available without Shared Engine."}</p>
+          </div>
+          {installed&&<div className="flex flex-wrap gap-2" role="group" aria-label="Installed system controls">
+            <button type="button" className={activePanel==="base"?"button-primary":"button-secondary"} aria-pressed={activePanel==="base"} onClick={()=>setActivePanel("base")}>Base management</button>
+            <button type="button" className={activePanel==="updates"?"button-primary":"button-secondary"} aria-pressed={activePanel==="updates"} onClick={()=>setActivePanel("updates")}>Updates and add-ons</button>
+          </div>}
+        </div>
+        <div className="min-w-0">{!installed||activePanel==="base"?<BaseManagement embedded/>:<UpdateManagement embedded/>}</div>
       </>}
     </section>
 
