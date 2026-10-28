@@ -1,4 +1,5 @@
 import {compareOrbitReleaseVersions} from "@/lib/orbitfs-version";
+import {selectApplicableUpdateTargets} from "@/lib/orbitfs-update-targets.mjs";
 import {gunzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
 import {licenseDb} from "@/lib/license-api";
@@ -1273,16 +1274,13 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     // combined Update Bundle without trying to provision an absent Engine.
     const engineTargetsAuthorized=authoritativeComponents.some(component=>component!=="base");
     const installedEngineState=engineTargetsAuthorized?await selectedEngineHostState(install):null;
-    const storedEngineConnection=install.metadata?.updaterConnection&&typeof install.metadata.updaterConnection==="object"
-      ?install.metadata.updaterConnection:{};
-    const engineInstalled=Boolean(
-      (installedEngineState&&["deployed","linked","ready","linking"].includes(String(installedEngineState.state||""))&&
-        (installedEngineState.projectId||installedEngineState.deploymentId))||
-      (storedEngineConnection.autoVerified===true&&storedEngineConnection.provenance==="inner-deployer-v1"&&storedEngineConnection.engineProjectId)
+    const selectedTargets=selectApplicableUpdateTargets(
+      authoritativeComponents,
+      bundleComponents,
+      installedEngineState,
+      install.metadata?.updaterConnection
     );
-    const components:string[]=[...new Set<string>(authoritativeComponents.filter(value=>
-      bundleComponents.includes(value)&&(value==="base"||engineInstalled)
-    ))];
+    const components:string[]=selectedTargets.components;
     const skippedComponents=bundleComponents.filter(component=>!components.includes(component));
     if(deploymentAuthorization?.notApplicable===true||!components.length){
       await event(install,"update.skipped","ok",`OrbitFS Update ${release.version} has no applicable targets for this installation`,{releaseId:release.id,releaseComponents:bundleComponents,skippedComponents,componentPlan:deploymentAuthorization?.componentPlan||null});
