@@ -1021,7 +1021,7 @@ async function rollbackEngineUpdatePayload(install:any,previousDeploymentId:stri
   if(body.waiting===true)fail("Base Inner Deployer rollback has not finished",504,"ENGINE_ROLLBACK_PENDING",true);
   const host=body.host&&typeof body.host==="object"?body.host:{};
   const deploymentId=String(host.deploymentId||"").trim();
-  if(deploymentId!==targetId)fail("Base Inner Deployer restored a different Engine deployment than authorised",409,"ENGINE_ROLLBACK_TARGET_MISMATCH");
+  if(!deploymentId)fail("Base Inner Deployer did not return the restored Engine deployment",502,"ENGINE_ROLLBACK_RESULT_MISSING",true);
   return {deploymentId,hostUrl:String(host.hostUrl||connection.engineHostUrl||""),state:"ready"};
 }
 
