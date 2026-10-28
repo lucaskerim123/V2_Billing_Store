@@ -717,7 +717,30 @@ async function applyBaseUpdatePatch(install:any,release:any,bundle:UpdateBundle,
   if(!patchFiles.length&&!deletePaths.length)fail("Base update patch contains no changes",422,"UPDATE_BASE_PATCH_EMPTY");
   if(patchFiles.some(file=>/\.sql$/i.test(file.file))||deletePaths.some((file:string)=>/\.sql$/i.test(file)))fail("Base SQL changes must use Update database migrations, not the Base file patch",422,"UPDATE_BASE_PATCH_SQL_INVALID");
 
+  // Reconstruct the complete active Base from the immutable full Base
+  // artifact followed by every successful Update patch. Starting from the
+  // original Base for each Update would silently discard earlier patches.
   const merged=new Map(current.files.map(file=>[file.file,file]));
+  const patchChain=Array.isArray(install.metadata?.baseUpdater?.patchChain)
+    ?install.metadata.baseUpdater.patchChain:[];
+  if(patchChain.length>100)fail("Base update patch history exceeds safe replay limit",409,"BASE_UPDATE_PATCH_CHAIN_LIMIT");
+  const seenPrior=new Set<string>();
+  for(const entry of patchChain){
+    const priorId=String(entry?.releaseId||"").trim();
+    if(!priorId||seenPrior.has(priorId))fail("Base update patch history is invalid",409,"BASE_UPDATE_PATCH_CHAIN_INVALID");
+    seenPrior.add(priorId);
+    const priorRelease=await exactRelease(priorId);
+    if(priorRelease.release_type!=="update")fail("Base update history contains a non-Update release",409,"BASE_UPDATE_PATCH_CHAIN_INVALID");
+    const priorArtifact=await readArtifact(priorRelease);
+    const priorBundle:any=priorArtifact.root;
+    if(priorBundle.format!=="orbitfs-update-bundle-v3"||!priorBundle.payloads?.panel)
+      fail("Previous Base Update artifact is unavailable for reconstructing this installation",409,"BASE_UPDATE_PATCH_CHAIN_INVALID");
+    const priorPatch=priorBundle.payloads.panel;
+    const previousFiles=Array.isArray(priorPatch.files)&&priorPatch.files.length?validateFiles(priorPatch.files,"Previous Base update patch"):[];
+    const previousDeletes=Array.isArray(priorPatch.deletePaths)?priorPatch.deletePaths.map((value:any)=>String(value||"").trim()):[];
+    for(const file of previousDeletes)merged.delete(file);
+    for(const file of previousFiles)merged.set(file.file,file);
+  }
   for(const file of deletePaths)merged.delete(file);
   for(const file of patchFiles)merged.set(file.file,file);
   const mergedFiles=[...merged.values()].sort((a,b)=>a.file.localeCompare(b.file));
@@ -1053,7 +1076,7 @@ async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:
 
     await configureVercel(deploymentInstall,String(release.version),productionUrl||undefined,requestedChannel,String(release.id),target.artifactSha256,String(target.pkg.sourceCommit||expectedSource(release)));
     const completedAt=new Date().toISOString();
-    const metadata={...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),lastBaseUpdate:{fromVersion:currentVersion,toVersion:String(release.version),fromReleaseId:currentReleaseId,toReleaseId:String(release.id),databaseMigrations:migrations,completedAt}};
+    const metadata={...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),baseUpdater:{installationId:String(install.installation_id),baseProjectId:String(install.vercel_project_id||""),status:"installed",registeredAt:completedAt,releaseId:String(release.id),baseVersion:String(release.version),patchChain:[]},lastBaseUpdate:{fromVersion:currentVersion,toVersion:String(release.version),fromReleaseId:currentReleaseId,toReleaseId:String(release.id),databaseMigrations:migrations,completedAt}};
     const patch:any={
       metadata,
       schema_version:targetSchemaVersion,
@@ -1433,7 +1456,11 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
             status:"installed",
             lastUpdatedAt:appliedAt,
             lastUpdateReleaseId:String(release.id),
-            lastUpdateVersion:String(release.version)
+            lastUpdateVersion:String(release.version),
+            patchChain:[
+              ...((Array.isArray(install.metadata?.baseUpdater?.patchChain)?install.metadata.baseUpdater.patchChain:[])),
+              {releaseId:String(release.id),version:String(release.version),sourceCommit:String(bundle.sourceCommit||"")}
+            ]
           }}:{}),
           ...(engineResult?{updaterConnection:{
             ...((install.metadata?.updaterConnection&&typeof install.metadata.updaterConnection==="object")?install.metadata.updaterConnection:{}),
@@ -1521,7 +1548,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
   // storage preparation, licence activation, Owner creation, workspace creation and
   // runtime installation registration all happen inside the installed Base setup flow.
   const completedAt=new Date().toISOString();
-  const patch={release_channel:requestedChannel,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,production_url:productionUrl,health_status:"unknown",release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,release_source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,previous_release_version:previousVersion,last_deployment_at:completedAt,last_error:null,state:"ready",metadata:{...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),baseUpdater:{installationId:String(install.installation_id),baseProjectId:String(install.vercel_project_id||""),status:"installed",registeredAt:completedAt,releaseId:String(release.id),baseVersion:String(release.version)}},...(action==="redeploy"&&packageDatabaseSchema?{schema_version:packageDatabaseSchema}: {})};
+  const patch={release_channel:requestedChannel,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,production_url:productionUrl,health_status:"unknown",release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,release_source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,previous_release_version:previousVersion,last_deployment_at:completedAt,last_error:null,state:"ready",metadata:{...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),baseUpdater:{installationId:String(install.installation_id),baseProjectId:String(install.vercel_project_id||""),status:"installed",registeredAt:completedAt,releaseId:String(release.id),baseVersion:String(release.version),patchChain:[]}},...(action==="redeploy"&&packageDatabaseSchema?{schema_version:packageDatabaseSchema}: {})};
   const {data,error}=await licenseDb().from("orbitfs_installations").update(patch).eq("id",install.id).select().single();if(error)throw error;
   const history=await licenseDb().from("orbitfs_installation_releases").insert({installation_id:install.id,auth_user_id:install.auth_user_id,release_version:String(release.version),release_id:String(release.id),release_sha256:parsed.artifactSha256,source_commit:parsed.pkg.sourceCommit||release.sourceCommit||null,vercel_deployment_id:deploymentId,deployment_url:deploymentUrl,action,status:"ready",ready_at:completedAt});
   if(history.error)throw history.error;
