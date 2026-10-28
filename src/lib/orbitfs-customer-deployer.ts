@@ -1004,13 +1004,27 @@ async function applyEngineUpdatePayload(install:any,release:any,bundle:UpdateBun
 
 async function rollbackEngineUpdatePayload(install:any,previousDeploymentId:string|null){
   const connection=await updaterConnection(install);
-  if(!previousDeploymentId)fail("No previous Engine Host deployment is recorded for rollback",409,"ENGINE_ROLLBACK_TARGET_MISSING");
-  const rollbackDeploymentId=String(previousDeploymentId);
-  await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(connection.engineProjectId)}/rollback/${encodeURIComponent(rollbackDeploymentId)}`,{method:"POST",body:JSON.stringify({})});
-  await rebindSelectedEngineVercelAlias(install,await selectedEngineHostState(install),rollbackDeploymentId,connection.engineProjectId);
-  await recordSharedEngineDeploymentState(install,rollbackDeploymentId,connection.engineHostUrl||null);
-  return {deploymentId:rollbackDeploymentId,hostUrl:connection.engineHostUrl,state:"ready"};
+  const targetId=String(previousDeploymentId||"").trim();
+  if(!targetId)fail("No previous Engine Host deployment is recorded for rollback",409,"ENGINE_ROLLBACK_TARGET_MISSING");
+  const releaseId=String(install.metadata?.appliedUpdate?.releaseId||"").trim();
+  if(!releaseId)fail("Applied Engine release is not recorded for rollback",409,"ENGINE_ROLLBACK_RELEASE_REQUIRED");
+  const channel=String(install.metadata?.appliedUpdate?.channel||install.release_channel||"stable").trim();
+  const {token,teamId}=await customerVercelCredentials(String(install.auth_user_id));
+  let body=await callBaseInnerDeployer(install,{
+    mode:"rollback",releaseId,releaseChannel:channel,
+    expectedPreviousDeploymentId:targetId,vercelToken:token,teamId:teamId||""
+  });
+  for(let attempt=0;attempt<30&&body.waiting===true;attempt++){
+    await new Promise(resolve=>setTimeout(resolve,10000));
+    body=await callBaseInnerDeployer(install,{mode:"refresh",vercelToken:token,teamId:teamId||""});
+  }
+  if(body.waiting===true)fail("Base Inner Deployer rollback has not finished",504,"ENGINE_ROLLBACK_PENDING",true);
+  const host=body.host&&typeof body.host==="object"?body.host:{};
+  const deploymentId=String(host.deploymentId||"").trim();
+  if(deploymentId!==targetId)fail("Base Inner Deployer restored a different Engine deployment than authorised",409,"ENGINE_ROLLBACK_TARGET_MISMATCH");
+  return {deploymentId,hostUrl:String(host.hostUrl||connection.engineHostUrl||""),state:"ready"};
 }
+
 async function previousDeployment(install:any):Promise<{vercel_deployment_id:string;deployment_url:string|null;release_version:string;release_id:string;created_at:string}>{const {data,error}=await licenseDb().from("orbitfs_installation_releases").select("vercel_deployment_id,deployment_url,release_version,release_id,created_at,action").eq("installation_id",install.id).eq("status","ready").neq("action","update").not("vercel_deployment_id","is",null).order("created_at",{ascending:false}).limit(5);if(error)throw error;const previous=(data||[]).find((r:any)=>String(r.release_id||"")!==String(install.release_id||""));if(!previous)throw Object.assign(new Error("No previous successful Base deployment is available for rollback"),{status:409});if(!previous.vercel_deployment_id||!previous.release_id||!previous.release_version)throw Object.assign(new Error("Previous Base deployment record is incomplete and cannot be rolled back"),{status:409});return {vercel_deployment_id:String(previous.vercel_deployment_id),deployment_url:previous.deployment_url?String(previous.deployment_url):null,release_version:String(previous.release_version),release_id:String(previous.release_id),created_at:String(previous.created_at||"")}}
 
 async function runBaseUpdateDeployment(install:any,release:any,requestedChannel:string,authorityLicenseId:string,progress?:OperationProgress){
