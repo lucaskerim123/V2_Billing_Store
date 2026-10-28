@@ -156,11 +156,15 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
         setSiteStep(1);
         setViewedPrimaryStage(1);
       }else if(connected==="supabase"){
+        // Connecting Supabase does not complete the two-provider Connections
+        // stage. Never advance past Vercel before its API access is verified.
+        const connections=Array.isArray(snapshot?.connections)?snapshot.connections:[];
+        const vercelReady=connections.some((row:any)=>row?.provider==="vercel"&&row?.status==="connected"&&row?.metadata?.api_ready===true);
         setViewedPrimaryStage(1);
         setCurrentStep(2);
-        setSiteStep(2);
+        setSiteStep(vercelReady?2:1);
         const loaded=await loadSupabase();
-        if(loaded)setMsg("Supabase account connected. Choose an existing project or create a new one.");
+        if(loaded)setMsg(vercelReady?"Supabase connected. Choose an existing project or create a new one.":"Supabase connected. Complete the Vercel connection before advancing past Connections; you can also choose your Supabase project.");
       }else if(connected==="vercel"){
         const installations=Array.isArray(snapshot?.installations)?snapshot.installations:[];
         const connectedSupabase=(Array.isArray(snapshot?.connections)?snapshot.connections:[]).some((row:any)=>row?.provider==="supabase"&&row?.status==="connected");
