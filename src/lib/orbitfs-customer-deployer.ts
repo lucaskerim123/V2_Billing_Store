@@ -1385,6 +1385,17 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
         metadata:{
           ...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),
           appliedUpdate:updateState,
+          // Base Updater registration is independent of the optional Engine
+          // connection, and survives ordinary Update releases.
+          ...(basePatchResult?{baseUpdater:{
+            ...((install.metadata?.baseUpdater&&typeof install.metadata.baseUpdater==="object")?install.metadata.baseUpdater:{}),
+            installationId:String(install.installation_id),
+            baseProjectId:String(install.vercel_project_id||""),
+            status:"installed",
+            lastUpdatedAt:appliedAt,
+            lastUpdateReleaseId:String(release.id),
+            lastUpdateVersion:String(release.version)
+          }}:{}),
           ...(engineResult?{updaterConnection:{
             ...((install.metadata?.updaterConnection&&typeof install.metadata.updaterConnection==="object")?install.metadata.updaterConnection:{}),
             linked:true,
