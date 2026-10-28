@@ -178,10 +178,9 @@ export default function PortalLayoutClient({children}:{children:React.ReactNode}
     {!suspended&&<details ref={orbitfsMenuRef} onToggle={e=>{const el=e.currentTarget;if(el.open)closeDropdowns(el)}} className={"portalTopNavGroup "+(path.startsWith("/portal/orbitfs")?"active":"")}>
      <summary>My OrbitFS <span className="portalTopNavChevron">⌄</span></summary>
      <div className="portalTopNavSub">
-      <Link onClick={()=>closeDropdowns()} className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Base Deployment</Link>
+      <Link onClick={()=>closeDropdowns()} className={path==="/portal/orbitfs"?"active":""} href="/portal/orbitfs">Installation &amp; Updates</Link>
       <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/license")?"active":""} href="/portal/orbitfs/license">Licence</Link>
       <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/channels")?"active":""} href="/portal/orbitfs/channels">Release Channels</Link>
-      <Link onClick={()=>closeDropdowns()} className={path.startsWith("/portal/orbitfs/releases")?"active":""} href="/portal/orbitfs/releases">Updates</Link>
      </div>
     </details>}
    </nav>
