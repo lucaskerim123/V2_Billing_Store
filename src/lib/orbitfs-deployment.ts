@@ -756,7 +756,7 @@ async function firstWorkingSupabaseKey(install:any,keys:any[],kind:"publishable"
 async function createAndValidateSupabaseKey(install:any,type:"publishable"|"secret",kind:"publishable"|"server"){
   const created=await supabaseApi(install.auth_user_id,`/projects/${install.supabase_project_ref}/api-keys?reveal=true`,{
     method:"POST",
-    body:JSON.stringify({type,name:`orbitfs-${kind}-${Date.now().toString(36)}`})
+    body:JSON.stringify({type,name:`orbitfs_${kind}_${Date.now().toString(36)}`})
   });
   const value=supabaseApiKeyValue(created);
   if(!value)throw Object.assign(new Error(`Supabase created a ${kind} API key but did not return its value`),{status:502,code:"CUSTOMER_SUPABASE_KEY_CREATE_FAILED"});
