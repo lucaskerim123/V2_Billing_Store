@@ -145,7 +145,7 @@ function adminRouteKey(path:string){
   if(path==="/admin")return "dashboard";
   if(path.startsWith("/admin/orbitfs/installations"))return "installations";
   if(path.startsWith("/admin/orbitfs/base-deployment")||path.startsWith("/admin/orbitfs/base-deploy"))return "base-deployment";
-  if(path.startsWith("/admin/orbitfs/update-release-deployer")||path.startsWith("/admin/orbitfs/releases")||path.startsWith("/admin/releases"))return "update-release";
+  if(path.startsWith("/admin/orbitfs/release-control")||path.startsWith("/admin/orbitfs/update-release-deployer")||path.startsWith("/admin/orbitfs/releases")||path.startsWith("/admin/releases"))return "update-release";
   if(path.startsWith("/admin/orbitfs/release-channels"))return "release-channels";
   if(path.startsWith("/admin/license-controller"))return "license-controller";
   if(path.startsWith("/admin/licensing")||path.startsWith("/admin/settings/license-master"))return "licensing";
