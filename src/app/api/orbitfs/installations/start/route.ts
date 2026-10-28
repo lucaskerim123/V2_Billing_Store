@@ -1,6 +1,6 @@
 import {httpError,requireOrbitUser,requireSetupSystem} from "@/lib/orbitfs-deployment";
 import {licenseDb} from "@/lib/license-api";
-import {masterLicenses} from "@/lib/master-api";
+import {masterLicenses,masterInstallationDetails} from "@/lib/master-api";
 import {serviceRpc} from "@/lib/paymentServer";
 import {canonicalLicenseStatus,isCanonicalLicenseUsable} from "@/lib/license-status";
 import {billingCustomerUserFilter} from "@/lib/billing-customer-identity.mjs";
@@ -40,10 +40,33 @@ export async function POST(req:Request){
 
     // Base deployment is authorized by the Base licence. Add-on entitlements are
     // evaluated separately by License Manager and never gate access to this flow.
-    const installation=await serviceRpc("service_ensure_orbitfs_inner_installation",{
+    const ensure=()=>serviceRpc("service_ensure_orbitfs_inner_installation",{
       p_auth_user_id:user.id,
       p_binding_id:bindingId
     });
+    let installation:any=await ensure();
+    if(!installation?.installation_id)throw Object.assign(new Error("Could not create a Base installation identity"),{status:502});
+    let authoritativeInstallation:any=null;
+    try{
+      authoritativeInstallation=await masterInstallationDetails(String(installation.installation_id),String(binding.license_id));
+    }catch(error:any){
+      if(Number(error?.status)!==404)throw error;
+    }
+    if(String(authoritativeInstallation?.installation?.status||"").toLowerCase()==="released"){
+      if(installation.vercel_project_id||installation.vercel_deployment_id||installation.production_url||installation.supabase_project_ref){
+        throw Object.assign(new Error("This setup refers to a released License Manager installation with customer resources. Review and retire that setup before starting fresh; the released identity cannot be reused."),{status:409,code:"INSTALLATION_RELEASED_REQUIRES_RECONCILIATION"});
+      }
+      // No cloud resources exist. Retire the stale Billing record without
+      // deleting its audit history, then use a fresh server-generated identity.
+      const retired=await db.from("orbitfs_installations").update({
+        state:"uninstalled",updated_at:new Date().toISOString()
+      }).eq("id",installation.id).eq("auth_user_id",user.id).select("id").single();
+      if(retired.error)throw retired.error;
+      installation=await ensure();
+      if(!installation?.installation_id||installation.installation_id===authoritativeInstallation.installation.installation_id){
+        throw Object.assign(new Error("Fresh Base installation identity could not be created"),{status:409,code:"FRESH_INSTALLATION_ID_REQUIRED"});
+      }
+    }
     return Response.json({ok:true,installation},{headers:{"cache-control":"no-store"}});
   }catch(error){return httpError(error)}
 }
