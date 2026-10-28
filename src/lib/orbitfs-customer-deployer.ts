@@ -779,6 +779,25 @@ async function selectedEngineHostState(install:any){
     return state;
   }catch{return null}
 }
+// Read the installed flags from the Base-owned customer database. Entitlement
+// alone never makes an add-on an update target. Query failures are explicit so
+// we do not silently apply a partial Engine/add-on update.
+async function selectedInstalledAddons(install:any):Promise<string[]>{
+  if(!install?.supabase_project_ref||!install?.database_initialized_at)
+    fail("Base customer database is not initialized for add-on inventory",409,"UPDATER_ADDON_INVENTORY_UNAVAILABLE");
+  let rows:any[];
+  try{
+    const response=await supabaseApi(String(install.auth_user_id),
+      "/projects/"+encodeURIComponent(String(install.supabase_project_ref))+"/database/query",{
+      method:"POST",
+      body:JSON.stringify({query:"select id from public.orbitfs_addons where installed=true and id in ('mcp','apex','studio');"})
+    });
+    rows=managementRows(response);
+  }catch(error:any){
+    fail("Could not verify installed add-ons from the Base customer database",503,"UPDATER_ADDON_INVENTORY_UNAVAILABLE",true);
+  }
+  return [...new Set(rows!.map(row=>String(row?.id||"").trim().toLowerCase()).filter(id=>["mcp","apex","studio"].includes(id)))];
+}
 async function verifiedSelectedEngineHostUrl(install:any,state:any,projectId:string,projectName:string,deploymentId:string|null){
   const selected=normalizedHttpsOrigin(state?.hostUrl);
   if(!selected)return null;
@@ -1274,11 +1293,17 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     // combined Update Bundle without trying to provision an absent Engine.
     const engineTargetsAuthorized=authoritativeComponents.some(component=>component!=="base");
     const installedEngineState=engineTargetsAuthorized?await selectedEngineHostState(install):null;
+    const engineObservation=selectApplicableUpdateTargets(
+      authoritativeComponents,bundleComponents,installedEngineState,install.metadata?.updaterConnection
+    );
+    const installedAddons=engineObservation.engineInstalled&&authoritativeComponents.some(component=>["mcp","apex","studio"].includes(component))
+      ?await selectedInstalledAddons(install):[];
     const selectedTargets=selectApplicableUpdateTargets(
       authoritativeComponents,
       bundleComponents,
       installedEngineState,
-      install.metadata?.updaterConnection
+      install.metadata?.updaterConnection,
+      installedAddons
     );
     const components:string[]=selectedTargets.components;
     const skippedComponents=bundleComponents.filter(component=>!components.includes(component));
