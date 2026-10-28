@@ -1384,7 +1384,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     const engineComponents=components.filter(component=>component!=="base");
     const appliesEngine=engineComponents.length>0;
     if(appliesBase&&!panel)fail("Update targets Base files but has no Base patch payload",422,"UPDATE_BASE_PAYLOAD_REQUIRED");
-    if(!appliesBase&&panel)fail("Update contains a Base patch without Base authorization",422,"UPDATE_SCOPE_INVALID");
+    if(!appliesBase&&panel&&!skippedComponents.includes("base"))fail("Update contains a Base patch outside the declared release targets",422,"UPDATE_SCOPE_INVALID");
     if(appliesEngine&&!engine)fail("Update targets Engine/addons but has no Engine payload",422,"UPDATE_ENGINE_PAYLOAD_REQUIRED");
     if(!appliesEngine&&engine&&!skippedComponents.some(component=>component!=="base"))fail("Update contains an Engine payload without an Engine/addon target",422,"UPDATE_SCOPE_INVALID");
     if(engine)validateFiles((engine as Package).files,"Engine update payload");
@@ -1432,7 +1432,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       }
       await event(install,"update.database.completed","ok","Update database migration check completed",{releaseId:release.id,releaseVersion:release.version,databaseMigrations:databaseResult});
 
-      if(panel){
+      if(appliesBase&&panel){
         await event(install,"update.base.started","info","Updater is applying the authorized Base file patch to the existing Base project",{releaseId:release.id,releaseVersion:release.version});
         basePatchAttempted=true;
         basePatchResult=await applyBaseUpdatePatch(install,release,bundle,panel,requestedChannel);
