@@ -68,6 +68,11 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Verify Base updater component selection and cumulative patches
+        run: |
+          node --test scripts/orbitfs-update-targets.test.mjs
+          node --test scripts/base-update-patches.test.mjs
+
       - name: Run complete production preflight
         run: npm run preflight
 
