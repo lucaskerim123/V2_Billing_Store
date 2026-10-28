@@ -46,3 +46,18 @@ test("Unverified or unrelated Engine metadata never enables Engine targets", () 
   assert.deepEqual(result.components,[]);
   assert.deepEqual(result.skippedComponents,["engine-shared"]);
 });
+
+test("Engine add-ons update only when installed in the Base inventory", () => {
+  const authorised=["base","engine-shared","mcp","apex","studio"];
+  const release=["base","engine-shared","mcp","apex","studio"];
+  const host={state:"ready",projectId:"prj-engine",deploymentId:"dpl-engine"};
+  const result=selectApplicableUpdateTargets(authorised,release,host,{},["mcp","studio"]);
+  assert.deepEqual(result.components,["base","engine-shared","mcp","studio"]);
+  assert.deepEqual(result.skippedComponents,["apex"]);
+});
+
+test("An entitled add-on is skipped if it is not installed even with Engine present", () => {
+  const result=selectApplicableUpdateTargets(["base","mcp"],["base","mcp"],{state:"ready",projectId:"prj-engine"}, {},[]);
+  assert.deepEqual(result.components,["base"]);
+  assert.deepEqual(result.skippedComponents,["mcp"]);
+});
