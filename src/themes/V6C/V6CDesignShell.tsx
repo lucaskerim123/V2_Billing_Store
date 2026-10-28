@@ -83,9 +83,7 @@ export default function V6CDesignShell({path,children,canAccessAdmin=false,loggi
         <details ref={orbitfsMenuRef} onToggle={event=>{const el=event.currentTarget;if(el.open)closeMenus(el)}} className={"v6c-orbitfs-nav "+(path.startsWith("/portal/orbitfs")?"is-active":"")}>
           <summary>My OrbitFS <span>⌄</span></summary>
           <div className="v6c-orbitfs-menu">
-            <Link onClick={()=>closeMenus()} href="/portal/orbitfs">Overview</Link>
-            <Link onClick={()=>closeMenus()} href="/portal/orbitfs/base">Base Deployment</Link>
-            <Link onClick={()=>closeMenus()} href="/portal/orbitfs/releases">Update Release System</Link>
+            <Link onClick={()=>closeMenus()} href="/portal/orbitfs">Installation &amp; Updates</Link>
             <Link onClick={()=>closeMenus()} href="/portal/orbitfs/license">License Controller</Link>
             <Link onClick={()=>closeMenus()} href="/portal/orbitfs/channels">Release Channels</Link>
           </div>
