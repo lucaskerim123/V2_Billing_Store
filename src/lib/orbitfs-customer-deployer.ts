@@ -929,8 +929,8 @@ async function sharedEngineHostHealthy(hostUrl:string){
 // coordinates the customer operation and reports its result; it must not
 // build or upload an independent Engine deployment.
 async function callBaseInnerDeployer(install:any,input:Record<string,unknown>){
-  const baseUrl=String(install.production_url||install.deployment_url||"").trim().replace(/\\/+$/,"");
-  if(!/^https:\\/\\/[^/]+$/i.test(baseUrl))fail("Registered Base production URL is unavailable",409,"BASE_INNER_DEPLOYER_URL_REQUIRED");
+  const baseUrl=String(install.production_url||install.deployment_url||"").trim().replace(/\/+$/,"");
+  if(!/^https:\/\/[^/]+$/i.test(baseUrl))fail("Registered Base production URL is unavailable",409,"BASE_INNER_DEPLOYER_URL_REQUIRED");
   const secret=await customerInstallationDbSecret(String(install.id));
   const response=await fetch(baseUrl+"/api/store/update-engine",{
     method:"POST",
