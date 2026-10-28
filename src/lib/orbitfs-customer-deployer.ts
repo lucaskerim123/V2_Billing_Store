@@ -1002,11 +1002,11 @@ async function applyEngineUpdatePayload(install:any,release:any,bundle:UpdateBun
   };
 }
 
-async function rollbackEngineUpdatePayload(install:any,previousDeploymentId:string|null){
+async function rollbackEngineUpdatePayload(install:any,previousDeploymentId:string|null,attemptedReleaseId?:string){
   const connection=await updaterConnection(install);
   const targetId=String(previousDeploymentId||"").trim();
   if(!targetId)fail("No previous Engine Host deployment is recorded for rollback",409,"ENGINE_ROLLBACK_TARGET_MISSING");
-  const releaseId=String(install.metadata?.appliedUpdate?.releaseId||"").trim();
+  const releaseId=String(attemptedReleaseId||install.metadata?.appliedUpdate?.releaseId||"").trim();
   if(!releaseId)fail("Applied Engine release is not recorded for rollback",409,"ENGINE_ROLLBACK_RELEASE_REQUIRED");
   const channel=String(install.metadata?.appliedUpdate?.channel||install.release_channel||"stable").trim();
   const {token,teamId}=await customerVercelCredentials(String(install.auth_user_id));
@@ -1515,7 +1515,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       if(engineAttempted){
         try{
           const previousEngineDeploymentId=String(engineResult?.previousDeploymentId||install.metadata?.updaterConnection?.engineDeploymentId||"").trim()||null;
-          const rolledBack=await rollbackEngineUpdatePayload(install,previousEngineDeploymentId);
+          const rolledBack=await rollbackEngineUpdatePayload(install,previousEngineDeploymentId,String(release.id));
           recovery.engine={ok:true,restoredDeploymentId:rolledBack.deploymentId||null};
         }catch(recoveryError){recovery.engine={ok:false,error:errorMessage(recoveryError,"Engine recovery failed")}}
       }
