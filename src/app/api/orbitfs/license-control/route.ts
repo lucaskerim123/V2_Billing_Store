@@ -53,7 +53,7 @@ export async function POST(req:Request){
     let installationId=String(body.installationId||"").trim();
     let installation:any=null;
     if(installationId){
-      const installResult=await sb.from("orbitfs_installations").select("id,installation_id,state,metadata").eq("auth_user_id",user.id).eq("license_binding_id",binding.id).eq("installation_id",installationId).maybeSingle();
+      const installResult=await sb.from("orbitfs_installations").select("id,installation_id,state,metadata,vercel_project_id,vercel_deployment_id,production_url").eq("auth_user_id",user.id).eq("license_binding_id",binding.id).eq("installation_id",installationId).maybeSingle();
       if(installResult.error)throw installResult.error;
       installation=installResult.data||null;
     }
@@ -62,6 +62,9 @@ export async function POST(req:Request){
       if(!installationId)return Response.json({error:"Installation is required to unlock a licence."},{status:400});
       if(!installation)return Response.json({error:"Installation is not registered for this licence"},{status:404});
       installationId=String(installation.installation_id);
+      if(installation.vercel_project_id||installation.vercel_deployment_id||installation.production_url){
+        return Response.json({error:"This Base installation still has a Vercel deployment. Undeploy it before unlocking the licence binding; unlocking cannot silently remove the installed runtime.",code:"UNDEPLOY_BEFORE_UNLOCK"},{status:409});
+      }
     }
 
     const masterAction=action==="unlock"?"customer-unlock":action;
@@ -70,6 +73,16 @@ export async function POST(req:Request){
       installation_id:installationId||null,
       actorRef:"billing_store_customer_portal"
     });
+    if(action==="unlock"&&installation?.id){
+      // Once License Manager releases this installation identity, it must never
+      // be reused for a later Base deployment. Keep the old record for audit.
+      const updated=await sb.from("orbitfs_installations").update({
+        state:"uninstalled",updated_at:new Date().toISOString(),
+        metadata:{...(installation.metadata&&typeof installation.metadata==="object"?installation.metadata:{}),
+          releasedInstallationId:installationId,unlockedAt:new Date().toISOString()}
+      }).eq("id",installation.id).eq("auth_user_id",user.id).select("id").single();
+      if(updated.error)throw Object.assign(new Error("License Manager released the installation, but Billing could not retire the old identity. Do not deploy before reconciling the installation record."),{status:502,code:"INSTALLATION_RETIRE_FAILED"});
+    }
     const key=result?.key||result?.license?.key||result?.license_key||result?.licenseKey||null;
 
     if(action==="rotate"){
@@ -131,7 +144,7 @@ export async function POST(req:Request){
       ?pendingReinstall
         ?"Licence rotated. Save the new key now, then return to Base Deployment and enter it to continue the pending Base reinstall."
         :"Licence rotated. Save the new key now."
-      :`Licence ${action} request completed.`;
+      :action==="unlock"?"Installation unlocked in License Manager. The old installation identity is retired; starting Base setup creates a new installation identity.":`Licence ${action} request completed.`;
 
     const warnings=Array.isArray((result as any).billingMirrorWarnings)?(result as any).billingMirrorWarnings:[];
     return Response.json({...result,...(key?{key}:{}),message,warnings});
