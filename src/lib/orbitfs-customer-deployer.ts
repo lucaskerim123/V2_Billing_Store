@@ -925,48 +925,62 @@ async function sharedEngineHostHealthy(hostUrl:string){
     return response.status<500;
   }catch{return false}
 }
+// Shared Engine is always executed by Base's Inner Deployer. Billing Store
+// coordinates the customer operation and reports its result; it must not
+// build or upload an independent Engine deployment.
+async function callBaseInnerDeployer(install:any,input:Record<string,unknown>){
+  const baseUrl=String(install.production_url||install.deployment_url||"").trim().replace(/\\/+$/,"");
+  if(!/^https:\\/\\/[^/]+$/i.test(baseUrl))fail("Registered Base production URL is unavailable",409,"BASE_INNER_DEPLOYER_URL_REQUIRED");
+  const secret=await customerInstallationDbSecret(String(install.id));
+  const response=await fetch(baseUrl+"/api/store/update-engine",{
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-orbitfs-db-secret":secret,
+      "x-orbitfs-installation-id":String(install.installation_id||"")
+    },
+    body:JSON.stringify(input),
+    cache:"no-store",
+    signal:AbortSignal.timeout(120000)
+  });
+  const body:any=await response.json().catch(()=>({}));
+  if(!response.ok&&response.status!==202){
+    const code=String(body?.code||"BASE_INNER_DEPLOYER_FAILED");
+    fail(errorMessage(body?.error||body?.message||body,"Base Inner Deployer rejected the Engine update"),
+      response.status>=500?502:response.status,code,response.status>=500);
+  }
+  if(body?.ok!==true)fail("Base Inner Deployer did not confirm the operation",502,"BASE_INNER_DEPLOYER_INVALID_RESPONSE",true);
+  return body;
+}
 async function applyEngineUpdatePayload(install:any,release:any,bundle:UpdateBundle,engine:Package,channel:string,components:string[]){
+  // Physical installation and provenance are verified before entering this
+  // operation; the Base endpoint performs its own licence and release checks.
   const connection=await updaterConnection(install);
-  const files=validateFiles(engine.files,"Engine update payload");
-  const uploadedFiles=await uploadVercelDeploymentFiles(String(install.auth_user_id),files);
-  const body:any={
-    name:connection.engineProjectName,
-    project:connection.engineProjectId,
-    target:"production",
-    files:uploadedFiles,
-    projectSettings:{framework:"sveltekit",installCommand:"npm ci",buildCommand:"npm run build",...(engine.projectSettings||{})},
-    meta:{
-      orbitfsReleaseId:String(release.id),
-      orbitfsVersion:String(release.version),
-      orbitfsAction:"update",
-      orbitfsChannel:channel,
-      orbitfsSourceCommit:String(bundle.sourceCommit||expectedSource(release)),
-      orbitfsInstallationRoute:"billing_store_updater",
-      orbitfsUpdateTargets:components.join(",")
-    }
-  };
-  const created=await vercelApi(String(install.auth_user_id),"/v13/deployments",{method:"POST",body:JSON.stringify(body)});
-  if(!created?.id&&!created?.uid)fail("Vercel did not return an Engine Host update deployment id",502);
-  const deploymentId=String(created.id||created.uid);
-  const ready=await waitForReady(String(install.auth_user_id),deploymentId);
-  const state=String(ready?.readyState||ready?.state||"").toUpperCase();
-  if(state!=="READY")fail("Engine Host update deployment did not become ready within the deployment window",504);
-  const selectedState=await selectedEngineHostState(install);
-  await rebindSelectedEngineVercelAlias(install,selectedState,deploymentId,connection.engineProjectId);
-  const deploymentUrl=ready?.url?`https://${String(ready.url).replace(/^https?:\/\//,"")}`:connection.engineHostUrl;
-  const hostUrl=connection.engineHostUrl||deploymentUrl;
-  if(!hostUrl||!await sharedEngineHostHealthy(hostUrl))fail("Updated Shared Engine Host is not healthy",502,"ENGINE_HOST_UNHEALTHY",true);
-  await recordSharedEngineDeploymentState(install,deploymentId,deploymentUrl);
+  const {token,teamId}=await customerVercelCredentials(String(install.auth_user_id));
+  const input={mode:"apply",releaseId:String(release.id),releaseChannel:channel,components,vercelToken:token,teamId:teamId||""};
+  let body=await callBaseInnerDeployer(install,input);
+  // Engine Vercel builds are asynchronous. Resolve status through Base so
+  // Billing never takes over provider-side Engine execution.
+  for(let attempt=0;attempt<30&&body.waiting===true;attempt++){
+    await new Promise(resolve=>setTimeout(resolve,10000));
+    body=await callBaseInnerDeployer(install,{mode:"refresh",vercelToken:token,teamId:teamId||""});
+  }
+  if(body.waiting===true)fail("Base Inner Deployer has not finished the Engine update",504,"BASE_INNER_DEPLOYER_PENDING",true);
+  const host=body.host&&typeof body.host==="object"?body.host:{};
+  const deploymentId=String(host.deploymentId||"").trim();
+  const hostUrl=String(host.hostUrl||connection.engineHostUrl||"").trim();
+  if(!deploymentId||!hostUrl)fail("Base Inner Deployer returned no verified Engine deployment",502,"BASE_INNER_DEPLOYER_INCOMPLETE",true);
   return {
     deploymentId,
-    deploymentUrl,
+    deploymentUrl:String(host.deploymentUrl||hostUrl),
     hostUrl,
     state:"ready",
     previousDeploymentId:connection.engineDeploymentId,
     componentVersions:engine.componentVersions||{},
-    updatePlan:{executor:"orbitfs-updater-v2",components,projectId:connection.engineProjectId}
+    updatePlan:{executor:"base-inner-deployer",components,projectId:String(host.projectId||connection.engineProjectId)}
   };
 }
+
 async function rollbackEngineUpdatePayload(install:any,previousDeploymentId:string|null){
   const connection=await updaterConnection(install);
   if(!previousDeploymentId)fail("No previous Engine Host deployment is recorded for rollback",409,"ENGINE_ROLLBACK_TARGET_MISSING");
