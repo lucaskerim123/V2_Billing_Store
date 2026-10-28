@@ -35,13 +35,18 @@ function phaseStatus(events:UpdateEvent[],started:string,completed:string){
   return "waiting";
 }
 
-export default function OrbitFSUpdateReleaseSystem(){
+export default function OrbitFSUpdateReleaseSystem({embedded=false}:{embedded?:boolean}={}){
   const pathname=usePathname(),router=useRouter();
   const allowedSections=["overview","catalog","review","progress","installed","recovery","history"] as const;
   const lastSegment=String(pathname||"").split("/").filter(Boolean).at(-1)||"";
-  const section=allowedSections.find(value=>value===lastSegment)||"overview";
+  const routeSection=allowedSections.find(value=>value===lastSegment)||"overview";
+  const [embeddedSection,setEmbeddedSection]=useState<(typeof allowedSections)[number]>("overview");
+  const section=embedded?embeddedSection:routeSection;
   const pageUrl=(target:string)=>target==="overview"?"/portal/orbitfs/releases":"/portal/orbitfs/releases/"+target;
-  const navigate=(target:string)=>router.push(pageUrl(target));
+  const navigate=(target:string)=>{
+    if(embedded){setEmbeddedSection((allowedSections.find(value=>value===target)||"overview"));return;}
+    router.push(pageUrl(target));
+  };
   const navigation=[{id:"overview",text:"Overview"},{id:"catalog",text:"Published updates"},{id:"review",text:"Review"},{id:"progress",text:"Live progress"},{id:"installed",text:"Installed"},{id:"recovery",text:"Recovery"},{id:"history",text:"History"}];
   const sb=useMemo(()=>createClient(),[]);
   const [data,setData]=useState<any>(null);
