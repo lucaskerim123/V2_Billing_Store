@@ -1188,6 +1188,9 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
   const authorityLicenseId=String(bindingResult.data?.license_id||"").trim();
   if(!authorityLicenseId)fail("This installation is not linked to an authoritative Billing licence",409,"LICENSE_BINDING_REQUIRED");
   const wantsPanel=components.includes("base"),wantsEngine=components.some((component:string)=>component!=="base");
+  const activeBasePatchChain=Array.isArray(install.metadata?.baseUpdater?.patchChain)?install.metadata.baseUpdater.patchChain:[];
+  if(wantsPanel&&String(activeBasePatchChain.at(-1)?.releaseId||"")!==releaseId)
+    fail("Base patch rollback history does not match the latest applied Update",409,"BASE_UPDATE_ROLLBACK_CHAIN_MISMATCH");
   await masterExecuteDeployment({action:"rollback",rollbackScope:"update",releaseId,installationId:install.installation_id,userRef:install.auth_user_id,licenseId:authorityLicenseId,channel,productVersion:String(install.release_version||""),previousVersion:releaseVersion,components});
   await event(install,"update.rollback.started","info",`Rolling back OrbitFS Update ${releaseVersion}`,{releaseId,components,reason:rollbackReason});
   let engineResult:any=null,panelResult:any=null;
@@ -1209,6 +1212,13 @@ export async function rollbackCustomerUpdate(install:any,reason:string){
       ...(install.metadata&&typeof install.metadata==="object"?install.metadata:{}),
       appliedUpdate:null,
       rolledBackUpdate,
+      ...(wantsPanel?{baseUpdater:{
+        ...((install.metadata?.baseUpdater&&typeof install.metadata.baseUpdater==="object")?install.metadata.baseUpdater:{}),
+        patchChain:activeBasePatchChain.slice(0,-1),
+        lastUpdatedAt:completedAt,
+        lastUpdateReleaseId:activeBasePatchChain.at(-2)?.releaseId||null,
+        lastUpdateVersion:activeBasePatchChain.at(-2)?.version||null
+      }}:{}),
       ...(engineResult?{updaterConnection:{
         ...((install.metadata?.updaterConnection&&typeof install.metadata.updaterConnection==="object")?install.metadata.updaterConnection:{}),
         linked:true,
