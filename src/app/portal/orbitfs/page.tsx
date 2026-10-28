@@ -43,7 +43,8 @@ export default function MyOrbitFSHome(){
   const installations=Array.isArray(data?.installations)?data.installations:[];
   const supabase=connections.find((row:any)=>row?.provider==="supabase");
   const vercel=connections.find((row:any)=>row?.provider==="vercel");
-  const install=installations[0]||null;
+  const install=installations.find((item:any)=>item&&["ready","deploying","updating"].includes(String(item.state||"").toLowerCase()))||installations[0]||null;
+  const installed=Boolean(install&&String(install?.release_version||"").trim()&&String(install?.state||"").toLowerCase()!=="not_installed");
 
   const status:StatusItem[]=[
     {
@@ -92,22 +93,28 @@ export default function MyOrbitFSHome(){
       <div>
         <span className="v6c-context-badge">MY ORBITFS</span>
         <h1>Your OrbitFS control hub.</h1>
-        <p>Open Base Deployment or the Update Release System, manage licence access and check the live status of the services your installation depends on.</p>
+        <p>One OrbitFS installation control centre. Install Base first, then manage Base updates, optional Shared Engine and add-ons from the same hub.</p>
       </div>
       <div className="v6c-orbit-landing-art" aria-hidden="true"><i/><b/><span/></div>
     </section>
 
-    <section className="v6c-orbit-primary-grid">
-      <Link className="v6c-orbit-destination primary" href="/portal/orbitfs/base">
+    <section className="v6c-orbit-primary-grid" aria-label="Installation and updates">
+      {!installed ? <Link className="v6c-orbit-destination primary" href="/portal/orbitfs/base">
         <span className="v6c-destination-number">01</span>
-        <div><small>DEPLOYMENT</small><h2>Base Deployment</h2><p>Connect Supabase and Vercel, configure the approved Base release and manage the deployed customer runtime.</p></div>
-        <b>Open Base Deployment →</b>
-      </Link>
-      <Link className="v6c-orbit-destination primary update" href="/portal/orbitfs/releases">
-        <span className="v6c-destination-number">02</span>
-        <div><small>UPDATES</small><h2>Update Release System</h2><p>Choose published Updates, review compatibility, follow live execution and use recovery controls when required.</p></div>
-        <b>Open Update System →</b>
-      </Link>
+        <div><small>FIRST INSTALLATION</small><h2>Install OrbitFS Base</h2><p>Connect providers and install the approved full Base release. Shared Engine and add-ons are optional; the updater works with Base alone.</p></div>
+        <b>Open Base Deployer →</b>
+      </Link> : <>
+        <Link className="v6c-orbit-destination primary" href="/portal/orbitfs/base">
+          <span className="v6c-destination-number">01</span>
+          <div><small>BASE INSTALLATION</small><h2>Manage installed Base</h2><p>Base {String(install?.release_version||"installed")} · {stateLabel(install?.state)}. Manage configuration, deployment health and installed-system controls.</p></div>
+          <b>Manage Base →</b>
+        </Link>
+        <Link className="v6c-orbit-destination primary update" href="/portal/orbitfs/releases">
+          <span className="v6c-destination-number">02</span>
+          <div><small>UPDATER</small><h2>Base and component updates</h2><p>Check for published Base patches, Shared Engine and installed add-on updates. Only authorised applicable components will be deployed, on manual action.</p></div>
+          <b>Check updates →</b>
+        </Link>
+      </>}
     </section>
 
     <section className="v6c-orbit-secondary-grid">
