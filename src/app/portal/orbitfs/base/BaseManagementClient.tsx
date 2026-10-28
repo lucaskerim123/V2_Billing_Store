@@ -16,8 +16,9 @@ const workingStates=new Set(["configuring","deploying","updating"]);
 type BaseConfirmState={title:string;description:string;confirmLabel:string;danger?:boolean;reasonRequired?:boolean}|null;
 
 export type BaseManagementSection="overview"|"updates"|"connections"|"domain"|"technical"|"history"|"recovery";
-export default function MyOrbitFS({section="overview"}:{section?:BaseManagementSection}){
-  const selectedSection=section;
+export default function MyOrbitFS({section="overview",embedded=false}:{section?:BaseManagementSection;embedded?:boolean}){
+  const [embeddedSection,setEmbeddedSection]=useState<BaseManagementSection>("overview");
+  const selectedSection=embedded?embeddedSection:section;
   const baseNav:{key:BaseManagementSection;label:string}[]=[
     {key:"overview",label:"Overview"},
     {key:"updates",label:"Base updates"},
@@ -705,7 +706,7 @@ export default function MyOrbitFS({section="overview"}:{section?:BaseManagementS
       </details>
     </header>}
     {panelReady&&<nav className="ob26Nav ob26TopNav" aria-label="Base management pages">
-      {baseNav.map(({key,label})=><Link key={key} href={key==="overview"?"/portal/orbitfs/base":`/portal/orbitfs/base/${key}`} aria-current={selectedSection===key?"page":undefined} className={selectedSection===key?"active":""}>{label}</Link>)}
+      {baseNav.map(({key,label})=>embedded?<button type="button" key={key} onClick={()=>setEmbeddedSection(key)} aria-current={selectedSection===key?"page":undefined} className={selectedSection===key?"active":""}>{label}</button>:<Link key={key} href={key==="overview"?"/portal/orbitfs/base":`/portal/orbitfs/base/${key}`} aria-current={selectedSection===key?"page":undefined} className={selectedSection===key?"active":""}>{label}</Link>)}
     </nav>}
     {deploymentRequestActive&&<div className="orbitUpdateBusy" role="status" aria-live="polite">
       <span className="orbitUpdateBusySpinner" aria-hidden="true"/>
