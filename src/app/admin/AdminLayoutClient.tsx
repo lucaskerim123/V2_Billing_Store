@@ -97,8 +97,7 @@ const orbitfsGroup:NavGroup={
   match:path=>path.startsWith("/admin/orbitfs")||path.startsWith("/admin/license-controller")||path.startsWith("/admin/licensing")||path.startsWith("/admin/settings/license-master")||path.startsWith("/admin/releases"),
   items:[
     {label:"Installations",href:"/admin/orbitfs/installations",permission:"licenses.view"},
-    {label:"Base Release",href:"/admin/orbitfs/base-deployment",permission:"licenses.manage"},
-    {label:"Update Release",href:"/admin/orbitfs/update-release-deployer",permission:"licenses.manage"},
+    {label:"Release Review",href:"/admin/orbitfs/release-control",permission:"licenses.manage"},
     {label:"Release Channels",href:"/admin/orbitfs/release-channels",permission:"licenses.manage"},
     {label:"Customer Licences",href:"/admin/license-controller",permission:"licenses.manage"},
     {label:"License System",href:"/admin/licensing",permission:"licenses.view"},
