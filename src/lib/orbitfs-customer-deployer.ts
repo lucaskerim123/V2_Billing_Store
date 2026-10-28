@@ -1267,7 +1267,22 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
       ?deploymentAuthorization.componentPlan.executionComponents.map(normalizeComponent).filter(Boolean)
       :[];
     if(authoritativeComponents.some(value=>!allowedUpdateComponents.has(value)))fail("License Manager returned an unsupported Update target",502,"UPDATE_AUTHORITY_SCOPE_INVALID");
-    const components:string[]=[...new Set<string>(authoritativeComponents.filter(value=>bundleComponents.includes(value)))];
+    // Licensing authority supplies the maximum permitted targets; it does not
+    // assert that Shared Engine has been installed by the Base Inner Deployer.
+    // A Base-only installation must be able to apply the Base portion of a
+    // combined Update Bundle without trying to provision an absent Engine.
+    const engineTargetsAuthorized=authoritativeComponents.some(component=>component!=="base");
+    const installedEngineState=engineTargetsAuthorized?await selectedEngineHostState(install):null;
+    const storedEngineConnection=install.metadata?.updaterConnection&&typeof install.metadata.updaterConnection==="object"
+      ?install.metadata.updaterConnection:{};
+    const engineInstalled=Boolean(
+      (installedEngineState&&["deployed","linked","ready","linking"].includes(String(installedEngineState.state||""))&&
+        (installedEngineState.projectId||installedEngineState.deploymentId))||
+      (storedEngineConnection.autoVerified===true&&storedEngineConnection.provenance==="inner-deployer-v1"&&storedEngineConnection.engineProjectId)
+    );
+    const components:string[]=[...new Set<string>(authoritativeComponents.filter(value=>
+      bundleComponents.includes(value)&&(value==="base"||engineInstalled)
+    ))];
     const skippedComponents=bundleComponents.filter(component=>!components.includes(component));
     if(deploymentAuthorization?.notApplicable===true||!components.length){
       await event(install,"update.skipped","ok",`OrbitFS Update ${release.version} has no applicable targets for this installation`,{releaseId:release.id,releaseComponents:bundleComponents,skippedComponents,componentPlan:deploymentAuthorization?.componentPlan||null});
@@ -1289,7 +1304,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
     if(appliesBase&&!panel)fail("Update targets Base files but has no Base patch payload",422,"UPDATE_BASE_PAYLOAD_REQUIRED");
     if(!appliesBase&&panel)fail("Update contains a Base patch without Base authorization",422,"UPDATE_SCOPE_INVALID");
     if(appliesEngine&&!engine)fail("Update targets Engine/addons but has no Engine payload",422,"UPDATE_ENGINE_PAYLOAD_REQUIRED");
-    if(!appliesEngine&&engine)fail("Update contains an Engine payload without an Engine/addon target",422,"UPDATE_SCOPE_INVALID");
+    if(!appliesEngine&&engine&&!skippedComponents.some(component=>component!=="base"))fail("Update contains an Engine payload without an Engine/addon target",422,"UPDATE_SCOPE_INVALID");
     if(engine)validateFiles((engine as Package).files,"Engine update payload");
 
     let verifiedEngineConnection:any=null;
@@ -1342,7 +1357,7 @@ export async function runCustomerDeployer(install:any,action:DeployAction,versio
         await event(install,"update.base.completed","ok","Base file patch deployment completed",{releaseId:release.id,releaseVersion:release.version,deploymentId:basePatchResult.deploymentId,patchFileCount:basePatchResult.patchFileCount,deleteCount:basePatchResult.deleteCount});
       }
 
-      if(engine){
+      if(appliesEngine&&engine){
         await event(install,"update.engine.started","info","Updater is applying the Shared Engine Host/addon payload after verified Inner Deployer preflight",{releaseId:release.id,releaseVersion:release.version,components:engineComponents,engineProjectId:verifiedEngineConnection?.engineProjectId||null,engineHostUrl:verifiedEngineConnection?.engineHostUrl||null});
         engineAttempted=true;
         engineResult=await applyEngineUpdatePayload(install,release,bundle,engine,requestedChannel,engineComponents);
