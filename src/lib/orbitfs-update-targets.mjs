@@ -1,6 +1,6 @@
 // Physical installation is distinct from the components allowed by a licence.
 // Never expand License Manager's authorised targets using local inventory.
-export function selectApplicableUpdateTargets(authorised, release, engineState, engineConnection) {
+export function selectApplicableUpdateTargets(authorised, release, engineState, engineConnection, installedAddons = []) {
   const requested = [...new Set(Array.isArray(release) ? release : [])];
   const permitted = new Set(Array.isArray(authorised) ? authorised : []);
   const state = engineState && typeof engineState === "object" ? engineState : {};
@@ -12,8 +12,10 @@ export function selectApplicableUpdateTargets(authorised, release, engineState, 
       connection.provenance === "inner-deployer-v1" &&
       connection.engineProjectId)
   );
+  const installedAddonSet = new Set(Array.isArray(installedAddons) ? installedAddons : []);
   const components = requested.filter(component =>
-    permitted.has(component) && (component === "base" || engineInstalled)
+    permitted.has(component) && (component === "base" ||
+      (engineInstalled && (component === "engine-shared" || installedAddonSet.has(component))))
   );
   return {
     components,
