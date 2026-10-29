@@ -214,7 +214,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
         const message=dns?.records?.length
           ?"Vercel could not verify the custom domain yet. Apply the DNS records shown below, wait for DNS propagation, then verify again."
           :"Vercel could not verify the custom domain yet. Check the domain in Vercel and try again after the required DNS records propagate.";
-        throw Object.assign(new Error(message),{status:409,code:"BASE_CUSTOM_DOMAIN_VERIFY_PENDING",cause:error});
+        return Response.json({error:message,code:"BASE_CUSTOM_DOMAIN_VERIFY_PENDING",dns,verificationPending:true},{status:409,headers:{"cache-control":"no-store"}});
       }
       const domains=await projectDomains(install);
       const refreshed=domains.find((item:any)=>normalizeHost(item?.name)===domain)||verification||attached;
@@ -291,7 +291,9 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
     }
     domains=await projectDomains(install);
     const refreshed=domains.find((item:any)=>normalizeHost(item?.name)===domain)||entry;
-    const verified=Boolean(refreshed?.verified===true&&refreshed?.misconfigured!==true);
+    const dns=await customDomainDns(install,domain,refreshed);
+    // A Vercel ownership flag alone does not prove DNS routing is configured.
+    const verified=Boolean(refreshed?.verified===true&&refreshed?.misconfigured!==true&&dns.misconfigured!==true&&dns.configError===null);
     const effectiveUrl=verified?`https://${domain}`:(generated?`https://${generated}`:null);
     const recorded=await masterRecordInstallationPanelDomain({
       installation_id:install.installation_id,
@@ -299,7 +301,6 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       panel_domain:{mode:"custom",domain_name:domain,verified,effective_url:effectiveUrl}
     });
     const state=domainState(install,recorded,domains);
-    const dns=await customDomainDns(install,domain,refreshed).catch(()=>null);
     install=await cacheAuthorityState(install,state);
     install=await syncDeployment(install);
     await event(install,"panel.domain_preference",verified?"ok":"warning",verified?`Base Panel custom domain changed to ${domain}`:`Base Panel custom domain ${domain} is waiting for Vercel DNS verification`,{authority:"license-manager",mode:"custom",domainName:domain,verified,dnsRecordCount:Number(dns?.records?.length||0)});
