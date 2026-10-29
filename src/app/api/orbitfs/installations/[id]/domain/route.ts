@@ -247,42 +247,47 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       const domain=normalizeVercelAlias(body.domain);
       const userId=String(install.auth_user_id);
       const projectId=String(install.vercel_project_id);
-      let domains=await projectDomains(install);
-      if(!domains.some((item:any)=>normalizeHost(item?.name)===domain)){
-        // Project domains are the authoritative configuration in Vercel.
-        // Alias lookups alone cannot establish whether the project owns a hostname.
+      const deploymentId=String(install.vercel_deployment_id);
+      // Match the working Inner Deployer workflow: assign the alias directly
+      // to the existing deployment, not through an unrelated project-domain claim.
+      let alias:any=null;
+      try{
+        alias=await vercelApi(userId,`/v4/aliases/${encodeURIComponent(domain)}`,{method:"GET"});
+      }catch(error:any){if(Number(error?.status||0)!==404)throw error;}
+      const existingProject=String(alias?.projectId||alias?.project?.id||alias?.deployment?.projectId||"").trim();
+      const existingDeployment=String(alias?.deploymentId||alias?.deployment?.id||"").trim();
+      if(existingProject&&existingProject!==projectId){
+        throw Object.assign(new Error(`${domain} belongs to another Vercel project. The Base address was not changed.`),{status:409,code:"BASE_VERCEL_ALIAS_UNAVAILABLE"});
+      }
+      if(existingDeployment!==deploymentId){
         try{
-          await vercelApi(userId,`/v10/projects/${encodeURIComponent(projectId)}/domains`,{
-            method:"POST",body:JSON.stringify({name:domain})
-          });
+          await vercelApi(userId,`/v2/deployments/${encodeURIComponent(deploymentId)}/aliases`,{method:"POST",body:JSON.stringify({alias:domain,redirect:null})});
         }catch(error:any){
           if(Number(error?.status||0)===403||Number(error?.status||0)===409||aliasUnavailable(error)){
-            throw Object.assign(new Error(`Vercel rejected ${domain} for this Base project: ${String(error?.message||"The address may be assigned to another project.")}`),{status:409,code:"BASE_VERCEL_PROJECT_DOMAIN_UNAVAILABLE"});
+            throw Object.assign(new Error(`Vercel rejected ${domain}: ${String(error?.message||"The address is not available.")}`),{status:409,code:"BASE_VERCEL_ALIAS_UNAVAILABLE"});
           }
           throw error;
         }
-        domains=await projectDomains(install);
       }
-      const selected=domains.find((item:any)=>normalizeHost(item?.name)===domain);
-      if(!selected){
-        throw Object.assign(new Error(`Vercel did not confirm ${domain} on the customer Base project. The address was not saved.`),{status:502,code:"BASE_VERCEL_PROJECT_DOMAIN_NOT_ATTACHED"});
-      }
-      if(selected.verified===false||selected.misconfigured===true){
-        throw Object.assign(new Error(`Vercel has attached ${domain}, but reports it is not yet configured. Check the domain in the customer Vercel project.`),{status:409,code:"BASE_VERCEL_PROJECT_DOMAIN_NOT_READY"});
+      const verifiedAlias=await vercelApi(userId,`/v4/aliases/${encodeURIComponent(domain)}`,{method:"GET"});
+      const actualDeployment=String(verifiedAlias?.deploymentId||verifiedAlias?.deployment?.id||"").trim();
+      const actualProject=String(verifiedAlias?.projectId||verifiedAlias?.project?.id||verifiedAlias?.deployment?.projectId||"").trim();
+      if(actualDeployment!==deploymentId||(actualProject&&actualProject!==projectId)){
+        throw Object.assign(new Error(`Vercel has not assigned ${domain} to the current Base deployment.`),{status:503,code:"BASE_VERCEL_ALIAS_BIND_FAILED"});
       }
       const recorded=await masterRecordInstallationPanelDomain({
         installation_id:install.installation_id,
         license_id:licenseId,
         panel_domain:{mode:"vercel",domain_name:domain,verified:true,effective_url:`https://${domain}`}
       });
-      const state=domainState(install,recorded,domains);
-      if(state.mode!=="vercel"||state.domainName!==domain||state.effectiveUrl!==`https://${domain}`){
-        throw Object.assign(new Error("License Manager did not retain the address confirmed by Vercel."),{status:502,code:"BASE_DOMAIN_AUTHORITY_MISMATCH"});
+      const state=domainState(install,recorded,await projectDomains(install));
+      if(state.mode!=="vercel"||state.domainName!==domain){
+        throw Object.assign(new Error("License Manager did not retain the Vercel address."),{status:502,code:"BASE_DOMAIN_AUTHORITY_MISMATCH"});
       }
       install=await cacheAuthorityState(install,state);
       install=await syncDeployment(install);
       if(normalizeHost(install.production_url)!==domain){
-        throw Object.assign(new Error(`Vercel accepted ${domain}, but the Base Panel active URL did not switch. The generated URL was not accepted as a successful save.`),{status:503,code:"BASE_DOMAIN_URL_SYNC_MISMATCH"});
+        throw Object.assign(new Error(`Vercel assigned ${domain}, but the Base URL synchronization has not selected it. The old address was not reported as a successful save.`),{status:503,code:"BASE_DOMAIN_URL_SYNC_MISMATCH"});
       }
       await event(install,"panel.domain_preference","ok",`Base Panel Vercel address changed to ${domain}`,{authority:"license-manager",mode:"vercel",domainName:domain});
       return Response.json({installation:install,availability:{domain,available:true,attached:true,reserved:true,current:true},domain:{...state,effectiveUrl:`https://${domain}`},authority:"orbitfs-license-master-v2"},{headers:{"cache-control":"no-store"}});
