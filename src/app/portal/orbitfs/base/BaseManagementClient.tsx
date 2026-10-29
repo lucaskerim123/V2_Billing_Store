@@ -569,8 +569,11 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
       const normalized=baseDomain.trim().toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"");
       const checked=String(baseDomainAvailability?.domain||"").toLowerCase();
       const matches=checked===normalized||checked===`${normalized}.vercel.app`||normalized===`${checked}.vercel.app`;
-      const availability=matches&&baseDomainAvailability?.available?baseDomainAvailability:await checkBaseDomainAvailability();
-      if(!availability?.available){if(availability)setMsg(`${availability.domain||baseDomain} is already in use on Vercel.`);return}
+      const availability=matches&&baseDomainAvailability?baseDomainAvailability:await checkBaseDomainAvailability();
+      if(!availability)return;
+      if(availability.available===false){setMsg(`${availability.domain||baseDomain} is already in use on Vercel or cannot be assigned by this account.`);return}
+      // An unknown availability result is not a rejection: the save endpoint attempts
+      // real Vercel assignment, verifies the deployment binding, then records authority.
     }
     setBusy("base-domain-save");
     try{
@@ -841,7 +844,7 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
               <input value={baseDomain} autoComplete="off" placeholder={baseDomainMode==="vercel"?"my-orbitfs.vercel.app":"orbitfs.example.com"} onChange={e=>{baseDomainEditRevision.current++;setBaseDomain(e.target.value);setBaseDomainAvailability(null);setBaseDomainDns(null)}}/>
               <small className="muted">{baseDomainMode==="vercel"?"Enter any valid .vercel.app name, check whether it is free, then save it.":"OrbitFS attaches this domain to the existing Base project. Vercel may require DNS verification before it becomes the active Panel URL."}</small>
             </label>}
-            {baseDomainMode==="vercel"&&baseDomainAvailability&&<p className="inlineStatus"><b>{baseDomainAvailability.available?"Available":"Unavailable"}:</b> {baseDomainAvailability.domain}{baseDomainAvailability.available?(baseDomainAvailability.attached?" is already attached to this Base deployment.":" can be claimed by this Base deployment."):" is already in use on Vercel."}</p>}
+            {baseDomainMode==="vercel"&&baseDomainAvailability&&<p className="inlineStatus"><b>{baseDomainAvailability.available===true?"Attached":baseDomainAvailability.available===false?"Unavailable":"Not yet assigned"}:</b> {baseDomainAvailability.domain}{baseDomainAvailability.available===true?" is already attached to this Base deployment.":baseDomainAvailability.available===false?" is already in use on Vercel or cannot be assigned by this account.":" will be checked by Vercel when you select Save address."}</p>}
             {baseDomainState?.mode==="custom"&&baseDomainState?.verified===false&&<p className="inlineStatus">Custom domain <b>{baseDomainState.domainName}</b> is attached but still needs Vercel verification. Add the DNS records below, then choose <b>Verify with Vercel</b>. The generated Vercel address remains active until verification succeeds.</p>}
             {baseDomainState?.mode==="custom"&&baseDomainState?.verified===true&&<p className="inlineStatus"><b>Verified:</b> Vercel has accepted {baseDomainState.domainName} and OrbitFS is using it as the active Base Panel address.</p>}
             {baseDomainMode==="custom"&&<div className="panel orbitBaseDnsPanel">
