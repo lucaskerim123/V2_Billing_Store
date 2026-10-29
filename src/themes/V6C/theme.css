@@ -5556,3 +5556,26 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route
     grid-template-columns: repeat(3,minmax(0,1fr))!important;
   }
 }
+
+
+/* Base installer desktop shell: restore the missing enclosing surface. */
+@media (min-width:721px) {
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitZipInstalling {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    align-content:start!important;
+    gap:20px!important;
+    padding:24px!important;
+    border:1px solid #19415d!important;
+    border-radius:12px!important;
+    background:linear-gradient(160deg,#071e31 0%,#061929 58%,#041522 100%)!important;
+    box-shadow:0 18px 45px rgba(0,0,0,.18)!important;
+    overflow:visible!important;
+  }
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitZipInstalling > .orbitV5Hero,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitZipInstalling > .orbitV5Start,
+  html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route-base .orbitfsBaseV3.orbitZipInstalling .orbitV5Flow {
+    width:100%!important;
+    min-width:0!important;
+  }
+}
