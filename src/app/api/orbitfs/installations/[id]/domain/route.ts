@@ -148,23 +148,14 @@ function domainState(install:any,authority:any,domains:any[]){
 }
 async function checkAlias(install:any,value:unknown){
   const domain=normalizeVercelAlias(value);
-  const generated=generatedDomain(install);
-  if(domain===generated)return {domain,available:true,attached:true,reserved:true,current:true};
-  try{
-    const alias=await vercelApi(String(install.auth_user_id),`/v4/aliases/${encodeURIComponent(domain)}`,{method:"GET"});
-    const projectId=String(alias?.projectId||alias?.project?.id||alias?.deployment?.projectId||"").trim();
-    const deploymentId=String(alias?.deploymentId||alias?.deployment?.id||"").trim();
-    if(projectId&&projectId===String(install.vercel_project_id||"")){
-      const attached=Boolean(install.vercel_deployment_id&&deploymentId===String(install.vercel_deployment_id));
-      return {domain,available:true,attached,reserved:true,current:attached};
-    }
-    return {domain,available:false,attached:false,reserved:false,current:false,reason:"already_in_use"};
-  }catch(error:any){
-    const status=Number(error?.status||0);
-    if(status===404)return {domain,available:null,attached:false,reserved:false,current:false,reason:"assignment_required"};
-    if(status===403||status===409||aliasUnavailable(error))return {domain,available:false,attached:false,reserved:false,current:false,reason:"already_in_use"};
-    throw error;
+  const domains=await projectDomains(install);
+  const attached=domains.some((item:any)=>normalizeHost(item?.name)===domain);
+  if(attached){
+    return {domain,available:true,attached:true,reserved:true,current:normalizeHost(install.production_url)===domain};
   }
+  // The project has not claimed this address. This is not proof of global availability:
+  // Vercel's project-domain POST is the decisive check when Save is pressed.
+  return {domain,available:null,attached:false,reserved:false,current:false,reason:"assignment_required"};
 }
 
 export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){
