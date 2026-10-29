@@ -547,7 +547,10 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
     setBusy("base-domain-verify");
     try{
       const r=await fetch(`/api/orbitfs/installations/${install.id}/domain`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"verify",domain:baseDomain})}),j=await r.json().catch(()=>({}));
-      if(!r.ok)throw new Error(apiError(j,"Vercel could not verify this custom domain yet."));
+      if(!r.ok){
+        if(j.dns)setBaseDomainDns(j.dns);
+        throw new Error(apiError(j,"Vercel could not verify this custom domain yet."));
+      }
       if(j.installation)setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===j.installation.id?j.installation:x)}):current);
       const state=j.domain||null;
       setBaseDomainState(state);
@@ -852,6 +855,7 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
                 <div><p className="eyebrow">DNS REQUIREMENTS</p><h3 className="orbitBaseDnsTitle">Custom domain DNS</h3><p className="muted">Exact DNS values are requested from Vercel for this hostname. Add them at the DNS provider that currently hosts the domain, then use Verify with Vercel. OrbitFS keeps the generated address active until Vercel confirms both ownership and routing.</p></div>
                 {baseDomainDns&&<span className={"state "+(baseDomainDns.configured?"ready":"waiting")}>{baseDomainDns.configured?"CONFIGURED":"ACTION REQUIRED"}</span>}
               </div>
+              {baseDomainDns?.configError&&<p className="inlineStatus">Vercel DNS configuration check: {baseDomainDns.configError}</p>}
               {baseDomainDns?.records?.length?<div className="orbitBaseDnsRecords">
                 {baseDomainDns.records.map((record:any,index:number)=><div className="listrow" key={String(record.type)+"-"+String(record.name)+"-"+index}><div><b>{String(record.type||"DNS").toUpperCase()} · {record.name}</b><span className="orbitBaseBreakAll">{record.value}</span>{record.reason&&<small className="muted">{record.reason}</small>}</div><span>{record.purpose==="ownership"?"VERIFY":"ROUTE"}</span></div>)}
                 {baseDomainDns.nameservers?.length>0&&<div className="listrow"><div><b>Nameservers</b><span className="orbitBaseBreakAll">{baseDomainDns.nameservers.join(" · ")}</span></div><span>OPTION</span></div>}
