@@ -1,5 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
-type DeploymentReport={phase?:string;action?:string;userRef?:string;installationId?:string;releaseId?:string;deploymentId?:string;productVersion?:string;error?:string};
+import {sendAutomation} from "@/lib/transactional-server";
+type DeploymentReport={phase?:string;action?:string;userRef?:string;installationId?:string;releaseId?:string;deploymentId?:string;productVersion?:string;deploymentUrl?:string;customerIdentity?:{customerEmail?:string|null;customerName?:string|null};error?:string};
 const uuid=/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 // Billing only emits communication after License Administration has accepted the result report.
 // This helper must never authorize or execute deployments.
@@ -20,7 +21,28 @@ export async function notifyRecordedDeployment(report:DeploymentReport){
   const {error}=await db.rpc("notification_emit",{p_recipient_user_id:userId,p_surface:surface,p_category:"deployment",p_event_type:eventType,p_title:title,p_message:message,p_severity:success?"success":"error",p_source_type:"authoritative_deployment_report",p_source_id:source,p_action_url:surface==="admin"?"/admin/orbitfs/installations":"/portal/orbitfs",p_metadata:{kind:"notification",authority:"license_administration",report_phase:phase,action:report.action},p_dedupe_key:dedupe});
   if(error)throw error;
  };
+
  await emit(report.userRef!,"portal");
+ // Email is separate from notifications and cannot affect deployment authority.
+ if(success){
+  const email=String(report.customerIdentity?.customerEmail||"").trim();
+  if(email){
+   const rawUrl=String(report.deploymentUrl||"").trim();
+   const environmentUrl=rawUrl.startsWith("https://")||rawUrl.startsWith("http://")?rawUrl:rawUrl?"https://"+rawUrl:"";
+   try{
+    await sendAutomation("deployment.succeeded",email,{
+     customer_name:String(report.customerIdentity?.customerName||"Customer"),
+     product_name:"OrbitFS",
+     version:String(report.productVersion||""),
+     deployment_type:String(report.action||"deployment").replace(/_/g," "),
+     environment_url:environmentUrl
+    },"deployment",String(report.deploymentId||report.installationId||report.releaseId||""));
+   }catch(error){
+    console.error("[orbitfs/deployment-email] Confirmed deployment but email delivery failed",error);
+   }
+  }else console.warn("[orbitfs/deployment-email] Confirmed deployment missing customer email");
+ }
+
  const {data:staff,error:se}=await db.from("staff_members").select("user_id,status").eq("status","active");
  if(se)throw se;
  const ids=(staff||[]).map(row=>row.user_id);
