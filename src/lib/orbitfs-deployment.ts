@@ -1036,7 +1036,15 @@ export async function resolveProductionUrl(install:any,deployment?:any):Promise<
   return projectDomain!==".vercel.app"?`https://${projectDomain}`:null;
  }
  if(preference.mode==="vercel"&&preferred&&preferred.endsWith(".vercel.app")){
-  if(aliases.includes(preferred)||candidates.some((d:any)=>normalize(d?.name)===preferred))return `https://${preferred}`;
+  // A saved Vercel alias is attached to a deployment and may not appear in the
+  // project-domain listing or an older deployment detail response.
+  const alias=await vercelApi(String(install.auth_user_id),`/v4/aliases/${encodeURIComponent(preferred)}`,{method:"GET"}).catch((error:any)=>{
+    if(Number(error?.status||0)===404)return null;
+    throw error;
+  });
+  const aliasDeployment=String(alias?.deploymentId||alias?.deployment?.id||"").trim();
+  const aliasProject=String(alias?.projectId||alias?.project?.id||alias?.deployment?.projectId||"").trim();
+  if(aliasDeployment===String(install.vercel_deployment_id||"")&&(!aliasProject||aliasProject===String(install.vercel_project_id||"")))return `https://${preferred}`;
   return projectDomain!==".vercel.app"?`https://${projectDomain}`:null;
  }
  const custom=candidates.find((d:any)=>!d.redirect&&!normalize(d.name).endsWith(".vercel.app"))
