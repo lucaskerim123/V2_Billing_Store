@@ -56,6 +56,7 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
   const [baseDomainState,setBaseDomainState]=useState<any>(null);
   const [baseDomainAvailability,setBaseDomainAvailability]=useState<any>(null);
   const [baseDomainDns,setBaseDomainDns]=useState<any>(null);
+  const baseDomainEditRevision=useRef(0);
   const [confirmState,setConfirmState]=useState<BaseConfirmState>(null);
   const [confirmReason,setConfirmReason]=useState("");
   const confirmAction=useRef<null|((reason:string)=>void)>(null);
@@ -485,16 +486,19 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
   async function repairPublicUrl(){if(!install)return;setBusy("public-url-repair");try{const r=await fetch(`/api/orbitfs/installations/${install.id}/status`,{method:"POST",headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(apiError(j,"Could not repair public Panel access."));await load();setMsg(j.installation?.health_status==="healthy"?"Public Panel URL repaired and verified.":"Production domain refreshed, but public health is unverified. Check the Vercel project protection settings and Panel health.")}catch(e:any){setMsg(e?.message||"Public URL repair failed.")}finally{setBusy("")}}
   async function loadBaseDomain(){
     if(!install?.id)return null;
+    const requestedRevision=baseDomainEditRevision.current;
     setBusy("base-domain-refresh");
     try{
       const r=await fetch(`/api/orbitfs/installations/${install.id}/domain`,{headers:await authHeaders(),cache:"no-store"}),j=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(apiError(j,"Could not load Base domain settings."));
       const state=j.domain||null;
       setBaseDomainState(state);
-      setBaseDomainMode(state?.mode==="custom"?"custom":state?.mode==="vercel"?"vercel":"generated");
-      setBaseDomain(String(state?.domainName||""));
-      setBaseDomainAvailability(null);
-      setBaseDomainDns(j.dns||null);
+      if(baseDomainEditRevision.current===requestedRevision){
+        setBaseDomainMode(state?.mode==="custom"?"custom":state?.mode==="vercel"?"vercel":"generated");
+        setBaseDomain(String(state?.domainName||""));
+        setBaseDomainAvailability(null);
+        setBaseDomainDns(j.dns||null);
+      }
       return state;
     }catch(e:any){setMsg(e?.message||"Could not load Base domain settings.");return null}
     finally{setBusy("")}
@@ -519,7 +523,7 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
       const r=await fetch(`/api/orbitfs/installations/${install.id}/domain`,{method:"POST",headers:{...(await authHeaders()),"content-type":"application/json"},body:JSON.stringify({action:"check",domain:baseDomain})}),j=await r.json().catch(()=>({}));
       if(!r.ok)throw new Error(apiError(j,"Could not check that Vercel address."));
       setBaseDomainAvailability(j.availability||null);
-      if(j.availability?.domain)setBaseDomain(String(j.availability.domain));
+      // Preserve exactly what the customer typed; normalization belongs to the API.
       return j.availability||null;
     }catch(e:any){setBaseDomainAvailability(null);setMsg(e?.message||"Could not check that Vercel address.");return null}
     finally{setBusy("")}
@@ -575,8 +579,9 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
       if(j.installation)setD((current:any)=>current?({...current,installations:(current.installations||[]).map((x:any)=>x.id===j.installation.id?j.installation:x)}):current);
       const state=j.domain||null;
       setBaseDomainState(state);
-      setBaseDomainMode(state?.mode==="custom"?"custom":state?.mode==="vercel"?"vercel":"generated");
-      setBaseDomain(String(state?.domainName||""));
+      if(state?.mode!==baseDomainMode||(baseDomainMode!=="generated"&&String(state?.domainName||"").toLowerCase()!==String(baseDomain.trim()).toLowerCase().replace(/^https?:\/\//,"").replace(/\/$/,"").replace(/^(?!.*\.vercel\.app$)(.+)$/,(value)=>baseDomainMode==="vercel"?`${value}.vercel.app`:value))){
+        throw new Error("The domain authority did not retain the requested address. The entered value has been preserved; retry after checking the domain assignment.");
+      }
       setBaseDomainAvailability(j.availability||null);
       setBaseDomainDns(j.dns||null);
       setMsg(state?.mode==="custom"&&state?.verified===false?`Custom domain ${state.domainName} is attached. Complete Vercel DNS verification; OrbitFS keeps the generated address active until verification succeeds.`:`Base Panel address updated to ${state?.effectiveUrl||state?.domainName||state?.generatedDomain||"the generated Vercel domain"}.`);
@@ -826,14 +831,14 @@ export default function MyOrbitFS({section="overview",embedded=false}:{section?:
           </div>
           {showBaseDomain&&<div className="form orbitBaseDomainForm">
             <label>Address type
-              <select value={baseDomainMode} disabled={busy!==""} onChange={e=>{setBaseDomainMode(e.target.value as "generated"|"vercel"|"custom");setBaseDomainAvailability(null);setBaseDomainDns(null);if(e.target.value==="generated")setBaseDomain("");}}>
+              <select value={baseDomainMode} disabled={busy!==""} onChange={e=>{setBaseDomainMode(e.target.value as "generated"|"vercel"|"custom");setBaseDomainAvailability(null);setBaseDomainDns(null);baseDomainEditRevision.current++;if(e.target.value==="generated")setBaseDomain("");}}>
                 <option value="generated">Default generated Vercel domain</option>
                 <option value="vercel">Custom Vercel address</option>
                 <option value="custom">Custom domain</option>
               </select>
             </label>
             {baseDomainMode==="generated"?<div className="listrow"><div><b>https://{install.vercel_project_name}.vercel.app</b><span>Stable generated address for this Base project.</span></div><span className="state ready">AVAILABLE</span></div>:<label>{baseDomainMode==="vercel"?"Custom Vercel address":"Custom domain"}
-              <input value={baseDomain} autoComplete="off" placeholder={baseDomainMode==="vercel"?"my-orbitfs.vercel.app":"orbitfs.example.com"} onChange={e=>{setBaseDomain(e.target.value);setBaseDomainAvailability(null);setBaseDomainDns(null)}}/>
+              <input value={baseDomain} autoComplete="off" placeholder={baseDomainMode==="vercel"?"my-orbitfs.vercel.app":"orbitfs.example.com"} onChange={e=>{baseDomainEditRevision.current++;setBaseDomain(e.target.value);setBaseDomainAvailability(null);setBaseDomainDns(null)}}/>
               <small className="muted">{baseDomainMode==="vercel"?"Enter any valid .vercel.app name, check whether it is free, then save it.":"OrbitFS attaches this domain to the existing Base project. Vercel may require DNS verification before it becomes the active Panel URL."}</small>
             </label>}
             {baseDomainMode==="vercel"&&baseDomainAvailability&&<p className="inlineStatus"><b>{baseDomainAvailability.available?"Available":"Unavailable"}:</b> {baseDomainAvailability.domain}{baseDomainAvailability.available?(baseDomainAvailability.attached?" is already attached to this Base deployment.":" can be claimed by this Base deployment."):" is already in use on Vercel."}</p>}
