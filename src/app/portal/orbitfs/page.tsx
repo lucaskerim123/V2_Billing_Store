@@ -113,7 +113,7 @@ export default function MyOrbitFSHome(){
             <button type="button" className={activePanel==="updates"?"button-primary":"button-secondary"} aria-pressed={activePanel==="updates"} onClick={()=>setActivePanel("updates")}>Updates and add-ons</button>
           </div>}
         </div>
-        <div className="min-w-0">{!installed||activePanel==="base"?<BaseManagement embedded/>:<UpdateManagement embedded/>}</div>
+        <div className="min-w-0 v6c-route-base">{!installed||activePanel==="base"?<BaseManagement embedded/>:<UpdateManagement embedded/>}</div>
       </>}
     </section>
 
