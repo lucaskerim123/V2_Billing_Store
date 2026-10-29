@@ -161,7 +161,7 @@ async function checkAlias(install:any,value:unknown){
     return {domain,available:false,attached:false,reserved:false,current:false,reason:"already_in_use"};
   }catch(error:any){
     const status=Number(error?.status||0);
-    if(status===404)return {domain,available:true,attached:false,reserved:false,current:false};
+    if(status===404)return {domain,available:null,attached:false,reserved:false,current:false,reason:"assignment_required"};
     if(status===403||status===409||aliasUnavailable(error))return {domain,available:false,attached:false,reserved:false,current:false,reason:"already_in_use"};
     throw error;
   }
@@ -254,7 +254,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
 
     if(mode==="vercel"){
       const availability=await checkAlias(install,body.domain);
-      if(!availability.available)throw Object.assign(new Error(`${availability.domain} is already in use on Vercel.`),{status:409,code:"BASE_VERCEL_ALIAS_UNAVAILABLE"});
+      if(availability.available===false)throw Object.assign(new Error(`${availability.domain} is already in use on Vercel or cannot be assigned by this account.`),{status:409,code:"BASE_VERCEL_ALIAS_UNAVAILABLE"});
       const domain=availability.domain;
       if(!availability.attached){
         try{
@@ -264,6 +264,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
           throw error;
         }
       }
+      // A successful assignment is not enough: verify the alias belongs to this exact deployment.
       const alias=await vercelApi(String(install.auth_user_id),`/v4/aliases/${encodeURIComponent(domain)}`,{method:"GET"});
       const aliasDeploymentId=String(alias?.deploymentId||alias?.deployment?.id||"").trim();
       const aliasProjectId=String(alias?.projectId||alias?.project?.id||alias?.deployment?.projectId||"").trim();
