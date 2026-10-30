@@ -5,6 +5,7 @@ export type ReleaseDatabasePackageReference={
   component:"base"|"engine-shared"|"mcp"|"apex"|"studio";
   databaseSchemaVersion:number;
   sha256:string;
+  sourceRepo:"lucaskerim123/Master-Database-System";
   sourceCommit:string;
 };
 
@@ -32,13 +33,14 @@ export function releaseDatabasePackageReferences(release:any):ReleaseDatabasePac
     const component=String(raw?.component||"").trim().toLowerCase();
     const databaseSchemaVersion=Number(raw?.databaseSchemaVersion);
     const sha256=String(raw?.sha256||"").trim().toLowerCase();
+    const sourceRepo=String(raw?.sourceRepo||raw?.source_repo||"").trim();
     const sourceCommit=String(raw?.sourceCommit||"").trim().toLowerCase();
-    if(!/^[0-9a-f-]{36}$/i.test(id)||!COMPONENTS.has(component)||!Number.isInteger(databaseSchemaVersion)||databaseSchemaVersion<1||!/^[a-f0-9]{64}$/.test(sha256)||!/^[a-f0-9]{40}$/.test(sourceCommit)){
+    if(!/^[0-9a-f-]{36}$/i.test(id)||!COMPONENTS.has(component)||!Number.isInteger(databaseSchemaVersion)||databaseSchemaVersion<1||!/^[a-f0-9]{64}$/.test(sha256)||sourceRepo!=="lucaskerim123/Master-Database-System"||!/^[a-f0-9]{40}$/.test(sourceCommit)){
       packageError("Release contains an invalid database package reference","DATABASE_PACKAGE_REFERENCE_INVALID");
     }
     if(seen.has(component))packageError("Release contains duplicate database package component references","DATABASE_PACKAGE_REFERENCE_DUPLICATE");
     seen.add(component);
-    return {id,component:component as ReleaseDatabasePackageReference["component"],databaseSchemaVersion,sha256,sourceCommit};
+    return {id,component:component as ReleaseDatabasePackageReference["component"],databaseSchemaVersion,sha256,sourceRepo:"lucaskerim123/Master-Database-System",sourceCommit};
   });
 }
 
@@ -57,13 +59,13 @@ export async function resolveReleaseDatabasePackage(release:any,component:Releas
   if(String(record.id)!==reference.id||String(record.component||"").toLowerCase()!==reference.component){
     packageError("License Manager database package identity does not match the approved release","DATABASE_PACKAGE_IDENTITY_MISMATCH");
   }
-  if(Number(record.databaseSchemaVersion)!==reference.databaseSchemaVersion||String(record.sha256||"").toLowerCase()!==reference.sha256||String(record.sourceCommit||"").toLowerCase()!==reference.sourceCommit){
+  if(String(record.sourceRepo||record.source_repo||"")!==reference.sourceRepo||Number(record.databaseSchemaVersion)!==reference.databaseSchemaVersion||String(record.sha256||"").toLowerCase()!==reference.sha256||String(record.sourceCommit||record.source_commit||"").toLowerCase()!==reference.sourceCommit){
     packageError("License Manager database package metadata does not match the approved release reference","DATABASE_PACKAGE_REFERENCE_MISMATCH");
   }
   if(!["current","superseded"].includes(String(record.status||"").toLowerCase())){
     packageError("Approved release database package is not an immutable published package in License Manager","DATABASE_PACKAGE_NOT_PUBLISHED",409);
   }
-  if(payload.format!=="orbitfs-customer-database-package-v1"||String(payload.component||"").toLowerCase()!==reference.component||Number(payload.databaseSchemaVersion)!==reference.databaseSchemaVersion||String(payload.sourceCommit||"").toLowerCase()!==reference.sourceCommit){
+  if(payload.format!=="orbitfs-customer-database-package-v1"||String(payload.sourceRepo||"")!==reference.sourceRepo||String(payload.component||"").toLowerCase()!==reference.component||Number(payload.databaseSchemaVersion)!==reference.databaseSchemaVersion||String(payload.sourceCommit||"").toLowerCase()!==reference.sourceCommit){
     packageError("License Manager database package payload does not match its registry record","DATABASE_PACKAGE_PAYLOAD_MISMATCH");
   }
   return {reference,record,payload};
