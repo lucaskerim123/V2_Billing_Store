@@ -319,9 +319,16 @@ async function resolveUpdateDatabaseMigrations(release:any,bundle:UpdateBundle,e
   const refs=releaseDatabasePackageReferences(release);
   const engineTargets=executionComponents.map(value=>String(value||"").trim().toLowerCase()).filter(value=>["engine-shared","mcp","apex","studio"].includes(value));
   if(!engineTargets.length)return {migrations:[],skippedByEntitlement:[],source:"license-manager-database-packages" as const};
+  // The Master Database System publishes one immutable package per selected
+  // target. Resolve the complete set before any customer database or Vercel
+  // mutation; a missing add-on package must never be treated as "no migrations".
   const allowedPackages=new Set(["engine-shared",...engineTargets]);
   const selected=refs.filter(ref=>allowedPackages.has(ref.component));
-  if(!selected.some(ref=>ref.component==="engine-shared"))fail("Approved Update release is missing its Shared Engine database package",409,"UPDATE_DATABASE_PACKAGE_MISSING");
+  for(const component of allowedPackages){
+    if(!selected.some(ref=>ref.component===component)){
+      fail("Approved Update release is missing its Master Database package for "+component,409,"UPDATE_DATABASE_PACKAGE_MISSING");
+    }
+  }
   const skippedByEntitlement=refs.filter(ref=>ref.component!=="base"&&!allowedPackages.has(ref.component)).map(ref=>`package:${ref.component}`);
   const migrations:DatabaseMigration[]=[];
   const seen=new Set<string>();
