@@ -72,6 +72,8 @@ jobs:
         run: |
           node --test scripts/orbitfs-update-targets.test.mjs
           node --test scripts/base-update-patches.test.mjs
+      - name: Verify Master Database Update readiness and package provenance
+        run: npm run test:update-master-database-readiness
 
       - name: Run complete production preflight
         run: npm run preflight
