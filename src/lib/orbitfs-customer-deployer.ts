@@ -11,6 +11,7 @@ import {customerReleaseChannels} from "@/lib/orbitfs-release-channels";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
 import {errorMessage} from "@/lib/error-message";
 import {billingCustomerUserFilter} from "@/lib/billing-customer-identity.mjs";
+import {getMasterApiUrl} from "@/lib/license-master-config";
 
 const MAX_FILES=5000,MAX_FILE_BYTES=25*1024*1024,MAX_TOTAL_BYTES=70*1024*1024;
 const ORBITFS_UPDATER_PROTOCOL=2;
@@ -985,7 +986,8 @@ async function applyEngineUpdatePayload(install:any,release:any,bundle:UpdateBun
   // operation; the Base endpoint performs its own licence and release checks.
   const connection=await updaterConnection(install);
   const {token,teamId}=await customerVercelCredentials(String(install.auth_user_id));
-  const input={mode:"apply",releaseId:String(release.id),releaseChannel:channel,components,vercelToken:token,teamId:teamId||""};
+  const updaterProviderBase=`${getMasterApiUrl().replace(/\/+$/,"")}/updater`;
+  const input={mode:"apply",releaseId:String(release.id),releaseChannel:channel,components,updaterProviderBase,vercelToken:token,teamId:teamId||""};
   let body=await callBaseInnerDeployer(install,input);
   // Engine Vercel builds are asynchronous. Resolve status through Base so
   // Billing never takes over provider-side Engine execution.
