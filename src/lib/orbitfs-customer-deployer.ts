@@ -986,7 +986,8 @@ async function applyEngineUpdatePayload(install:any,release:any,bundle:UpdateBun
   // operation; the Base endpoint performs its own licence and release checks.
   const connection=await updaterConnection(install);
   const {token,teamId}=await customerVercelCredentials(String(install.auth_user_id));
-  const updaterProviderBase=`${getMasterApiUrl().replace(/\/+$/,"")}/updater`;
+  const masterApiBase=await getMasterApiUrl();
+  const updaterProviderBase=`${masterApiBase.replace(/\/+$/,"")}/updater`;
   const input={mode:"apply",releaseId:String(release.id),releaseChannel:channel,components,updaterProviderBase,vercelToken:token,teamId:teamId||""};
   let body=await callBaseInnerDeployer(install,input);
   // Engine Vercel builds are asynchronous. Resolve status through Base so
