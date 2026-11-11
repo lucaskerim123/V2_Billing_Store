@@ -107,6 +107,7 @@ test('central catalogue helpers preserve product and group element types through
  const api=read('../src/lib/master-api.ts');
  const page=read('../src/app/billing/page.tsx');
  assert.match(api,/export type MasterProductRecord = \{/);
+ assert.match(api,/validation_policy\?: Record<string, unknown> \| null/);
  assert.match(api,/export type MasterProductGroupRecord = \{/);
  assert.match(api,/Promise<MasterProductsResponse>/);
  assert.match(api,/Promise<MasterProductGroupsResponse>/);
