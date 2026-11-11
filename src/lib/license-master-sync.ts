@@ -1,5 +1,5 @@
 import {licenseDb} from "@/lib/license-api";
-import {masterControl,masterIssue} from "@/lib/master-api";
+import {masterControl,masterIssue,masterProducts} from "@/lib/master-api";
 import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 import {deliverInitialLicenseKey} from "@/lib/license-key-delivery";
 
@@ -55,6 +55,8 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   const {data:items,error:itemError}=await db.from("order_items").select("id,product_id,product_name,license_product_key,quantity,configuration").eq("order_id",id).order("id").limit(MAX_ITEMS+1);
   if(itemError)throw itemError;if((items||[]).length>MAX_ITEMS)throw new Error(`Order exceeds fulfilment safety limit of ${MAX_ITEMS} line items`);
   const normalizedItems=(items||[]).map((item:any)=>({...item,license_product_key:canonicalComponent(item.license_product_key)}));
+  const catalogue=await masterProducts();
+  const registeredProducts=new Set((Array.isArray(catalogue?.products)?catalogue.products:[]).map((p:any)=>String(p.slug||p.product_code||p.code||"").trim().toLowerCase()).filter(Boolean));
   const hasBase=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&item.license_product_key==="orbitfs_base");
   const hasAddon=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&["orbitfs_apex","orbitfs_mcp","orbitfs_studio"].includes(item.license_product_key));
   const {data:existingBaseBinding,error:baseBindingError}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("auth_user_id",order.auth_user_id).eq("license_product_key","orbitfs_base").eq("admin_override",false).neq("desired_state","revoked").order("created_at",{ascending:true}).limit(1).maybeSingle();
@@ -81,7 +83,14 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   const orderedItems=[...normalizedItems].sort((a:any,b:any)=>Number(b.license_product_key==="orbitfs_base")-Number(a.license_product_key==="orbitfs_base"));
   for(const item of orderedItems){
     if(item.configuration?.gift===true)continue;
-    const product=String(item.license_product_key||"");if(!CANONICAL.has(product))continue;
+    const product=String(item.license_product_key||"");if(!product)continue;
+    if(!registeredProducts.has(product)){
+      const error=new Error(`Product "${product}" is not registered and active in License Manager`);
+      failed++;
+      await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,state:"failed",attempt_count:Number(existing?.attempt_count||0)+1,last_error:error.message,metadata:{...(existing?.metadata||{}),license_product_key:product,customer_number:customerNumber,customer_id:customerId}},{onConflict:"order_item_id"});
+      results.push({product,orderItemId:item.id,state:"failed",error:error.message});
+      continue;
+    }
     const ref=`${id}:${String(item.id)}`;
     const {data:existing}=await db.from("license_fulfillments").select("id,license_id,state,attempt_count,last_error,fulfilled_at,metadata").eq("order_item_id",item.id).maybeSingle();
     if(existing?.license_id&&existing.state==="fulfilled"){
@@ -100,9 +109,36 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
           baseBinding={...bindingRepair,id:undefined};
         } else baseBinding=existingBinding;
       }
-      results.push({product,orderItemId:item.id,licenseId:existing.license_id,reused:true,attachedToBase:product!=="orbitfs_base",state:"fulfilled"});fulfilled++;continue
+      results.push({product,orderItemId:item.id,licenseId:existing.license_id,reused:true,attachedToBase:CANONICAL.has(product)&&product!=="orbitfs_base",state:"fulfilled"});fulfilled++;continue
     }
     try{
+      if(!CANONICAL.has(product)){
+        const result=await masterIssue({product,customer_external_id:customerNumber,external_reference:ref,max_installations:Number(item.configuration?.max_installations||1),expires_at:item.configuration?.expires_at||null,features:item.configuration?.features&&typeof item.configuration.features==="object"?item.configuration.features:{},metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),customerId,customerNumber,licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
+        const licenseId=String(result?.id||result?.license_id||result?.license?.id||"");
+        const licenseKey=String(result?.license_key||result?.licenseKey||result?.key||result?.license?.license_key||"");
+        if(!licenseId)throw new Error("License Manager did not return a licence ID");
+        const now=new Date().toISOString();
+        const remoteState=String(result?.storage_status||result?.license?.storage_status||result?.status||result?.license?.status||"active");
+        const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:licenseId,state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,customer_number:customerNumber,customer_id:customerId,master_response:{id:licenseId,status:remoteState,license_key_last4:licenseKey?licenseKey.slice(-4):null,already_issued:Boolean(result?.already_issued||result?.license?.already_issued)}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
+        if(upsertError)throw upsertError;
+        const bindingPayload={order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,fulfillment_id:upserted.id,license_id:licenseId,license_product_key:product,desired_state:"active",remote_state:remoteState,license_key_last4:licenseKey?licenseKey.slice(-4):null,label:String(item.product_name||product),api_source:"license_master",admin_override:false,updated_at:now};
+        const {data:binding}=await db.from("license_bindings").select("id").eq("order_item_id",item.id).maybeSingle();
+        const bindingWrite=binding?.id?await db.from("license_bindings").update(bindingPayload).eq("id",binding.id):await db.from("license_bindings").insert(bindingPayload);
+        if(bindingWrite.error)throw bindingWrite.error;
+        const {error:entitlementError}=await db.from("download_entitlements").upsert({auth_user_id:order.auth_user_id,order_id:id,order_item_id:item.id,product_id:item.product_id,status:"active",granted_at:now,revoked_at:null,reason:"License Manager product provisioning",metadata:{license_id:licenseId,license_product_key:product,customer_id:customerId,source:"license_master"},source_order_status:String(order.status||order.payment_status||"")},{onConflict:"auth_user_id,order_item_id"});
+        if(entitlementError)throw entitlementError;
+        let keyDelivery:any=null;
+        const alreadyIssued=Boolean(result?.already_issued||result?.license?.already_issued);
+        if(licenseKey&&!alreadyIssued){
+          try{
+            if(!customer?.email)throw new Error("Customer email is missing; one-time licence-key email was not sent");
+            keyDelivery=await deliverInitialLicenseKey({authUserId:String(order.auth_user_id),orderId:id,licenseId,licenseKey,recipient:String(customer.email),customerName:customer.name||null});
+          }catch(deliveryError:any){keyDelivery={ok:false,error:String(deliveryError?.message||"Licence-key delivery failed")};}
+        }
+        results.push({product,orderItemId:item.id,licenseId,state:upserted.state,reused:alreadyIssued,keyDelivery});
+        fulfilled++;
+        continue;
+      }
       if(product!=="orbitfs_base"){
         if(!baseBinding?.license_id)throw new Error("OrbitFS Base licence binding is missing");
         const now=new Date().toISOString();
