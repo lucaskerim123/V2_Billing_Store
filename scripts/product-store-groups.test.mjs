@@ -68,3 +68,12 @@ test('product checkout copy is independent of OrbitFS branding',()=>{
  assert.match(detail,/Billing Store creates the order and invoice first/);
  assert.doesNotMatch(detail,/OrbitFS creates the order and invoice first/);
 });
+
+
+test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent products',()=>{
+ const migration=read('../database/migrations/20261111_product_independent_checkout.sql');
+ assert.match(migration,/license_product_key in \\('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\\)/);
+ assert.match(migration,/product_metadata->>'product_family'/);
+ assert.match(migration,/product_metadata->>'store_kind'/);
+ assert.doesNotMatch(migration,/license_product_key not in \\('orbitfs_panel','orbitfs_base'\\)/);
+});
