@@ -1,37 +1,51 @@
 import Link from "next/link";
-import {createClient} from "@supabase/supabase-js";
+import {licenseDb} from "@/lib/license-api";
 import {masterRequest} from "@/lib/master-api";
 
 export const dynamic="force-dynamic";
 
-const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
-const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
-const productPrice=(p:any)=>p.metadata?.free_product?"Free":p.priceAmount==null?"View details":new Intl.NumberFormat("en-AU",{style:"currency",currency:p.priceCurrency||"AUD",maximumFractionDigits:0}).format(Number(p.priceAmount||0));
-const componentOrder:Record<string,number>={base:0,mcp:1,apex:2,studio:3};
+const productPrice=(p:any)=>p.metadata?.free_product?"Free":p.price_cents==null?"View details":new Intl.NumberFormat("en-AU",{style:"currency",currency:p.currency||"AUD",maximumFractionDigits:0}).format(Number(p.price_cents||0)/100);
 
 export default async function BillingPage(){
- const sb=createClient(url,publicKey,{auth:{persistSession:false}});
- const [catalog,s]=await Promise.all([
+ const db=licenseDb();
+ const [catalog,groupCatalog,localResult]=await Promise.all([
   masterRequest("/api/v1/products",{method:"GET"}).catch(()=>({products:[]})),
-  sb.from("app_settings").select("key,value").eq("public_read",true)
+  masterRequest("/api/v1/product-groups",{method:"GET"}).catch(()=>({groups:[]})),
+  db.from("products").select("id,slug,name,description,price_cents,currency,metadata,license_product_key,active").eq("active",true)
  ]);
- const products=(Array.isArray(catalog?.products)?catalog.products:[]).filter((p:any)=>p.active&&p.public&&p.purchasable).sort((a:any,b:any)=>(componentOrder[String(a.metadata?.component||a.componentKey||a.slug||"").toLowerCase()]??99)-(componentOrder[String(b.metadata?.component||b.componentKey||b.slug||"").toLowerCase()]??99));
- const settings=Object.fromEntries((s.data||[]).map((x:any)=>[x.key,x.value])) as Record<string,any>;
- const site=settings["identity.site_name"]||"OrbitFS";
- const logoText=settings["site.logo_text"]||site;
+ if(localResult.error)throw localResult.error;
+ const masterRows=(Array.isArray(catalog?.products)?catalog.products:[]).filter((p:any)=>String(p.status||"active").toLowerCase()==="active");
+ const localRows=(Array.isArray(localResult.data)?localResult.data:[]).filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true); 
+ const masterByCode=new Map(masterRows.map((p:any)=>[String(p.slug||"").toLowerCase(),p]));
+ const sourceGroups=Array.isArray(groupCatalog?.groups)?groupCatalog.groups:[];
+ const products=localRows.map((local:any)=>{
+  const master=masterByCode.get(String(local.license_product_key||"").toLowerCase());
+  const group=master?(sourceGroups.find((g:any)=>String(g.id)===String(master.group_id))||sourceGroups.find((g:any)=>String(g.slug)===String(master.group_slug))):null;
+  return {...local,code:local.license_product_key||local.slug,slug:local.slug,name:local.name||master?.name,description:local.description||master?.description||"",group_id:group?.id||null,group_slug:group?.slug||"other-products",group_name:group?.name||"Other products",metadata:{...(local.metadata||{}),component:master?.componentKey||local.metadata?.component||null}};
+ });
+ const groups=sourceGroups.map((group:any)=>({...group,products:products.filter((product:any)=>String(product.group_id||"")===String(group.id||""))})).filter((group:any)=>group.products.length>0);
+ const otherProducts=products.filter((product:any)=>!product.group_id);
+ if(otherProducts.length)groups.push({id:"other-products",slug:"other-products",name:"Other products",description:"Products not assigned to a product group or not connected to License Manager.",products:otherProducts});
+ const site="Billing Store";
 
  return <main className="orbitHome orbitBilling">
+  <style>{`\n   .orbitStoreGroups{display:grid;gap:34px}
+   .orbitStoreGroup{padding:24px;border:1px solid rgba(125,160,205,.2);border-radius:20px;background:rgba(7,17,35,.54)}
+   .orbitStoreGroupHead{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:20px}
+   .orbitStoreGroupHead h2{margin:4px 0 0;font-size:clamp(24px,3vw,34px);letter-spacing:-.035em}
+   .orbitStoreGroupHead p:not(.orbitHomeKicker){margin:8px 0 0;max-width:650px;opacity:.68;font-size:13px}
+   .orbitStoreGroupHead>span{white-space:nowrap;font-size:11px;opacity:.62;padding:7px 10px;border:1px solid rgba(125,160,205,.22);border-radius:999px}
+   @media(max-width:640px){.orbitStoreGroup{padding:16px}.orbitStoreGroupHead{align-items:flex-start;flex-direction:column;gap:10px}}
+  `}</style>
   <header className="orbitHomeTop">
-   <Link className="orbitHomeBrand" href="/billing"><span className="orbitHomeMark" aria-hidden="true"/><span>{logoText} <small style={{fontWeight:650,opacity:.58}}>Billing</small></span></Link>
-   <nav className="orbitHomeNav" aria-label="Billing navigation">
-    <Link className="orbitHomeNavOptional" href="/">Main site</Link><a className="orbitHomeNavOptional" href="#products">Products</a><Link href="/login" style={{fontSize:"11px",opacity:.68,padding:"6px 4px"}}>Sign in</Link><Link href="/register" style={{fontSize:"11px",opacity:.68,padding:"6px 4px"}}>Register</Link>
-   </nav>
+   <Link className="orbitHomeBrand" href="/billing"><span className="orbitHomeMark" aria-hidden="true"/><span>{site} <small style={{fontWeight:650,opacity:.58}}>Store</small></span></Link>
+   <nav className="orbitHomeNav" aria-label="Store navigation"><Link className="orbitHomeNavOptional" href="/">Main site</Link><a className="orbitHomeNavOptional" href="#products">Products</a><Link href="/login" style={{fontSize:"11px",opacity:.68,padding:"6px 4px"}}>Sign in</Link><Link href="/register" style={{fontSize:"11px",opacity:.68,padding:"6px 4px"}}>Register</Link></nav>
   </header>
-  <section className="orbitHomeSection" style={{paddingTop:"84px",paddingBottom:"54px"}}><div style={{maxWidth:"820px"}}><p className="orbitHomeEyebrow">OrbitFS billing</p><h1 style={{margin:0,fontSize:"clamp(44px,7vw,76px)",lineHeight:1,letterSpacing:"-.055em"}}>Buy OrbitFS and its add-ons.</h1><p className="orbitHomeLead" style={{maxWidth:"690px"}}>Browse the available OrbitFS products below. Choose the Base system first, then add the components you need for your setup.</p><div className="orbitHomeActions"><a className="orbitHomePrimary" href="#products">Browse products <span aria-hidden="true">→</span></a><Link className="orbitHomeSecondary" href="/">About OrbitFS</Link></div></div></section>
-  <section className="orbitHomeSection" id="products" style={{paddingTop:"34px"}}><div className="orbitHomeSectionHead"><div><p className="orbitHomeKicker">Available products</p><h2>OrbitFS Base and add-ons.</h2></div><p>Base is the main OrbitFS system. Add-ons extend it with specialised features and workflows.</p></div><div className="orbitHomeComponentGrid">
-   {products.length?products.map((product:any)=>{const component=String(product.metadata?.component||product.componentKey||product.slug||"").toLowerCase().replace("orbitfs-","").replace("orbitfs_","");const badge=product.metadata?.store_badge||product.metadata?.store_kind||(component==="base"?"Core system":"Add-on");return <Link className="orbitHomeComponentCard" data-component={component} href={`/products/${product.slug}`} key={product.code}><div className="orbitHomeComponentTop"><span className="orbitHomeComponentBadge">{badge}</span><span className="orbitHomeComponentPrice">{productPrice(product)}</span></div><h3>{product.name}</h3><p>{product.description}</p><div className="orbitHomeComponentMeta"><span>{component==="base"?"OrbitFS foundation":"OrbitFS add-on"}</span><span>View product →</span></div></Link>}):<article className="orbitHomeComponentCard"><div className="orbitHomeComponentTop"><span className="orbitHomeComponentBadge">OrbitFS</span></div><h3>Products unavailable</h3><p>The Billing Store could not reach the License Master catalogue. No stale local catalogue is shown.</p></article>}
-  </div></section>
-  <section className="orbitHomeCta" style={{marginTop:"20px"}}><div><p className="orbitHomeKicker">OrbitFS</p><h2>Start with Base. Add what you need.</h2><p>Product availability, pricing and licence component definitions are controlled by the OrbitFS License Master.</p></div><div className="orbitHomeCtaActions"><a className="orbitHomePrimary" href="#products">View products</a></div></section>
-  <footer className="orbitHomeFooter"><div><span>OrbitFS Billing</span><small style={{display:"block",marginTop:"6px",opacity:.55}}>Public OrbitFS product storefront</small></div><nav style={{fontSize:"11px",opacity:.66}}><Link href="/">Main site</Link><Link href="/login">Sign in</Link><Link href="/register">Register</Link></nav></footer>
+  <section className="orbitHomeSection" style={{paddingTop:"84px",paddingBottom:"54px"}}><div style={{maxWidth:"820px"}}><p className="orbitHomeEyebrow">Product store</p><h1 style={{margin:0,fontSize:"clamp(44px,7vw,76px)",lineHeight:1,letterSpacing:"-.055em"}}>Products for your business and workflows.</h1><p className="orbitHomeLead" style={{maxWidth:"690px"}}>Browse products from across the catalogue. Products are organised into groups so each product family has its own place, without limiting the store to one platform or a Base-and-add-ons structure.</p><div className="orbitHomeActions"><a className="orbitHomePrimary" href="#products">Browse products <span aria-hidden="true">→</span></a><Link className="orbitHomeSecondary" href="/">Main website</Link></div></div></section>
+  <section className="orbitHomeSection" id="products" style={{paddingTop:"34px"}}><div className="orbitHomeSectionHead"><div><p className="orbitHomeKicker">Available catalogue</p><h2>Browse by product group.</h2></div><p>Each group contains its own products. Active products registered in License Manager appear here automatically, alongside standalone store products.</p></div>
+   <div className="orbitStoreGroups">{groups.length?groups.map((group:any)=><section className="orbitStoreGroup" key={group.id||group.slug}><div className="orbitStoreGroupHead"><div><p className="orbitHomeKicker">{group.slug==="other-products"?"UNASSIGNED PRODUCTS":"PRODUCT GROUP"}</p><h2>{group.name}</h2>{group.description&&<p>{group.description}</p>}</div><span>{group.products.length} {group.products.length===1?"product":"products"}</span></div><div className="orbitHomeComponentGrid">{group.products.map((product:any)=>{const badge=product.metadata?.store_badge||product.metadata?.store_kind||group.name;return <Link className="orbitHomeComponentCard" href={`/products/${product.slug}`} key={product.code||product.slug}><div className="orbitHomeComponentTop"><span className="orbitHomeComponentBadge">{badge}</span><span className="orbitHomeComponentPrice">{productPrice(product)}</span></div><h3>{product.name}</h3><p>{product.description||"View product details and available options."}</p><div className="orbitHomeComponentMeta"><span>{group.name}</span><span>View product →</span></div></Link>})}</div></section>):<article className="orbitHomeComponentCard"><div className="orbitHomeComponentTop"><span className="orbitHomeComponentBadge">Catalogue</span></div><h3>No active products</h3><p>There are currently no active products available in the catalogue.</p></article>}</div>
+  </section>
+  <section className="orbitHomeCta" style={{marginTop:"20px"}}><div><p className="orbitHomeKicker">Product catalogue</p><h2>One store. Multiple product families.</h2><p>Product groups and licensing details are managed centrally. The store displays active products from the central catalogue and standalone store products.</p></div><div className="orbitHomeCtaActions"><a className="orbitHomePrimary" href="#products">View products</a></div></section>
+  <footer className="orbitHomeFooter"><div><span>{site} Store</span><small style={{display:"block",marginTop:"6px",opacity:.55}}>Product catalogue and checkout</small></div><nav style={{fontSize:"11px",opacity:.66}}><Link href="/">Main site</Link><Link href="/login">Sign in</Link><Link href="/register">Register</Link></nav></footer>
  </main>;
 }

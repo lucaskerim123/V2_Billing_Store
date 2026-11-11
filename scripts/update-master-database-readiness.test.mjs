@@ -10,7 +10,7 @@ test('release database package references are pinned to Master Database System',
 });
 test('every selected Engine component has an immutable central database package before execution',()=>{
   assert.match(deployer,/for\(const component of allowedPackages\)/);
-  assert.match(deployer,/DATABASE_PACKAGE_REFERENCE_MISSING/);
+  assert.match(packages,/DATABASE_PACKAGE_REFERENCE_MISSING/);
   assert.match(deployer,/resolveReleaseDatabasePackage\(release,ref\.component\)/);
 });
 test('Base package and Engine packages are resolved before customer mutations',()=>{

@@ -6,13 +6,13 @@ export const dynamic="force-dynamic";
 
 async function masterCatalog(){
   const master=await masterRequest("/api/v1/products",{method:"GET"});
-  return Array.isArray(master?.products)?master.products:[];
+  return Array.isArray(master?.products)?master.products.map((p:any)=>({...p,code:String(p.code||p.product_code||p.slug||"")})):[];
 }
 function masterActive(p:any){return typeof p.active==="boolean"?p.active:String(p.status||"").toLowerCase()==="active";}
 function masterPurchasable(p:any){return typeof p.purchasable==="boolean"?p.purchasable:masterActive(p);}
 function masterPublic(p:any){return typeof p.public==="boolean"?p.public:masterActive(p);}
 function masterPriceCents(master:any,local:any){return master.priceAmount!=null?Math.round(Number(master.priceAmount)*100):local?.price_cents??null;}
-function merge(master:any,local:any){return {...local,id:local?.id||null,master_id:master.id,master_code:master.code,name:master.name,slug:master.slug,description:master.description,short_description:master.shortDescription,price_cents:masterPriceCents(master,local),currency:master.priceCurrency||local?.currency||"AUD",active:masterActive(master),purchasable:masterPurchasable(master),public:masterPublic(master),license_product_key:master.code,metadata:{...(local?.metadata||{}),...(master.metadata||{}),component:master.componentKey||local?.metadata?.component||null},master};}
+function merge(master:any,local:any){return {...local,id:local?.id||null,master_id:master.id,master_code:master.code,name:master.name,slug:master.slug,description:master.description,short_description:master.shortDescription,price_cents:masterPriceCents(master,local),currency:master.priceCurrency||local?.currency||"AUD",active:masterActive(master),purchasable:masterPurchasable(master),public:masterPublic(master),license_product_key:master.code,group_id:master.group_id||null,group_slug:master.group_slug||null,group_name:master.group_name||null,metadata:{...(local?.metadata||{}),...(master.metadata||{}),component:master.componentKey||local?.metadata?.component||null},master};}
 
 async function syncOne(db:any,master:any,local:any){
   const patch={name:master.name,slug:master.slug,description:master.description,price_cents:masterPriceCents(master,local),currency:master.priceCurrency||local?.currency||"AUD",active:masterActive(master),license_product_key:master.code,metadata:{...(local?.metadata||{}),...(master.metadata||{}),component:master.componentKey||local?.metadata?.component||null}};
@@ -24,14 +24,21 @@ async function syncOne(db:any,master:any,local:any){
 
 export async function GET(req:Request){
   try{
-    const products=await masterCatalog();
+    const products=await masterCatalog().catch(()=>[]);
     const db=licenseDb();
-    const {data:local,error}=await db.from("products").select("*").in("license_product_key",products.map((p:any)=>String(p.code||"")).filter(Boolean));
+    const {data:local,error}=await db.from("products").select("*").eq("active",true);
     if(error)throw error;
     const byCode=new Map((local||[]).map((p:any)=>[String(p.license_product_key),p]));
     const merged=products.map((m:any)=>merge(m,byCode.get(String(m.code))));
     const slug=new URL(req.url).searchParams.get("slug");
-    if(slug){const product=merged.find((p:any)=>p.slug===slug);if(!product)return reply({error:"Product not found"},404);return reply({product});}
+    if(slug){
+      const product=merged.find((p:any)=>p.slug===slug);
+      if(product)return reply({product});
+      const {data:localProduct,error:localError}=await db.from("products").select("*").eq("slug",slug).eq("active",true).maybeSingle();
+      if(localError)throw localError;
+      if(!localProduct)return reply({error:"Product not found"},404);
+      return reply({product:{...localProduct,master_id:null,master_code:localProduct.license_product_key||null,purchasable:!!localProduct.active,public:!!localProduct.active}});
+    }
     return reply({authority:"orbitfs-license-master-v2",products:merged});
   }catch(e:any){return reply({error:e?.message||"License Master catalogue unavailable"},503)}
 }
