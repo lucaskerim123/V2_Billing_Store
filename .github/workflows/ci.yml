@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Verify Base updater component selection and cumulative patches
+      - name: Verify product groups and product-independent storefront\n        run: npm run test:product-store-groups\n\n      - name: Verify product-independent licensing contracts\n        run: npm run test:product-agnostic\n\n      - name: Verify Base updater component selection
         run: |
           node --test scripts/orbitfs-update-targets.test.mjs
           node --test scripts/base-update-patches.test.mjs
