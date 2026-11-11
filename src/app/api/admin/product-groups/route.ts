@@ -3,7 +3,7 @@ import {masterProductGroups} from "@/lib/master-api";
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const SUPABASE_KEY=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
 async function staff(req:Request){
- const token=(req.headers.get("authorization")||"").replace(/^Bearer\\s+/i,"").trim();
+ const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
  if(!token||!SUPABASE_URL||!SUPABASE_KEY)return null;
  const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false,autoRefreshToken:false}});
  const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;
