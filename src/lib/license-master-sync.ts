@@ -148,7 +148,22 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
       fulfilled++;
       continue;
     }
-    if(!product)continue;
+    if(!product){
+      const message="No License Manager product key is configured for this paid order item. Set the product's License Manager product API ID and register it in License Manager before retrying fulfilment.";
+      failed++;
+      await db.from("license_fulfillments").upsert({
+        id:existing?.id,
+        order_id:id,
+        order_item_id:item.id,
+        auth_user_id:order.auth_user_id,
+        state:"failed",
+        attempt_count:Number(existing?.attempt_count||0)+1,
+        last_error:message,
+        metadata:{...(existing?.metadata||{}),product_id:item.product_id||null,product_name:item.product_name||null,customer_number:customerNumber,customer_id:customerId}
+      },{onConflict:"order_item_id"});
+      results.push({product:null,orderItemId:item.id,state:"failed",error:message});
+      continue;
+    }
     const ref=`${id}:${String(item.id)}`;
     const {data:existing}=await db.from("license_fulfillments").select("id,license_id,state,attempt_count,last_error,fulfilled_at,metadata").eq("order_item_id",item.id).maybeSingle();
     if(!registeredProducts.has(product)){
