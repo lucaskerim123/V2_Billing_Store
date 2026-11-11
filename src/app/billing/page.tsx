@@ -15,7 +15,7 @@ export default async function BillingPage(){
  ]);
  if(localResult.error)throw localResult.error;
  const masterRows=(Array.isArray(catalog?.products)?catalog.products:[]).filter((p:any)=>String(p.status||"active").toLowerCase()==="active");
- const localRows=Array.isArray(localResult.data)?localResult.data:[]; 
+ const localRows=(Array.isArray(localResult.data)?localResult.data:[]).filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true); 
  const masterByCode=new Map(masterRows.map((p:any)=>[String(p.slug||"").toLowerCase(),p]));
  const sourceGroups=Array.isArray(groupCatalog?.groups)?groupCatalog.groups:[];
  const products=localRows.map((local:any)=>{
