@@ -117,3 +117,26 @@ test('admin licence assignment requires an explicit registered product',()=>{
  assert.match(route,/masterProducts\(\)/);
  assert.doesNotMatch(route,/body\.product\|\|"orbitfs_base"/);
 });
+
+test('approved pending licences are retried by a guarded Vercel Cron GET route',()=>{
+ const config=JSON.parse(read('../vercel.json'));
+ assert.ok(config.crons.some(job=>job.path==='/api/admin/license-master/reconcile'&&job.schedule==='*/5 * * * *'));
+ const route=read('../src/app/api/admin/license-master/reconcile/route.ts');
+ assert.match(route,/export async function GET\(req:Request\)/);
+ assert.match(route,/process\.env\.CRON_SECRET/);
+ assert.match(route,/authorization/);
+ assert.match(route,/reconcileLicenseMaster/);
+});
+
+test('reconciliation applies a retry cooldown so a broken authority is not hammered every cron tick',()=>{
+ const reconcile=read('../src/lib/license-master-reconcile.ts');
+ assert.match(reconcile,/\.lt\("updated_at",\s*new Date\(Date\.now\(\)-5\*60\*1000\)\.toISOString\(\)\)/);
+});
+
+test('product-catalogue failures are recorded against the pending order instead of leaving a false active state',()=>{
+ const sync=read('../src/lib/license-master-sync.ts');
+ assert.match(sync,/License Manager product catalogue request failed/);
+ assert.match(sync,/state:"failed"/);
+ assert.match(sync,/last_error:message/);
+ assert.match(sync,/service_status:"provisioning_error"/);
+});
