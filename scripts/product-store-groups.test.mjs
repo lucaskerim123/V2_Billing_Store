@@ -54,3 +54,17 @@ test('public billing store renders active License Manager products by group and 
  assert.doesNotMatch(page,/OrbitFS Base and add-ons/);
  assert.doesNotMatch(page,/componentOrder/);
 });
+
+test('public storefront only exposes locally configured purchasable products and maps them to central groups',()=>{
+ const page=read('../src/app/billing/page.tsx');
+ assert.match(page,/localRows=.*price_cents!=null.*metadata\?\.free_product===true/);
+ assert.match(page,/masterByCode\.get/);
+ assert.match(page,/sourceGroups\.find/);
+ assert.match(page,/Other products/);
+ assert.doesNotMatch(page,/id:local\?\.id\|\|master\.id/);
+});
+test('product checkout copy is independent of OrbitFS branding',()=>{
+ const detail=read('../src/app/products/[slug]/page.tsx');
+ assert.match(detail,/Billing Store creates the order and invoice first/);
+ assert.doesNotMatch(detail,/OrbitFS creates the order and invoice first/);
+});
