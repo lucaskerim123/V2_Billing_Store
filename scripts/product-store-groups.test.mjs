@@ -81,12 +81,12 @@ test('product checkout copy is independent of OrbitFS branding',()=>{
  assert.doesNotMatch(detail,/OrbitFS creates the order and invoice first/);
 });
 
-test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent products',()=>{
- const migration=read('../database/migrations/20261111_product_independent_checkout.sql');
- assert.match(migration,/license_product_key in \('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\)/);
- assert.match(migration,/r\.metadata->>'product_family'/);
- assert.match(migration,/r\.metadata->>'store_kind'/);
- assert.doesNotMatch(migration,/license_product_key not in \('orbitfs_panel','orbitfs_base'\)/);
+test('checkout dependency rules are driven by License Manager product policy, never OrbitFS product keys',()=>{
+ const migration=read('../database/migrations/20261112090000_product_policy_driven_checkout.sql');
+ assert.match(migration,/license_validation_policy/);
+ assert.match(migration,/license_strategy/);
+ assert.match(migration,/base_product_key/);
+ assert.doesNotMatch(migration,/orbitfs_(base|panel|apex|mcp|studio|sorter)/i);
 });
 
 test('catalogue fallbacks retain typed product and product-group response shapes',()=>{
@@ -129,4 +129,33 @@ test('admin product editor can assign a Billing Store product to a License Manag
  assert.match(assignApi,/group_id:groupId/);
  assert.match(assignApi,/method:"PATCH"/);
  assert.match(assignApi,/method:"POST"/);
+});
+
+test('store catalogue persists current License Manager validation policy for database checkout',()=>{
+ const route=read('../src/app/api/store/catalog/route.ts');
+ assert.match(route,/license_validation_policy/);
+ assert.match(route,/db\.from\("products"\)\.update/);
+});
+test('product detail catalogue sync preserves License Manager validation policy',()=>{
+ const route=read('../src/app/api/orbitfs/catalog/route.ts');
+ assert.match(route,/license_validation_policy:master\.validation_policy/);
+});
+test('manual fulfilment accepts registered standalone and component products without an OrbitFS allowlist',()=>{
+ const route=read('../src/app/api/admin/fulfillment/route.ts');
+ assert.match(route,/masterProducts\(\)/);
+ assert.match(route,/validation_policy\?\.license_strategy/);
+ assert.doesNotMatch(route,/const CANONICAL=new Set/);
+ assert.doesNotMatch(route,/requires the customer's OrbitFS Base licence/);
+});
+test('License Manager reconciliation processes all registered product bindings',()=>{
+ const reconcile=read('../src/lib/license-master-reconcile.ts');
+ assert.match(reconcile,/masterProducts\(\)/);
+ assert.doesNotMatch(reconcile,/const CANONICAL=new Set/);
+ assert.doesNotMatch(reconcile,/if\(!CANONICAL\.has\(product\)\)/);
+});
+test('fulfilment queue language and product labels are not tied to OrbitFS',()=>{
+ const page=read('../src/app/admin/fulfillment/page.tsx');
+ assert.doesNotMatch(page,/Paid OrbitFS orders/);
+ assert.doesNotMatch(page,/Base licence ID/);
+ assert.match(page,/License Manager licence ID/);
 });
