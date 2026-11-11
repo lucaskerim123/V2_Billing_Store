@@ -179,7 +179,10 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
       const result=await masterIssue({product_code:product,customer_external_id:customerNumber,external_reference:ref,components,metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),customerId,customerNumber,licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
       const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
       const licenseKey=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||result?.licence?.licenseKey||"");
+      const alreadyIssued=Boolean(result?.already_issued||result?.license?.already_issued||result?.licence?.already_issued);
       if(!licenseId)throw new Error("License Master did not return a licence/binding id");
+      if(!licenseKey&&!alreadyIssued)throw new Error("License Manager returned a licence ID without the one-time licence key");
+      if(!licenseKey&&alreadyIssued){const {data:priorDelivery,error:deliveryLookupError}=await db.from("license_key_deliveries").select("id").eq("license_id",licenseId).limit(1).maybeSingle();if(deliveryLookupError)throw deliveryLookupError;if(!priorDelivery)throw new Error("License Manager reused an existing licence, but Billing Store has no prior key-delivery record. Rotate the licence key before completing fulfilment.");}
       const now=new Date().toISOString(),remoteState=String(result?.storage_status||result?.licence?.storage_status||result?.license?.storage_status||result?.binding?.storage_status||result?.status||result?.licence?.status||result?.license?.status||result?.binding?.status||"active");
       const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:licenseId,state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,customer_number:customerNumber,customer_id:customerId,master_response:{id:licenseId,status:remoteState,license_key_last4:licenseKey?licenseKey.slice(-4):null,idempotent:Boolean(result?.idempotent)}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
       if(upsertError)throw upsertError;
@@ -197,7 +200,6 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
       const {error:entitlementError}=await db.from("download_entitlements").upsert({auth_user_id:order.auth_user_id,order_id:id,order_item_id:item.id,product_id:item.product_id,status:"active",granted_at:now,revoked_at:null,reason:"License Master provisioning",metadata:{license_id:licenseId,license_product_key:product,customer_id:customerId,source:"license_master"},source_order_status:String(order.status||order.payment_status||"")},{onConflict:"auth_user_id,order_item_id"});if(entitlementError)throw entitlementError;
 
       let keyDelivery:any=null;
-      const alreadyIssued=Boolean(result?.already_issued||result?.license?.already_issued);
       if(licenseKey&&!alreadyIssued){
         try{
           if(!customer?.email)throw new Error("Customer email is missing; one-time licence-key email was not sent");
