@@ -143,7 +143,12 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
     ?await db.from("license_bindings").select("id,license_id,license_product_key,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("auth_user_id",order.auth_user_id).eq("admin_override",false).neq("desired_state","revoked").in("license_product_key",baseKeys).order("created_at",{ascending:true})
     :{data:[],error:null} as any;
   if(baseBindingsResult.error)throw baseBindingsResult.error;
-  const remoteSnapshot=await masterLicenses();
+  // Standalone products are issued directly and do not need a customer-wide
+  // licence listing. Avoid making their fulfilment depend on the separate
+  // licences.read permission; only base/component products need this snapshot
+  // to find an existing base licence.
+  const needsBaseSnapshot=licensedItems.some((item:any)=>["base","component"].includes(productStrategy(String(item.license_product_key||""))));
+  const remoteSnapshot=needsBaseSnapshot?await masterLicenses():{licenses:[]};
   const remoteLicenseEntries: [string,string][] = (
     Array.isArray(remoteSnapshot?.licenses) ? remoteSnapshot.licenses : []
   ).map((license:any):[string,string]=>[
