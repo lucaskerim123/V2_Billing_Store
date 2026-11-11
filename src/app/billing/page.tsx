@@ -31,6 +31,14 @@ export default async function BillingPage(){
  const site="Billing Store";
 
  return <main className="orbitHome orbitBilling">
+  <style>{`\n   .orbitStoreGroups{display:grid;gap:34px}
+   .orbitStoreGroup{padding:24px;border:1px solid rgba(125,160,205,.2);border-radius:20px;background:rgba(7,17,35,.54)}
+   .orbitStoreGroupHead{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:20px}
+   .orbitStoreGroupHead h2{margin:4px 0 0;font-size:clamp(24px,3vw,34px);letter-spacing:-.035em}
+   .orbitStoreGroupHead p:not(.orbitHomeKicker){margin:8px 0 0;max-width:650px;opacity:.68;font-size:13px}
+   .orbitStoreGroupHead>span{white-space:nowrap;font-size:11px;opacity:.62;padding:7px 10px;border:1px solid rgba(125,160,205,.22);border-radius:999px}
+   @media(max-width:640px){.orbitStoreGroup{padding:16px}.orbitStoreGroupHead{align-items:flex-start;flex-direction:column;gap:10px}}
+  `}</style>
   <header className="orbitHomeTop">
    <Link className="orbitHomeBrand" href="/billing"><span className="orbitHomeMark" aria-hidden="true"/><span>{site} <small style={{fontWeight:650,opacity:.58}}>Store</small></span></Link>
    <nav className="orbitHomeNav" aria-label="Store navigation"><Link className="orbitHomeNavOptional" href="/">Main site</Link><a className="orbitHomeNavOptional" href="#products">Products</a><Link href="/login" style={{fontSize:"11px",opacity:.68,padding:"6px 4px"}}>Sign in</Link><Link href="/register" style={{fontSize:"11px",opacity:.68,padding:"6px 4px"}}>Register</Link></nav>
