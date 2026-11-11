@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/mail-automations",
       "schedule": "0 3 */2 * *"
+    },
+    {
+      "path": "/api/admin/license-master/reconcile",
+      "schedule": "*/5 * * * *"
     }
   ],
   "git": {
