@@ -9,7 +9,8 @@ export default function StaffMembers(){
  const [data,setData]=useState<any>({members:[],groups:[],can:{}}),[q,setQ]=useState(""),[status,setStatus]=useState("all"),[msg,setMsg]=useState(""),[loading,setLoading]=useState(true);
  async function load(){
   setLoading(true);const {data:{session}}=await sb.auth.getSession();
-  const headers=session?.access_token?{Authorization:`Bearer ${session.access_token}`}:{};
+  const headers = new Headers();
+  if (session?.access_token) headers.set("Authorization", `Bearer ${session.access_token}`);
   const r=await fetch("/api/admin/staff",{headers,cache:"no-store"});const j=await r.json().catch(()=>({}));setLoading(false);
   if(!r.ok){setMsg(j.error||"Unable to load employee list.");return}setData(j);
  }
