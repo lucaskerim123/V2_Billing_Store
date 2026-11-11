@@ -63,3 +63,8 @@ test('fulfilled Billing Store orders are checked against License Manager before 
   assert.match(sync,/existing\.state===\"fulfilled\"&&remoteLicenseActive/);
   assert.doesNotMatch(sync,/if\(priorState===\"fulfilled\"\)return/);
 });
+
+test('remote licence status index preserves string key/value types for strict TypeScript',()=>{
+  const sync=read('../src/lib/license-master-sync.ts');
+  assert.match(sync,/new Map<string,string>\(\(Array\.isArray\(remoteSnapshot\?\.licenses\)[\s\S]*?\.map\(\(license:any\):\[string,string\]=>/);
+});
