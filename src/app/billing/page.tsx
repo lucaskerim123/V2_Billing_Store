@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {licenseDb} from "@/lib/license-api";
-import {masterRequest} from "@/lib/master-api";
+import {masterProducts,masterProductGroups} from "@/lib/master-api";
 
 export const dynamic="force-dynamic";
 
@@ -14,8 +14,8 @@ const productPrice=(p:any)=>p.metadata?.free_product?"Free":p.price_cents==null?
 export default async function BillingPage(){
  const db=licenseDb();
  const [catalog,groupCatalog,localResult]=await Promise.all([
-  masterRequest("/api/v1/products",{method:"GET"}).catch(():MasterProductsResponse=>({products:[]})),
-  masterRequest("/api/v1/product-groups",{method:"GET"}).catch(():MasterProductGroupsResponse=>({groups:[]})),
+  masterProducts().catch(():MasterProductsResponse=>({products:[]})),
+  masterProductGroups().catch(():MasterProductGroupsResponse=>({groups:[]})),
   db.from("products").select("id,slug,name,description,price_cents,currency,metadata,license_product_key,active").eq("active",true)
  ]);
  if(localResult.error)throw localResult.error;
