@@ -77,6 +77,14 @@ test('fulfilled Billing Store orders are checked against License Manager before 
   assert.doesNotMatch(sync,/if\(priorState===\"fulfilled\"\)return/);
 });
 
+test('order provisioning success requires a confirmed License Manager licence ID',()=>{
+  const sync=read('../src/lib/license-master-sync.ts');
+  const route=read('../src/app/api/admin/license-master/order-control/route.ts');
+  assert.match(sync,/const licenseIssued=results\.filter\(\(result:any\)=>Boolean\(result\.licenseId\)\)\.length/);
+  assert.match(sync,/ok:failed===0&&licenseIssued>0/);
+  assert.match(route,/Number\(result\?\.licenseIssued\|\|0\)<1/);
+});
+
 test('remote licence status index preserves string key/value types for strict TypeScript',()=>{
   const sync=read('../src/lib/license-master-sync.ts');
   assert.match(sync,/const remoteLicenseEntries:\s*\[string,\s*string\]\[\]\s*=\s*\([\s\S]*?\.map\(\s*\(license:\s*any\):\s*\[string,\s*string\]\s*=>/);
