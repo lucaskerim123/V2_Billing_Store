@@ -3,8 +3,8 @@ import {masterProducts,masterProductGroups} from "@/lib/master-api";
 
 export const dynamic="force-dynamic";
 
-type MasterProduct={code?:string;slug?:string;group_id?:string|null;group_slug?:string|null;[key:string]:any};
-type MasterProductGroup={id:string;slug:string;name:string;description?:string;sort_order?:number;[key:string]:any};
+type MasterProduct={code?:string;slug?:string;group_id?:string|null;group_slug?:string|null};
+type MasterProductGroup={id:string;slug:string;name:string;description?:string;sort_order?:number};
 type MasterProductsResponse={products:MasterProduct[]};
 type MasterProductGroupsResponse={groups:MasterProductGroup[]};
 
