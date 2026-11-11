@@ -2,7 +2,7 @@ name: Store Full Scan
 
 on:
   push:
-    branches: [Special-dev]
+    branches: [Special-dev, main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -67,3 +67,12 @@ jobs:
 
       - name: Run complete production preflight
         run: npm run preflight
+
+      - name: TypeScript validation
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
