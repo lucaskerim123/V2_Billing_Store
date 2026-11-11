@@ -3,8 +3,6 @@ name: Patch Next.js Security Release
 on:
   push:
     branches: [Special-dev]
-    paths:
-      - .github/workflows/patch-next-security.yml
   workflow_dispatch:
 
 permissions:
@@ -12,6 +10,7 @@ permissions:
 
 jobs:
   patch:
+    if: github.event_name == 'push' && github.event.head_commit.message == 'Trigger Next.js security patch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
