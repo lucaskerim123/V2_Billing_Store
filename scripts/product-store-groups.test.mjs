@@ -43,8 +43,8 @@ test('standalone products remain listed when the central licensing service is un
 
 test('public billing store renders active License Manager products by group and includes standalone store products',()=>{
  const page=read('../src/app/billing/page.tsx');
- assert.match(page,/masterRequest\("\/api\/v1\/products"/);
- assert.match(page,/masterRequest\("\/api\/v1\/product-groups"/);
+ assert.match(page,/masterProducts\(\)/);
+ assert.match(page,/masterProductGroups\(\)/);
  assert.match(page,/license_product_key/);
  assert.match(page,/group_id/);
  assert.match(page,/Other products/);
@@ -87,4 +87,16 @@ test('catalogue fallbacks retain typed product and product-group response shapes
 test('product licence inventory rows are explicitly typed when iterating grouped records',()=>{
  const page=read('../src/app/admin/product-licenses/page.tsx');
  assert.match(page,/groupRows\.map\(\(row:Row\)=>/);
+});
+
+test('central catalogue helpers preserve product and group element types through the shared API boundary',()=>{
+ const api=read('../src/lib/master-api.ts');
+ const page=read('../src/app/billing/page.tsx');
+ assert.match(api,/export type MasterProductRecord = \{/);
+ assert.match(api,/export type MasterProductGroupRecord = \{/);
+ assert.match(api,/Promise<MasterProductsResponse>/);
+ assert.match(api,/Promise<MasterProductGroupsResponse>/);
+ assert.match(page,/masterProducts\(\)\.catch/);
+ assert.match(page,/masterProductGroups\(\)\.catch/);
+ assert.doesNotMatch(page,/masterRequest\("\/api\/v1\/(products|product-groups)"/);
 });
