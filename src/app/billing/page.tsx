@@ -15,19 +15,17 @@ export default async function BillingPage(){
  ]);
  if(localResult.error)throw localResult.error;
  const masterRows=(Array.isArray(catalog?.products)?catalog.products:[]).filter((p:any)=>String(p.status||"active").toLowerCase()==="active");
- const localRows=Array.isArray(localResult.data)?localResult.data:[];
- const localByCode=new Map(localRows.map((p:any)=>[String(p.license_product_key||"").toLowerCase(),p]));
- const masterCodes=new Set(masterRows.map((p:any)=>String(p.slug||"").toLowerCase()));
- const products=masterRows.map((master:any)=>{
-  const local=localByCode.get(String(master.slug||"").toLowerCase());
-  return {id:local?.id||master.id,code:master.slug,slug:master.slug,name:master.name||local?.name||master.slug,description:master.description||local?.description||"",price_cents:local?.price_cents??null,currency:local?.currency||"AUD",metadata:{...(local?.metadata||{}),component:master.componentKey||local?.metadata?.component||null},group_id:master.group_id||null,group_slug:master.group_slug||null,group_name:master.group_name||null};
- });
- for(const local of localRows){if(!local.license_product_key||!masterCodes.has(String(local.license_product_key).toLowerCase()))products.push({...local,code:local.license_product_key,group_id:null,group_slug:"other-products",group_name:"Other products"});}
+ const localRows=Array.isArray(localResult.data)?localResult.data:[]; 
+ const masterByCode=new Map(masterRows.map((p:any)=>[String(p.slug||"").toLowerCase(),p]));
  const sourceGroups=Array.isArray(groupCatalog?.groups)?groupCatalog.groups:[];
+ const products=localRows.map((local:any)=>{
+  const master=masterByCode.get(String(local.license_product_key||"").toLowerCase());
+  const group=master?(sourceGroups.find((g:any)=>String(g.id)===String(master.group_id))||sourceGroups.find((g:any)=>String(g.slug)===String(master.group_slug))):null;
+  return {...local,code:local.license_product_key||local.slug,slug:local.slug,name:local.name||master?.name,description:local.description||master?.description||"",group_id:group?.id||null,group_slug:group?.slug||"other-products",group_name:group?.name||"Other products",metadata:{...(local.metadata||{}),component:master?.componentKey||local.metadata?.component||null}};
+ });
  const groups=sourceGroups.map((group:any)=>({...group,products:products.filter((product:any)=>String(product.group_id||"")===String(group.id||""))})).filter((group:any)=>group.products.length>0);
- const groupedCodes=new Set(groups.flatMap((group:any)=>group.products.map((product:any)=>String(product.code||product.slug||"").toLowerCase())));
- const otherProducts=products.filter((product:any)=>!groupedCodes.has(String(product.code||product.slug||"").toLowerCase()));
- if(otherProducts.length)groups.push({id:"other-products",slug:"other-products",name:"Other products",description:"Products not assigned to a product group.",products:otherProducts});
+ const otherProducts=products.filter((product:any)=>!product.group_id);
+ if(otherProducts.length)groups.push({id:"other-products",slug:"other-products",name:"Other products",description:"Products not assigned to a product group or not connected to License Manager.",products:otherProducts});
  const site="Billing Store";
 
  return <main className="orbitHome orbitBilling">
