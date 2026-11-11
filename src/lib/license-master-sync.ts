@@ -81,7 +81,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
     ?await db.from("products").select("id,license_api_enabled").in("id",productIds)
     :{data:[],error:null} as any;
   if(localProductsResult.error)throw localProductsResult.error;
-  const localProductsById=new Map((localProductsResult.data||[]).map((p:any)=>[String(p.id),p]));
+  const localProductsById=new Map<string,{license_api_enabled?:boolean}>((localProductsResult.data||[]).map((p:any):[string,{license_api_enabled?:boolean}]=>[String(p.id),p]));
   const licenseEnabled=(item:any)=>localProductsById.get(String(item.product_id||""))?.license_api_enabled!==false;
   const licensedItems=normalizedItems.filter((item:any)=>item.configuration?.gift!==true&&licenseEnabled(item)&&Boolean(item.license_product_key));
   for(const item of licensedItems){
