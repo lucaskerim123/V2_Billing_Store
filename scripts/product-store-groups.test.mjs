@@ -86,7 +86,7 @@ test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent p
  assert.match(migration,/license_product_key in \('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\)/);
  assert.match(migration,/r\.metadata->>'product_family'/);
  assert.match(migration,/r\.metadata->>'store_kind'/);
- assert.doesNotMatch(migration,/license_product_key not in \\('orbitfs_panel','orbitfs_base'\\)/);
+ assert.doesNotMatch(migration,/license_product_key not in \('orbitfs_panel','orbitfs_base'\)/);
 });
 
 test('catalogue fallbacks retain typed product and product-group response shapes',()=>{
