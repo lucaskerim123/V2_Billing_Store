@@ -84,6 +84,8 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   for(const item of orderedItems){
     if(item.configuration?.gift===true)continue;
     const product=String(item.license_product_key||"");if(!product)continue;
+    const ref=`${id}:${String(item.id)}`;
+    const {data:existing}=await db.from("license_fulfillments").select("id,license_id,state,attempt_count,last_error,fulfilled_at,metadata").eq("order_item_id",item.id).maybeSingle();
     if(!registeredProducts.has(product)){
       const error=new Error(`Product "${product}" is not registered and active in License Manager`);
       failed++;
@@ -91,8 +93,6 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
       results.push({product,orderItemId:item.id,state:"failed",error:error.message});
       continue;
     }
-    const ref=`${id}:${String(item.id)}`;
-    const {data:existing}=await db.from("license_fulfillments").select("id,license_id,state,attempt_count,last_error,fulfilled_at,metadata").eq("order_item_id",item.id).maybeSingle();
     if(existing?.license_id&&existing.state==="fulfilled"){
       if(product==="orbitfs_base"){
         const {data:existingBinding}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("order_item_id",item.id).maybeSingle();
