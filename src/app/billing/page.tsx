@@ -4,26 +4,31 @@ import {masterRequest} from "@/lib/master-api";
 
 export const dynamic="force-dynamic";
 
+type MasterProduct={slug?:string;group_id?:string|null;group_slug?:string|null;name?:string;description?:string;componentKey?:string;status?:string;[key:string]:any};
+type MasterProductGroup={id:string;slug:string;name:string;description?:string;[key:string]:any};
+type MasterProductsResponse={products:MasterProduct[]};
+type MasterProductGroupsResponse={groups:MasterProductGroup[]};
+
 const productPrice=(p:any)=>p.metadata?.free_product?"Free":p.price_cents==null?"View details":new Intl.NumberFormat("en-AU",{style:"currency",currency:p.currency||"AUD",maximumFractionDigits:0}).format(Number(p.price_cents||0)/100);
 
 export default async function BillingPage(){
  const db=licenseDb();
  const [catalog,groupCatalog,localResult]=await Promise.all([
-  masterRequest("/api/v1/products",{method:"GET"}).catch(()=>({products:[]})),
-  masterRequest("/api/v1/product-groups",{method:"GET"}).catch(()=>({groups:[]})),
+  masterRequest("/api/v1/products",{method:"GET"}).catch(():MasterProductsResponse=>({products:[]})),
+  masterRequest("/api/v1/product-groups",{method:"GET"}).catch(():MasterProductGroupsResponse=>({groups:[]})),
   db.from("products").select("id,slug,name,description,price_cents,currency,metadata,license_product_key,active").eq("active",true)
  ]);
  if(localResult.error)throw localResult.error;
- const masterRows=(Array.isArray(catalog?.products)?catalog.products:[]).filter((p:any)=>String(p.status||"active").toLowerCase()==="active");
- const localRows=(Array.isArray(localResult.data)?localResult.data:[]).filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true); 
- const masterByCode=new Map(masterRows.map((p:any)=>[String(p.slug||"").toLowerCase(),p]));
- const sourceGroups=Array.isArray(groupCatalog?.groups)?groupCatalog.groups:[];
+ const masterRows=(Array.isArray(catalog.products)?catalog.products:[]).filter((p)=>String(p.status||"active").toLowerCase()==="active");
+ const localRows=(Array.isArray(localResult.data)?localResult.data:[]).filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true);
+ const masterByCode=new Map(masterRows.map((p)=>[String(p.slug||"").toLowerCase(),p]));
+ const sourceGroups=Array.isArray(groupCatalog.groups)?groupCatalog.groups:[];
  const products=localRows.map((local:any)=>{
   const master=masterByCode.get(String(local.license_product_key||"").toLowerCase());
-  const group=master?(sourceGroups.find((g:any)=>String(g.id)===String(master.group_id))||sourceGroups.find((g:any)=>String(g.slug)===String(master.group_slug))):null;
+  const group=master?(sourceGroups.find((g)=>String(g.id)===String(master.group_id))||sourceGroups.find((g)=>String(g.slug)===String(master.group_slug))):null;
   return {...local,code:local.license_product_key||local.slug,slug:local.slug,name:local.name||master?.name,description:local.description||master?.description||"",group_id:group?.id||null,group_slug:group?.slug||"other-products",group_name:group?.name||"Other products",metadata:{...(local.metadata||{}),component:master?.componentKey||local.metadata?.component||null}};
  });
- const groups=sourceGroups.map((group:any)=>({...group,products:products.filter((product:any)=>String(product.group_id||"")===String(group.id||""))})).filter((group:any)=>group.products.length>0);
+ const groups=sourceGroups.map((group)=>({...group,products:products.filter((product:any)=>String(product.group_id||"")===String(group.id||""))})).filter((group)=>group.products.length>0);
  const otherProducts=products.filter((product:any)=>!product.group_id);
  if(otherProducts.length)groups.push({id:"other-products",slug:"other-products",name:"Other products",description:"Products not assigned to a product group or not connected to License Manager.",products:otherProducts});
  const site="Billing Store";
