@@ -131,7 +131,7 @@ export default function ProductLicensesPage(){
       <div className="orbitReferenceSectionHead"><div><b>License Manager inventory</b><small>All registered product licences visible to the Billing Store integration.</small></div><span>{filtered.length} records</span></div>
       <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search product, customer reference, status, licence ID…"/>
       <div className="orbitReferenceLicenceList">
-        {Object.entries(groupedLicenses).map(([groupName,groupRows])=><section key={groupName} className="orbitReferenceGroup"><div className="orbitReferenceSectionHead"><div><b>{groupName}</b><small>{groupRows.length} licences</small></div></div>{groupRows.map(row=>{
+        {Object.entries(groupedLicenses).map(([groupName,groupRows])=><section key={groupName} className="orbitReferenceGroup"><div className="orbitReferenceSectionHead"><div><b>{groupName}</b><small>{groupRows.length} licences</small></div></div>{groupRows.map((row:Row)=>{
           const id=idOf(row);const status=statusOf(row);const policy=row.metadata?.license_policy||{};
           const expires=row.expires_at?new Date(row.expires_at).toISOString().slice(0,16):"";
           const featureNames=Object.entries(policy.features||row.features||{}).filter(([,v])=>Boolean(v)).map(([k])=>k).join(", ");
