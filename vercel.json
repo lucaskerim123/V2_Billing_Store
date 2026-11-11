@@ -9,7 +9,7 @@
     },
     {
       "path": "/api/admin/license-master/reconcile",
-      "schedule": "*/5 * * * *"
+      "schedule": "5 17 * * *"
     }
   ],
   "git": {
