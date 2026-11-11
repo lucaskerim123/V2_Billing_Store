@@ -130,18 +130,20 @@ export async function POST(req:Request){
    const products=Array.isArray(productsResult?.products)?productsResult.products:[];
    const productMap=new Map<string,any>(products.flatMap((p:any)=>[p.code,p.product_code,p.slug]
     .map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean).map((key:string)=>[key,p] as [string,any])));
-   const baseProduct=products.find((p:any)=>String(p?.validation_policy?.license_strategy||"")==="base");
-   const baseProductCode=canonical(baseProduct?.code||baseProduct?.product_code||baseProduct?.slug||"");
    const items=(itemsResult.data||[]).filter((item:any)=>item.configuration?.gift!==true);
    if(!items.length)return Response.json({error:"This order has no licence products to fulfil"},{status:409});
    const remoteProduct=canonical(remote.product_code||remote.product||"");
    const strategies=items.map((item:any)=>{
     const product=canonical(item.license_product_key),record=productMap.get(product);
-    if(!record)return {item,product,strategy:"unregistered"};
-    return {item,product,strategy:String(record.validation_policy?.license_strategy||"standalone")};
+    if(!record)return {item,product,strategy:"unregistered",baseProductCode:""};
+    const strategy=String(record.validation_policy?.license_strategy||"standalone");
+    const configuredBase=canonical(record.validation_policy?.base_product_key||"");
+    const baseRecord=productMap.get(configuredBase);
+    const baseProductCode=canonical(baseRecord?.code||baseRecord?.product_code||baseRecord?.slug||configuredBase);
+    return {item,product,strategy,baseProductCode};
    });
    if(strategies.some((entry:any)=>entry.strategy==="unregistered"))return Response.json({error:"One or more purchased products are not registered in License Manager"},{status:409});
-   const expectedRemoteProducts=[...new Set(strategies.map((entry:any)=>entry.strategy==="component"?baseProductCode:entry.product))];
+   const expectedRemoteProducts=[...new Set(strategies.map((entry:any)=>entry.strategy==="component"?entry.baseProductCode:entry.product))];
    if(expectedRemoteProducts.length!==1||!expectedRemoteProducts[0]||remoteProduct!==expectedRemoteProducts[0]){
     return Response.json({error:"The selected licence does not match the purchased product policy. A single manual licence can only fulfil products covered by that same licence."},{status:409});
    }
