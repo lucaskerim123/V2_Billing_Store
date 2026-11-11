@@ -46,11 +46,12 @@ const permissionAliases:Record<string,string[]>={
 const billingGroup:NavGroup={
   label:"Billing",
   shortLabel:"Billing",
-  match:path=>["/admin/orders","/admin/fulfillment","/admin/invoices","/admin/coupons","/admin/payments","/admin/billing","/admin/product-licenses"].some(x=>path.startsWith(x)),
+  match:path=>["/admin/orders","/admin/fulfillment","/admin/invoices","/admin/coupons","/admin/payments","/admin/billing","/admin/product-licenses","/admin/product-groups"].some(x=>path.startsWith(x)),
   items:[
     {label:"Orders",href:"/admin/orders",permission:"orders.view"},
     {label:"Fulfilment",href:"/admin/fulfillment",permission:"licenses.manage"},
     {label:"Product Licences",href:"/admin/product-licenses",permission:"licenses.manage"},
+    {label:"Product Groups",href:"/admin/product-groups",permission:"licenses.manage"},
     {label:"Invoices",href:"/admin/invoices",permission:"invoices.view"},
     {label:"Coupons",href:"/admin/coupons",permission:"coupons.view"},
     {label:"Payments",href:"/admin/payments",permission:"payments.view"},
@@ -152,6 +153,7 @@ function adminRouteKey(path:string){
   if(path.startsWith("/admin/licensing")||path.startsWith("/admin/settings/license-master"))return "licensing";
   if(path.startsWith("/admin/customers/")&&!path.endsWith("/cancellations"))return "customer-detail";
   if(path.startsWith("/admin/customers"))return "customers";
+  if(path.startsWith("/admin/product-groups"))return "product-groups";
   if(path.startsWith("/admin/product-licenses"))return "product-licenses";
   if(path.startsWith("/admin/orders/"))return "order-detail";
   if(path.startsWith("/admin/orders"))return "orders";
