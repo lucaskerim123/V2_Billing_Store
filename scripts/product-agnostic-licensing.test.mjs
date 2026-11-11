@@ -69,3 +69,9 @@ test('remote licence status index preserves string key/value types for strict Ty
   assert.match(sync,/const remoteLicenseEntries:\s*\[string,\s*string\]\[\]\s*=\s*\([\s\S]*?\.map\(\s*\(license:\s*any\):\s*\[string,\s*string\]\s*=>/);
   assert.match(sync,/new Map<string,\s*string>\(remoteLicenseEntries\)/);
 });
+
+test('registered product catalogue index preserves key and product types for strict TypeScript',()=>{
+  const sync=read('../src/lib/license-master-sync.ts');
+  assert.match(sync,/const registeredProductEntries:\s*\[string,\s*any\]\[\]\s*=\s*\([\s\S]*?\.map\(\s*\(p:\s*any\):\s*\[string,\s*any\]\s*=>/);
+  assert.match(sync,/new Map<string,\s*any>\(registeredProductEntries\)/);
+});
