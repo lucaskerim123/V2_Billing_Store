@@ -78,7 +78,7 @@ export async function requireOfficialMasterApiUrl(value:string){
   const normalized=validMasterUrl(value);
   if(!normalized)throw new Error("License Manager URL must be an official HTTPS /api/v1 endpoint.");
   const official=await getOfficialMasterApiConnections(true);
-  if(!official.some(row=>row.base_url===normalized))throw new Error("That URL is not an enabled official OrbitFS License Manager API.");
+  if(!official.some(row=>row.base_url===normalized))throw new Error("That URL is not an enabled official License Manager API.");
   return normalized;
 }
 
