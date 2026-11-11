@@ -50,6 +50,7 @@ export async function masterHealthState(){
 export async function masterProducts(role:MasterRole="billing"){
   return masterRequest("/api/v1/products",{method:"GET"},role);
 }
+export async function masterProductGroups(input:any={}){return masterRequest("/api/v1/product-groups",{method:String(input.method||"GET").toUpperCase(),...(input.body?{body:JSON.stringify(input.body)}:{})});}
 export async function masterLicenses(role:MasterRole="billing",customerExternalId?:string,licenseIds:string[]=[]){
   const qs=new URLSearchParams();
   const customer=String(customerExternalId||"").trim();
