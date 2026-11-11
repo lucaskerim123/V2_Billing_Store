@@ -159,6 +159,6 @@ test('customer licence controller labels Brandon RV and does not show OrbitFS ad
 
 test('admin License Manager proxy accepts the encoded control path used by the rotate button',()=>{
  const route=read('../src/app/api/admin/license-master/route.ts');
- assert.ok(route.includes('const PATH_RE=/^\\\\/api\\\\/v1\\\\/'), 'proxy path regex must escape each slash exactly once');
- assert.ok(route.includes('raw.match(/^\\\\/api\\\\/v1\\\\/license\\\\/([^/]+)\\\\/control$/)'), 'rotation path matcher must use the same valid path syntax');
+ assert.ok(route.includes('const PATH_RE=/^\\/api\\/v1\\/'), 'proxy path regex must escape each slash exactly once');
+ assert.ok(route.includes('raw.match(/^\\/api\\/v1\\/license\\/([^/]+)\\/control$/)'), 'rotation path matcher must use the same valid path syntax');
 });
