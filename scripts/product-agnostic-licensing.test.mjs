@@ -140,3 +140,11 @@ test('product-catalogue failures are recorded against the pending order instead 
  assert.match(sync,/last_error:message/);
  assert.match(sync,/service_status:"provisioning_error"/);
 });
+
+test('successful License Manager key rotation synchronizes the replacement key suffix to the Billing Store binding',()=>{
+ const route=read('../src/app/api/admin/license-master/route.ts');
+ assert.match(route,/licenseDb/);
+ assert.match(route,/action\s*===\s*['"]rotate['"]/);
+ assert.match(route,/license_key_last4/);
+ assert.match(route,/\.eq\(['"]license_id['"],licenseId\)/);
+});
