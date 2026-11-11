@@ -43,8 +43,8 @@ test('standalone products remain listed when the central licensing service is un
 
 test('public billing store renders active License Manager products by group and includes standalone store products',()=>{
  const page=read('../src/app/billing/page.tsx');
- assert.match(page,/masterRequest\("\/api\/v1\/products"/);
- assert.match(page,/masterRequest\("\/api\/v1\/product-groups"/);
+ assert.match(page,/masterProducts\(\)/);
+ assert.match(page,/masterProductGroups\(\)/);
  assert.match(page,/license_product_key/);
  assert.match(page,/group_id/);
  assert.match(page,/Other products/);
