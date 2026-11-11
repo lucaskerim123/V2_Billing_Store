@@ -3,7 +3,6 @@ import {masterControl,masterIssue,masterProducts} from "@/lib/master-api";
 import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 import {deliverInitialLicenseKey} from "@/lib/license-key-delivery";
 
-const CANONICAL=new Set(["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio"]);
 const ALIASES:Record<string,string>={orbitfs_panel:"orbitfs_base",orbitfs_sorter:"orbitfs_apex"};
 const MAX_ITEMS=20;
 function canonicalComponent(value:any){const key=String(value||"").trim().toLowerCase();return ALIASES[key]||key}
@@ -56,10 +55,12 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   if(itemError)throw itemError;if((items||[]).length>MAX_ITEMS)throw new Error(`Order exceeds fulfilment safety limit of ${MAX_ITEMS} line items`);
   const normalizedItems=(items||[]).map((item:any)=>({...item,license_product_key:canonicalComponent(item.license_product_key)}));
   const catalogue=await masterProducts();
-  const registeredProducts=new Set((Array.isArray(catalogue?.products)?catalogue.products:[]).map((p:any)=>String(p.slug||p.product_code||p.code||"").trim().toLowerCase()).filter(Boolean));
-  const hasBase=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&item.license_product_key==="orbitfs_base");
-  const hasAddon=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&["orbitfs_apex","orbitfs_mcp","orbitfs_studio"].includes(item.license_product_key));
-  const {data:existingBaseBinding,error:baseBindingError}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("auth_user_id",order.auth_user_id).eq("license_product_key","orbitfs_base").eq("admin_override",false).neq("desired_state","revoked").order("created_at",{ascending:true}).limit(1).maybeSingle();
+  const registeredProducts=new Map((Array.isArray(catalogue?.products)?catalogue.products:[]).map((p:any)=>[String(p.slug||p.product_code||p.code||"").trim().toLowerCase(),p]).filter(([slug]:any)=>Boolean(slug)));
+  const productStrategy=(slug:string)=>String((registeredProducts.get(slug) as any)?.validation_policy?.license_strategy||"standalone");
+  const baseProductSlug=[...registeredProducts.entries()].find(([,p]:any)=>String(p?.validation_policy?.license_strategy||"")==="base")?.[0] as string||"";
+  const hasBase=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&productStrategy(item.license_product_key)==="base");
+  const hasAddon=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&productStrategy(item.license_product_key)==="component");
+  const {data:existingBaseBinding,error:baseBindingError}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("auth_user_id",order.auth_user_id).eq("license_product_key",baseProductSlug||"__no_base_product__").eq("admin_override",false).neq("desired_state","revoked").order("created_at",{ascending:true}).limit(1).maybeSingle();
   if(baseBindingError)throw baseBindingError;
   let baseBinding:any=existingBaseBinding||null;
   if(hasAddon&&!hasBase&&!baseBinding?.license_id)throw new Error("OrbitFS Base is required before any OrbitFS add-on can be fulfilled");
@@ -80,7 +81,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   if(!claim.data)return {ok:true,skipped:true,reason:"already_processing",orderId:id};
 
   const results=[];let fulfilled=0,failed=0;
-  const orderedItems=[...normalizedItems].sort((a:any,b:any)=>Number(b.license_product_key==="orbitfs_base")-Number(a.license_product_key==="orbitfs_base"));
+  const orderedItems=[...normalizedItems].sort((a:any,b:any)=>Number(productStrategy(b.license_product_key)==="base")-Number(productStrategy(a.license_product_key)==="base"));
   for(const item of orderedItems){
     if(item.configuration?.gift===true)continue;
     const product=String(item.license_product_key||"");if(!product)continue;
@@ -94,7 +95,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
       continue;
     }
     if(existing?.license_id&&existing.state==="fulfilled"){
-      if(product==="orbitfs_base"){
+      if(productStrategy(product)==="base"){
         const {data:existingBinding}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("order_item_id",item.id).maybeSingle();
         if(!existingBinding?.id){
           const now=new Date().toISOString();
@@ -109,10 +110,10 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
           baseBinding={...bindingRepair,id:undefined};
         } else baseBinding=existingBinding;
       }
-      results.push({product,orderItemId:item.id,licenseId:existing.license_id,reused:true,attachedToBase:CANONICAL.has(product)&&product!=="orbitfs_base",state:"fulfilled"});fulfilled++;continue
+      results.push({product,orderItemId:item.id,licenseId:existing.license_id,reused:true,attachedToBase:productStrategy(product)==="component",state:"fulfilled"});fulfilled++;continue
     }
     try{
-      if(!CANONICAL.has(product)){
+      if(productStrategy(product)==="standalone"){
         const result=await masterIssue({product,customer_external_id:customerNumber,external_reference:ref,max_installations:Number(item.configuration?.max_installations||1),expires_at:item.configuration?.expires_at||null,features:item.configuration?.features&&typeof item.configuration.features==="object"?item.configuration.features:{},metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),customerId,customerNumber,licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
         const licenseId=String(result?.id||result?.license_id||result?.license?.id||"");
         const licenseKey=String(result?.license_key||result?.licenseKey||result?.key||result?.license?.license_key||"");
@@ -139,11 +140,11 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
         fulfilled++;
         continue;
       }
-      if(product!=="orbitfs_base"){
+      if(productStrategy(product)==="component"){
         if(!baseBinding?.license_id)throw new Error("OrbitFS Base licence binding is missing");
         const now=new Date().toISOString();
         const result=await masterControl(String(baseBinding.license_id),{action:"set-component",component:product,enabled:true,actorRef:"billing_store_fulfillment"});
-        const components={...(result?.components||baseBinding.components||{}),orbitfs_base:true,[product]:true};
+        const components={...(result?.components||baseBinding.components||{}),[baseProductSlug]:true,[product]:true};
         const remoteState=String(result?.license?.storage_status||result?.storage_status||result?.license?.status||baseBinding.remote_state||"active");
         const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:String(baseBinding.license_id),state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,customer_number:customerNumber,customer_id:customerId,attached_to_base:true,base_binding_id:baseBinding.id,master_response:{id:String(baseBinding.license_id),status:remoteState}}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
         if(upsertError)throw upsertError;
@@ -159,7 +160,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
 
       if(baseBinding?.license_id){
         const now=new Date().toISOString();
-        const components={...(baseBinding.components||{}),orbitfs_base:true};
+        const components={...(baseBinding.components||{}),[baseProductSlug]:true};
         await masterControl(String(baseBinding.license_id),{action:"set-components",components,actorRef:"billing_store_fulfillment"});
         const {data:upserted,error:upsertError}=await db.from("license_fulfillments").upsert({id:existing?.id,order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,license_id:String(baseBinding.license_id),state:"fulfilled",attempt_count:Number(existing?.attempt_count||0)+1,last_error:null,fulfilled_at:now,metadata:{...(existing?.metadata||{}),license_product_key:product,customer_number:customerNumber,customer_id:customerId,reused_base:true,base_binding_id:baseBinding.id}},{onConflict:"order_item_id"}).select("id,license_id,state,fulfilled_at").single();
         if(upsertError)throw upsertError;
@@ -172,7 +173,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
         continue;
       }
 
-      const components={orbitfs_base:true};
+      const components={[baseProductSlug]:true};
       const result=await masterIssue({product_code:product,customer_external_id:customerNumber,external_reference:ref,components,metadata:{billingOrderId:String(id),orderNumber:String(order.order_number||""),orderItemId:String(item.id),customerId,customerNumber,licenseProductKey:product,quantity:Number(item.quantity||1),source:"v2_billing_store"}});
       const licenseId=String(result?.id||result?.license_id||result?.licence?.id||result?.license?.id||result?.binding?.id||"");
       const licenseKey=String(result?.license_key||result?.licenseKey||result?.licenceKey||result?.key||result?.licence?.licenseKey||"");
