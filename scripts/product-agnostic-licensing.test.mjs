@@ -148,3 +148,10 @@ test('successful License Manager key rotation synchronizes the replacement key s
  assert.match(route,/license_key_last4/);
  assert.match(route,/\.eq\(['"]license_id['"],licenseId\)/);
 });
+
+test('customer licence controller labels Brandon RV and does not show OrbitFS add-on controls for standalone products',()=>{
+ const page=read('../src/app/admin/license-controller/page.tsx');
+ assert.match(page,/"brandon-rv":"Brandon RV"/);
+ assert.match(page,/isOrbitBase=String\(b\.license_product_key\|\|""\)\.toLowerCase\(\)==="orbitfs_base"/);
+ assert.match(page,/\{isOrbitBase&&<div className="orbitReferenceInstallations">/);
+});
