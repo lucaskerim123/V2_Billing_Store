@@ -38,9 +38,12 @@ export async function POST(req:Request){
 
     // Approval may create a pending fulfillment before any license binding exists.
     // Issue the purchased product through the same License Manager API used by OrbitFS.
-    if(action==="activate"&&(bindings||[]).length===0){
+    if(action==="activate"){
       const {syncPaidOrderToLicenseMaster}=await import("@/lib/license-master-sync");
       const result=await syncPaidOrderToLicenseMaster(orderId,{manual:true});
+      if(result?.skipped&&result.reason==="already_fulfilled"){
+        return Response.json({ok:true,orderId,action,results:[],fulfillment:result},{headers:{"cache-control":"no-store"}});
+      }
       if(result?.skipped){
         return Response.json({ok:false,orderId,action,results:[],failures:[{error:`License was not issued: ${String(result.reason||"fulfillment skipped")}`}],fulfillment:result},{status:503,headers:{"cache-control":"no-store"}});
       }
