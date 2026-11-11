@@ -41,7 +41,6 @@ test('standalone products remain listed when the central licensing service is un
  assert.match(route,/masterProductGroups\(\)\.catch/);
 });
 
-
 test('public billing store renders active License Manager products by group and includes standalone store products',()=>{
  const page=read('../src/app/billing/page.tsx');
  assert.match(page,/masterRequest\("\/api\/v1\/products"/);
@@ -69,20 +68,23 @@ test('product checkout copy is independent of OrbitFS branding',()=>{
  assert.doesNotMatch(detail,/OrbitFS creates the order and invoice first/);
 });
 
-
-test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent products',()=>{
- const migration=read('../database/migrations/20261111_product_independent_checkout.sql');
- assert.match(migration,/license_product_key in \\('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\\)/);
- assert.match(migration,/product_metadata->>'product_family'/);
- assert.match(migration,/product_metadata->>'store_kind'/);
- assert.doesNotMatch(migration,/license_product_key not in \\('orbitfs_panel','orbitfs_base'\\)/);
-});
-
-
 test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent products',()=>{
  const migration=read('../database/migrations/20261111_product_independent_checkout.sql');
  assert.match(migration,/license_product_key in \('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\)/);
  assert.match(migration,/r\.metadata->>'product_family'/);
  assert.match(migration,/r\.metadata->>'store_kind'/);
  assert.doesNotMatch(migration,/license_product_key not in \('orbitfs_panel','orbitfs_base'\)/);
+});
+
+test('catalogue fallbacks retain typed product and product-group response shapes',()=>{
+ const route=read('../src/app/api/store/catalog/route.ts');
+ const page=read('../src/app/billing/page.tsx');
+ assert.match(route,/catch\(\):MasterProductsResponse=>\(\{products:\[\]\}\)/);
+ assert.match(route,/catch\(\):MasterProductGroupsResponse=>\(\{groups:\[\]\}\)/);
+ assert.match(page,/catch\(\):MasterProductsResponse=>\(\{products:\[\]\}\)/);
+ assert.match(page,/catch\(\):MasterProductGroupsResponse=>\(\{groups:\[\]\}\)/);
+});
+test('product licence inventory rows are explicitly typed when iterating grouped records',()=>{
+ const page=read('../src/app/admin/product-licenses/page.tsx');
+ assert.match(page,/groupRows\.map\(\(row:Row\)=>/);
 });
