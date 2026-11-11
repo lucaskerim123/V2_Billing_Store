@@ -28,7 +28,7 @@ test('OrbitFS add-on component fulfilment remains a separate compatibility path'
   const sync=read('../src/lib/license-master-sync.ts');
   assert.match(sync,/productStrategy\(product\)==="component"/);
   assert.match(sync,/productStrategy\(product\)==="base"/);
-  assert.match(sync,/OrbitFS Base is required before any OrbitFS add-on/);
+  assert.match(sync,/A base product licence is required before a component product can be fulfilled/);
 });
 test('standalone product issuance omits OrbitFS components unless a component object is supplied',()=>{
   const api=read('../src/lib/master-api.ts');
@@ -48,4 +48,10 @@ test('licence issuance refuses to guess a product when callers omit the product 
   const api=read('../src/lib/master-api.ts');
   assert.match(api,/LICENSE_PRODUCT_REQUIRED/);
   assert.doesNotMatch(api,/product:input\.product\|\|input\.product_code\|\|input\.productCode\|\|"orbitfs_base"/);
+});
+
+test('new standalone issuance must return both a License Manager ID and one-time key before fulfilment is marked complete',()=>{
+  const sync=read('../src/lib/license-master-sync.ts');
+  assert.match(sync,/if\(!licenseId\)throw new Error\("License Manager did not return a licence ID"\)/);
+  assert.match(sync,/if\(!licenseKey&&!alreadyIssued\)throw new Error\("License Manager returned a licence ID without the one-time licence key"\)/);
 });
