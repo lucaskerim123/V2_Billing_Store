@@ -1,0 +1,44 @@
+name: Patch Next.js Security Release
+
+on:
+  push:
+    branches: [Special-dev]
+    paths:
+      - .github/workflows/patch-next-security.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Special-dev
+        uses: actions/checkout@v6
+        with:
+          ref: Special-dev
+
+      - name: Use Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Update Next.js to the patched release
+        run: npm install next@16.4.1 --save-exact --package-lock-only
+
+      - name: Commit patched dependency lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "Next.js is already at the patched version."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "Patch Next.js security advisories"
+          git push origin HEAD:Special-dev
