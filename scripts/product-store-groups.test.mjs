@@ -79,10 +79,10 @@ test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent p
 test('catalogue fallbacks retain typed product and product-group response shapes',()=>{
  const route=read('../src/app/api/store/catalog/route.ts');
  const page=read('../src/app/billing/page.tsx');
- assert.match(route,/catch\(\):MasterProductsResponse=>\(\{products:\[\]\}\)/);
- assert.match(route,/catch\(\):MasterProductGroupsResponse=>\(\{groups:\[\]\}\)/);
- assert.match(page,/catch\(\):MasterProductsResponse=>\(\{products:\[\]\}\)/);
- assert.match(page,/catch\(\):MasterProductGroupsResponse=>\(\{groups:\[\]\}\)/);
+ assert.match(route,/catch\(\(\):MasterProductsResponse=>\(\{products:\[\]\}\)/);
+ assert.match(route,/catch\(\(\):MasterProductGroupsResponse=>\(\{groups:\[\]\}\)/);
+ assert.match(page,/catch\(\(\):MasterProductsResponse=>\(\{products:\[\]\}\)/);
+ assert.match(page,/catch\(\(\):MasterProductGroupsResponse=>\(\{groups:\[\]\}\)/);
 });
 test('product licence inventory rows are explicitly typed when iterating grouped records',()=>{
  const page=read('../src/app/admin/product-licenses/page.tsx');
