@@ -17,7 +17,6 @@ export default function Products(){
  const [cart,setCart]=useState<any>(null);
  const [msg,setMsg]=useState("");
  const [loadingError,setLoadingError]=useState("");
- const [catalogCfg,setCatalogCfg]=useState<any>({hideOutOfStock:false,sortMode:"sort_order"});
 
  async function loadStore(){
   const [catalogResult,{data:options},{data:settings},{data:cartData,error:cartError},{data:cfgRows}]=await Promise.all([
@@ -29,7 +28,6 @@ export default function Products(){
   ]).catch((error:any)=>{setLoadingError(error?.message||"Could not load the store catalogue.");return [null,{data:[]},{data:[]},{data:{items:[],item_count:0},error:null},{data:[]} ] as any});
   if(!catalogResult){setGroups([]);setCart(cartData||{items:[],item_count:0});return;}
   const cfg=Object.fromEntries((cfgRows||[]).map((x:any)=>[x.key,x.value]));
-  setCatalogCfg({hideOutOfStock:cfg["products.hide_out_of_stock"]===true,sortMode:String(cfg["products.sort_mode"]||"sort_order")});
   const hideOut=cfg["products.hide_out_of_stock"]===true,sortMode=String(cfg["products.sort_mode"]||"sort_order");
   const sortProducts=(rows:any[])=>[...rows].filter((p:any)=>!hideOut||!p.track_stock||p.allow_backorders||Number(p.stock_on_hand||0)-Number(p.stock_reserved||0)>0).sort((a:any,b:any)=>
    sortMode==="price"?Number(a.price_cents||0)-Number(b.price_cents||0):
