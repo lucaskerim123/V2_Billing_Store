@@ -6,7 +6,7 @@ export const dynamic="force-dynamic";
 
 async function masterCatalog(){
   const master=await masterRequest("/api/v1/products",{method:"GET"});
-  return Array.isArray(master?.products)?master.products:[];
+  return Array.isArray(master?.products)?master.products.map((p:any)=>({...p,code:String(p.code||p.product_code||p.slug||"")})):[];
 }
 function masterActive(p:any){return typeof p.active==="boolean"?p.active:String(p.status||"").toLowerCase()==="active";}
 function masterPurchasable(p:any){return typeof p.purchasable==="boolean"?p.purchasable:masterActive(p);}
@@ -31,7 +31,14 @@ export async function GET(req:Request){
     const byCode=new Map((local||[]).map((p:any)=>[String(p.license_product_key),p]));
     const merged=products.map((m:any)=>merge(m,byCode.get(String(m.code))));
     const slug=new URL(req.url).searchParams.get("slug");
-    if(slug){const product=merged.find((p:any)=>p.slug===slug);if(!product)return reply({error:"Product not found"},404);return reply({product});}
+    if(slug){
+      const product=merged.find((p:any)=>p.slug===slug);
+      if(product)return reply({product});
+      const {data:localProduct,error:localError}=await db.from("products").select("*").eq("slug",slug).eq("active",true).maybeSingle();
+      if(localError)throw localError;
+      if(!localProduct)return reply({error:"Product not found"},404);
+      return reply({product:{...localProduct,master_id:null,master_code:localProduct.license_product_key||null,purchasable:!!localProduct.active,public:!!localProduct.active}});
+    }
     return reply({authority:"orbitfs-license-master-v2",products:merged});
   }catch(e:any){return reply({error:e?.message||"License Master catalogue unavailable"},503)}
 }
