@@ -54,7 +54,29 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   const {data:items,error:itemError}=await db.from("order_items").select("id,product_id,product_name,license_product_key,quantity,configuration").eq("order_id",id).order("id").limit(MAX_ITEMS+1);
   if(itemError)throw itemError;if((items||[]).length>MAX_ITEMS)throw new Error(`Order exceeds fulfilment safety limit of ${MAX_ITEMS} line items`);
   const normalizedItems=(items||[]).map((item:any)=>({...item,license_product_key:canonicalComponent(item.license_product_key)}));
-  const catalogue=await masterProducts();
+  let catalogue:any;
+  try{
+    catalogue=await masterProducts();
+  }catch(catalogueError:any){
+    const message="License Manager product catalogue request failed: "+String(catalogueError?.message||catalogueError).slice(0,900);
+    const now=new Date().toISOString();
+    for(const item of normalizedItems.filter((row:any)=>row.configuration?.gift!==true)){
+      const {data:prior}=await db.from("license_fulfillments").select("id,attempt_count,metadata").eq("order_item_id",item.id).maybeSingle();
+      const write=await db.from("license_fulfillments").upsert({
+        id:prior?.id,
+        order_id:id,
+        order_item_id:item.id,
+        auth_user_id:order.auth_user_id,
+        state:"failed",
+        attempt_count:Number(prior?.attempt_count||0)+1,
+        last_error:message,
+        metadata:{...(prior?.metadata||{}),license_product_key:item.license_product_key||null,customer_number:customerNumber,customer_id:customerId,preflight_failure:"license_manager_product_catalogue"}
+      },{onConflict:"order_item_id"});
+      if(write.error)console.error("Could not persist License Manager catalogue failure",{orderId:id,orderItemId:item.id,error:write.error});
+    }
+    await db.from("orders").update({fulfillment_status:"partial",service_status:"provisioning_error",updated_at:now}).eq("id",id);
+    throw new Error(message);
+  }
   const registeredProductEntries: [string, any][] = (
     Array.isArray(catalogue?.products) ? catalogue.products : []
   ).flatMap((p: any): [string, any][] =>
