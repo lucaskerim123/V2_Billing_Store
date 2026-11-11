@@ -120,7 +120,7 @@ test('admin licence assignment requires an explicit registered product',()=>{
 
 test('approved pending licences are retried by a guarded daily Vercel Cron GET route',()=>{
  const config=JSON.parse(read('../vercel.json'));
- assert.ok(config.crons.some(job=>job.path==='/api/admin/license-master/reconcile'&&job.schedule==='*/5 * * * *'));
+ assert.ok(config.crons.some(job=>job.path==='/api/admin/license-master/reconcile'&&job.schedule==='5 17 * * *'));
  const route=read('../src/app/api/admin/license-master/reconcile/route.ts');
  assert.match(route,/export async function GET\(req:Request\)/);
  assert.match(route,/process\.env\.CRON_SECRET/);
