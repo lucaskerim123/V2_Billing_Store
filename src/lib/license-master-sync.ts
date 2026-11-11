@@ -348,5 +348,6 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   }
   const nextFulfillment=failed?"partial":fulfilled?"fulfilled":"pending";
   await db.from("orders").update({fulfillment_status:nextFulfillment,service_status:failed?"provisioning_error":"active",activated_at:fulfilled?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq("id",id);
-  return {ok:failed===0,orderId:id,customerId,customerNumber,fulfilled,failed,fulfillmentStatus:nextFulfillment,results};
+  const licenseIssued=results.filter((result:any)=>Boolean(result.licenseId)).length;
+  return {ok:failed===0&&licenseIssued>0,orderId:id,customerId,customerNumber,fulfilled,licenseIssued,failed,fulfillmentStatus:nextFulfillment,results};
 }
