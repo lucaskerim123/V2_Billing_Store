@@ -50,6 +50,7 @@ export async function masterHealthState(){
 export type MasterProductRecord = {
   id?: string;
   code?: string;
+  product_code?: string;
   slug?: string;
   name?: string;
   description?: string;
