@@ -40,7 +40,7 @@ test('standalone product issuance omits OrbitFS components unless a component ob
 
 test('product strategies are read from License Manager policy and default to standalone',()=>{
   const sync=read('../src/lib/license-master-sync.ts');
-  assert.match(sync,/new Map\(\(Array\.isArray\(catalogue\?\.products\)/);
+  assert.match(sync,/const registeredProductEntries:\s*\[string,\s*any\]\[\]\s*=/);\n  assert.match(sync,/new Map<string,\s*any>\(registeredProductEntries\)/);
   assert.match(sync,/validation_policy\?\.license_strategy\|\|"standalone"/);
   assert.doesNotMatch(sync,/CANONICAL/);
 });
