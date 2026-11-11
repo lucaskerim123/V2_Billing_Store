@@ -6,6 +6,7 @@ import {createClient} from "@/lib/supabase";
 type Row=Record<string,any>;
 const statusOf=(row:Row)=>String(row.canonical_status||row.effective_status||row.status||row.storage_status||"unknown").toLowerCase();
 const idOf=(row:Row)=>String(row.id||row.license_id||row.license?.id||"");
+const productKey=(row:Row)=>String(row.code||row.product_code||row.slug||"").trim().toLowerCase();
 
 export default function ProductLicensesPage(){
   const sb=useMemo(()=>createClient(),[]);
@@ -44,7 +45,7 @@ export default function ProductLicensesPage(){
       const nextProducts=Array.isArray(data.products)?data.products:[];
       const nextCustomers=Array.isArray(data.customers)?data.customers:[];
       setProducts(nextProducts);setCustomers(nextCustomers);setLicenses(Array.isArray(data.licenses)?data.licenses:[]);
-      setProduct(current=>current||String(nextProducts[0]?.slug||nextProducts[0]?.product_code||""));
+      setProduct(current=>current||productKey(nextProducts.find((p:Row)=>String(p.validation_policy?.license_strategy||"standalone").toLowerCase()!=="component")||nextProducts[0]||{}));
       setCustomerId(current=>current||String(nextCustomers[0]?.id||""));
     }catch(e:any){setError(e?.message||"Could not load licences")}
     finally{setBusy("")}
@@ -53,11 +54,13 @@ export default function ProductLicensesPage(){
   useEffect(()=>{void refresh()},[refresh]);
 
   const selectedCustomer=customers.find(x=>String(x.id)===customerId);
+  const selectedProduct=products.find(p=>productKey(p)===product);
+  const selectedStrategy=String(selectedProduct?.validation_policy?.license_strategy||"standalone").toLowerCase();
   const filtered=licenses.filter(row=>{
     const haystack=[row.id,row.license_id,row.product,row.product_code,row.customer_external_id,row.external_reference,row.status,row.license_key_last4].join(" ").toLowerCase();
     return haystack.includes(query.toLowerCase());
   });
-  const productGroups=new Map(products.map(p=>[String(p.slug||p.product_code||"").toLowerCase(),String(p.group_name||"Ungrouped")]));
+  const productGroups=new Map(products.flatMap(p=>[p.code,p.product_code,p.slug].filter(Boolean).map((key:any)=>[String(key).toLowerCase(),String(p.group_name||"Ungrouped")])));
   const groupedLicenses=filtered.reduce((groups,row)=>{
     const productCode=String(row.product_code||row.product||"").toLowerCase();
     const groupName=productGroups.get(productCode)||"Ungrouped";
@@ -117,13 +120,14 @@ export default function ProductLicensesPage(){
     <section className="orbitReferenceSection">
       <div className="orbitReferenceSectionHead"><div><b>Issue a licence</b><small>Creates a licence for the selected registered product and links it to the Billing Store customer.</small></div></div>
       <div className="orbitReferenceActions" style={{flexWrap:"wrap",alignItems:"end"}}>
-        <label>Product<select value={product} onChange={e=>setProduct(e.target.value)}>{products.map(p=><option key={p.id||p.slug} value={p.slug||p.product_code}>{p.group_name?`${p.group_name} · `:""}{p.name||p.slug||p.product_code}</option>)}</select></label>
+        <label>Product<select value={product} onChange={e=>setProduct(e.target.value)}>{products.map(p=><option key={p.id||productKey(p)} value={productKey(p)} disabled={String(p.validation_policy?.license_strategy||"standalone").toLowerCase()==="component"}>{p.group_name?`${p.group_name} · `:""}{p.name||productKey(p)}{String(p.validation_policy?.license_strategy||"standalone").toLowerCase()==="component"?" · component entitlement":""}</option>)}</select></label>
         <label>Customer<select value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value="">Select customer</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name||c.email||c.customer_number}</option>)}</select></label>
         <label>Expiry (optional)<input type="datetime-local" value={expiry} onChange={e=>setExpiry(e.target.value)}/></label>
         <label>Maximum installations<input type="number" min="1" max="1000" value={maxInstallations} onChange={e=>setMaxInstallations(e.target.value)}/></label>
         <label>Feature entitlements (comma separated)<input value={featureText} onChange={e=>setFeatureText(e.target.value)} placeholder="feature.one, feature.two"/></label>
-        <button type="button" disabled={!!busy||!product||!customerId||!selectedCustomer} onClick={()=>void issue()}>{busy==="issue"?"Issuing…":"Issue licence"}</button>
+        <button type="button" disabled={!!busy||!product||!customerId||!selectedCustomer||selectedStrategy==="component"} onClick={()=>void issue()}>{busy==="issue"?"Issuing…":"Issue licence"}</button>
       </div>
+      {selectedStrategy==="component"&&<small className="muted">This product is an entitlement on its configured base product licence.</small>}
       {selectedCustomer&&<small className="muted">Customer reference: {selectedCustomer.customer_number||"Missing customer number"}</small>}
     </section>
 

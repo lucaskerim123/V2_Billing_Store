@@ -24,12 +24,18 @@ test('non-OrbitFS products receive independent licence keys rather than OrbitFS 
   assert.match(sync,/License Manager product provisioning/);
 });
 
-test('OrbitFS add-on component fulfilment remains a separate compatibility path',()=>{
-  const sync=read('../src/lib/license-master-sync.ts');
-  assert.match(sync,/productStrategy\(product\)==="component"/);
-  assert.match(sync,/productStrategy\(product\)==="base"/);
-  assert.match(sync,/A base product licence is required before a component product can be fulfilled/);
-});
+test('component fulfilment resolves each product base key from License Manager policy',()=>{
+ const sync=read('../src/lib/license-master-sync.ts');
+ assert.match(sync,/productStrategy\(product\)==="component"/);
+ assert.match(sync,/productStrategy\(product\)==="base"/);
+ assert.match(sync,/validation_policy\?\.base_product_key/);
+ assert.match(sync,/baseProductKeyFor/);
+ assert.match(sync,/baseBindings/);
+ assert.match(sync,/license_api_enabled/);
+ assert.doesNotMatch(sync,/baseProductCode/);
+ assert.doesNotMatch(sync,/hasAddon/);
+ assert.doesNotMatch(sync,/hasBase/);
+});;
 test('standalone product issuance omits OrbitFS components unless a component object is supplied',()=>{
   const api=read('../src/lib/master-api.ts');
   assert.match(api,/const product=String\(input\.product\|\|input\.product_code\|\|input\.productCode\|\|""\)/);
@@ -75,4 +81,25 @@ test('registered product catalogue index preserves key and product types for str
   const sync=read('../src/lib/license-master-sync.ts');
   assert.match(sync,/const registeredProductEntries:\s*\[string,\s*any\]\[\]\s*=\s*\([\s\S]*?\.flatMap\(\s*\(p:\s*any\):\s*\[string,\s*any\]\[\]\s*=>/);
   assert.match(sync,/new Map<string,\s*any>\(registeredProductEntries\)/);
+});
+
+
+test('product licence issue flow uses registered canonical product codes',()=>{
+ const api=read('../src/app/api/admin/product-licenses/route.ts');
+ const page=read('../src/app/admin/product-licenses/page.tsx');
+ assert.match(api,/productRecord\.code\|\|productRecord\.product_code\|\|productRecord\.slug/);
+ assert.match(page,/row\.code\|\|row\.product_code\|\|row\.slug/);
+});
+test('existing licence linking accepts standalone products without an OrbitFS Base prerequisite',()=>{
+ const route=read('../src/app/api/admin/license-link/route.ts');
+ assert.match(route,/masterProducts\(\)/);
+ assert.match(route,/validation_policy\?\.license_strategy/);
+ assert.doesNotMatch(route,/ALLOWED_PRODUCTS/);
+ assert.doesNotMatch(route,/OrbitFS Base must be linked/);
+});
+test('admin licence assignment requires an explicit registered product',()=>{
+ const route=read('../src/app/api/admin/license-assign/route.ts');
+ assert.match(route,/requestedProduct=String\(body\.product\|\|body\.product_code\|\|""\)/);
+ assert.match(route,/masterProducts\(\)/);
+ assert.doesNotMatch(route,/body\.product\|\|"orbitfs_base"/);
 });

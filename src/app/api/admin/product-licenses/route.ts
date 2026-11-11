@@ -40,9 +40,18 @@ export async function POST(req:Request){
     const action=String(body.action||"").trim().toLowerCase();
     const id=String(body.licenseId||body.license_id||"").trim();
     if(action==="issue"){
-      const product=String(body.product||body.product_code||"").trim().toLowerCase();
+      const requestedProduct=String(body.product||body.product_code||"").trim().toLowerCase();
       const customerId=String(body.customerId||body.customer_id||"").trim();
-      if(!slugOk(product))return Response.json({error:"A valid product API ID is required"},{status:400});
+      if(!slugOk(requestedProduct))return Response.json({error:"A valid product API ID is required"},{status:400});
+      const catalogue=await masterProducts();
+      const registeredRows=Array.isArray(catalogue?.products)?catalogue.products:Array.isArray(catalogue)?catalogue:[];
+      const productRecord=registeredRows.find((p:any)=>[p.code,p.product_code,p.slug].some((value:any)=>String(value||"").trim().toLowerCase()===requestedProduct));
+      if(!productRecord)return Response.json({error:"Product is not registered in License Manager"},{status:404});
+      if(String(productRecord.status||"active").toLowerCase()!=="active")return Response.json({error:"Product is not active in License Manager"},{status:409});
+      const strategy=String(productRecord.validation_policy?.license_strategy||"standalone").trim().toLowerCase();
+      if(strategy==="component")return Response.json({error:"This product is a component entitlement. Issue or manage the licence for its configured base product instead.",base_product_key:productRecord.validation_policy?.base_product_key||null},{status:409});
+      if(!["standalone","base"].includes(strategy))return Response.json({error:"Product has an unsupported License Manager licence strategy: "+strategy},{status:409});
+      const product=String(productRecord.code||productRecord.product_code||productRecord.slug||requestedProduct).trim().toLowerCase();
       if(!customerId)return Response.json({error:"Customer is required"},{status:400});
       const {data:customer,error}=await actor.sb.from("customers").select("id,auth_user_id,user_id,customer_number,name,email").eq("id",customerId).maybeSingle();
       if(error)throw error;if(!customer)return Response.json({error:"Customer not found"},{status:404});
@@ -59,10 +68,11 @@ export async function POST(req:Request){
       const newId=licenseId(remote);
       if(!newId)throw new Error("License Manager did not return a licence ID");
       const key=String(remote?.license_key||remote?.licenseKey||remote?.key||remote?.license?.license_key||"");
-      const components=remote?.components&&typeof remote.components==="object"?remote.components:{};
+      const components=remote?.components&&typeof remote.components==="object"?remote.components:remote?.license?.components&&typeof remote.license.components==="object"?remote.license.components:{};
+      const remoteState=String(remote?.storage_status||remote?.license?.storage_status||remote?.status||remote?.license?.status||"active").toLowerCase();
       const {error:bindingError}=await licenseDb().from("license_bindings").insert({
-        auth_user_id:userId,license_id:newId,license_product_key:product,desired_state:"active",remote_state:"active",
-        components,label:String(body.label||product),api_source:"license_master",admin_override:false,updated_at:new Date().toISOString()
+        auth_user_id:userId,license_id:newId,license_product_key:product,desired_state:remoteState,remote_state:remoteState,
+        components,expires_at:remote?.expires_at||expiresAt?.toISOString()||null,license_key_last4:key?key.slice(-4):null,label:String(body.label||productRecord.name||product),api_source:"license_master",admin_override:false,updated_at:new Date().toISOString()
       });
       if(bindingError)throw bindingError;
       return Response.json({ok:true,license:remote.license||remote,key,licenseId:newId},{status:201,headers:{"cache-control":"no-store"}});
