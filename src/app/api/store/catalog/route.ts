@@ -21,7 +21,7 @@ export async function GET(){
    const master=masterByCode.get(key);
    const group=master?(groups.find((g:any)=>String(g.id)===String(master.group_id))||groupBySlug.get(String(master.group_slug||"").toLowerCase())):null;
    return {...p,group_id:group?.id||null,group_slug:group?.slug||"ungrouped",group_name:group?.name||"Other products"};
-  }).filter((p:any)=>!p.track_stock||p.allow_backorders||Number(p.stock_on_hand||0)-Number(p.stock_reserved||0)>0);
+  });
   const grouped=[...groups.map((group:any)=>({...group,products:products.filter((p:any)=>p.group_id===group.id)})).filter((g:any)=>g.products.length>0)];
   const ungrouped=products.filter((p:any)=>!p.group_id);
   if(ungrouped.length)grouped.push({id:"ungrouped",slug:"ungrouped",name:"Other products",description:"Products not assigned to a product group.",sort_order:999999,products:ungrouped});
