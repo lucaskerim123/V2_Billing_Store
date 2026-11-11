@@ -19,9 +19,25 @@ jobs:
   reject-duplicate-database-source:
     runs-on: ubuntu-latest
     steps:
-      - name: Database source moved to Master Database System
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Reject new or modified local database sources
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        shell: bash
         run: |
-          echo "::error::OrbitFS database source is centralized in lucaskerim123/Master-Database-System."
-          echo "::error::Do not add or edit database schema/migration SQL in this repository."
-          echo "::error::Make the database change in Master-Database-System, then let the release/deployment workflow consume the central package."
-          exit 1
+          set -euo pipefail
+          base="${BASE_SHA:-}"
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            base="$(git rev-parse HEAD^)"
+          fi
+          changes="$(git diff --name-status "$base" "$GITHUB_SHA" -- database/migrations/ supabase/supabase-application.sql || true)"
+          forbidden="$(printf '%s\n' "$changes" | awk 'NF && $1 != "D" { print }')"
+          if [[ -n "$forbidden" ]]; then
+            echo "::error::OrbitFS database source is centralised in lucaskerim123/Master-Database-System."
+            echo "::error::Do not add or edit database schema/migration SQL in this repository."
+            printf '%s\n' "$forbidden"
+            exit 1
+          fi
+          echo "Only removal of misplaced local database source was detected; central database ownership remains enforced."
