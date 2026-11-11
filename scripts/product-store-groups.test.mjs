@@ -159,3 +159,16 @@ test('fulfilment queue language and product labels are not tied to OrbitFS',()=>
  assert.doesNotMatch(page,/Base licence ID/);
  assert.match(page,/License Manager licence ID/);
 });
+
+test('admin product editor enables License Manager for any registered product, not a fixed OrbitFS list',()=>{
+ const page=read('../src/app/admin/products/page.tsx');
+ assert.doesNotMatch(page,/ORBITFS_LICENSE_PRODUCTS/);
+ assert.match(page,/license_api_enabled:!!edit\.license_api_enabled/);
+ assert.match(page,/license_api_mode:edit\.license_api_mode\|\|"master"/);
+});
+test('License Manager diagnostics enumerate all registered products instead of an OrbitFS allowlist',()=>{
+ const route=read('../src/app/api/admin/settings/license-master/route.ts');
+ assert.doesNotMatch(route,/canonicalProducts/);
+ assert.match(route,/const connections=rows\.map/);
+ assert.match(route,/License Manager returned no registered products/);
+});
