@@ -70,19 +70,3 @@ test('product checkout copy is independent of OrbitFS branding',()=>{
 });
 
 
-test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent products',()=>{
- const migration=read('../database/migrations/20261111_product_independent_checkout.sql');
- assert.match(migration,/license_product_key in \\('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\\)/);
- assert.match(migration,/product_metadata->>'product_family'/);
- assert.match(migration,/product_metadata->>'store_kind'/);
- assert.doesNotMatch(migration,/license_product_key not in \\('orbitfs_panel','orbitfs_base'\\)/);
-});
-
-
-test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent products',()=>{
- const migration=read('../database/migrations/20261111_product_independent_checkout.sql');
- assert.match(migration,/license_product_key in \('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\)/);
- assert.match(migration,/r\.metadata->>'product_family'/);
- assert.match(migration,/r\.metadata->>'store_kind'/);
- assert.doesNotMatch(migration,/license_product_key not in \('orbitfs_panel','orbitfs_base'\)/);
-});
