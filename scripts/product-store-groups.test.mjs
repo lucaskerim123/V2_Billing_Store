@@ -18,7 +18,7 @@ test('store catalogue returns all active Billing Store products and central grou
  assert.match(route,/from\("products"\)/);
  assert.match(route,/masterProductGroups/);
  assert.match(route,/masterProducts/);
- assert.match(route,/Ungrouped/);
+ assert.match(route,/Other products/);
 });
 
 test('OrbitFS remains a normal product group rather than a hard-coded storefront layout',()=>{
@@ -33,4 +33,10 @@ test('standalone local products can load product details and skip License Manage
  const detail=read('../src/app/products/[slug]/page.tsx');
  assert.match(catalogue,/from\("products"\)\.select\("\*"\)\.eq\("slug",slug\)/);
  assert.match(detail,/!product\?\.license_api_enabled/);
+});
+
+test('standalone products remain listed when the central licensing service is unavailable',()=>{
+ const route=read('../src/app/api/store/catalog/route.ts');
+ assert.match(route,/masterProducts\(\)\.catch/);
+ assert.match(route,/masterProductGroups\(\)\.catch/);
 });
