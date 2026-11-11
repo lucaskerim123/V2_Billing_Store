@@ -57,6 +57,13 @@ export default function ProductLicensesPage(){
     const haystack=[row.id,row.license_id,row.product,row.product_code,row.customer_external_id,row.external_reference,row.status,row.license_key_last4].join(" ").toLowerCase();
     return haystack.includes(query.toLowerCase());
   });
+  const productGroups=new Map(products.map(p=>[String(p.slug||p.product_code||"").toLowerCase(),String(p.group_name||"Ungrouped")]));
+  const groupedLicenses=filtered.reduce((groups,row)=>{
+    const productCode=String(row.product_code||row.product||"").toLowerCase();
+    const groupName=productGroups.get(productCode)||"Ungrouped";
+    (groups[groupName] ||= []).push(row);
+    return groups;
+  },{} as Record<string,Row[]>);
 
   function featuresObject(){
     return Object.fromEntries([...new Set(featureText.split(",").map(x=>x.trim().toLowerCase()).filter(Boolean))].map(x=>[x,true]));
@@ -124,7 +131,7 @@ export default function ProductLicensesPage(){
       <div className="orbitReferenceSectionHead"><div><b>License Manager inventory</b><small>All registered product licences visible to the Billing Store integration.</small></div><span>{filtered.length} records</span></div>
       <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search product, customer reference, status, licence ID…"/>
       <div className="orbitReferenceLicenceList">
-        {filtered.map(row=>{
+        {Object.entries(groupedLicenses).map(([groupName,groupRows])=><section key={groupName} className="orbitReferenceGroup"><div className="orbitReferenceSectionHead"><div><b>{groupName}</b><small>{groupRows.length} licences</small></div></div>{groupRows.map(row=>{
           const id=idOf(row);const status=statusOf(row);const policy=row.metadata?.license_policy||{};
           const expires=row.expires_at?new Date(row.expires_at).toISOString().slice(0,16):"";
           const featureNames=Object.entries(policy.features||row.features||{}).filter(([,v])=>Boolean(v)).map(([k])=>k).join(", ");
@@ -147,7 +154,7 @@ export default function ProductLicensesPage(){
               </div>
             </div>
           </details>;
-        })}
+        })}</section>)}
         {!filtered.length&&<div className="orbitReferenceEmpty compact">No licences match this search.</div>}
       </div>
     </section>
