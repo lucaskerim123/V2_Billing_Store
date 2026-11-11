@@ -57,6 +57,7 @@ export type MasterProductRecord = {
   group_id?: string | null;
   group_slug?: string | null;
   componentKey?: string | null;
+  validation_policy?: Record<string, unknown> | null;
 };
 export type MasterProductGroupRecord = {
   id: string;
