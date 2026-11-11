@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,existsSync} from 'node:fs';
 const read=(path)=>readFileSync(new URL(path,import.meta.url),'utf8');
 
 test('product groups are nested under Products and accessible from the actual admin products page',()=>{
@@ -172,4 +172,8 @@ test('License Manager diagnostics enumerate all registered products instead of a
  assert.doesNotMatch(route,/canonicalProducts/);
  assert.match(route,/const connections=rows\.map/);
  assert.match(route,/License Manager returned no registered products/);
+});
+
+test('Billing Store does not own database migrations; schema changes live in Master Database System',()=>{
+ assert.equal(existsSync(new URL('../database/migrations/20261112090000_product_policy_driven_checkout.sql',import.meta.url)),false);
 });
