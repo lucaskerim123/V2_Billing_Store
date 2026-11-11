@@ -1,5 +1,5 @@
 import {createClient} from "@supabase/supabase-js";
-import {masterControl,masterIssue,masterLicenses,masterProducts,masterUpdateLicense} from "@/lib/master-api";
+import {masterControl,masterIssue,masterLicenses,masterProducts,masterRequest,masterUpdateLicense} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
@@ -86,4 +86,31 @@ export async function POST(req:Request){
     const key=String(result?.key||result?.license?.key||result?.license?.license_key||"");
     return Response.json({ok:true,...result,...(key?{key}:{})},{headers:{"cache-control":"no-store"}});
   }catch(e:any){return Response.json({error:e?.message||"Product licence action failed",code:e?.code||"PRODUCT_LICENSE_ACTION_FAILED"},{status:e?.status||500});}
+}
+
+export async function PATCH(req:Request){
+  try{
+    const actor=await staff(req);if(!actor)return Response.json({error:"License management permission required"},{status:403});
+    const body=await req.json().catch(()=>({}));
+    const productId=String(body.product_id||body.productId||"").trim();
+    const groupId=body.group_id===null||body.group_id===""?null:String(body.group_id||"").trim();
+    if(!productId)return Response.json({error:"product_id is required"},{status:400});
+    const {products=[]}=await masterProducts();
+    const product=products.find((p:any)=>String(p.id||"")===productId);
+    if(!product)return Response.json({error:"Registered License Manager product not found. Register the product first."},{status:404});
+    const result=await masterRequest("/api/v1/products",{
+      method:"PATCH",
+      body:JSON.stringify({
+        product_id:productId,
+        name:product.name,
+        slug:product.slug,
+        description:product.description??null,
+        group_id:groupId,
+        validation_policy:product.validation_policy||{}
+      })
+    });
+    return Response.json({ok:true,product:result.product||result},{headers:{"cache-control":"no-store"}});
+  }catch(e:any){
+    return Response.json({error:e?.message||"Could not assign product group",code:e?.code||"PRODUCT_GROUP_ASSIGNMENT_FAILED"},{status:e?.status||500});
+  }
 }
