@@ -55,7 +55,13 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   if(itemError)throw itemError;if((items||[]).length>MAX_ITEMS)throw new Error(`Order exceeds fulfilment safety limit of ${MAX_ITEMS} line items`);
   const normalizedItems=(items||[]).map((item:any)=>({...item,license_product_key:canonicalComponent(item.license_product_key)}));
   const catalogue=await masterProducts();
-  const registeredProducts=new Map((Array.isArray(catalogue?.products)?catalogue.products:[]).map((p:any)=>[String(p.slug||p.product_code||p.code||"").trim().toLowerCase(),p]).filter(([slug]:any)=>Boolean(slug)));
+  const registeredProductEntries: [string, any][] = (
+    Array.isArray(catalogue?.products) ? catalogue.products : []
+  ).map((p: any): [string, any] => [
+    String(p.slug || p.product_code || p.code || "").trim().toLowerCase(),
+    p,
+  ]).filter(([slug]) => Boolean(slug));
+  const registeredProducts = new Map<string, any>(registeredProductEntries);
   const productStrategy=(slug:string)=>String((registeredProducts.get(slug) as any)?.validation_policy?.license_strategy||"standalone");
   const baseProductSlug=[...registeredProducts.entries()].find(([,p]:any)=>String(p?.validation_policy?.license_strategy||"")==="base")?.[0] as string||"";
   const hasBase=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&productStrategy(item.license_product_key)==="base");
