@@ -27,3 +27,10 @@ test('OrbitFS remains a normal product group rather than a hard-coded storefront
  assert.doesNotMatch(page,/Add-ons/);
  assert.match(page,/groups\.map/);
 });
+
+test('standalone local products can load product details and skip License Manager sync when licensing is disabled',()=>{
+ const catalogue=read('../src/app/api/orbitfs/catalog/route.ts');
+ const detail=read('../src/app/products/[slug]/page.tsx');
+ assert.match(catalogue,/from\("products"\)\.select\("\*"\)\.eq\("slug",slug\)/);
+ assert.match(detail,/!product\?\.license_api_enabled/);
+});
