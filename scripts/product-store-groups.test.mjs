@@ -177,3 +177,15 @@ test('License Manager diagnostics enumerate all registered products instead of a
 test('Billing Store does not own database migrations; schema changes live in Master Database System',()=>{
  assert.equal(existsSync(new URL('../database/migrations/20261112090000_product_policy_driven_checkout.sql',import.meta.url)),false);
 });
+
+test('product licence administration parses standard Bearer authorization headers',()=>{
+ const route=read('../src/app/api/admin/product-licenses/route.ts');
+ assert.match(route,/replace\(\/\^Bearer\\s\+\/i/);
+ assert.doesNotMatch(route,/Bearer\\\\s/);
+});
+test('product group assignment resolves product code, product_code and slug aliases',()=>{
+ const route=read('../src/app/api/admin/product-licenses/route.ts');
+ const page=read('../src/app/admin/products/page.tsx');
+ assert.match(route,/\[p\.code,p\.product_code,p\.slug\]\.some/);
+ assert.match(page,/\[x\.code,x\.product_code,x\.slug\]\.some/);
+});
