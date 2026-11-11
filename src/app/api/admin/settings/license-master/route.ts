@@ -22,7 +22,9 @@ export async function GET(req:Request){
    if(pulseResult.status==="fulfilled")pulse=pulseResult.value;
   }
   const rows=Array.isArray(products?.products)?products.products:[];
-  const connections=rows.map((master:any)=>{const code=String(master.code||master.product_code||master.slug||"").trim().toLowerCase();const localProduct=local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code)||null;return {code,master,local:localProduct,connected:Boolean(localProduct)};});
+  const connections=rows.map((master:any)=>{const identifiers=[master.code,master.product_code,master.slug].map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean);const code=String(master.code||master.product_code||master.slug||"").trim().toLowerCase();const localProduct=local.find((p:any)=>identifiers.includes(String(p.license_product_key||"").toLowerCase()))||null;return {code,master,local:localProduct,connected:Boolean(localProduct)};});
+  const masterKeys=new Set(rows.flatMap((master:any)=>[master.code,master.product_code,master.slug].map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean)));
+  for(const localProduct of local){const code=String(localProduct.license_product_key||"").trim().toLowerCase();if(code&&!masterKeys.has(code))connections.push({code,master:null,local:localProduct,connected:false});}
   return Response.json({connection:data?{...data,master_url:await getMasterApiUrl()}:null,configuredUrl:await getMasterApiUrl(),masterPanelUrl:"https://panel.incendiarynetworks.cc",apiOptions:[{label:"Main API",value:"https://incendiarynetworks.cc/api/v1"},{label:"Fallback API",value:"https://lm.incendiarynetworks.cc/api/v1"}],selectedMode:"main",connections,masterProducts:rows,pulse,health,officialConnections},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:cleanError(e)},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}})}
 }

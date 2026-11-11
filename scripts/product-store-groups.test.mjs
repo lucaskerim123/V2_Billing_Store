@@ -189,3 +189,25 @@ test('product group assignment resolves product code, product_code and slug alia
  assert.match(route,/\[p\.code,p\.product_code,p\.slug\]\.some/);
  assert.match(page,/\[x\.code,x\.product_code,x\.slug\]\.some/);
 });
+
+
+test('License Manager diagnostics include unmatched local products as well as registered mappings',()=>{
+ const route=read('../src/app/api/admin/settings/license-master/route.ts');
+ assert.match(route,/const masterKeys=new Set/);
+ assert.match(route,/for\\(const localProduct of local\\)/);
+});
+test('manual fulfilment accepts multiple standalone licences and policy-selected base licences',()=>{
+ const route=read('../src/app/api/admin/fulfillment/route.ts');
+ const page=read('../src/app/admin/fulfillment/page.tsx');
+ assert.match(route,/body\.licenseIds/);
+ assert.match(route,/validation_policy\?\.base_product_key/);
+ assert.match(route,/entry\.strategy==="component"/);
+ assert.match(route,/entry\.strategy==="standalone"/);
+ assert.match(page,/manualLicenseKey/);
+ assert.match(page,/licenseIds:licenseValues/);
+});
+test('licensing authority presentation is product-neutral',()=>{
+ const page=read('../src/app/admin/licensing/page.tsx');
+ assert.doesNotMatch(page,/Connected OrbitFS products/);
+ assert.doesNotMatch(page,/No canonical OrbitFS products/);
+});

@@ -15,12 +15,7 @@ type AuthorityData={
  officialConnections?:any[];
 };
 
-const labelFor=(code:string)=>({
- orbitfs_base:"OrbitFS Base",
- orbitfs_apex:"OrbitFS APEX",
- orbitfs_mcp:"OrbitFS MCP",
- orbitfs_studio:"OrbitFS Studio"
-}[code]||code);
+const labelFor=(code:string,name?:string)=>name||code;
 
 export default function LicensingAdmin(){
  const sb=useMemo(()=>createClient(),[]);
@@ -52,7 +47,7 @@ export default function LicensingAdmin(){
    masterPanelUrl:"https://panel.incendiarynetworks.cc",
    masterProducts:productsList,
    pulse:hj,
-   connections:productsList.map((p:any)=>({code:String(p.code||p.slug||""),connected:true,master:p,local:null}))
+   connections:productsList.map((p:any)=>({code:String(p.code||p.product_code||p.slug||""),connected:true,master:p,local:null}))
   } satisfies AuthorityData;
  }
 
@@ -110,7 +105,7 @@ export default function LicensingAdmin(){
  return <main className="lmPage orbitAuthorityPage orbitPhaseOne">
   <header className="orbitReferenceHero orbitPhaseHero">
    <div>
-    <p className="eyebrow">MY ORBITFS · LICENSE AUTHORITY</p>
+    <p className="eyebrow">LICENSE AUTHORITY</p>
     <h1>License System</h1>
     <p className="muted">Billing Store connects to the standalone License Manager for licences, products, release channels and deployment authority. This page reports that connection; it does not duplicate technical state.</p>
    </div>
@@ -146,10 +141,10 @@ export default function LicensingAdmin(){
     </article>
 
     <article className="orbitAuthorityPanel">
-     <div className="orbitAuthorityPanelHead"><div><p className="eyebrow">CAPABILITIES</p><h2>Authority coverage</h2></div><span>{connectedCount}/{Math.max(connections.length,4)} products</span></div>
+     <div className="orbitAuthorityPanelHead"><div><p className="eyebrow">CAPABILITIES</p><h2>Authority coverage</h2></div><span>{connectedCount}/{connections.length} products</span></div>
      <div className="orbitAuthorityCapabilityList">
       <div><b>Licensing</b><span>Issuance, status, keys, entitlements and activations</span><strong>License Manager</strong></div>
-      <div><b>Release channels</b><span>Shared Base + Update channel definitions and access</span><strong>License Manager</strong></div>
+      <div><b>Release channels</b><span>Product release channels and access</span><strong>License Manager</strong></div>
       <div><b>Release authority</b><span>Validation, approval, artifacts, manifests and publication state</span><strong>License Manager</strong></div>
       <div><b>Deployment authority</b><span>Authorization, coordination and result recording</span><strong>License Manager</strong></div>
      </div>
@@ -158,19 +153,19 @@ export default function LicensingAdmin(){
 
    <section className="orbitAuthorityPanel">
     <div className="orbitAuthorityPanelHead">
-     <div><p className="eyebrow">CANONICAL CATALOGUE</p><h2>Connected OrbitFS products</h2><p>Product mappings compare the Billing catalogue with the authoritative License Manager registry.</p></div>
+     <div><p className="eyebrow">REGISTERED CATALOGUE</p><h2>Registered products</h2><p>Product mappings compare the Billing catalogue with the authoritative License Manager registry.</p></div>
      <span>{products.length} returned</span>
     </div>
     <div className="orbitAuthorityProducts">
      {(connections.length?connections:products.map((p:any)=>({code:String(p.code||p.slug||""),connected:true,master:p,local:null}))).map((row:any)=>{
       const code=String(row.code||row.master?.code||row.master?.slug||"");
       return <article key={code||row.master?.id}>
-       <div className="orbitAuthorityProductMark">{code==="orbitfs_base"?"B":code==="orbitfs_mcp"?"M":code==="orbitfs_apex"?"A":"S"}</div>
-       <div><b>{labelFor(code)}</b><span className="orbitMono">{code||"Unknown product"}</span><small>{row.master?.name||"Registered in License Manager"}</small></div>
+       <div className="orbitAuthorityProductMark">{String(row.master?.name||code||"?").charAt(0).toUpperCase()}</div>
+       <div><b>{labelFor(code,row.master?.name)}</b><span className="orbitMono">{code||"Unknown product"}</span><small>{row.master?.name||"Registered in License Manager"}</small></div>
        <span className={"orbitMiniState "+(row.connected?"live":"")}>{row.connected?"Connected":"Needs mapping"}</span>
       </article>
      })}
-     {!products.length&&!connections.length&&<div className="orbitReferenceEmpty compact">No canonical OrbitFS products were returned by License Manager.</div>}
+     {!products.length&&!connections.length&&<div className="orbitReferenceEmpty compact">No registered products were returned by License Manager.</div>}
     </div>
    </section>
 
