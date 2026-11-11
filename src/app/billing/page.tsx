@@ -4,8 +4,8 @@ import {masterRequest} from "@/lib/master-api";
 
 export const dynamic="force-dynamic";
 
-type MasterProduct={slug?:string;group_id?:string|null;group_slug?:string|null;name?:string;description?:string;componentKey?:string;status?:string;[key:string]:any};
-type MasterProductGroup={id:string;slug:string;name:string;description?:string;[key:string]:any};
+type MasterProduct={slug?:string;group_id?:string|null;group_slug?:string|null;name?:string;description?:string;componentKey?:string;status?:string};
+type MasterProductGroup={id:string;slug:string;name:string;description?:string};
 type MasterProductsResponse={products:MasterProduct[]};
 type MasterProductGroupsResponse={groups:MasterProductGroup[]};
 
