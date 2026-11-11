@@ -16,7 +16,8 @@
     "theme:sync": "node tools/theme-manager.mjs sync",
     "theme:validate": "node tools/theme-manager.mjs validate",
     "test:update-master-database-readiness": "node --test scripts/update-master-database-readiness.test.mjs",
-    "test:product-agnostic": "node --test scripts/product-agnostic-licensing.test.mjs"
+    "test:product-agnostic": "node --test scripts/product-agnostic-licensing.test.mjs",
+    "test:product-store-groups": "node --test scripts/product-store-groups.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
