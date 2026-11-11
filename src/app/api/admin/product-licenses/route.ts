@@ -98,10 +98,10 @@ export async function PATCH(req:Request){
     const groupId=body.group_id===null||body.group_id===""?null:String(body.group_id||"").trim();
     if(!slug||!name||!slugOk(slug))return Response.json({error:"A valid Billing Store product name and licence product key are required"},{status:400});
     const {products=[]}=await masterProducts();
-    const product=products.find((p:any)=>String(p.slug||p.code||"").toLowerCase()===slug);
+    const product=products.find((p:any)=>[p.code,p.product_code,p.slug].some((value:any)=>String(value||"").trim().toLowerCase()===slug));
     const payload:any={
       name,
-      slug,
+      slug:product?.slug||slug,
       description,
       group_id:groupId,
       validation_policy:product?.validation_policy||{}
