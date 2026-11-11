@@ -66,5 +66,6 @@ test('fulfilled Billing Store orders are checked against License Manager before 
 
 test('remote licence status index preserves string key/value types for strict TypeScript',()=>{
   const sync=read('../src/lib/license-master-sync.ts');
-  assert.match(sync,/new Map<string,\s*string>\s*\([\s\S]*?\.map\(\s*\(license:\s*any\):\s*\[string,\s*string\]\s*=>/);
+  assert.match(sync,/const remoteLicenseEntries:\s*\[string,\s*string\]\[\]\s*=\s*\([\s\S]*?\.map\(\s*\(license:\s*any\):\s*\[string,\s*string\]\s*=>/);
+  assert.match(sync,/new Map<string,\s*string>\(remoteLicenseEntries\)/);
 });
