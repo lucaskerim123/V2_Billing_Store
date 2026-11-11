@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=(path)=>readFileSync(new URL(path,import.meta.url),'utf8');
 
+test('product groups are nested under Products and accessible from the actual admin products page',()=>{
+ const layout=read('../src/app/admin/AdminLayoutClient.tsx');
+ const page=read('../src/app/admin/products/page.tsx');
+ const productsGroup=layout.slice(layout.indexOf('const productsGroup:'),layout.indexOf('const orbitfsGroup:'));
+ const billingGroup=layout.slice(layout.indexOf('const billingGroup:'),layout.indexOf('const customersGroup:'));
+ assert.match(productsGroup,/Product Groups/);
+ assert.match(productsGroup,/\/admin\/product-groups/);
+ assert.match(productsGroup,/path\.startsWith\("\/admin\/product-groups"\)/);
+ assert.doesNotMatch(billingGroup,/Product Groups/);
+ assert.match(page,/href="\/admin\/product-groups"/);
+});
+
 test('customer product catalogue renders products by License Manager group, not Base and add-ons',()=>{
  const page=read('../src/app/portal/products/page.tsx');
  assert.match(page,/\/api\/store\/catalog/);
@@ -62,6 +74,7 @@ test('public storefront only exposes locally configured purchasable products and
  assert.match(page,/Other products/);
  assert.doesNotMatch(page,/id:local\?\.id\|\|master\.id/);
 });
+
 test('product checkout copy is independent of OrbitFS branding',()=>{
  const detail=read('../src/app/products/[slug]/page.tsx');
  assert.match(detail,/Billing Store creates the order and invoice first/);
@@ -70,10 +83,10 @@ test('product checkout copy is independent of OrbitFS branding',()=>{
 
 test('checkout only requires OrbitFS Base for OrbitFS add-ons, not independent products',()=>{
  const migration=read('../database/migrations/20261111_product_independent_checkout.sql');
- assert.match(migration,/license_product_key in \('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\)/);
+ assert.match(migration,/license_product_key in \\('orbitfs_apex','orbitfs_mcp','orbitfs_studio','orbitfs_sorter'\\)/);
  assert.match(migration,/r\.metadata->>'product_family'/);
  assert.match(migration,/r\.metadata->>'store_kind'/);
- assert.doesNotMatch(migration,/license_product_key not in \('orbitfs_panel','orbitfs_base'\)/);
+ assert.doesNotMatch(migration,/license_product_key not in \\('orbitfs_panel','orbitfs_base'\\)/);
 });
 
 test('catalogue fallbacks retain typed product and product-group response shapes',()=>{
@@ -84,6 +97,7 @@ test('catalogue fallbacks retain typed product and product-group response shapes
  assert.match(page,/catch\(\(\):MasterProductsResponse=>\(\{products:\[\]\}\)/);
  assert.match(page,/catch\(\(\):MasterProductGroupsResponse=>\(\{groups:\[\]\}\)/);
 });
+
 test('product licence inventory rows are explicitly typed when iterating grouped records',()=>{
  const page=read('../src/app/admin/product-licenses/page.tsx');
  assert.match(page,/groupRows\.map\(\(row:Row\)=>/);
