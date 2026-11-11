@@ -24,9 +24,9 @@ async function syncOne(db:any,master:any,local:any){
 
 export async function GET(req:Request){
   try{
-    const products=await masterCatalog();
+    const products=await masterCatalog().catch(()=>[]);
     const db=licenseDb();
-    const {data:local,error}=await db.from("products").select("*").in("license_product_key",products.map((p:any)=>String(p.code||"")).filter(Boolean));
+    const {data:local,error}=await db.from("products").select("*").eq("active",true);
     if(error)throw error;
     const byCode=new Map((local||[]).map((p:any)=>[String(p.license_product_key),p]));
     const merged=products.map((m:any)=>merge(m,byCode.get(String(m.code))));
