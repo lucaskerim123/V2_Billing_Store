@@ -117,7 +117,7 @@ export default function ProductLicensesPage(){
     <section className="orbitReferenceSection">
       <div className="orbitReferenceSectionHead"><div><b>Issue a licence</b><small>Creates a licence for the selected registered product and links it to the Billing Store customer.</small></div></div>
       <div className="orbitReferenceActions" style={{flexWrap:"wrap",alignItems:"end"}}>
-        <label>Product<select value={product} onChange={e=>setProduct(e.target.value)}>{products.map(p=><option key={p.id||p.slug} value={p.slug||p.product_code}>{p.name||p.slug||p.product_code}</option>)}</select></label>
+        <label>Product<select value={product} onChange={e=>setProduct(e.target.value)}>{products.map(p=><option key={p.id||p.slug} value={p.slug||p.product_code}>{p.group_name?`${p.group_name} · `:""}{p.name||p.slug||p.product_code}</option>)}</select></label>
         <label>Customer<select value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value="">Select customer</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name||c.email||c.customer_number}</option>)}</select></label>
         <label>Expiry (optional)<input type="datetime-local" value={expiry} onChange={e=>setExpiry(e.target.value)}/></label>
         <label>Maximum installations<input type="number" min="1" max="1000" value={maxInstallations} onChange={e=>setMaxInstallations(e.target.value)}/></label>
