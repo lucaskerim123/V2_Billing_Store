@@ -1,5 +1,5 @@
 import {licenseDb} from "@/lib/license-api";
-import {masterControl,masterIssue,masterLicenses,masterProducts} from "@/lib/master-api";
+import {masterControl,masterIssue,masterLicenses,masterProducts,masterRequest} from "@/lib/master-api";
 import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 import {deliverInitialLicenseKey} from "@/lib/license-key-delivery";
 
@@ -78,12 +78,47 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   };
   const productIds=[...new Set(normalizedItems.map((item:any)=>String(item.product_id||"")).filter(Boolean))];
   const localProductsResult=productIds.length
-    ?await db.from("products").select("id,license_api_enabled").in("id",productIds)
+    ?await db.from("products").select("id,slug,name,description,license_product_key,license_api_enabled").in("id",productIds)
     :{data:[],error:null} as any;
   if(localProductsResult.error)throw localProductsResult.error;
-  const localProductsById=new Map<string,{license_api_enabled?:boolean}>((localProductsResult.data||[]).map((p:any):[string,{license_api_enabled?:boolean}]=>[String(p.id),p]));
+  const localProductsById=new Map<string,{slug?:string;name?:string;description?:string;license_product_key?:string;license_api_enabled?:boolean}>((localProductsResult.data||[]).map((p:any):[string,{slug?:string;name?:string;description?:string;license_product_key?:string;license_api_enabled?:boolean}]=>[String(p.id),p]));
   const licenseEnabled=(item:any)=>localProductsById.get(String(item.product_id||""))?.license_api_enabled!==false;
+  // The Billing Store product slug is the product-independent default API ID.
+  // An explicit License Manager key always takes precedence.
+  for(const item of normalizedItems){
+    const local=localProductsById.get(String(item.product_id||""));
+    if(!item.license_product_key){
+      item.license_product_key=canonicalComponent(local?.license_product_key||local?.slug||"");
+    }
+  }
   const licensedItems=normalizedItems.filter((item:any)=>item.configuration?.gift!==true&&licenseEnabled(item)&&Boolean(item.license_product_key));
+  // Register missing products centrally before issuing any licences. This keeps
+  // product onboarding independent of OrbitFS-specific product configuration.
+  const productsToRegister=[...new Set(licensedItems.map((item:any)=>String(item.license_product_key||"")).filter((code:string)=>code&&!registeredProducts.has(code)))];
+  for(const code of productsToRegister){
+    const item=licensedItems.find((row:any)=>String(row.license_product_key||"")===code);
+    const local=localProductsById.get(String(item?.product_id||""));
+    const payload={
+      name:String(local?.name||item?.product_name||code),
+      slug:code,
+      description:local?.description||null,
+      validation_policy:{max_installations:1,features:{},allowed_domains:[],minimum_version:"1.0.0",maximum_version:"999.999.999",allow_offline_grace:true,offline_grace_seconds:6000,license_strategy:"standalone"}
+    };
+    try{
+      const created=await masterRequest<any>("/api/v1/products",{method:"POST",body:JSON.stringify(payload)});
+      const record=created?.product||created;
+      const identifiers=[record?.code,record?.product_code,record?.slug,code].map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean);
+      for(const identifier of identifiers)registeredProducts.set(identifier,record);
+    }catch(registrationError:any){
+      // A duplicate can mean another webhook registered it concurrently.
+      if(Number(registrationError?.status)===409){
+        const refreshed=await masterProducts();
+        const record=(refreshed?.products||[]).find((p:any)=>[p.code,p.product_code,p.slug].some((value:any)=>String(value||"").trim().toLowerCase()===code));
+        if(record){for(const identifier of [record.code,record.product_code,record.slug,code].map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean))registeredProducts.set(identifier,record);continue;}
+      }
+      throw new Error("Could not register product "+code+" in License Manager: "+String(registrationError?.message||registrationError));
+    }
+  }
   for(const item of licensedItems){
     const product=String(item.license_product_key||"");
     const strategy=productStrategy(product);
