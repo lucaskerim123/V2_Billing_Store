@@ -2,7 +2,7 @@ import {masterRequest} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 
-const PATH_RE=/^\\/api\\/v1\\/(license(?:\\/health|\\/[^/]+\\/control)?|products|releases(?:\\/[^/]+(?:\\/(?:validate|artifact))?)?|release-channels(?:\\/access)?)$/;
+const PATH_RE=/^\/api\/v1\/(license(?:\/health|\/[^/]+\/control)?|products|releases(?:\/[^/]+(?:\/(?:validate|artifact))?)?|release-channels(?:\/access)?)$/;
 
 function allowed(path:string){return PATH_RE.test(path);}
 async function forward(req:Request,method:string){
@@ -19,7 +19,7 @@ async function forward(req:Request,method:string){
   if(method==="POST"&&body){
     let input:any={};
     try{input=JSON.parse(body)}catch{}
-    const match=raw.match(/^\\/api\\/v1\\/license\\/([^/]+)\\/control$/);
+    const match=raw.match(/^\/api\/v1\/license\/([^/]+)\/control$/);
     if(match&&String(input?.action||"").trim().toLowerCase()==="rotate"){
       const licenseId=decodeURIComponent(match[1]);
       const license=result?.license||result?.licence||result;
