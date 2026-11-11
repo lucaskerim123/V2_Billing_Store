@@ -41,14 +41,16 @@ test('standalone products remain listed when the central licensing service is un
  assert.match(route,/masterProductGroups\(\)\.catch/);
 });
 
-test('public billing store displays every public purchasable product under its central product group',()=>{
+
+test('public billing store renders active License Manager products by group and includes standalone store products',()=>{
  const page=read('../src/app/billing/page.tsx');
- assert.match(page,/\/api\/v1\/products/);
- assert.match(page,/\/api\/v1\/product-groups/);
- assert.match(page,/product\.group_id/);
- assert.match(page,/groups\.map/);
+ assert.match(page,/masterRequest\("\/api\/v1\/products"/);
+ assert.match(page,/masterRequest\("\/api\/v1\/product-groups"/);
+ assert.match(page,/license_product_key/);
+ assert.match(page,/group_id/);
  assert.match(page,/Other products/);
- assert.match(page,/p\.active&&p\.public&&p\.purchasable/);
+ assert.match(page,/groups\.map/);
+ assert.match(page,/status\|\|"active"/);
  assert.doesNotMatch(page,/OrbitFS Base and add-ons/);
  assert.doesNotMatch(page,/componentOrder/);
 });
