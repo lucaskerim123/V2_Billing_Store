@@ -114,3 +114,18 @@ test('central catalogue helpers preserve product and group element types through
  assert.match(page,/masterProductGroups\(\)\.catch/);
  assert.doesNotMatch(page,/masterRequest\("\/api\/v1\/(products|product-groups)"/);
 });
+
+test('admin product editor can assign a Billing Store product to a License Manager group',()=>{
+ const page=read('../src/app/admin/products/page.tsx');
+ const groupsApi=read('../src/app/api/admin/product-groups/route.ts');
+ const assignApi=read('../src/app/api/admin/product-licenses/route.ts');
+ assert.match(page,/Product group/);
+ assert.match(page,/groups\.map/);
+ assert.match(page,/saveProductGroup/);
+ assert.match(page,/\/api\/admin\/product-licenses/);
+ assert.match(groupsApi,/masterProducts\(\)/);
+ assert.match(assignApi,/export async function PATCH/);
+ assert.match(assignApi,/group_id:groupId/);
+ assert.match(assignApi,/method:"PATCH"/);
+ assert.match(assignApi,/method:"POST"/);
+});
