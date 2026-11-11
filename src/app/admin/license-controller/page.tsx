@@ -11,7 +11,8 @@ const productName=(x:any)=>({
  orbitfs_base:"OrbitFS Base",
  orbitfs_apex:"OrbitFS APEX",
  orbitfs_mcp:"OrbitFS MCP",
- orbitfs_studio:"OrbitFS Studio"
+ orbitfs_studio:"OrbitFS Studio",
+ "brandon-rv":"Brandon RV"
 }[String(x||"").toLowerCase()]||String(x||"OrbitFS licence"));
 
 const initials=(name:string)=>{
@@ -290,6 +291,7 @@ export default function LicenseControllerPage(){
        const status=canonicalLicenseStatus(b);
        const authoritativeComponents=b.authoritative_components||{};
        const components=Object.entries(authoritativeComponents).filter(([,enabled])=>Boolean(enabled)).map(([key])=>productName(key)).join(" · ")||productName(b.license_product_key||"orbitfs_base");
+       const isOrbitBase=String(b.license_product_key||"").toLowerCase()==="orbitfs_base";
        const addonControls=[["orbitfs_apex","APEX"],["orbitfs_mcp","MCP"],["orbitfs_studio","Studio"]] as const;
        const installs=b.master_activations?.length?b.master_activations:(data?.installations||[]).filter((i:any)=>String(i.license_binding_id)===String(b.id)).map((i:any)=>({...i,status:i.state}));
        return <details className="orbitReferenceLicenceCard" key={b.id}>
@@ -318,9 +320,9 @@ export default function LicenseControllerPage(){
          {status==="terminated"&&<button className="secondary" disabled={!!busy} onClick={()=>void control(String(b.license_id),"activate")}>{busy.startsWith("activate:"+b.license_id)?"Reactivating…":"Reactivate with new key"}</button>}
          {status!=="terminated"&&<button className="danger" disabled={!!busy} onClick={()=>void control(String(b.license_id),"terminate")}>{busy.startsWith("terminate:"+b.license_id)?"Terminating…":"Terminate"}</button>}
         </div>
-        <div className="orbitReferenceInstallations">
+        {isOrbitBase&&<div className="orbitReferenceInstallations">
          {addonControls.map(([key,label])=>{const enabled=Boolean(authoritativeComponents[key]);const busyKey="component:"+key+":"+b.license_id;return <div key={key}><span><b>{label}</b><small>{enabled?"Active entitlement":"Not entitled"} · Base binding stays locked</small></span><button className="secondary" disabled={!!busy||!(status==="active"||status==="locked")} onClick={()=>void controlComponent(String(b.license_id),key,!enabled)}>{busy===busyKey?(enabled?"Deactivating…":"Activating…"):(enabled?"Deactivate":"Activate")}</button></div>})}
-        </div>
+        </div>}
         {!!installs.length&&<div className="orbitReferenceInstallations">
          {installs.map((i:any)=><div key={i.id||i.installation_id}><span><b>{i.installation_id}</b><small>{String(i.status||"").toLowerCase()==="active"?"bound / locked":String(i.status||"").toLowerCase()==="released"?"released / unlocked":i.status||"unknown"}</small></span>{String(i.status||"").toLowerCase()==="active"&&<button className="secondary" disabled={!!busy} onClick={()=>void control(String(b.license_id),"unlock-installation",String(i.installation_id))}>{busy===("unlock-installation:"+b.license_id+":"+i.installation_id)?"Releasing…":"Unlock / release"}</button>}</div>)}
         </div>}
