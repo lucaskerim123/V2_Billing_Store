@@ -28,3 +28,8 @@ test('OrbitFS add-on component fulfilment remains a separate compatibility path'
   assert.match(sync,/CANONICAL=new Set\(\["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio"\]\)/);
   assert.match(sync,/OrbitFS Base is required before any OrbitFS add-on/);
 });
+test('standalone product issuance omits OrbitFS components unless a component object is supplied',()=>{
+  const api=read('../src/lib/master-api.ts');
+  assert.match(api,/const components=input\.components&&typeof input\.components==="object"&&!Array\.isArray\(input\.components\)\?input\.components:undefined/);
+  assert.match(api,/\.\.\.\(components\?\{components\}:\{\}\)/);
+});
