@@ -75,7 +75,7 @@ export default function Products(){
     <span className="pill">{group.products.length} {group.products.length===1?"product":"products"}</span>
    </div>
    <div className="storeAddonList">{group.products.map((p:any)=><article className="storeAddonCard" key={p.id}>
-    <div><span className="pill">{p.metadata?.store_badge||(p.license_product_key&&!["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio","orbitfs_sorter"].includes(String(p.license_product_key).toLowerCase())?"SOFTWARE LICENCE":group.name)}</span><h3>{p.name}</h3><p>{p.description|| (p.license_product_key?"Purchase a product licence. Your licence is issued through License Manager after payment.":"View product details and available options.")}</p></div>
+    <div><span className="pill">{p.metadata?.store_badge||(p.license_product_key?(String(p.metadata?.license_validation_policy?.license_strategy||"standalone")==="component"?"COMPONENT LICENCE":String(p.metadata?.license_validation_policy?.license_strategy||"standalone")==="base"?"BASE LICENCE":"SOFTWARE LICENCE"):group.name)}</span><h3>{p.name}</h3><p>{p.description|| (p.license_product_key?"Purchase a product licence. Your licence is issued through License Manager after payment.":"View product details and available options.")}</p></div>
     <div className="storeAddonMeta">
      <strong>{productPrice(p)}</strong>
      {hasOptions(p)?<Link className="storePrimaryAction" href={"/portal/products/"+p.slug}>Configure & add</Link>:<button className="storePrimaryAction" onClick={()=>void directAdd(p)}>Add to basket</button>}
