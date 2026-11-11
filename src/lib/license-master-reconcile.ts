@@ -47,7 +47,7 @@ export async function reconcileLicenseMaster(limit=MAX_BATCH){
    results.push({kind:"authority_link",licenseId:id,bindingId,customerId:customer.id,customerNumber:customer.customer_number,status:"synced"});
   }
  }catch(error:any){failures.push({kind:"authority_link",error:String(error?.message||error)})}
- const pendingResult=await db.from("license_fulfillments").select("order_id,order_item_id,state,attempt_count,last_error").in("state",["pending","failed"]).not("order_id","is",null).order("updated_at",{ascending:true}).limit(cap);
+ const pendingResult=await db.from("license_fulfillments").select("order_id,order_item_id,state,attempt_count,last_error").in("state",["pending","failed"]).not("order_id","is",null).lt("updated_at",new Date(Date.now()-5*60*1000).toISOString()).order("updated_at",{ascending:true}).limit(cap);
  if(pendingResult.error)throw pendingResult.error;
  const orderIds=[...new Set((pendingResult.data||[]).map((x:any)=>String(x.order_id)).filter(Boolean))];
  for(const orderId of orderIds){try{const r=await syncPaidOrderToLicenseMaster(orderId);results.push({kind:"fulfillment",orderId,result:r})}catch(error:any){failures.push({kind:"fulfillment",orderId,error:String(error?.message||error)})}}
