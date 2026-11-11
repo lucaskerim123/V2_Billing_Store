@@ -22,7 +22,6 @@ export async function GET(req:Request){
    if(pulseResult.status==="fulfilled")pulse=pulseResult.value;
   }
   const rows=Array.isArray(products?.products)?products.products:[];
-  const by=new Map(rows.flatMap((p:any)=>[p.code,p.product_code,p.slug].map((value:any)=>String(value||"").trim().toLowerCase()).filter(Boolean).map((key:string)=>[key,p] as [string,any])));
   const connections=rows.map((master:any)=>{const code=String(master.code||master.product_code||master.slug||"").trim().toLowerCase();const localProduct=local.find((p:any)=>String(p.license_product_key||"").toLowerCase()===code)||null;return {code,master,local:localProduct,connected:Boolean(localProduct)};});
   return Response.json({connection:data?{...data,master_url:await getMasterApiUrl()}:null,configuredUrl:await getMasterApiUrl(),masterPanelUrl:"https://panel.incendiarynetworks.cc",apiOptions:[{label:"Main API",value:"https://incendiarynetworks.cc/api/v1"},{label:"Fallback API",value:"https://lm.incendiarynetworks.cc/api/v1"}],selectedMode:"main",connections,masterProducts:rows,pulse,health,officialConnections},{headers:{"cache-control":"no-store"}});
  }catch(e:any){return Response.json({error:cleanError(e)},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}})}
