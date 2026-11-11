@@ -10,7 +10,7 @@ function canonicalComponent(value:any){const key=String(value||"").trim().toLowe
 
 export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manual?:boolean}={}){
   const authority=await getLicenseMasterAvailability();
-  if(authority.effectiveMode==="manual"){
+  if(authority.effectiveMode==="manual"&&!options.manual){
     const db=licenseDb();
     const id=String(orderId||"").trim();
     if(id){
