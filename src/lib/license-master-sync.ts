@@ -63,7 +63,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   const {data:existingBaseBinding,error:baseBindingError}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("auth_user_id",order.auth_user_id).eq("license_product_key",baseProductSlug||"__no_base_product__").eq("admin_override",false).neq("desired_state","revoked").order("created_at",{ascending:true}).limit(1).maybeSingle();
   if(baseBindingError)throw baseBindingError;
   let baseBinding:any=existingBaseBinding||null;
-  if(hasAddon&&!hasBase&&!baseBinding?.license_id)throw new Error("OrbitFS Base is required before any OrbitFS add-on can be fulfilled");
+  if(hasAddon&&!hasBase&&!baseBinding?.license_id)throw new Error("A base product licence is required before a component product can be fulfilled");
   // Claim the order with a conditional database update before calling the external
   // licence API. A competing request cannot acquire the same order concurrently.
   const priorState=String(order.fulfillment_status||"").toLowerCase();
@@ -99,7 +99,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
         const {data:existingBinding}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("order_item_id",item.id).maybeSingle();
         if(!existingBinding?.id){
           const now=new Date().toISOString();
-          const bindingRepair={order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,fulfillment_id:existing.id,license_id:existing.license_id,license_product_key:product,desired_state:"active",remote_state:"active",components:{orbitfs_base:true},label:String(item.product_name||product),api_source:"license_master",admin_override:false,updated_at:now};
+          const bindingRepair={order_id:id,order_item_id:item.id,auth_user_id:order.auth_user_id,fulfillment_id:existing.id,license_id:existing.license_id,license_product_key:product,desired_state:"active",remote_state:"active",components:{[baseProductSlug]:true},label:String(item.product_name||product),api_source:"license_master",admin_override:false,updated_at:now};
           let repaired=false;
           for(let attempt=1;attempt<=3&&!repaired;attempt++){
             const write=await db.from("license_bindings").insert(bindingRepair);
@@ -142,7 +142,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
         continue;
       }
       if(productStrategy(product)==="component"){
-        if(!baseBinding?.license_id)throw new Error("OrbitFS Base licence binding is missing");
+        if(!baseBinding?.license_id)throw new Error("Base product licence binding is missing");
         const now=new Date().toISOString();
         const result=await masterControl(String(baseBinding.license_id),{action:"set-component",component:product,enabled:true,actorRef:"billing_store_fulfillment"});
         const components={...(result?.components||baseBinding.components||{}),[baseProductSlug]:true,[product]:true};
