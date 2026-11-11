@@ -6,12 +6,13 @@ export const dynamic="force-dynamic";
 export async function GET(){
  try{
   const db=licenseDb();
-  const [{data:local,error:localError},catalog,groupResult]=await Promise.all([
+  const [localResult,catalog,groupResult]=await Promise.all([
    db.from("products").select("id,slug,name,description,price_cents,currency,metadata,track_stock,stock_on_hand,stock_reserved,allow_backorders,created_at,license_product_key,active").eq("active",true),
-   masterProducts(),
-   masterProductGroups()
+   masterProducts().catch(()=>({products:[]})),
+   masterProductGroups().catch(()=>({groups:[]}))
   ]);
-  if(localError)throw localError;
+  if(localResult.error)throw localResult.error;
+  const local=localResult.data;
   const masterRows=Array.isArray(catalog?.products)?catalog.products:[];
   const masterByCode=new Map(masterRows.map((p:any)=>[String(p.code||p.slug||"").toLowerCase(),p]));
   const groups=Array.isArray(groupResult?.groups)?groupResult.groups:[];
