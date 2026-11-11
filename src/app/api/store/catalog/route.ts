@@ -17,13 +17,14 @@ export async function GET(){
    masterProductGroups().catch(():MasterProductGroupsResponse=>({groups:[]}))
   ]);
   if(localResult.error)throw localResult.error;
-  const local=(localResult.data||[]).filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true);
+  const activeLocal=localResult.data||[];
+  const local=activeLocal.filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true);
   const masterRows=Array.isArray(catalog.products)?catalog.products:[];
   const masterByCode=new Map(masterRows.flatMap((p)=>[p.code,p.product_code,p.slug].filter(Boolean).map((key)=>[String(key).toLowerCase(),p] as const)));
   // Keep the local checkout policy mirror aligned with License Manager.
   // Checkout is database-backed, so it must not rely on an OrbitFS product list
   // or on a browser-side policy snapshot.
-  for(const product of local){
+  for(const product of activeLocal){
    const master=masterByCode.get(String(product.license_product_key||"").toLowerCase());
    if(!master)continue;
    const policy=master.validation_policy&&typeof master.validation_policy==="object"?master.validation_policy:null;
