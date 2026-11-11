@@ -36,6 +36,20 @@ export async function POST(req:Request){
     const {data:items,error:ie}=await actor.sb.from("order_items").select("id,product_name,license_product_key").eq("order_id",orderId).order("id");
     if(ie)throw ie;
 
+    // Approval may create a pending fulfillment before any license binding exists.
+    // Issue the purchased product through the same License Manager API used by OrbitFS.
+    if(action==="activate"&&(bindings||[]).length===0){
+      const {syncPaidOrderToLicenseMaster}=await import("@/lib/license-master-sync");
+      const result=await syncPaidOrderToLicenseMaster(orderId,{manual:true});
+      if(result?.skipped){
+        return Response.json({ok:false,orderId,action,results:[],failures:[{error:`License was not issued: ${String(result.reason||"fulfillment skipped")}`}],fulfillment:result},{status:503,headers:{"cache-control":"no-store"}});
+      }
+      if(result?.ok!==true||Number(result?.fulfilled||0)<1||Number(result?.failed||0)>0){
+        return Response.json({ok:false,orderId,action,results:result?.results||[],failures:[{error:"License Manager did not confirm successful product fulfilment."}],fulfillment:result},{status:502,headers:{"cache-control":"no-store"}});
+      }
+      return Response.json({ok:true,orderId,action,results:result.results||[],fulfillment:result},{headers:{"cache-control":"no-store"}});
+    }
+
     const masterSnapshot=await masterLicenses();
     const masterRows=Array.isArray(masterSnapshot?.licenses)?masterSnapshot.licenses:[];
     const results:any[]=[];const failures:any[]=[];
