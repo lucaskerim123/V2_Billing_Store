@@ -81,12 +81,13 @@ test('product checkout copy is independent of OrbitFS branding',()=>{
  assert.doesNotMatch(detail,/OrbitFS creates the order and invoice first/);
 });
 
-test('checkout dependency rules are driven by License Manager product policy, never OrbitFS product keys',()=>{
- const migration=read('../database/migrations/20261112090000_product_policy_driven_checkout.sql');
- assert.match(migration,/license_validation_policy/);
- assert.match(migration,/license_strategy/);
- assert.match(migration,/base_product_key/);
- assert.doesNotMatch(migration,/orbitfs_(base|panel|apex|mcp|studio|sorter)/i);
+test('storefront mirrors central product policy without owning database migrations',()=>{
+ const route=read('../src/app/api/store/catalog/route.ts');
+ const detail=read('../src/app/api/orbitfs/catalog/route.ts');
+ assert.match(route,/license_validation_policy/);
+ assert.match(route,/for\(const product of activeLocal\)/);
+ assert.match(detail,/license_validation_policy:master\.validation_policy/);
+ assert.doesNotMatch(route,/orbitfs_(base|panel|apex|mcp|studio|sorter)/i);
 });
 
 test('catalogue fallbacks retain typed product and product-group response shapes',()=>{
