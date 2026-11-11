@@ -194,7 +194,7 @@ test('product group assignment resolves product code, product_code and slug alia
 test('License Manager diagnostics include unmatched local products as well as registered mappings',()=>{
  const route=read('../src/app/api/admin/settings/license-master/route.ts');
  assert.match(route,/const masterKeys=new Set/);
- assert.match(route,/for\\(const localProduct of local\\)/);
+ assert.match(route,/for\(const localProduct of local\)/);
 });
 test('manual fulfilment accepts multiple standalone licences and policy-selected base licences',()=>{
  const route=read('../src/app/api/admin/fulfillment/route.ts');
