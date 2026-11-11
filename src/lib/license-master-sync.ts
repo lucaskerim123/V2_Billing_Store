@@ -63,7 +63,14 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   const {data:existingBaseBinding,error:baseBindingError}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("auth_user_id",order.auth_user_id).eq("license_product_key",baseProductSlug||"__no_base_product__").eq("admin_override",false).neq("desired_state","revoked").order("created_at",{ascending:true}).limit(1).maybeSingle();
   if(baseBindingError)throw baseBindingError;
   const remoteSnapshot=await masterLicenses();
-  const remoteLicenses=new Map((Array.isArray(remoteSnapshot?.licenses)?remoteSnapshot.licenses:[]).map((license:any)=>[String(license.id||license.license_id||""),String(license.canonical_status||license.effective_status||license.status||"").toLowerCase()]));
+  const remoteLicenses = new Map<string, string>(
+    (Array.isArray(remoteSnapshot?.licenses) ? remoteSnapshot.licenses : []).map(
+      (license: any): [string, string] => [
+        String(license.id || license.license_id || ""),
+        String(license.canonical_status || license.effective_status || license.status || "").toLowerCase(),
+      ],
+    ),
+  );
   const remoteLicenseActive=(licenseId:string)=>["active","locked"].includes(remoteLicenses.get(String(licenseId))||"");
   let baseBinding:any=existingBaseBinding&&remoteLicenseActive(String(existingBaseBinding.license_id||""))?existingBaseBinding:null;
   if(hasAddon&&!hasBase&&!baseBinding?.license_id)throw new Error("A base product licence is required before a component product can be fulfilled");
