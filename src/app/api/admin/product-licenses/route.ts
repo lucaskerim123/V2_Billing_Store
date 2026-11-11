@@ -92,23 +92,23 @@ export async function PATCH(req:Request){
   try{
     const actor=await staff(req);if(!actor)return Response.json({error:"License management permission required"},{status:403});
     const body=await req.json().catch(()=>({}));
-    const productId=String(body.product_id||body.productId||"").trim();
+    const slug=String(body.product_slug||body.productSlug||"").trim().toLowerCase();
+    const name=String(body.product_name||body.productName||"").trim();
+    const description=body.description==null?null:String(body.description);
     const groupId=body.group_id===null||body.group_id===""?null:String(body.group_id||"").trim();
-    if(!productId)return Response.json({error:"product_id is required"},{status:400});
+    if(!slug||!name||!slugOk(slug))return Response.json({error:"A valid Billing Store product name and licence product key are required"},{status:400});
     const {products=[]}=await masterProducts();
-    const product=products.find((p:any)=>String(p.id||"")===productId);
-    if(!product)return Response.json({error:"Registered License Manager product not found. Register the product first."},{status:404});
-    const result=await masterRequest("/api/v1/products",{
-      method:"PATCH",
-      body:JSON.stringify({
-        product_id:productId,
-        name:product.name,
-        slug:product.slug,
-        description:product.description??null,
-        group_id:groupId,
-        validation_policy:product.validation_policy||{}
-      })
-    });
+    const product=products.find((p:any)=>String(p.slug||p.code||"").toLowerCase()===slug);
+    const payload:any={
+      name,
+      slug,
+      description,
+      group_id:groupId,
+      validation_policy:product?.validation_policy||{}
+    };
+    const result=product
+      ?await masterRequest("/api/v1/products",{method:"PATCH",body:JSON.stringify({...payload,product_id:product.id})})
+      :await masterRequest("/api/v1/products",{method:"POST",body:JSON.stringify(payload)});
     return Response.json({ok:true,product:result.product||result},{headers:{"cache-control":"no-store"}});
   }catch(e:any){
     return Response.json({error:e?.message||"Could not assign product group",code:e?.code||"PRODUCT_GROUP_ASSIGNMENT_FAILED"},{status:e?.status||500});
