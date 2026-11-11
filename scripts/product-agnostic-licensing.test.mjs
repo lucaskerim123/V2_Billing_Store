@@ -63,6 +63,12 @@ test('new standalone issuance must return both a License Manager ID and one-time
   assert.match(sync,/if\(!licenseKey&&!alreadyIssued\)throw new Error\("License Manager returned a licence ID without the one-time licence key"\)/);
 });
 
+test('standalone fulfilment does not require the separate License Manager licence-list permission',()=>{
+  const sync=read('../src/lib/license-master-sync.ts');
+  assert.match(sync,/needsBaseSnapshot=licensedItems\.some/);
+  assert.match(sync,/needsBaseSnapshot\?await masterLicenses\(\):\{licenses:\[\]\}/);
+});
+
 test('fulfilled Billing Store orders are checked against License Manager before being reported successful',()=>{
   const sync=read('../src/lib/license-master-sync.ts');
   assert.match(sync,/masterLicenses\(\)/);
