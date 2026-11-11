@@ -47,7 +47,7 @@ export async function POST(req:Request){
       if(result?.skipped){
         return Response.json({ok:false,orderId,action,results:[],failures:[{error:`License was not issued: ${String(result.reason||"fulfillment skipped")}`}],fulfillment:result},{status:503,headers:{"cache-control":"no-store"}});
       }
-      if(result?.ok!==true||Number(result?.fulfilled||0)<1||Number(result?.failed||0)>0){
+      if(result?.ok!==true||Number(result?.licenseIssued||0)<1||Number(result?.failed||0)>0){
         return Response.json({ok:false,orderId,action,results:result?.results||[],failures:[{error:"License Manager did not confirm successful product fulfilment."}],fulfillment:result},{status:502,headers:{"cache-control":"no-store"}});
       }
       return Response.json({ok:true,orderId,action,results:result.results||[],fulfillment:result},{headers:{"cache-control":"no-store"}});
