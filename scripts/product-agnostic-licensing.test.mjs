@@ -18,18 +18,34 @@ test('paid-order fulfilment discovers active products from License Manager',()=>
 
 test('non-OrbitFS products receive independent licence keys rather than OrbitFS components',()=>{
   const sync=read('../src/lib/license-master-sync.ts');
-  assert.match(sync,/if\(!CANONICAL\.has\(product\)\)/);
+  assert.match(sync,/productStrategy\(product\)==="standalone"/);
   assert.match(sync,/masterIssue\(\{product,customer_external_id:customerNumber/);
+  assert.match(sync,/validation_policy\?\.license_strategy/);
   assert.match(sync,/License Manager product provisioning/);
 });
 
 test('OrbitFS add-on component fulfilment remains a separate compatibility path',()=>{
   const sync=read('../src/lib/license-master-sync.ts');
-  assert.match(sync,/CANONICAL=new Set\(\["orbitfs_base","orbitfs_apex","orbitfs_mcp","orbitfs_studio"\]\)/);
+  assert.match(sync,/productStrategy\(product\)==="component"/);
+  assert.match(sync,/productStrategy\(product\)==="base"/);
   assert.match(sync,/OrbitFS Base is required before any OrbitFS add-on/);
 });
 test('standalone product issuance omits OrbitFS components unless a component object is supplied',()=>{
   const api=read('../src/lib/master-api.ts');
-  assert.match(api,/const components=input\.components&&typeof input\.components==="object"&&!Array\.isArray\(input\.components\)\?input\.components:undefined/);
+  assert.match(api,/const product=String\(input\.product\|\|input\.product_code\|\|input\.productCode\|\|""\)/);
+  assert.match(api,/LICENSE_PRODUCT_REQUIRED/);
+  assert.doesNotMatch(api,/productCode\|\|"orbitfs_base"/);
   assert.match(api,/\.\.\.\(components\?\{components\}:\{\}\)/);
+});
+
+test('product strategies are read from License Manager policy and default to standalone',()=>{
+  const sync=read('../src/lib/license-master-sync.ts');
+  assert.match(sync,/new Map\(\(Array\.isArray\(catalogue\?\.products\)/);
+  assert.match(sync,/validation_policy\?\.license_strategy\|\|"standalone"/);
+  assert.doesNotMatch(sync,/CANONICAL/);
+});
+test('licence issuance refuses to guess a product when callers omit the product API ID',()=>{
+  const api=read('../src/lib/master-api.ts');
+  assert.match(api,/LICENSE_PRODUCT_REQUIRED/);
+  assert.doesNotMatch(api,/product:input\.product\|\|input\.product_code\|\|input\.productCode\|\|"orbitfs_base"/);
 });
