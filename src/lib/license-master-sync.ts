@@ -1,5 +1,5 @@
 import {licenseDb} from "@/lib/license-api";
-import {masterControl,masterIssue,masterProducts} from "@/lib/master-api";
+import {masterControl,masterIssue,masterLicenses,masterProducts} from "@/lib/master-api";
 import {getLicenseMasterAvailability} from "@/lib/license-master-availability";
 import {deliverInitialLicenseKey} from "@/lib/license-key-delivery";
 
@@ -62,13 +62,15 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
   const hasAddon=normalizedItems.some((item:any)=>item.configuration?.gift!==true&&productStrategy(item.license_product_key)==="component");
   const {data:existingBaseBinding,error:baseBindingError}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("auth_user_id",order.auth_user_id).eq("license_product_key",baseProductSlug||"__no_base_product__").eq("admin_override",false).neq("desired_state","revoked").order("created_at",{ascending:true}).limit(1).maybeSingle();
   if(baseBindingError)throw baseBindingError;
-  let baseBinding:any=existingBaseBinding||null;
+  const remoteSnapshot=await masterLicenses();
+  const remoteLicenses=new Map((Array.isArray(remoteSnapshot?.licenses)?remoteSnapshot.licenses:[]).map((license:any)=>[String(license.id||license.license_id||""),String(license.canonical_status||license.effective_status||license.status||"").toLowerCase()]));
+  const remoteLicenseActive=(licenseId:string)=>["active","locked"].includes(remoteLicenses.get(String(licenseId))||"");
+  let baseBinding:any=existingBaseBinding&&remoteLicenseActive(String(existingBaseBinding.license_id||""))?existingBaseBinding:null;
   if(hasAddon&&!hasBase&&!baseBinding?.license_id)throw new Error("A base product licence is required before a component product can be fulfilled");
   // Claim the order with a conditional database update before calling the external
   // licence API. A competing request cannot acquire the same order concurrently.
   const priorState=String(order.fulfillment_status||"").toLowerCase();
   const staleBefore=new Date(Date.now()-10*60*1000).toISOString();
-  if(priorState==="fulfilled")return {ok:true,skipped:true,reason:"already_fulfilled",orderId:id};
   if(priorState==="processing"&&String(order.updated_at||"")>=staleBefore)
     return {ok:true,skipped:true,reason:"already_processing",orderId:id};
   const claim=await db.from("orders")
@@ -94,7 +96,7 @@ export async function syncPaidOrderToLicenseMaster(orderId:string,options:{manua
       results.push({product,orderItemId:item.id,state:"failed",error:error.message});
       continue;
     }
-    if(existing?.license_id&&existing.state==="fulfilled"){
+    if(existing?.license_id&&existing.state==="fulfilled"&&remoteLicenseActive(String(existing.license_id))){
       if(productStrategy(product)==="base"){
         const {data:existingBinding}=await db.from("license_bindings").select("id,license_id,components,fulfillment_id,order_id,order_item_id,desired_state,remote_state,license_key_last4,label,api_source").eq("order_item_id",item.id).maybeSingle();
         if(!existingBinding?.id){
