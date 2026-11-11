@@ -12,7 +12,7 @@ export async function GET(){
    masterProductGroups().catch(()=>({groups:[]}))
   ]);
   if(localResult.error)throw localResult.error;
-  const local=localResult.data;
+  const local=(localResult.data||[]).filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true);
   const masterRows=Array.isArray(catalog?.products)?catalog.products:[];
   const masterByCode=new Map(masterRows.map((p:any)=>[String(p.code||p.slug||"").toLowerCase(),p]));
   const groups=Array.isArray(groupResult?.groups)?groupResult.groups:[];
