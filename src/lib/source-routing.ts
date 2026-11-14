@@ -2,7 +2,7 @@
 // navigations move to the stable Billing hostname only when License Manager
 // verifies that FALLBACK has a READY Production deployment. No customer
 // database or payment API calls are forwarded to a different host.
-const AUTHORITIES=['https://lm.incendiarynetworks.cc/api/v1/source-routing','https://incendiarynetworks.cc/api/v1/source-routing'] as const;
+const AUTHORITIES=['https://incendiarynetworks.cc/api/v1/source-routing'] as const;
 const MAIN_HOST='orbitfsstore.vercel.app';
 const FALLBACK_STORE='https://billing.incendiarynetworks.cc';
 export function eligibleStoreNavigation(url:string,method:string,accept:string):boolean{
