@@ -30,7 +30,7 @@ export async function announcePublishedUpdate(release:any){
     version:String(release.version||""),
     channel,
     release_notes:String(release.customer_notes||release.changelog||""),
-    release_url:"https://orbitfsstore.vercel.app/portal/orbitfs/releases"
+    release_url:"https://billing.incendiarynetworks.cc/portal/orbitfs/releases"
    },"release",releaseId);
    if(result?.skipped)skipped++;else{sent++;sentTo.add(email.toLowerCase())}
   }catch(error){console.error("[orbitfs/release-announcement] Email failed",error)}
