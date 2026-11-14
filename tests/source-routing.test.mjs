@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {eligibleStoreNavigation,standbyStoreUrl} from '../src/lib/source-routing.ts';
 const home='https://orbitfsstore.vercel.app/cart?q=one';
-test('only public store browser GETs on the stable Main domain are routed',()=>{
+test('only public store browser GETs on the legacy Main Vercel alias are routed',()=>{
   assert.equal(eligibleStoreNavigation(home,'GET','text/html'),true);
   for(const url of ['https://v2-billing-store.vercel.app/','https://orbitfsstore.vercel.app/api/checkout','https://orbitfsstore.vercel.app/_next/static/chunk.js'])
     assert.equal(eligibleStoreNavigation(url,'GET','text/html'),false);
