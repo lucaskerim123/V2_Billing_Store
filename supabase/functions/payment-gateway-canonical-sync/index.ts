@@ -20,7 +20,7 @@ async function requireSyncToken(req:Request){
 
 async function canonicalOrigin(){
   const {data}=await svc.from('app_settings').select('value').eq('key','site.public_url').maybeSingle();
-  return normalizeOrigin(typeof data?.value==='string'?data.value:String(data?.value||''))||'https://orbitfsstore.vercel.app';
+  return normalizeOrigin(typeof data?.value==='string'?data.value:String(data?.value||''))||'https://billing.incendiarynetworks.cc';
 }
 
 async function gatewayContext(code:string){
