@@ -40,3 +40,7 @@ jobs:
         run: node --test scripts/main-proxy.test.mjs
       - name: Canonical Billing source-routing contract
         run: node --experimental-strip-types --test tests/source-routing.test.mjs
+      - name: TypeScript validation
+        run: npm run typecheck
+      - name: Production build (no deployment)
+        run: npm run build
