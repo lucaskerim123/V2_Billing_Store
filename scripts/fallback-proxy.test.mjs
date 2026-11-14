@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 
 const source=readFileSync(new URL('../src/proxy.ts',import.meta.url),'utf8');
-const authority='https://lm.incendiarynetworks.cc/api/v1/source-configuration';
+const authority='https://incendiarynetworks.cc/api/v1/source-configuration';
 
 function loadProxy(response) {
   const compiled=ts.transpileModule(source,{
