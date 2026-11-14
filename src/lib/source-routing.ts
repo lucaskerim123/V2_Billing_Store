@@ -35,7 +35,7 @@ export async function standbyStoreUrl(
       target.search=source.search;
       return target.toString();
     }catch{
-      // The other License Manager may still be available during failover.
+      // The shared canonical endpoint can be temporarily unavailable; fail closed without confirmed readiness.
     }
   }
   // Never redirect when the License Manager cannot confirm the active service.
