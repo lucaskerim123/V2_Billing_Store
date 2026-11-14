@@ -1,0 +1,42 @@
+name: Source Mode Contract Check (No Deployment)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/source-mode-contract-check.yml'
+      - 'src/proxy.ts'
+      - 'src/lib/source-routing.ts'
+      - 'scripts/main-proxy.test.mjs'
+      - 'tests/source-routing.test.mjs'
+      - 'scripts/preflight-report.mjs'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/source-mode-contract-check.yml'
+      - 'src/proxy.ts'
+      - 'src/lib/source-routing.ts'
+      - 'scripts/main-proxy.test.mjs'
+      - 'tests/source-routing.test.mjs'
+      - 'scripts/preflight-report.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify Main source routing and canonical API (no deployment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Main proxy contract
+        run: node --test scripts/main-proxy.test.mjs
+      - name: Canonical Billing source-routing contract
+        run: node --experimental-strip-types --test tests/source-routing.test.mjs
