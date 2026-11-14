@@ -10,11 +10,13 @@ test('only public store browser GETs on the legacy Main Vercel alias are routed'
   assert.equal(eligibleStoreNavigation(home,'GET','application/json'),false);
 });
 test('MAIN and FALLBACK redirect the legacy Vercel alias to the canonical Billing URL',async()=>{
-  const response=await standbyStoreUrl(home,'GET','text/html',async()=>
-    new Response(JSON.stringify({mode:'main',ready:{billing:true},targets:{
-      billing:'https://billing.incendiarynetworks.cc'
-    }})));
-  assert.equal(response,'https://billing.incendiarynetworks.cc/cart?q=one');
+  for(const mode of ['main','fallback']){
+    const response=await standbyStoreUrl(home,'GET','text/html',async()=>
+      new Response(JSON.stringify({mode,ready:{billing:true},targets:{
+        billing:'https://billing.incendiarynetworks.cc'
+      }})));
+    assert.equal(response,'https://billing.incendiarynetworks.cc/cart?q=one');
+  }
 });
 test('unready, invalid mode, invalid host, or unavailable authority never redirects',async()=>{
   for(const state of [
