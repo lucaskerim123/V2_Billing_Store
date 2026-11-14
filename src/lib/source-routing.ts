@@ -1,10 +1,9 @@
 // The old Main Vercel hostname is retained only as a legacy entry. Browser
-// navigations move to the stable Billing hostname only when License Manager
-// verifies that FALLBACK has a READY Production deployment. No customer
-// database or payment API calls are forwarded to a different host.
+// navigations always move to the stable Billing hostname after the License Manager
+// confirms that the active Production service is ready. No API or payment calls are forwarded.
 const AUTHORITIES=['https://incendiarynetworks.cc/api/v1/source-routing'] as const;
 const MAIN_HOST='orbitfsstore.vercel.app';
-const FALLBACK_STORE='https://billing.incendiarynetworks.cc';
+const CANONICAL_STORE='https://billing.incendiarynetworks.cc';
 export function eligibleStoreNavigation(url:string,method:string,accept:string):boolean{
   const current=new URL(url);
   return current.hostname.toLowerCase()===MAIN_HOST &&
@@ -29,9 +28,9 @@ export async function standbyStoreUrl(
       const state=await response.json() as {
         mode?:string;ready?:{billing?:boolean};targets?:{billing?:string}
       };
-      if(state.mode!=='fallback'||state.ready?.billing!==true||
-        state.targets?.billing!==FALLBACK_STORE)continue;
-      const source=new URL(url),target=new URL(FALLBACK_STORE);
+      if((state.mode!=='main'&&state.mode!=='fallback')||state.ready?.billing!==true||
+        state.targets?.billing!==CANONICAL_STORE)continue;
+      const source=new URL(url),target=new URL(CANONICAL_STORE);
       target.pathname=source.pathname;
       target.search=source.search;
       return target.toString();
@@ -39,6 +38,6 @@ export async function standbyStoreUrl(
       // The other License Manager may still be available during failover.
     }
   }
-  // Never redirect when neither authority confirms fallback readiness.
+  // Never redirect when the License Manager cannot confirm the active service.
   return;
 }
