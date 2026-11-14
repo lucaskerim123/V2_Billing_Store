@@ -6,7 +6,7 @@ type GithubProfileStatus="primary"|"fallback"|"unknown";
 
 async function githubProfileStatus():Promise<GithubProfileStatus>{
   try{
-    const response=await fetch("https://lm.incendiarynetworks.cc/api/v1/github-profile",{cache:"no-store",signal:AbortSignal.timeout(5000)});
+    const response=await fetch("https://incendiarynetworks.cc/api/v1/github-profile",{cache:"no-store",signal:AbortSignal.timeout(5000)});
     if(!response.ok)throw new Error("Profile endpoint unavailable");
     const body=await response.json();
     if(body?.profile==="fallback")return "fallback";
