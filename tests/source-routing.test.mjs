@@ -12,14 +12,14 @@ test('only public store browser GETs on the stable Main domain are routed',()=>{
 test('FALLBACK must have a verified ready Production store',async()=>{
   const response=await standbyStoreUrl(home,'GET','text/html',async()=>
     new Response(JSON.stringify({mode:'fallback',ready:{billing:true},targets:{
-      billing:'https://orbitfs-billing-fallback.vercel.app'
+      billing:'https://billing.incendiarynetworks.cc'
     }})));
-  assert.equal(response,'https://orbitfs-billing-fallback.vercel.app/cart?q=one');
+  assert.equal(response,'https://billing.incendiarynetworks.cc/cart?q=one');
 });
 test('unready, Main, invalid host, or unavailable authority never redirects',async()=>{
   for(const state of [
-    {mode:'main',ready:{billing:true},targets:{billing:'https://orbitfs-billing-fallback.vercel.app'}},
-    {mode:'fallback',ready:{billing:false},targets:{billing:'https://orbitfs-billing-fallback.vercel.app'}},
+    {mode:'main',ready:{billing:true},targets:{billing:'https://billing.incendiarynetworks.cc'}},
+    {mode:'fallback',ready:{billing:false},targets:{billing:'https://billing.incendiarynetworks.cc'}},
     {mode:'fallback',ready:{billing:true},targets:{billing:'https://other.example'}},
   ]) assert.equal(await standbyStoreUrl(home,'GET','text/html',async()=>new Response(JSON.stringify(state))),undefined);
   assert.equal(await standbyStoreUrl(home,'GET','text/html',async()=>{throw new Error('offline')}),undefined);
