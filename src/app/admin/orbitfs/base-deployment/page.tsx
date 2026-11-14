@@ -185,7 +185,7 @@ export default function BaseDeploymentAdmin(){
  return <main className="orbitAdminPage">
   <header className="orbitAdminHeader">
    <div><p className="eyebrow">ORBITFS CONTROL · BASE RELEASES</p><h1>Base deployment</h1><p className="muted">Compact intake, readiness review and customer publication view. Technical approval remains authoritative in License Manager.</p></div>
-   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button><a className="buttonlink orbitAction orbitActionSecondary" href="https://panel.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">Open License Manager</a></div>
+   <div className="orbitAdminActions"><button className="orbitAction orbitActionSecondary" onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button><a className="buttonlink orbitAction orbitActionSecondary" href="https://lm.incendiarynetworks.cc/releases/base" target="_blank" rel="noreferrer">Open License Manager</a></div>
   </header>
 
   {message&&<div className="orbitInlineNotice">{message}</div>}
