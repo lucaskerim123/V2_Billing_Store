@@ -1,7 +1,7 @@
 # OrbitFS Public Access and Password Reset
 
 ## Canonical Store address
-The customer-facing OrbitFS Store/Billing site is `https://orbitfsstore.vercel.app`.
+The customer-facing OrbitFS Store/Billing site is `https://billing.incendiarynetworks.cc`.
 
 - `site.public_url` in Supabase is the canonical public Store origin.
 - Server-generated customer links resolve through the canonical Store origin instead of trusting an arbitrary production request hostname.
