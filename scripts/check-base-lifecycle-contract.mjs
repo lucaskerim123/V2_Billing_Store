@@ -10,7 +10,7 @@ const explicitRoute=read("src/app/api/orbitfs/installations/[id]/base/[action]/r
 const legacyRoute=read("src/app/api/orbitfs/installations/[id]/deploy/route.ts");
 const status=read("src/app/api/orbitfs/status/route.ts");
 const portal=read("src/app/portal/orbitfs/base/BaseManagementClient.tsx");
-const updatesPortal=read("src/app/portal/orbitfs/releases/page.tsx");
+const updatesPortal=read("src/app/portal/orbitfs/releases/UpdateReleaseClient.tsx");
 const migration=read("database/migrations/20260928020000_orbitfs_base_operation_ledger.sql");
 
 const createProjectCalls=(deployer.match(/ensureVercelProject\(/g)||[]).length;
