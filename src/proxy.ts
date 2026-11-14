@@ -5,7 +5,7 @@ import {standbyStoreUrl} from './lib/source-routing';
 // Billings must not operate independently of License Manager's shared
 // authoritative mode. Fail closed, including for API and server actions.
 const FAMILY='main';
-// Never contact the other family's API during ordinary requests.
+// The shared canonical API routing layer resolves the active source family.
 const SOURCES=['https://incendiarynetworks.cc/api/v1/source-configuration'] as const;
 
 export async function proxy(request:NextRequest){
