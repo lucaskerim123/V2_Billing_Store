@@ -1,4 +1,3 @@
-import {createHash} from "node:crypto";
 import {OBS_SCOPES,obsAdmin,obsDb,storeObsKey,type ObsScope} from "@/lib/obs-api";
 export async function GET(req:Request){
  if(!await obsAdmin(req))return Response.json({error:"Forbidden"},{status:403});
