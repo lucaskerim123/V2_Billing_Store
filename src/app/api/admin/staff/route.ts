@@ -60,7 +60,7 @@ export async function GET(req:Request){
 
 export async function POST(req:Request){
   try{
-    const {token,db,user,access}=await context(req);
+    const {db,user,access}=await context(req);
     const body=await req.json().catch(()=>({}));
     const action=String(body.action||"member.save");
 
@@ -119,7 +119,7 @@ export async function POST(req:Request){
     if(ge||!groupRows||groupRows.length!==requestedGroups.length)return Response.json({error:ge?.message||"One or more staff groups are invalid."},{status:400});
     if(groupRows.some((g:any)=>g.slug==="superadmin")&&!allowed(access,"settings.permissions"))return Response.json({error:"Only permission administrators can assign Superadmin."},{status:403});
 
-    let target=String(body.existing_user_id||body.user_id||"");
+    const target=String(body.existing_user_id||body.user_id||"");
     // New staff membership must be accepted by email, never granted on invitation.
     const {data:existingStaff}=target?await db.from("staff_members").select("user_id").eq("user_id",target).maybeSingle():{data:null};
     if(!existingStaff){
