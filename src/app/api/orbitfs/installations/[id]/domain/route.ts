@@ -200,7 +200,7 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       let verification:any=null;
       try{
         verification=await vercelApi(String(install.auth_user_id),`/v9/projects/${encodeURIComponent(String(install.vercel_project_id))}/domains/${encodeURIComponent(domain)}/verify`,{method:"POST"});
-      }catch(error:any){
+      }catch{
         const dns=await customDomainDns(install,domain,attached).catch(()=>null);
         const message=dns?.records?.length
           ?"Vercel could not verify the custom domain yet. Apply the DNS records shown below, wait for DNS propagation, then verify again."
