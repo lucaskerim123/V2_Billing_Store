@@ -16,7 +16,7 @@ export async function POST(req:Request){
   if(eventKey==="support.ticket.closed"&&ctx.status!=="closed")return Response.json({error:"Ticket is not closed."},{status:409});
   if(eventKey==="support.ticket.reopened"&&ctx.status==="closed")return Response.json({error:"Ticket is not reopened."},{status:409});
   const origin=new URL(req.url).origin;
-  const internalOrigin=(process.env.APP_URL||process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.NEXT_PUBLIC_SITE_URL||origin||"https://orbitfsstore.vercel.app").replace(/\/+$/,"");
+  const internalOrigin=(process.env.APP_URL||process.env.NEXT_PUBLIC_ORBITFS_STORE_URL||process.env.NEXT_PUBLIC_SITE_URL||origin||"https://billing.incendiarynetworks.cc").replace(/\/+$/,"");
   const vars={customer_name:String(ctx.customer_name||"Customer"),ticket_number:String(ctx.ticket_number||""),ticket_subject:String(ctx.subject||""),reply_preview:String(b.replyPreview||"").slice(0,600),ticket_url:ctx.is_guest?`${origin}/support`:`${origin}/portal/support/${ticketId}`};
   const {data:isStaff}=await db.rpc("is_staff");
   if(isStaff){
