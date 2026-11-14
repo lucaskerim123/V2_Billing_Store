@@ -52,7 +52,7 @@ export async function orbitfsProviderOAuthOrigin(requestUrl:string){
   const fallback=process.env.ORBITFS_BILLING_MODE==="fallback" ||
     process.env.VERCEL_PROJECT_ID==="prj_BZNKPOm5pTcMdD4QrOXPOqpE7Imq" ||
     (request.protocol==="https:" &&
-     ["orbitfs-billing-fallback.vercel.app","billing.incendiarynetworks.cc"].includes(request.hostname));
+     ["orbitfs-billing-fallback.vercel.app"].includes(request.hostname));
   const mode=fallback?"fallback":"main";
   const {data,error}=await licenseDb().rpc("service_orbitfs_oauth_callback_origin",{p_mode:mode});
   if(error)throw new Error("OAuth callback configuration unavailable: "+error.message);
