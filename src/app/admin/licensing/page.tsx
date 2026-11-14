@@ -44,7 +44,7 @@ export default function LicensingAdmin(){
   const productsList=Array.isArray(pj.products)?pj.products:[];
   return {
    configuredUrl:"https://incendiarynetworks.cc/api/v1",
-   masterPanelUrl:"https://panel.incendiarynetworks.cc",
+   masterPanelUrl:"https://lm.incendiarynetworks.cc",
    masterProducts:productsList,
    pulse:hj,
    connections:productsList.map((p:any)=>({code:String(p.code||p.product_code||p.slug||""),connected:true,master:p,local:null}))
@@ -110,7 +110,7 @@ export default function LicensingAdmin(){
     <p className="muted">Billing Store connects to the standalone License Manager for licences, products, release channels and deployment authority. This page reports that connection; it does not duplicate technical state.</p>
    </div>
    <div className="orbitReferenceHeroActions">
-    <a className="buttonlink secondary" href={data?.masterPanelUrl||"https://panel.incendiarynetworks.cc"} target="_blank" rel="noreferrer">Open Master Panel</a>
+    <a className="buttonlink secondary" href={data?.masterPanelUrl||"https://lm.incendiarynetworks.cc"} target="_blank" rel="noreferrer">Open Master Panel</a>
     <Link className="buttonlink secondary" href="/admin/license-controller">Customer licences</Link>
     <Link className="buttonlink secondary" href="/admin/settings/license-master">Product connections</Link>
     <button type="button" onClick={()=>void load()} disabled={loading}>{loading?"Refreshing…":"Refresh"}</button>
