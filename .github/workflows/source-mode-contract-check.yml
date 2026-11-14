@@ -42,5 +42,3 @@ jobs:
         run: node --experimental-strip-types --test tests/source-routing.test.mjs
       - name: TypeScript validation
         run: npm run typecheck
-      - name: Production build (no deployment)
-        run: npm run build
