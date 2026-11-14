@@ -38,7 +38,10 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       throw Object.assign(new Error(`Could not fully reset provider connections. ${failures.join(" | ")}`),{status:502,code:"PROVIDER_RESET_FAILED"});
     }
 
-    const {licenseRegistration:discardedLicenseRegistration,appliedUpdate:discardedAppliedUpdate,...metadataRest}=metadata;
+    const metadataRest={...metadata};
+    const discardedLicenseRegistration=metadataRest.licenseRegistration;
+    delete metadataRest.licenseRegistration;
+    delete metadataRest.appliedUpdate;
     const preservedMetadata={...metadataRest,setupResetAt:now()};
 
     const patch={
