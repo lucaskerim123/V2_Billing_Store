@@ -76,7 +76,7 @@ export default function LicenseMasterSettings(){
  const authority={system_enabled:health.external_authority_online!==false,licensing_enabled:health.licensing_enabled!==false,maintenance_mode:Boolean(health.maintenance_mode),release_system_enabled:health.capabilities?.releases!==false,deployment_enabled:health.capabilities?.deployment!==false,...(pulse?.authority||{})};
  const policy=pulse?.runtime_policy||{};
  const officialConnections=Array.isArray(data?.officialConnections)?data.officialConnections:[];
- const panelUrl=String(data?.masterPanelUrl||"https://panel.incendiarynetworks.cc").replace(/\/+$/,"");
+ const panelUrl=String(data?.masterPanelUrl||"https://lm.incendiarynetworks.cc").replace(/\/+$/,"");
  const masterSettings=panelUrl+"/settings";
  const connectedCount=connections.filter((row:any)=>row.connected).length;
  const apiReachable=health?.reachable!==false&&Boolean(data);
