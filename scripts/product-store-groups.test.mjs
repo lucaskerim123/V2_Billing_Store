@@ -30,7 +30,7 @@ test('store catalogue returns all active Billing Store products and central grou
  assert.match(route,/from\("products"\)/);
  assert.match(route,/masterProductGroups/);
  assert.match(route,/masterProducts/);
- assert.match(route,/Other products/);
+ assert.match(route,/Uncategorized/);
 });
 
 test('OrbitFS remains a normal product group rather than a hard-coded storefront layout',()=>{
@@ -59,7 +59,7 @@ test('public billing store renders active License Manager products by group and 
  assert.match(page,/masterProductGroups\(\)/);
  assert.match(page,/license_product_key/);
  assert.match(page,/group_id/);
- assert.match(page,/Other products/);
+ assert.match(page,/Uncategorized/);
  assert.match(page,/groups\.map/);
  assert.match(page,/status\|\|"active"/);
  assert.doesNotMatch(page,/OrbitFS Base and add-ons/);
@@ -71,7 +71,7 @@ test('public storefront only exposes locally configured purchasable products and
  assert.match(page,/localRows=.*price_cents!=null.*metadata\?\.free_product===true/);
  assert.match(page,/masterByCode\.get/);
  assert.match(page,/sourceGroups\.find/);
- assert.match(page,/Other products/);
+ assert.match(page,/Uncategorized/);
  assert.doesNotMatch(page,/id:local\?\.id\|\|master\.id/);
 });
 
@@ -266,6 +266,6 @@ test('ungrouped products use the Uncategorized label across the public catalogue
  const billing=read('../src/app/billing/page.tsx');
  assert.match(route,/Uncategorized/);
  assert.match(billing,/Uncategorized/);
- assert.doesNotMatch(route,/Other products/);
- assert.doesNotMatch(billing,/Other products/);
+ assert.doesNotMatch(route,/Uncategorized/);
+ assert.doesNotMatch(billing,/Uncategorized/);
 });
