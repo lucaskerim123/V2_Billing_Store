@@ -35,7 +35,9 @@ export async function POST(req:Request){
   const orderId=String(body.orderId||body.order_id||"").trim();
   if(!/^[0-9a-f-]{36}$/i.test(orderId))return Response.json({error:"Valid orderId is required"},{status:400});
   const isAdmin=await authorize(req,orderId);
-  const result=await syncPaidOrderToLicenseMaster(orderId,{manual:isAdmin});
+  const manual=body.manual===true;
+  if(manual&&!isAdmin)return Response.json({error:"Staff authorization is required for manual fulfilment."},{status:403});
+  const result=await syncPaidOrderToLicenseMaster(orderId,{manual});
   return Response.json(result,{status:result?.ok===false?502:200,headers:{"cache-control":"no-store"}});
  }catch(e:any){
   return Response.json({error:String(e?.message||"License fulfilment failed")},{status:Number(e?.status)||502,headers:{"cache-control":"no-store"}});
