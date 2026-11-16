@@ -16,11 +16,11 @@ export default async function BillingPage(){
  const [catalog,groupCatalog,localResult]=await Promise.all([
   masterProducts().catch(():MasterProductsResponse=>({products:[]})),
   masterProductGroups().catch(():MasterProductGroupsResponse=>({groups:[]})),
-  db.from("products").select("id,slug,name,description,price_cents,currency,metadata,license_product_key,active").eq("active",true)
+  db.from("products").select("id,slug,name,description,price_cents,currency,metadata,license_product_key,active,published").eq("active",true)
  ]);
  if(localResult.error)throw localResult.error;
  const masterRows=(Array.isArray(catalog.products)?catalog.products:[]).filter((p)=>String(p.status||"active").toLowerCase()==="active");
- const localRows=(Array.isArray(localResult.data)?localResult.data:[]).filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true);
+ const localRows=(Array.isArray(localResult.data)?localResult.data:[]).filter((p:any)=>p.published!==false&&(p.price_cents!=null||p.metadata?.free_product===true));
  const masterByCode=new Map(masterRows.flatMap((p)=>[p.code,p.product_code,p.slug].filter(Boolean).map((key)=>[String(key).toLowerCase(),p] as const)));
  const sourceGroups=Array.isArray(groupCatalog.groups)?groupCatalog.groups:[];
  const products=localRows.map((local:any)=>{
