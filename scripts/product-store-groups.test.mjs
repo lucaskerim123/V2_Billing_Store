@@ -228,3 +228,44 @@ test('product publication is independent of activation and public catalogues exc
  assert.match(create,/\.eq\("active",true\)/);
  assert.doesNotMatch(create,/\.eq\("published",true\)/);
 });
+
+
+test('admin product list groups products from License Manager and uses an Uncategorized bucket',()=>{
+ const page=read('../src/app/admin/products/page.tsx');
+ assert.match(page,/groupProductsByLicenseManagerGroup/);
+ assert.match(page,/Uncategorized/);
+ assert.match(page,/productGroupSection/);
+ assert.match(page,/productGroupList/);
+ assert.match(page,/centralProducts/);
+});
+
+test('admin product list uses accessible list rows and native collapsible group sections',()=>{
+ const page=read('../src/app/admin/products/page.tsx');
+ assert.match(page,/<details className="productGroupSection"/);
+ assert.match(page,/<ul className="productGroupList"/);
+ assert.match(page,/<li key=\{p.id\}>/);
+ assert.match(page,/aria-pressed=\{edit\?\.id===p\.id\}/);
+});
+
+test('stock, customer options and downloads are independently collapsible editor sections',()=>{
+ const page=read('../src/app/admin/products/page.tsx');
+ for(const section of ['stockSection','optionsSection','downloadsSection']){
+  assert.match(page,new RegExp('productEditorSection '+section));
+ }
+});
+
+test('saving a Billing Store product also syncs its group through License Manager',()=>{
+ const page=read('../src/app/admin/products/page.tsx');
+ assert.match(page,/async function syncProductGroup/);
+ assert.match(page,/await syncProductGroup\(data\)/);
+ assert.match(page,/\/api\/admin\/product-licenses/);
+});
+
+test('ungrouped products use the Uncategorized label across the public catalogues',()=>{
+ const route=read('../src/app/api/store/catalog/route.ts');
+ const billing=read('../src/app/billing/page.tsx');
+ assert.match(route,/Uncategorized/);
+ assert.match(billing,/Uncategorized/);
+ assert.doesNotMatch(route,/Other products/);
+ assert.doesNotMatch(billing,/Other products/);
+});
