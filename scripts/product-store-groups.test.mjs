@@ -123,7 +123,7 @@ test('admin product editor can assign a Billing Store product to a License Manag
  const assignApi=read('../src/app/api/admin/product-licenses/route.ts');
  assert.match(page,/Product group/);
  assert.match(page,/groups\.map/);
- assert.match(page,/saveProductGroup/);
+ assert.match(page,/syncProductGroup/);
  assert.match(page,/\/api\/admin\/product-licenses/);
  assert.match(groupsApi,/masterProducts\(\)/);
  assert.match(assignApi,/export async function PATCH/);
