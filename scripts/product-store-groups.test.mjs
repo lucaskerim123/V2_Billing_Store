@@ -220,7 +220,7 @@ test('product publication is independent of activation and public catalogues exc
  const create=read('../src/app/admin/billing/create/page.tsx');
  assert.match(admin,/published:edit\.published!==false/);
  assert.match(admin,/Published to store/);
- assert.match(route,/published,published/);
+ assert.match(route,/active,published/);
  assert.match(route,/p\.published!==false/);
  assert.match(billing,/p\.published!==false/);
  assert.match(detail,/\.eq\("published",true\)/);
