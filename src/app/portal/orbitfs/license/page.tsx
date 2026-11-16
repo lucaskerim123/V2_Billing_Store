@@ -33,7 +33,7 @@ function shortId(value:any){
   return text.length>22?text.slice(0,9)+"…"+text.slice(-8):text;
 }
 
-type ConfirmState={action:"rotate"|"unlock";title:string;description:string}|null;
+type ConfirmState={action:"rotate"|"unlock";title:string;description:string;licenseId:string;installationId:string|null}|null;
 
 export default function OrbitFSLicenseController(){
   const sb=useMemo(()=>createClient(),[]);
@@ -115,32 +115,37 @@ export default function OrbitFSLicenseController(){
     ?installations.filter((row:any)=>String(row.license_binding_id)===String(selectedBinding.id))
     :[];
 
-  function askControl(action:"rotate"|"unlock"){
-    if(!selectedBinding?.license_id)return setError("No License Manager licence ID is available.");
-    if(action==="unlock"&&!selectedInstall?.installation_id)return setError("No bound installation is available to unlock.");
+  function askControl(action:"rotate"|"unlock",binding:any=selectedBinding,installation:any=selectedInstall){
+    if(!binding?.license_id)return setError("No License Manager licence ID is available.");
+    if(action==="unlock"&&!installation?.installation_id)return setError("No bound installation is available to unlock.");
+    const pending=installation?.metadata?.pendingBaseForceReinstall&&typeof installation.metadata.pendingBaseForceReinstall==="object";
     const description=action==="rotate"
-      ?pendingBaseForceReinstall
+      ?pending
         ?"The current licence key becomes invalid immediately. The replacement key is shown once and must be entered in Base Deployment to continue the pending reinstall."
         :"The current licence key becomes invalid immediately. The replacement key is shown once, so copy it before leaving this page."
       :"This releases the current installation binding so the licence can be used for another installation. It does not delete the deployed infrastructure.";
+    setSelectedLicenseId(String(binding.license_id));
     setConfirmState({
       action,
       title:action==="rotate"?"Rotate licence key?":"Unlock installation?",
-      description
+      description,
+      licenseId:String(binding.license_id),
+      installationId:action==="unlock"?String(installation.installation_id):null
     });
   }
 
   async function executeControl(action:"rotate"|"unlock"){
-    if(!selectedBinding?.license_id)return;
-    setBusy(action);setError("");setNotice("");setNewKey("");
+    const target=confirmState;
+    if(!target?.licenseId)return;
+    setBusy(action+":"+target.licenseId);setError("");setNotice("");setNewKey("");
     try{
       const headers=await authHeaders();
       const response=await fetch("/api/orbitfs/license-control",{
         method:"POST",
         headers:{...headers,"Content-Type":"application/json"},
         body:JSON.stringify({
-          licenseId:selectedBinding.license_id,
-          installationId:selectedInstall?.installation_id||null,
+          licenseId:target.licenseId,
+          installationId:target.installationId,
           action
         })
       });
@@ -291,17 +296,17 @@ export default function OrbitFSLicenseController(){
               {selectedInstallations.map((row:any)=><div key={row.id||row.installation_id}>
                 <div><b>{shortId(row.installation_id)}</b><small>{String(row.state||row.health_status||"Bound").replaceAll("_"," ")} · channel {row.release_channel||"stable"}</small></div>
                 <span className={"orbitCustomerState "+(String(row.state||"").toLowerCase()==="failed"?"attention":"ready")}>{String(row.state||"Bound").replaceAll("_"," ")}</span>
+                <button type="button" className="secondary" disabled={!!busy||!customerUnlockEnabled||!selectedUsable||!row.installation_id||["uninstalled","released"].includes(String(row.state||"").toLowerCase())} onClick={()=>askControl("unlock",selectedBinding,row)}>{busy==="unlock:"+selectedBinding.license_id?"Unlocking…":"Unlock installation"}</button>
               </div>)}
             </div>:<div className="orbitCustomerEmpty compact"><b>No installation bound</b><p>Deploy OrbitFS Base to create an installation binding for this licence.</p><Link className="buttonlink secondary" href="/portal/orbitfs/base">Open Base Deployment</Link></div>}
           </section>
 
-          {isBase&&<section className="orbitCustomerLicenceActions">
-            <div><span>PERMITTED CUSTOMER ACTIONS</span><h3>Licence controls</h3><p>Customer controls are intentionally narrower than administrator enforcement controls.</p></div>
+          <section className="orbitCustomerLicenceActions">
+            <div><span>PERMITTED CUSTOMER ACTIONS</span><h3>Licence controls</h3><p>Rotate the key for this licence. Unlock actions are shown beside each registered installation above.</p></div>
             <div>
-              <button type="button" disabled={!!busy||!selectedBinding.license_id||!selectedUsable} onClick={()=>askControl("rotate")}>{busy==="rotate"?"Rotating…":"Rotate key"}</button>
-              <button type="button" className="secondary" disabled={!!busy||!selectedBinding.license_id||!selectedInstall?.installation_id||!customerUnlockEnabled||!selectedUsable} onClick={()=>askControl("unlock")}>{busy==="unlock"?"Unlocking…":customerUnlockEnabled?"Unlock installation":"Customer unlock disabled"}</button>
+              <button type="button" disabled={!!busy||!selectedBinding.license_id||!selectedUsable} onClick={()=>askControl("rotate",selectedBinding,selectedInstall)}>{busy.startsWith("rotate:")?"Rotating…":"Rotate key"}</button>
             </div>
-          </section>}
+          </section>
         </>}
       </section>
     </div>:<section className="orbitCustomerEmpty">
