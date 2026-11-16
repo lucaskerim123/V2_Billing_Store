@@ -266,6 +266,6 @@ test('ungrouped products use the Uncategorized label across the public catalogue
  const billing=read('../src/app/billing/page.tsx');
  assert.match(route,/Uncategorized/);
  assert.match(billing,/Uncategorized/);
- assert.doesNotMatch(route,/Uncategorized/);
- assert.doesNotMatch(billing,/Uncategorized/);
+ assert.doesNotMatch(route,/Other products/);
+ assert.doesNotMatch(billing,/Other products/);
 });
