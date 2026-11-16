@@ -11,7 +11,7 @@ async function staff(req:Request){
   const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;
   const {data}=await sb.rpc("get_my_staff_access");const row=Array.isArray(data)?data[0]:data,p=row?.permissions;
-  const ok=p?.all===true||(Array.isArray(p)?p.includes("licenses.manage")||p.includes("license_api.manage"):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]));
+  const ok=p?.all===true||(Array.isArray(p)?["licenses.manage","license_api.manage","orders.activate","orders.override_payment"].some(key=>p.includes(key)):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]||p?.["orders.activate"]||p?.["orders.override_payment"]));
   return row?{user,sb,permissions:p}:null;
 }
 
