@@ -12,7 +12,7 @@ async function staff(req:Request){
   const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;
   const {data}=await sb.rpc("get_my_staff_access");const row=Array.isArray(data)?data[0]:data,p=row?.permissions;
   const ok=p?.all===true||(Array.isArray(p)?p.includes("licenses.manage")||p.includes("license_api.manage"):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]));
-  return ok?{user,sb}:null;
+  return row?{user,sb,permissions:p}:null;
 }
 
 export async function POST(req:Request){
@@ -22,19 +22,32 @@ export async function POST(req:Request){
     const orderId=String(body.orderId||body.order_id||"").trim();
     const action=String(body.action||"").trim().toLowerCase();
     if(!orderId)return Response.json({error:"orderId is required"},{status:400});
-    if(!["activate","reprovision","suspend","unsuspend","terminate"].includes(action))return Response.json({error:"Unsupported order license action"},{status:400});
+    if(!["activate","fulfill","reprovision","suspend","unsuspend","terminate"].includes(action))return Response.json({error:"Unsupported order license action"},{status:400});
+    const permission=(key:string)=>actor.permissions?.all===true||(Array.isArray(actor.permissions)?actor.permissions.includes(key):Boolean(actor.permissions?.[key]));
+    const allowed=action==="activate"
+      ?permission("licenses.manage")||permission("license_api.manage")||permission("orders.activate")||permission("orders.override_payment")
+      :action==="fulfill"
+        ?permission("licenses.manage")||permission("license_api.manage")||permission("orders.activate")
+        :permission("licenses.manage")||permission("license_api.manage");
+    if(!allowed)return Response.json({error:action==="activate"?"Order activation permission required":"License management permission required"},{status:403});
 
     const {data:order,error:oe}=await actor.sb.from("orders").select("id,auth_user_id,order_number").eq("id",orderId).maybeSingle();
     if(oe)throw oe;if(!order)return Response.json({error:"Order not found"},{status:404});
     const {data:customer,error:ce}=await actor.sb.from("customers").select("id,customer_number").or("auth_user_id.eq."+order.auth_user_id+",user_id.eq."+order.auth_user_id).maybeSingle();
     if(ce)throw ce;
     const customerNumber=String(customer?.customer_number||"").trim();
-    if(!customerNumber)return Response.json({error:"Customer number is missing for this order"},{status:409});
 
     const {data:bindings,error:be}=await licenseDb().from("license_bindings").select("*").eq("order_id",orderId).order("created_at",{ascending:false});
     if(be)throw be;
     const {data:items,error:ie}=await actor.sb.from("order_items").select("id,product_name,license_product_key").eq("order_id",orderId).order("id");
     if(ie)throw ie;
+
+    if(action==="fulfill"){
+      const {syncPaidOrderToLicenseMaster}=await import("@/lib/license-master-sync");
+      const result=await syncPaidOrderToLicenseMaster(orderId,{manual:true});
+      return Response.json({ok:result?.ok!==false,orderId,action,fulfillment:result,error:result?.ok===false?"License Manager did not confirm fulfilment.":undefined},{status:result?.ok===false?502:200,headers:{"cache-control":"no-store"}});
+    }
+    if(!customerNumber)return Response.json({error:"Customer number is missing for this order"},{status:409});
 
     // Approval may create a pending fulfillment before any license binding exists.
     // Issue the purchased product through the same License Manager API used by OrbitFS.
