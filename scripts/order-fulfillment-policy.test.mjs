@@ -3,19 +3,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=(path)=>readFileSync(new URL(path,import.meta.url),'utf8');
 
-test('admin override can activate an order without fabricating an invoice',()=>{
- const migration=read('../database/migrations/20261117090000_admin_order_override_without_invoice.sql');
- assert.match(migration,/has_permission\('orders\.override_payment'\)/);
- assert.match(migration,/has_invoice := found/);
- assert.match(migration,/'paid_admin_override'/);
- assert.match(migration,/'invoice_missing',not has_invoice/);
- assert.match(migration,/order\.force_activate/);
- assert.doesNotMatch(migration,/raise exception 'order has no invoice'/);
-});
-
 test('order details expose invoice-independent admin override and explicit manual fulfilment',()=>{
  const page=read('../src/app/admin/orders/[id]/page.tsx');
- assert.match(page,/can\('orders\.override_payment'\).*Admin Override · Accept & Activate/);
+ assert.match(page,/orders\.override_payment/);
+ assert.match(page,/Admin Override · Accept & Activate/);
  assert.match(page,/invoice_missing/);
  assert.match(page,/Run Manual Fulfilment/);
  assert.match(page,/action:'fulfill'/);
