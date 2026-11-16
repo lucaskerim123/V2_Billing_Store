@@ -211,3 +211,20 @@ test('licensing authority presentation is product-neutral',()=>{
  assert.doesNotMatch(page,/Connected OrbitFS products/);
  assert.doesNotMatch(page,/No canonical OrbitFS products/);
 });
+
+test('product publication is independent of activation and public catalogues exclude unpublished products',()=>{
+ const admin=read('../src/app/admin/products/page.tsx');
+ const route=read('../src/app/api/store/catalog/route.ts');
+ const billing=read('../src/app/billing/page.tsx');
+ const detail=read('../src/app/api/orbitfs/catalog/route.ts');
+ const create=read('../src/app/admin/billing/create/page.tsx');
+ assert.match(admin,/published:edit\.published!==false/);
+ assert.match(admin,/Published to store/);
+ assert.match(route,/published,published/);
+ assert.match(route,/p\.published!==false/);
+ assert.match(billing,/p\.published!==false/);
+ assert.match(detail,/\.eq\("published",true\)/);
+ assert.match(detail,/p\.published&&p\.public/);
+ assert.match(create,/\.eq\("active",true\)/);
+ assert.doesNotMatch(create,/\.eq\("published",true\)/);
+});
