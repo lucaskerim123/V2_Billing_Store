@@ -40,8 +40,8 @@ export async function POST(req:Request){
     // Issue the purchased product through the same License Manager API used by OrbitFS.
     if(action==="activate"){
       const {syncPaidOrderToLicenseMaster}=await import("@/lib/license-master-sync");
-      const result=await syncPaidOrderToLicenseMaster(orderId,{manual:true});
-      if(result?.skipped&&result.reason==="already_fulfilled"){
+      const result=await syncPaidOrderToLicenseMaster(orderId,{manual:false});
+      if(result?.skipped&&["already_fulfilled","manual_fulfillment_queue","fulfillment_on_hold"].includes(result.reason)){
         return Response.json({ok:true,orderId,action,results:[],fulfillment:result},{headers:{"cache-control":"no-store"}});
       }
       if(result?.skipped){
