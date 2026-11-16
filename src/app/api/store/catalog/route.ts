@@ -12,13 +12,13 @@ export async function GET(){
  try{
   const db=licenseDb();
   const [localResult,catalog,groupResult]=await Promise.all([
-   db.from("products").select("id,slug,name,description,price_cents,currency,metadata,track_stock,stock_on_hand,stock_reserved,allow_backorders,created_at,license_product_key,active").eq("active",true),
+   db.from("products").select("id,slug,name,description,price_cents,currency,metadata,track_stock,stock_on_hand,stock_reserved,allow_backorders,created_at,license_product_key,active,published").eq("active",true),
    masterProducts().catch(():MasterProductsResponse=>({products:[]})),
    masterProductGroups().catch(():MasterProductGroupsResponse=>({groups:[]}))
   ]);
   if(localResult.error)throw localResult.error;
   const activeLocal=localResult.data||[];
-  const local=activeLocal.filter((p:any)=>p.price_cents!=null||p.metadata?.free_product===true);
+  const local=activeLocal.filter((p:any)=>p.published!==false&&(p.price_cents!=null||p.metadata?.free_product===true));
   const masterRows=Array.isArray(catalog.products)?catalog.products:[];
   const masterByCode=new Map(masterRows.flatMap((p)=>[p.code,p.product_code,p.slug].filter(Boolean).map((key)=>[String(key).toLowerCase(),p] as const)));
   // Keep the local checkout policy mirror aligned with License Manager.
