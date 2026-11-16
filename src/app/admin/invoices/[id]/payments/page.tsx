@@ -24,7 +24,7 @@ export default function InvoicePayments({params}:{params:Promise<{id:string}>}){
    try{
     const {data:{session}}=await sb.auth.getSession();
     if(!session?.access_token)throw new Error("Administrator session expired before fulfilment.");
-    const response=await fetch("/api/admin/license-master/fulfill",{method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({orderId:String(updated.order_id)})});
+    const response=await fetch("/api/admin/license-master/fulfill",{method:"POST",headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({orderId:String(updated.order_id),manual:false})});
     const result=await response.json().catch(()=>({}));
     if(!response.ok||result?.ok===false)throw new Error(result?.error||result?.reason||"License fulfilment did not complete.");
     setMsg(result?.skipped?"Payment recorded. Fulfilment queued: "+String(result.reason||"waiting for License Manager")+".":"Payment recorded and licence fulfilment completed.");
