@@ -257,7 +257,7 @@ test('stock, customer options and downloads are independently collapsible editor
 test('saving a Billing Store product also syncs its group through License Manager',()=>{
  const page=read('../src/app/admin/products/page.tsx');
  assert.match(page,/async function syncProductGroup/);
- assert.match(page,/await syncProductGroup\(data\)/);
+ assert.match(page,/await syncProductGroup\(\{\.\.\.saved/);
  assert.match(page,/\/api\/admin\/product-licenses/);
 });
 
