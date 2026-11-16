@@ -18,7 +18,7 @@ test('order details expose invoice-independent admin override and explicit manua
  assert.match(page,/can\('orders\.override_payment'\).*Admin Override · Accept & Activate/);
  assert.match(page,/invoice_missing/);
  assert.match(page,/Run Manual Fulfilment/);
- assert.match(page,/manual:true/);
+ assert.match(page,/action:'fulfill'/);
 });
 
 test('fulfilment API only bypasses configured automatic mode for an explicit staff manual action',()=>{
@@ -34,6 +34,8 @@ test('automatic fulfilment after manually recorded payment respects the configur
  assert.match(payment,/manual:false/);
  assert.match(orderControl,/syncPaidOrderToLicenseMaster\(orderId,\{manual:false\}\)/);
  assert.match(orderControl,/manual_fulfillment_queue/);
+ assert.match(orderControl,/syncPaidOrderToLicenseMaster\(orderId,\{manual:true\}\)/);
+ assert.match(orderControl,/action==="fulfill"/);
 });
 
 test('invoice and order workflows preserve automatic/manual/paused fulfilment policy',()=>{
