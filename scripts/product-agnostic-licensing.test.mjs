@@ -162,3 +162,18 @@ test('admin License Manager proxy accepts the encoded control path used by the r
  assert.ok(route.includes('const PATH_RE=/^\\/api\\/v1\\/'), 'proxy path regex must escape each slash exactly once');
  assert.ok(route.includes('raw.match(/^\\/api\\/v1\\/license\\/([^/]+)\\/control$/)'), 'rotation path matcher must use the same valid path syntax');
 });
+
+test('customer portal exposes rotate controls on every selected licence and unlock controls per installation',()=>{
+ const page=read('../src/app/portal/orbitfs/license/page.tsx');
+ assert.match(page,/type ConfirmState=\{action:"rotate"\|"unlock";title:string;description:string;licenseId:string;installationId:string\|null\}\|null/);
+ assert.match(page,/function askControl\(action:"rotate"\|"unlock",binding:any=selectedBinding,installation:any=selectedInstall\)/);
+ assert.match(page,/onClick=\{\(\)=>askControl\("unlock",selectedBinding,row\)\}/);
+ assert.match(page,/onClick=\{\(\)=>askControl\("rotate",selectedBinding,selectedInstall\)\}/);
+ assert.doesNotMatch(page,/\{isBase&&<section className="orbitCustomerLicenceActions"/);
+});
+
+test('admin customer licence controller keeps rotate and per-installation unlock controls on each licence',()=>{
+ const page=read('../src/app/admin/license-controller/page.tsx');
+ assert.match(page,/control\(String\(b\.license_id\),"rotate"\)/);
+ assert.match(page,/control\(String\(b\.license_id\),"unlock-installation",String\(i\.installation_id\)\)/);
+});
