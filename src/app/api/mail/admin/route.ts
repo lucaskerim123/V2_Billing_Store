@@ -13,7 +13,7 @@ export async function GET(req:Request){
   if(!data)return Response.json({error:'Mail administration denied.'},{status:403});
   const outboundConfigured=!!(String(process.env.MAIL_SYSTEM_URL||'').trim()&&String(process.env.MAIL_SYSTEM_API_KEY||'').trim())||!!String(process.env.RESEND_API_KEY||'').trim();
   const inboundConfigured=!!String(process.env.RESEND_MAIL_API_KEY||process.env.RESEND_API_KEY||'').trim();
-  return Response.json({...data,subscriptionCategories:subscriptionCategories||[],subscriptionEvents:subscriptionEvents||[],queue:queue||{summary:{},queue:[],stuck_logs:[]},runtimeConfig:config,provider:{name:String(process.env.MAIL_SYSTEM_URL||'').trim()&&String(process.env.MAIL_SYSTEM_API_KEY||'').trim()?'Central Mail System':'Resend fallback transport',apiKeyConfigured:outboundConfigured,mailApiKeyConfigured:inboundConfigured,separateMailApiKeyConfigured:!!String(process.env.RESEND_MAIL_API_KEY||'').trim(),secretsLocation:'Vercel environment'}})
+  return Response.json({...data,subscriptionCategories:subscriptionCategories||[],subscriptionEvents:subscriptionEvents||[],queue:queue||{summary:{},queue:[],stuck_logs:[]},runtimeConfig:config,provider:{name:String(process.env.MAIL_SYSTEM_URL||'').trim()&&String(process.env.MAIL_SYSTEM_API_KEY||'').trim()?'Central Mail System':'Resend fallback transport',apiKeyConfigured:outboundConfigured,mailApiKeyConfigured:inboundConfigured,separateMailApiKeyConfigured:!!String(process.env.RESEND_MAIL_API_KEY||'').trim(),mailSystemUrlConfigured:!!String(process.env.MAIL_SYSTEM_URL||'').trim(),mailSystemKeyConfigured:!!String(process.env.MAIL_SYSTEM_API_KEY||'').trim(),secretsLocation:'Vercel environment'}})
 }
 
 export async function PUT(req:Request){
