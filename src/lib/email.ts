@@ -1,4 +1,5 @@
 import {deliveryIdentity,loadMailRuntimeConfig} from "@/lib/mail-config-server";
+import {sendMailThroughConfiguredTransport} from "@/lib/mail-system-transport";
 
 export type SendEmailInput = {
   to: string | string[];
@@ -11,20 +12,23 @@ export type SendEmailInput = {
 };
 
 export type SendEmailResult = {id:string};
-const RESEND_API_URL="https://api.resend.com/emails";
-
-function requiredEnv(name:string):string{const value=process.env[name]?.trim();if(!value)throw new Error(`${name} is not configured.`);return value}
 
 export async function sendEmail(input:SendEmailInput):Promise<SendEmailResult>{
-  const apiKey=requiredEnv("RESEND_API_KEY");
   const config=await loadMailRuntimeConfig();
   const identity=deliveryIdentity(config,input.from);
   const fromName=(input.fromName||identity.name).trim()||"OrbitFS";
   if(!input.html&&!input.text)throw new Error("Email requires html or text content.");
-  const response=await fetch(RESEND_API_URL,{method:"POST",headers:{Authorization:`Bearer ${apiKey}`,"Content-Type":"application/json"},body:JSON.stringify({from:`${fromName} <${identity.from}>`,to:Array.isArray(input.to)?input.to:[input.to],subject:input.subject,html:input.html,text:input.text,reply_to:input.replyTo||identity.replyTo}),cache:"no-store"});
+  const response=await sendMailThroughConfiguredTransport({
+    from:`${fromName} <${identity.from}>`,
+    to:Array.isArray(input.to)?input.to:[input.to],
+    subject:input.subject,
+    html:input.html,
+    text:input.text,
+    replyTo:input.replyTo||identity.replyTo,
+  });
   const payload=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(String(payload?.message||payload?.error||`Resend request failed with status ${response.status}.`));
-  if(!payload?.id)throw new Error("Resend did not return a message id.");
+  if(!response.ok)throw new Error(String(payload?.message||payload?.error||`Mail transport failed with status ${response.status}.`));
+  if(!payload?.id)throw new Error("Mail transport did not return a provider message id.");
   return {id:String(payload.id)};
 }
 
