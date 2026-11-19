@@ -45,7 +45,7 @@ Set these on the V2_Billing_Store Vercel project for **Production, Preview and D
 
 - `NEXT_PUBLIC_ORBITFS_STORE_URL` — normally `https://billing.incendiarynetworks.cc` only when an explicit deployment override is required.
 
-Do **not** put normal OrbitFS Mail configuration in environment variables.
+Do not duplicate sender addresses, templates or mailbox behaviour in environment variables. The Mail System URL and send-only API key are the only new transport settings; application sender and template configuration remains in Supabase.
 
 The following legacy Mail variables are retired and can be removed from Vercel after the runtime-config version is live:
 
