@@ -62,7 +62,6 @@ export async function sendMailThroughConfiguredTransport(input: MailTransportInp
           headers: input.headers || {},
           cc: input.cc,
           bcc: input.bcc,
-      attachments: input.attachments,
           attachments: input.attachments,
         }),
         cache: "no-store",
@@ -93,6 +92,7 @@ export async function sendMailThroughConfiguredTransport(input: MailTransportInp
       headers: input.headers,
       cc: input.cc,
       bcc: input.bcc,
+      attachments: input.attachments,
     }),
     cache: "no-store",
   });
