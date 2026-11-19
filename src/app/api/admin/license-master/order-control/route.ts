@@ -15,6 +15,21 @@ async function staff(req:Request){
   return row?{user,sb,permissions:p}:null;
 }
 
+export async function GET(req:Request){
+  try{
+    const actor=await staff(req);if(!actor)return Response.json({error:"License management permission required"},{status:403});
+    const orderId=String(new URL(req.url).searchParams.get("orderId")||"").trim();
+    if(!orderId)return Response.json({error:"orderId is required"},{status:400});
+    const {data:order,error:orderError}=await actor.sb.from("orders").select("id").eq("id",orderId).maybeSingle();
+    if(orderError)throw orderError;if(!order)return Response.json({error:"Order not found"},{status:404});
+    const {data:bindings,error:bindingError}=await licenseDb().from("license_bindings").select("id,order_item_id,license_id,license_product_key,remote_state,desired_state,archived_at,last_synced_at,last_sync_error").eq("order_id",orderId).order("created_at",{ascending:false});
+    if(bindingError)throw bindingError;
+    const snapshot=await masterLicenses();const masterRows=Array.isArray(snapshot?.licenses)?snapshot.licenses:[];
+    const result=(bindings||[]).map((binding:any)=>{const license=masterRows.find((row:any)=>String(row.id||row.license_id||"")===String(binding.license_id||""));const masterStatus=String(license?.canonical_status||license?.effective_status||license?.status||"").trim().toLowerCase();return {order_item_id:binding.order_item_id,license_id:binding.license_id,product:binding.license_product_key,status:masterStatus||String(binding.remote_state||binding.desired_state||"unknown").toLowerCase(),status_source:masterStatus?"license_manager":"last_confirmed_binding",checked_at:new Date().toISOString(),last_synced_at:binding.last_synced_at,last_sync_error:binding.last_sync_error,archived_at:binding.archived_at}});
+    return Response.json({ok:true,orderId,bindings:result},{headers:{"cache-control":"no-store"}});
+  }catch(e:any){return Response.json({error:e?.message||"Could not read License Manager order status"},{status:e?.status||502,headers:{"cache-control":"no-store"}})}
+}
+
 export async function POST(req:Request){
   try{
     const actor=await staff(req);if(!actor)return Response.json({error:"License management permission required"},{status:403});
