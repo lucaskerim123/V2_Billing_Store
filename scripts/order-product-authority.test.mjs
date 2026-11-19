@@ -1,0 +1,10 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const page=readFileSync(new URL("../src/app/admin/orders/[id]/page.tsx",import.meta.url),"utf8");
+const route=readFileSync(new URL("../src/app/api/admin/license-master/order-control/route.ts",import.meta.url),"utf8");
+const list=readFileSync(new URL("../src/app/admin/orders/page.tsx",import.meta.url),"utf8");
+test("product editor is rendered inside each existing order product card",()=>{assert.match(page,/items\.length\?items\.map/);assert.match(page,/editItem\?\.id===i\.id/);assert.match(page,/Save product changes/);});
+test("order product view loads catalogue details and configuration",()=>{assert.match(page,/from\('products'\)\.select\('\*'\)\.in\('id',productIds\)/);assert.match(page,/product\.description/);assert.match(page,/configEntries\(i\.configuration\)/);assert.match(page,/i\.unit_price_cents/);assert.match(page,/i\.total_cents/);});
+test("order detail reads current License Manager state and uses it for item status",()=>{assert.match(route,/export async function GET/);assert.match(route,/masterLicenses\(\)/);assert.match(page,/authorityByItem\[String\(item\.id\)\]\?\.status/);});
+test("orders list reconciles pending approval display with confirmed active licences",()=>{assert.match(route,/orderIds/);assert.match(list,/authority_service_status/);assert.match(list,/display_status/);assert.match(list,/confirmedActive/);});
