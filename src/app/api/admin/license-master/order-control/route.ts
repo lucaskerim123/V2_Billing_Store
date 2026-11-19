@@ -12,7 +12,7 @@ async function staff(req:Request){
   const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;
   const {data}=await sb.rpc("get_my_staff_access");const row=Array.isArray(data)?data[0]:data,p=row?.permissions;
   const ok=p?.all===true||(Array.isArray(p)?["licenses.manage","license_api.manage","orders.activate","orders.override_payment"].some(key=>p.includes(key)):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]||p?.["orders.activate"]||p?.["orders.override_payment"]));
-  return row?{user,sb,permissions:p}:null;
+  return ok&&row?{user,sb,permissions:p}:null;
 }
 
 export async function GET(req:Request){
@@ -22,7 +22,7 @@ export async function GET(req:Request){
     const ids=orderId?[orderId]:orderIds;if(!ids.length||ids.length>100)return Response.json({error:"orderId or up to 100 orderIds is required"},{status:400});
     const {data:orders,error:orderError}=await actor.sb.from("orders").select("id").in("id",ids);
     if(orderError)throw orderError;if((orders||[]).length!==ids.length)return Response.json({error:"One or more orders were not found"},{status:404});
-    const {data:bindings,error:bindingError}=await licenseDb().from("license_bindings").select("id,order_id,order_item_id,license_id,license_product_key,remote_state,desired_state,archived_at,last_synced_at,last_sync_error").in("order_id",ids).order("created_at",{ascending:false});
+    const {data:bindings,error:bindingError}=await licenseDb().from("license_bindings").select("id,order_id,order_item_id,license_id,license_product_key,remote_state,desired_state,archived_at,last_synced_at,last_sync_error").in("order_id",ids).is("archived_at",null).order("created_at",{ascending:false});
     if(bindingError)throw bindingError;
     const snapshot=await masterLicenses();const masterRows=Array.isArray(snapshot?.licenses)?snapshot.licenses:[];
     const checkedAt=new Date().toISOString();
