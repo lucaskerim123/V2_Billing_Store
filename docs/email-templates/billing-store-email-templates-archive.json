@@ -1,0 +1,1043 @@
+{
+  "archive_title": "OrbitFS Billing Store Email Templates Archive",
+  "archive_scope": "Billing Store email templates only. No mailbox, transport, mail settings, inbound mail, queue, delivery log, or mail account configuration is included.",
+  "source": {
+    "repository": "lucaskerim123/V2_Billing_Store",
+    "branch": "main",
+    "database_project": "OrbitFS Billing Store",
+    "database_project_ref": "bealqgenrcytjzjoikmk",
+    "captured_at": "2026-11-19T15:14:30.285Z",
+    "extraction": "Live Supabase public.mail_templates and public.mail_automations rows."
+  },
+  "counts": {
+    "templates": 36,
+    "automations": 36
+  },
+  "templates": [
+    {
+      "id": "e6737d61-b1fe-4d9e-a611-e65e0b09ad66",
+      "html": "<p>Hi {{customer_name}},</p><p>Your OrbitFS account is ready.</p><p><a href=\"{{site_url}}\">Open OrbitFS</a></p>",
+      "name": "Customer welcome",
+      "enabled": true,
+      "subject": "Welcome to OrbitFS",
+      "category": "account",
+      "text_body": "Hi {{customer_name}},\\n\\nYour OrbitFS account is ready.\\n\\n{{site_url}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "customer.created"
+    },
+    {
+      "id": "548ffd4c-0848-400a-99ae-5438b4c3c6ce",
+      "html": "<p>Hello {{customer_name}},</p><p>A password reset was requested for your OrbitFS account.</p><p><a href=\"{{reset_url}}\">Reset your password</a></p><p>This link expires in {{expires_minutes}} minutes and can only be used once.</p><p>If you did not request this, you can ignore this email.</p>",
+      "name": "Password reset",
+      "enabled": true,
+      "subject": "Reset your OrbitFS password",
+      "category": "account",
+      "text_body": "Hello {{customer_name}},\\n\\nA password reset was requested for your OrbitFS account.\\n\\nReset your password: {{reset_url}}\\n\\nThis link expires in {{expires_minutes}} minutes and can only be used once.\\n\\nIf you did not request this, you can ignore this email.",
+      "created_at": "2026-09-16T21:29:05.631625+00:00",
+      "updated_at": "2026-09-16T21:29:05.631625+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "account_password_reset"
+    },
+    {
+      "id": "a63e3e3f-d7ad-4dde-9772-dca092a555bc",
+      "html": "<p>Hi {{customer_name}},</p><p>Verify your email address to activate your OrbitFS account.</p><p><a href=\"{{verification_url}}\">Verify email address</a></p><p>This link expires in {{expires_hours}} hours.</p><p>If you did not create this account, you can ignore this email.</p>",
+      "name": "Verify OrbitFS email",
+      "enabled": true,
+      "subject": "Verify your OrbitFS email address",
+      "category": "account",
+      "text_body": "Hi {{customer_name}},\\n\\nVerify your email address to activate your OrbitFS account:\\n{{verification_url}}\\n\\nThis link expires in {{expires_hours}} hours.\\n\\nIf you did not create this account, you can ignore this email.",
+      "created_at": "2026-09-16T21:29:05.631625+00:00",
+      "updated_at": "2026-09-16T21:29:05.631625+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "account.email_verification"
+    },
+    {
+      "id": "76729d4c-586b-4f26-ae17-88ab3f7a01e7",
+      "html": "<p>Hi {{customer_name}},</p><p>Invoice <strong>{{invoice_number}}</strong> has been cancelled.</p>",
+      "name": "Invoice cancelled",
+      "enabled": true,
+      "subject": "Invoice {{invoice_number}} cancelled",
+      "category": "billing",
+      "text_body": "Hi {{customer_name}},\\n\\nInvoice {{invoice_number}} has been cancelled.",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "billing@orbitfs.cc",
+      "template_key": "invoice.cancelled"
+    },
+    {
+      "id": "5ee4896a-d334-47db-9c7c-d70712d815de",
+      "html": "<p>Hi {{customer_name}},</p><p>Invoice <strong>{{invoice_number}}</strong> has been created.</p><p>Total: {{invoice_total}}</p><p>Due: {{invoice_due}} by {{due_date}}</p><p><a href=\"{{invoice_url}}\">View invoice</a></p>",
+      "name": "Invoice created",
+      "enabled": true,
+      "subject": "OrbitFS invoice {{invoice_number}}",
+      "category": "billing",
+      "text_body": "Hi {{customer_name}},\\n\\nInvoice {{invoice_number}} has been created.\\nTotal: {{invoice_total}}\\nDue: {{invoice_due}} by {{due_date}}\\n\\n{{invoice_url}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "billing@orbitfs.cc",
+      "template_key": "invoice.created"
+    },
+    {
+      "id": "f540a2a1-54e8-4632-a4dc-cd3c33f13cfa",
+      "html": "<p>Hi {{customer_name}},</p><p>Invoice <strong>{{invoice_number}}</strong> is due on {{due_date}}.</p><p>Amount due: {{invoice_due}}</p><p><a href=\"{{invoice_url}}\">View invoice</a></p>",
+      "name": "Invoice due reminder",
+      "enabled": true,
+      "subject": "Invoice {{invoice_number}} is due soon",
+      "category": "billing",
+      "text_body": "Hi {{customer_name}},\\n\\nInvoice {{invoice_number}} is due on {{due_date}}.\\nAmount due: {{invoice_due}}\\n\\n{{invoice_url}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "billing@orbitfs.cc",
+      "template_key": "invoice.due"
+    },
+    {
+      "id": "577e070f-6c7e-4cf3-bc2d-61d985232cdd",
+      "html": "<p>Hi {{customer_name}},</p><p>Invoice <strong>{{invoice_number}}</strong> is overdue.</p><p>Amount due: {{invoice_due}}</p><p><a href=\"{{invoice_url}}\">View invoice</a></p>",
+      "name": "Invoice overdue",
+      "enabled": true,
+      "subject": "Invoice {{invoice_number}} is overdue",
+      "category": "billing",
+      "text_body": "Hi {{customer_name}},\\n\\nInvoice {{invoice_number}} is overdue.\\nAmount due: {{invoice_due}}\\n\\n{{invoice_url}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "billing@orbitfs.cc",
+      "template_key": "invoice.overdue"
+    },
+    {
+      "id": "8753b443-8ada-4431-b8eb-479e713e0e97",
+      "html": "<p>Hi {{customer_name}},</p><p>Invoice <strong>{{invoice_number}}</strong> has been paid.</p><p>Total: {{invoice_total}}</p><p><a href=\"{{invoice_url}}\">View invoice</a></p>",
+      "name": "Invoice paid",
+      "enabled": true,
+      "subject": "Payment received for invoice {{invoice_number}}",
+      "category": "billing",
+      "text_body": "Hi {{customer_name}},\\n\\nInvoice {{invoice_number}} has been paid.\\nTotal: {{invoice_total}}\\n\\n{{invoice_url}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "billing@orbitfs.cc",
+      "template_key": "invoice.paid"
+    },
+    {
+      "id": "2619ce9d-a113-4e1a-ad52-5e6c813cce13",
+      "html": "<p>Hi {{customer_name}},</p><p>A refund for invoice <strong>{{invoice_number}}</strong> has been updated.</p><p>Amount: {{refund_amount}}</p><p>Method: {{refund_method}}</p><p>Status: {{refund_status}}</p><p>Reference: {{refund_reference}}</p><p>{{refund_timing}}</p>",
+      "name": "Invoice refund",
+      "enabled": true,
+      "subject": "Refund update for invoice {{invoice_number}}",
+      "category": "billing",
+      "text_body": "Hi {{customer_name}},\\n\\nRefund update for invoice {{invoice_number}}.\\nAmount: {{refund_amount}}\\nMethod: {{refund_method}}\\nStatus: {{refund_status}}\\nReference: {{refund_reference}}\\n{{refund_timing}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "billing@orbitfs.cc",
+      "template_key": "invoice.refund"
+    },
+    {
+      "id": "d99eb472-22d1-4c1a-8c2c-9859b8912f42",
+      "html": "<p>Hi {{customer_name}},</p><p>Your deployment for <strong>{{product_name}} {{version}}</strong> needs a manual step before it can continue.</p><p>{{action_required}}</p><p><a href=\"{{deployment_url}}\">Continue deployment</a></p>",
+      "name": "Deployment action required",
+      "enabled": true,
+      "subject": "Action required for {{product_name}} deployment",
+      "category": "deployments",
+      "text_body": "Hi {{customer_name}},\\n\\nYour deployment for {{product_name}} {{version}} needs a manual step before it can continue.\\n\\n{{action_required}}\\n\\nContinue deployment: {{deployment_url}}",
+      "created_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "deployment.action_required"
+    },
+    {
+      "id": "45d5dccc-cfea-41da-b958-545ac81b4aea",
+      "html": "<p>Hi {{customer_name}},</p><p>Your <strong>{{deployment_type}}</strong> deployment for <strong>{{product_name}} {{version}}</strong> completed successfully.</p><p><a href=\"{{environment_url}}\">Open your environment</a></p>",
+      "name": "Deployment completed",
+      "enabled": true,
+      "subject": "{{product_name}} {{version}} deployment completed",
+      "category": "deployments",
+      "text_body": "Hi {{customer_name}},\\n\\nYour {{deployment_type}} deployment for {{product_name}} {{version}} completed successfully.\\n\\nOpen your environment: {{environment_url}}",
+      "created_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "deployment.succeeded"
+    },
+    {
+      "id": "e315b2ae-7c1b-4b41-a502-9822da42763f",
+      "html": "<p>Hi {{customer_name}},</p><p>Your <strong>{{deployment_type}}</strong> deployment for <strong>{{product_name}} {{version}}</strong> did not complete.</p><p><strong>What happened:</strong> {{error_summary}}</p><p>Your existing authorised release state has not been changed by this email. Review the deployment in the customer portal before retrying.</p><p><a href=\"{{deployment_url}}\">Review deployment</a></p><p>If you need help, contact <a href=\"mailto:support@orbitfs.cc\">support@orbitfs.cc</a>.</p>",
+      "name": "Deployment failed",
+      "enabled": true,
+      "subject": "{{product_name}} {{version}} deployment needs attention",
+      "category": "deployments",
+      "text_body": "Hi {{customer_name}},\\n\\nYour {{deployment_type}} deployment for {{product_name}} {{version}} did not complete.\\nWhat happened: {{error_summary}}\\n\\nYour existing authorised release state has not been changed by this email. Review the deployment before retrying.\\n\\nReview deployment: {{deployment_url}}\\nSupport: support@orbitfs.cc",
+      "created_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "deployment.failed"
+    },
+    {
+      "id": "111eaa5b-ece4-4544-a5b2-0c1bad2f9f0b",
+      "html": "<p>Hi {{customer_name}},</p><p><strong>{{product_name}} {{version}}</strong> is ready for {{deployment_type}} deployment.</p><p>The deployment will only start when you approve it from your customer portal.</p><p><a href=\"{{deploy_url}}\">Open deployment</a></p>",
+      "name": "Deployment ready",
+      "enabled": true,
+      "subject": "{{product_name}} {{version}} is ready to deploy",
+      "category": "deployments",
+      "text_body": "Hi {{customer_name}},\\n\\n{{product_name}} {{version}} is ready for {{deployment_type}} deployment.\\nThe deployment will only start when you approve it from your customer portal.\\n\\nOpen deployment: {{deploy_url}}",
+      "created_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "deployment.ready"
+    },
+    {
+      "id": "67a42024-ddb8-4a70-bbd3-c5bd3f1f2db7",
+      "html": "<p>Hi {{customer_name}},</p><p>Your <strong>{{deployment_type}}</strong> deployment for <strong>{{product_name}} {{version}}</strong> has started.</p><p>Deployment reference: <strong>{{deployment_id}}</strong></p><p>You can follow progress from the customer portal.</p>",
+      "name": "Deployment started",
+      "enabled": true,
+      "subject": "{{product_name}} {{version}} deployment started",
+      "category": "deployments",
+      "text_body": "Hi {{customer_name}},\\n\\nYour {{deployment_type}} deployment for {{product_name}} {{version}} has started.\\nDeployment reference: {{deployment_id}}\\n\\nYou can follow progress from the customer portal.",
+      "created_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "deployment.started"
+    },
+    {
+      "id": "aa331756-7916-45d4-bed9-3c6b011966a8",
+      "html": "<p>Hi {{customer_name}},</p><p>Your <strong>{{product_name}}</strong> rollback completed successfully.</p><p><strong>Restored version:</strong> {{rollback_version}}</p><p><a href=\"{{environment_url}}\">Open your environment</a></p>",
+      "name": "Rollback completed",
+      "enabled": true,
+      "subject": "{{product_name}} rollback completed",
+      "category": "deployments",
+      "text_body": "Hi {{customer_name}},\\n\\nYour {{product_name}} rollback completed successfully.\\nRestored version: {{rollback_version}}\\n\\nOpen your environment: {{environment_url}}",
+      "created_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "deployment.rollback_succeeded"
+    },
+    {
+      "id": "69a85a19-ce17-486c-aef0-32c87fca7a34",
+      "html": "<p>Hi {{customer_name}},</p><p>Your OrbitFS Base payment has been activated and your licence key is ready.</p><p><a href=\"{{license_key_url}}\">Reveal your licence key</a></p><p>This link can reveal the key once and expires in {{expires_hours}} hours.</p><p>After the key activates an OrbitFS installation, that licence is bound to that one Base system and its add-ons until you unlock it.</p><p>Key rotations are shown directly when requested and are not emailed.</p>",
+      "name": "OrbitFS licence key ready",
+      "enabled": true,
+      "subject": "Your OrbitFS licence key is ready",
+      "category": "licensing",
+      "text_body": "Hi {{customer_name}},\n\nYour OrbitFS Base payment has been activated and your licence key is ready.\n\nReveal your licence key once: {{license_key_url}}\n\nThis link expires in {{expires_hours}} hours.\n\nAfter activation the licence is bound to one Base system and its add-ons until unlocked. Key rotations are not emailed.",
+      "created_at": "2026-09-27T08:13:11.814049+00:00",
+      "updated_at": "2026-09-27T08:13:11.814049+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "license_key_issued"
+    },
+    {
+      "id": "a5be8a17-5ebc-4b70-ae1d-1fc6c6ddf012",
+      "html": "<p>Hi {{customer_name}},</p><h2>{{news_title}}</h2><p>{{news_excerpt}}</p><p><a href=\"{{news_url}}\">Read the announcement</a></p><p style=\"font-size:12px\"><a href=\"{{site_url}}/portal/settings?tab=preferences\">Manage email preferences</a></p>",
+      "name": "OrbitFS announcement",
+      "enabled": true,
+      "subject": "OrbitFS Announcement: {{news_title}}",
+      "category": "news",
+      "text_body": "Hi {{customer_name}},\\n\\n{{news_title}}\\n\\n{{news_excerpt}}\\n\\nRead announcement: {{news_url}}\\n\\nManage email preferences: {{site_url}}/portal/settings?tab=preferences",
+      "created_at": "2026-09-30T10:58:09.244555+00:00",
+      "updated_at": "2026-09-30T10:58:09.244555+00:00",
+      "from_account": "role:system",
+      "template_key": "news.announcement"
+    },
+    {
+      "id": "3229645e-bd9e-47f2-84a5-ac56704d3926",
+      "html": "<p>Hi {{customer_name}},</p><h2>{{news_title}}</h2><p>{{news_excerpt}}</p><p><a href=\"{{news_url}}\">Read the update</a></p><p style=\"font-size:12px\"><a href=\"{{site_url}}/portal/settings?tab=preferences\">Manage email preferences</a></p>",
+      "name": "OrbitFS news",
+      "enabled": true,
+      "subject": "OrbitFS News: {{news_title}}",
+      "category": "news",
+      "text_body": "Hi {{customer_name}},\\n\\n{{news_title}}\\n\\n{{news_excerpt}}\\n\\nRead more: {{news_url}}\\n\\nManage email preferences: {{site_url}}/portal/settings?tab=preferences",
+      "created_at": "2026-09-30T10:58:09.244555+00:00",
+      "updated_at": "2026-09-30T10:58:09.244555+00:00",
+      "from_account": "role:system",
+      "template_key": "news.general_news"
+    },
+    {
+      "id": "5911c172-c5d5-4657-aaa7-d1db0c8820bc",
+      "html": "<p>Hi {{customer_name}},</p><p>Cancellation for order <strong>{{order_number}}</strong> is complete.</p>",
+      "name": "Cancellation completed",
+      "enabled": true,
+      "subject": "Cancellation completed for {{order_number}}",
+      "category": "orders",
+      "text_body": "Hi {{customer_name}},\\n\\nCancellation for order {{order_number}} is complete.",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "cancellation.completed"
+    },
+    {
+      "id": "22603b2f-5105-402c-8b9a-e338ca0c3094",
+      "html": "<p>Hi {{customer_name}},</p><p>The cancellation request for order <strong>{{order_number}}</strong> was not approved.</p><p>{{staff_note}}</p>",
+      "name": "Cancellation denied",
+      "enabled": true,
+      "subject": "Cancellation request update for {{order_number}}",
+      "category": "orders",
+      "text_body": "Hi {{customer_name}},\\n\\nThe cancellation request for order {{order_number}} was not approved.\\n{{staff_note}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "cancellation.denied"
+    },
+    {
+      "id": "152b00b1-9be9-4813-84a9-8679ee96363a",
+      "html": "<p>Hi {{customer_name}},</p><p>We received your cancellation request for order <strong>{{order_number}}</strong>.</p><p>Reason: {{reason}}</p>",
+      "name": "Cancellation requested",
+      "enabled": true,
+      "subject": "Cancellation request received for {{order_number}}",
+      "category": "orders",
+      "text_body": "Hi {{customer_name}},\\n\\nWe received your cancellation request for order {{order_number}}.\\nReason: {{reason}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "cancellation.requested"
+    },
+    {
+      "id": "4bcda8a7-d078-4f5b-905c-a810fcc01a5b",
+      "html": "<p>Hi {{customer_name}},</p><p>Cancellation for order <strong>{{order_number}}</strong> is scheduled for {{scheduled_for}}.</p><p>{{staff_note}}</p>",
+      "name": "Cancellation scheduled",
+      "enabled": true,
+      "subject": "Cancellation scheduled for {{order_number}}",
+      "category": "orders",
+      "text_body": "Hi {{customer_name}},\\n\\nCancellation for order {{order_number}} is scheduled for {{scheduled_for}}.\\n{{staff_note}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "cancellation.scheduled"
+    },
+    {
+      "id": "f011d58d-2ed9-4ff6-b496-8bc76e38a7f0",
+      "html": "<p>Hi {{customer_name}},</p><p>We received order <strong>{{order_number}}</strong>.</p><p>Total: {{order_total}}</p>",
+      "name": "Order created",
+      "enabled": true,
+      "subject": "OrbitFS order {{order_number}} received",
+      "category": "orders",
+      "text_body": "Hi {{customer_name}},\\n\\nWe received order {{order_number}}.\\nTotal: {{order_total}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "order.created"
+    },
+    {
+      "id": "68a80678-4bb0-46ac-901b-eb58c30f060f",
+      "html": "<p>Hi {{customer_name}},</p><p>Payment has been received for order <strong>{{order_number}}</strong>.</p><p>Total: {{order_total}}</p>",
+      "name": "Order paid",
+      "enabled": true,
+      "subject": "Payment received for OrbitFS order {{order_number}}",
+      "category": "orders",
+      "text_body": "Hi {{customer_name}},\\n\\nPayment has been received for order {{order_number}}.\\nTotal: {{order_total}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "billing@orbitfs.cc",
+      "template_key": "order.paid"
+    },
+    {
+      "id": "9c5207c7-bda2-4e1d-955d-abe76338ded8",
+      "html": "<p>Hi {{customer_name}},</p><p>Order <strong>{{order_number}}</strong> was cancelled because payment was not completed within the payment window.</p>",
+      "name": "Unpaid order cancelled",
+      "enabled": true,
+      "subject": "OrbitFS order {{order_number}} cancelled",
+      "category": "orders",
+      "text_body": "Hi {{customer_name}},\\n\\nOrder {{order_number}} was cancelled because payment was not completed within the payment window.",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "billing@orbitfs.cc",
+      "template_key": "order.cancelled_unpaid"
+    },
+    {
+      "id": "9f60cee8-f7da-4d7f-929b-2e98bf440b9a",
+      "html": "<p>Hi {{customer_name}},</p><h2>{{news_title}}</h2><p>{{news_excerpt}}</p><p><a href=\"{{news_url}}\">Read the product update</a></p><p style=\"font-size:12px\"><a href=\"{{site_url}}/portal/settings?tab=preferences\">Manage email preferences</a></p>",
+      "name": "OrbitFS product news",
+      "enabled": true,
+      "subject": "{{product_name}}: {{news_title}}",
+      "category": "product_updates",
+      "text_body": "Hi {{customer_name}},\\n\\n{{product_name}}: {{news_title}}\\n\\n{{news_excerpt}}\\n\\nRead the product update: {{news_url}}\\n\\nManage email preferences: {{site_url}}/portal/settings?tab=preferences",
+      "created_at": "2026-09-30T10:58:09.244555+00:00",
+      "updated_at": "2026-09-30T10:58:09.244555+00:00",
+      "from_account": "role:system",
+      "template_key": "news.product_updates"
+    },
+    {
+      "id": "5c49fcbe-f39b-4f77-b409-d0a1e33af057",
+      "html": "<p>Hi {{customer_name}},</p><p>An update is available for <strong>{{product_name}}</strong>.</p><p><strong>Version:</strong> {{version}}<br><strong>Your version:</strong> {{current_version}}<br><strong>Channel:</strong> {{channel}}</p><p>{{release_notes}}</p><p><a href=\"{{update_url}}\">Review and deploy the update</a></p>",
+      "name": "Update available",
+      "enabled": true,
+      "subject": "OrbitFS {{product_name}} {{version}} update available",
+      "category": "releases",
+      "text_body": "Hi {{customer_name}},\\n\\nAn update is available for {{product_name}}.\\nVersion: {{version}}\\nYour version: {{current_version}}\\nChannel: {{channel}}\\n\\n{{release_notes}}\\n\\nReview and deploy: {{update_url}}",
+      "created_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "release.update_available"
+    },
+    {
+      "id": "6b9bda0a-504c-4a39-bb3c-3bc9cc0bd8de",
+      "html": "<p>Hi {{customer_name}},</p><p><strong>{{product_name}} {{version}}</strong> has been released to the <strong>{{channel}}</strong> channel.</p><p>{{release_notes}}</p><p><a href=\"{{release_url}}\">View release details</a></p>",
+      "name": "Update released",
+      "enabled": true,
+      "subject": "OrbitFS {{product_name}} {{version}} has been released",
+      "category": "releases",
+      "text_body": "Hi {{customer_name}},\\n\\n{{product_name}} {{version}} has been released to the {{channel}} channel.\\n\\n{{release_notes}}\\n\\nView release details: {{release_url}}",
+      "created_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "release.update_released"
+    },
+    {
+      "id": "2c32384d-6220-4f1e-9bbf-8d165050a2f7",
+      "html": "<p>Hi {{customer_name}},</p><p>Your OrbitFS service for order <strong>{{order_number}}</strong> is active.</p>",
+      "name": "Service activated",
+      "enabled": true,
+      "subject": "Your OrbitFS service is active",
+      "category": "service",
+      "text_body": "Hi {{customer_name}},\\n\\nYour OrbitFS service for order {{order_number}} is active.",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "service.activated"
+    },
+    {
+      "id": "4c6aded2-4fbb-4472-bdb7-159b6addf81c",
+      "html": "<p>Hi {{customer_name}},</p><p>Your OrbitFS service for order <strong>{{order_number}}</strong> has been restored.</p>",
+      "name": "Service restored",
+      "enabled": true,
+      "subject": "Your OrbitFS service has been restored",
+      "category": "service",
+      "text_body": "Hi {{customer_name}},\\n\\nYour OrbitFS service for order {{order_number}} has been restored.",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "service.restored"
+    },
+    {
+      "id": "e70eeb72-8a7a-410a-b4be-38a61cbf4b1c",
+      "html": "<p>Hi {{customer_name}},</p><p>Your OrbitFS service for order <strong>{{order_number}}</strong> has been suspended.</p><p>{{reason}}</p>",
+      "name": "Service suspended",
+      "enabled": true,
+      "subject": "Your OrbitFS service is suspended",
+      "category": "service",
+      "text_body": "Hi {{customer_name}},\\n\\nYour OrbitFS service for order {{order_number}} has been suspended.\\n{{reason}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "service.suspended"
+    },
+    {
+      "id": "657cc321-8a01-47d2-a697-9a78d94dc646",
+      "html": "<p>Hi {{customer_name}},</p><p>Your OrbitFS service for order <strong>{{order_number}}</strong> has been terminated.</p><p>{{reason}}</p>",
+      "name": "Service terminated",
+      "enabled": true,
+      "subject": "Your OrbitFS service has been terminated",
+      "category": "service",
+      "text_body": "Hi {{customer_name}},\\n\\nYour OrbitFS service for order {{order_number}} has been terminated.\\n{{reason}}",
+      "created_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "from_account": "info@orbitfs.cc",
+      "template_key": "service.terminated"
+    },
+    {
+      "id": "ddd03761-e5c7-4c7c-a7e6-118f51c36ce4",
+      "html": "<p>Hello {{customer_name}},</p><p>Your OrbitFS support ticket <strong>#{{ticket_number}}</strong> has been closed.</p><p>You can reopen it by replying if further help is needed.</p>",
+      "name": "Support ticket closed",
+      "enabled": true,
+      "subject": "OrbitFS support ticket #{{ticket_number}} closed",
+      "category": "Support",
+      "text_body": "Hello {{customer_name}},\\n\\nYour OrbitFS support ticket #{{ticket_number}} has been closed.\\n\\nYou can reopen it by replying if further help is needed.",
+      "created_at": "2026-09-19T20:32:28.621324+00:00",
+      "updated_at": "2026-09-19T20:32:28.621324+00:00",
+      "from_account": "support@orbitfs.cc",
+      "template_key": "support.ticket.closed"
+    },
+    {
+      "id": "4b670457-df50-43a1-8caf-da86727bb046",
+      "html": "<p>Hello {{customer_name}},</p><p>We received your support ticket <strong>#{{ticket_number}}</strong>: {{ticket_subject}}.</p><p>We will respond through your OrbitFS Support centre.</p>",
+      "name": "Support ticket created",
+      "enabled": true,
+      "subject": "OrbitFS support ticket #{{ticket_number}} received",
+      "category": "Support",
+      "text_body": "Hello {{customer_name}},\\n\\nWe received your support ticket #{{ticket_number}}: {{ticket_subject}}.\\n\\nWe will respond through your OrbitFS Support centre.",
+      "created_at": "2026-09-19T20:32:28.621324+00:00",
+      "updated_at": "2026-09-19T20:32:28.621324+00:00",
+      "from_account": "support@orbitfs.cc",
+      "template_key": "support.ticket.created"
+    },
+    {
+      "id": "12626df1-c701-4d52-b6a9-3ef4177b342d",
+      "html": "<p>Hello {{customer_name}},</p><p>Your OrbitFS support ticket <strong>#{{ticket_number}}</strong> has been reopened and is back with Support.</p>",
+      "name": "Support ticket reopened",
+      "enabled": true,
+      "subject": "OrbitFS support ticket #{{ticket_number}} reopened",
+      "category": "Support",
+      "text_body": "Hello {{customer_name}},\\n\\nYour OrbitFS support ticket #{{ticket_number}} has been reopened and is back with Support.",
+      "created_at": "2026-09-19T20:32:28.621324+00:00",
+      "updated_at": "2026-09-19T20:32:28.621324+00:00",
+      "from_account": "support@orbitfs.cc",
+      "template_key": "support.ticket.reopened"
+    },
+    {
+      "id": "8ae4f215-73df-4b05-b94c-8182566b95bb",
+      "html": "<p>Hello {{customer_name}},</p><p>OrbitFS Support replied to ticket <strong>#{{ticket_number}}</strong>: {{ticket_subject}}.</p><p>{{reply_preview}}</p><p>Open your Support centre to continue the conversation.</p>",
+      "name": "Support ticket reply",
+      "enabled": true,
+      "subject": "Reply to OrbitFS support ticket #{{ticket_number}}",
+      "category": "Support",
+      "text_body": "Hello {{customer_name}},\\n\\nOrbitFS Support replied to ticket #{{ticket_number}}: {{ticket_subject}}.\\n\\n{{reply_preview}}\\n\\nOpen your Support centre to continue the conversation.",
+      "created_at": "2026-09-19T20:32:28.621324+00:00",
+      "updated_at": "2026-09-19T20:32:28.621324+00:00",
+      "from_account": "support@orbitfs.cc",
+      "template_key": "support.ticket.replied"
+    }
+  ],
+  "automations": [
+    {
+      "name": "Account email verification",
+      "enabled": true,
+      "category": "account",
+      "event_key": "account.email_verification",
+      "variables": [
+        "customer_name",
+        "verification_url",
+        "expires_hours"
+      ],
+      "updated_at": "2026-09-16T21:37:37.102721+00:00",
+      "updated_by": null,
+      "description": "Send the OrbitFS account verification link.",
+      "template_key": "account.email_verification"
+    },
+    {
+      "name": "Customer welcome",
+      "enabled": true,
+      "category": "account",
+      "event_key": "customer.created",
+      "variables": [
+        "customer_name"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Send a welcome message when a customer account is created.",
+      "template_key": "customer.created"
+    },
+    {
+      "name": "Password reset",
+      "enabled": true,
+      "category": "account",
+      "event_key": "account.password_reset",
+      "variables": [
+        "customer_name",
+        "reset_url",
+        "expires_minutes"
+      ],
+      "updated_at": "2026-09-16T21:37:37.102721+00:00",
+      "updated_by": null,
+      "description": "Send the OrbitFS password reset link.",
+      "template_key": "account_password_reset"
+    },
+    {
+      "name": "Invoice cancelled",
+      "enabled": true,
+      "category": "billing",
+      "event_key": "invoice.cancelled",
+      "variables": [
+        "customer_name",
+        "invoice_number"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when an invoice is cancelled.",
+      "template_key": "invoice.cancelled"
+    },
+    {
+      "name": "Invoice created",
+      "enabled": true,
+      "category": "billing",
+      "event_key": "invoice.created",
+      "variables": [
+        "customer_name",
+        "invoice_number",
+        "invoice_total",
+        "invoice_due",
+        "due_date",
+        "invoice_url"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when an invoice is created.",
+      "template_key": "invoice.created"
+    },
+    {
+      "name": "Invoice due reminder",
+      "enabled": true,
+      "category": "billing",
+      "event_key": "invoice.due",
+      "variables": [
+        "customer_name",
+        "invoice_number",
+        "invoice_due",
+        "due_date",
+        "invoice_url"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Remind the customer before an invoice is due.",
+      "template_key": "invoice.due"
+    },
+    {
+      "name": "Invoice overdue",
+      "enabled": true,
+      "category": "billing",
+      "event_key": "invoice.overdue",
+      "variables": [
+        "customer_name",
+        "invoice_number",
+        "invoice_due",
+        "invoice_url"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when an invoice is overdue.",
+      "template_key": "invoice.overdue"
+    },
+    {
+      "name": "Invoice paid",
+      "enabled": true,
+      "category": "billing",
+      "event_key": "invoice.paid",
+      "variables": [
+        "customer_name",
+        "invoice_number",
+        "invoice_total",
+        "invoice_url"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when an invoice is paid.",
+      "template_key": "invoice.paid"
+    },
+    {
+      "name": "Invoice refund",
+      "enabled": true,
+      "category": "billing",
+      "event_key": "invoice.refund",
+      "variables": [
+        "customer_name",
+        "invoice_number",
+        "refund_amount",
+        "refund_method",
+        "refund_status",
+        "refund_reference",
+        "refund_timing"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer about invoice refund progress.",
+      "template_key": "invoice.refund"
+    },
+    {
+      "name": "Deployment action required",
+      "enabled": true,
+      "category": "deployments",
+      "event_key": "deployment.action_required",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "version",
+        "action_required",
+        "deployment_url"
+      ],
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when the deployer requires a manual provider or environment step.",
+      "template_key": "deployment.action_required"
+    },
+    {
+      "name": "Deployment completed",
+      "enabled": true,
+      "category": "deployments",
+      "event_key": "deployment.succeeded",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "version",
+        "deployment_type",
+        "environment_url"
+      ],
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_by": null,
+      "description": "Notify the customer after License Manager records a successful deployment result.",
+      "template_key": "deployment.succeeded"
+    },
+    {
+      "name": "Deployment failed",
+      "enabled": true,
+      "category": "deployments",
+      "event_key": "deployment.failed",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "version",
+        "deployment_type",
+        "error_summary",
+        "deployment_url"
+      ],
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_by": null,
+      "description": "Notify the customer after License Manager records a failed deployment result.",
+      "template_key": "deployment.failed"
+    },
+    {
+      "name": "Deployment ready",
+      "enabled": true,
+      "category": "deployments",
+      "event_key": "deployment.ready",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "version",
+        "deployment_type",
+        "deploy_url"
+      ],
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when an authorised Base or Update deployment is ready for customer approval.",
+      "template_key": "deployment.ready"
+    },
+    {
+      "name": "Deployment started",
+      "enabled": true,
+      "category": "deployments",
+      "event_key": "deployment.started",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "version",
+        "deployment_type",
+        "deployment_id"
+      ],
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when the customer deployer starts an authorised deployment.",
+      "template_key": "deployment.started"
+    },
+    {
+      "name": "Rollback completed",
+      "enabled": true,
+      "category": "deployments",
+      "event_key": "deployment.rollback_succeeded",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "rollback_version",
+        "environment_url"
+      ],
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_by": null,
+      "description": "Notify the customer after an authorised rollback completes and the result is recorded.",
+      "template_key": "deployment.rollback_succeeded"
+    },
+    {
+      "name": "Initial licence key delivery",
+      "enabled": true,
+      "category": "licensing",
+      "event_key": "license.key_issued",
+      "variables": [
+        "customer_name",
+        "license_key_url",
+        "expires_hours"
+      ],
+      "updated_at": "2026-09-27T08:13:11.814049+00:00",
+      "updated_by": null,
+      "description": "Sent once after paid OrbitFS Base fulfilment. Rotation keys are deliberately excluded.",
+      "template_key": "license_key_issued"
+    },
+    {
+      "name": "OrbitFS announcement",
+      "enabled": true,
+      "category": "news",
+      "event_key": "news.announcement",
+      "variables": [
+        "customer_name",
+        "news_title",
+        "news_excerpt",
+        "news_url"
+      ],
+      "updated_at": "2026-09-30T10:58:09.244555+00:00",
+      "updated_by": null,
+      "description": "Send an explicitly published announcement to subscribed customers.",
+      "template_key": "news.announcement"
+    },
+    {
+      "name": "OrbitFS news",
+      "enabled": true,
+      "category": "news",
+      "event_key": "news.general_news",
+      "variables": [
+        "customer_name",
+        "news_title",
+        "news_excerpt",
+        "news_url"
+      ],
+      "updated_at": "2026-09-30T10:58:09.244555+00:00",
+      "updated_by": null,
+      "description": "Send an explicitly published OrbitFS news item to subscribed customers.",
+      "template_key": "news.general_news"
+    },
+    {
+      "name": "Cancellation completed",
+      "enabled": true,
+      "category": "orders",
+      "event_key": "cancellation.completed",
+      "variables": [
+        "customer_name",
+        "order_number"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when cancellation is complete.",
+      "template_key": "cancellation.completed"
+    },
+    {
+      "name": "Cancellation denied",
+      "enabled": true,
+      "category": "orders",
+      "event_key": "cancellation.denied",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "staff_note"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when a cancellation request is denied.",
+      "template_key": "cancellation.denied"
+    },
+    {
+      "name": "Cancellation requested",
+      "enabled": true,
+      "category": "orders",
+      "event_key": "cancellation.requested",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "reason"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Confirm a cancellation request.",
+      "template_key": "cancellation.requested"
+    },
+    {
+      "name": "Cancellation scheduled",
+      "enabled": true,
+      "category": "orders",
+      "event_key": "cancellation.scheduled",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "scheduled_for",
+        "staff_note"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when cancellation is scheduled.",
+      "template_key": "cancellation.scheduled"
+    },
+    {
+      "name": "Order created",
+      "enabled": true,
+      "category": "orders",
+      "event_key": "order.created",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "order_total"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when an order is created.",
+      "template_key": "order.created"
+    },
+    {
+      "name": "Order paid",
+      "enabled": true,
+      "category": "orders",
+      "event_key": "order.paid",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "order_total"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when an order is paid.",
+      "template_key": "order.paid"
+    },
+    {
+      "name": "Unpaid order cancelled",
+      "enabled": true,
+      "category": "orders",
+      "event_key": "order.cancelled_unpaid",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "order_total",
+        "reason"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when an unpaid order is automatically cancelled.",
+      "template_key": "order.cancelled_unpaid"
+    },
+    {
+      "name": "Product update news",
+      "enabled": true,
+      "category": "product_updates",
+      "event_key": "news.product_updates",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "news_title",
+        "news_excerpt",
+        "news_url"
+      ],
+      "updated_at": "2026-09-30T10:58:09.244555+00:00",
+      "updated_by": null,
+      "description": "Send an explicitly published product news item to subscribed customers.",
+      "template_key": "news.product_updates"
+    },
+    {
+      "name": "Update available",
+      "enabled": true,
+      "category": "releases",
+      "event_key": "release.update_available",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "current_version",
+        "version",
+        "channel",
+        "release_notes",
+        "update_url"
+      ],
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_by": null,
+      "description": "Notify an entitled customer when License Manager reports that a newer update is available in the customer's release channel.",
+      "template_key": "release.update_available"
+    },
+    {
+      "name": "Update released",
+      "enabled": true,
+      "category": "releases",
+      "event_key": "release.update_released",
+      "variables": [
+        "customer_name",
+        "product_name",
+        "version",
+        "channel",
+        "release_notes",
+        "release_url"
+      ],
+      "updated_at": "2026-09-29T01:47:02.020983+00:00",
+      "updated_by": null,
+      "description": "Notify customers when Billing publishes an approved update for customer presentation.",
+      "template_key": "release.update_released"
+    },
+    {
+      "name": "Service activated",
+      "enabled": true,
+      "category": "service",
+      "event_key": "service.activated",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "order_total"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when service becomes active.",
+      "template_key": "service.activated"
+    },
+    {
+      "name": "Service restored",
+      "enabled": true,
+      "category": "service",
+      "event_key": "service.restored",
+      "variables": [
+        "customer_name",
+        "order_number"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when service is restored.",
+      "template_key": "service.restored"
+    },
+    {
+      "name": "Service suspended",
+      "enabled": true,
+      "category": "service",
+      "event_key": "service.suspended",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "reason"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when service is suspended.",
+      "template_key": "service.suspended"
+    },
+    {
+      "name": "Service terminated",
+      "enabled": true,
+      "category": "service",
+      "event_key": "service.terminated",
+      "variables": [
+        "customer_name",
+        "order_number",
+        "reason"
+      ],
+      "updated_at": "2026-09-27T11:34:17.636479+00:00",
+      "updated_by": null,
+      "description": "Notify the customer when service is terminated.",
+      "template_key": "service.terminated"
+    },
+    {
+      "name": "Support ticket closed",
+      "enabled": true,
+      "category": "Support",
+      "event_key": "support.ticket.closed",
+      "variables": [],
+      "updated_at": "2026-09-19T20:32:28.621324+00:00",
+      "updated_by": null,
+      "description": "Notify customers when a ticket is closed.",
+      "template_key": "support.ticket.closed"
+    },
+    {
+      "name": "Support ticket created",
+      "enabled": true,
+      "category": "Support",
+      "event_key": "support.ticket.created",
+      "variables": [],
+      "updated_at": "2026-09-19T20:32:28.621324+00:00",
+      "updated_by": null,
+      "description": "Notify customers when a support ticket is opened.",
+      "template_key": "support.ticket.created"
+    },
+    {
+      "name": "Support ticket reopened",
+      "enabled": true,
+      "category": "Support",
+      "event_key": "support.ticket.reopened",
+      "variables": [],
+      "updated_at": "2026-09-19T20:32:28.621324+00:00",
+      "updated_by": null,
+      "description": "Notify customers when a closed ticket is reopened.",
+      "template_key": "support.ticket.reopened"
+    },
+    {
+      "name": "Support ticket reply",
+      "enabled": true,
+      "category": "Support",
+      "event_key": "support.ticket.replied",
+      "variables": [],
+      "updated_at": "2026-09-19T20:32:28.621324+00:00",
+      "updated_by": null,
+      "description": "Notify customers when Support replies.",
+      "template_key": "support.ticket.replied"
+    }
+  ]
+}
