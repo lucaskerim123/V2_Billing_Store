@@ -1,5 +1,6 @@
 import {canUseMailbox,requireMailUser} from "@/lib/mail-auth";
 import {loadMailRuntimeConfig} from "@/lib/mail-config-server";
+import {sendMailThroughConfiguredTransport} from "@/lib/mail-system-transport";
 
 const resendBase="https://api.resend.com";
 const validFolders=new Set(["inbox","outbox","sent","spam","trash"]);
@@ -32,11 +33,11 @@ export async function PATCH(req:Request){
 }
 
 export async function POST(req:Request){
- const ctx:any=await requireMailUser(req);if(ctx.error)return ctx.error;const key=String(process.env.RESEND_API_KEY||"").trim();if(!key)return Response.json({error:"Outbound transport is not configured. Set RESEND_API_KEY."},{status:503});
+ const ctx:any=await requireMailUser(req);if(ctx.error)return ctx.error;
  const config=await loadMailRuntimeConfig(ctx.db),body=await req.json().catch(()=>({})),address=addressFrom(String(body.account||body.mailbox||"admin"),config.inbound.domain);if(!await canUseMailbox(ctx,address,true))return Response.json({error:"You do not have send access to this mailbox."},{status:403});if(!body.to||!body.subject||(!body.text&&!body.html))return Response.json({error:"To, subject and message are required."},{status:400});
  const recipient=Array.isArray(body.to)?body.to.join(", "):String(body.to);const {data:identity}=await ctx.db.rpc("mail_sender_identity",{p_address:address});const senderName=String(identity?.display_name||config.outbound.sender_name);
  const {data:prep,error:pe}=await ctx.db.rpc("mail_prepare_delivery",{p_template_key:null,p_event_type:"manual",p_related_type:null,p_related_id:null,p_recipient:recipient,p_sender:address,p_subject:String(body.subject)});if(pe||!prep?.reference_id)return Response.json({error:pe?.message||"Could not prepare email record."},{status:500});
  const referenceId=String(prep.reference_id),logId=String(prep.id);const reqBody:any={from:`${senderName} <${address}>`,to:Array.isArray(body.to)?body.to:[String(body.to)],cc:body.cc?String(body.cc).split(",").map((x:string)=>x.trim()).filter(Boolean):undefined,bcc:body.bcc?String(body.bcc).split(",").map((x:string)=>x.trim()).filter(Boolean):undefined,subject:String(body.subject),text:body.text?String(body.text):undefined,html:body.html?String(body.html):undefined,reply_to:address,headers:{"X-OrbitFS-Reference":referenceId}};if(body.inReplyTo)reqBody.headers={...reqBody.headers,"In-Reply-To":String(body.inReplyTo),References:String(body.references||body.inReplyTo)};
- const r=await fetch(`${resendBase}/emails`,{method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(reqBody),cache:"no-store"});const j:any=await payload(r);if(!r.ok){await ctx.db.rpc("mail_finalize_delivery",{p_log_id:logId,p_provider_id:j.id||null,p_status:"failed",p_error:j?.message||`Mail provider returned ${r.status}.`,p_sent_at:null});return Response.json({error:j?.message||`Mail provider returned ${r.status}.`,reference_id:referenceId},{status:r.status})}
+ const r=await sendMailThroughConfiguredTransport({from:reqBody.from,to:reqBody.to,cc:reqBody.cc,bcc:reqBody.bcc,subject:reqBody.subject,text:reqBody.text,html:reqBody.html,replyTo:reqBody.reply_to,headers:reqBody.headers});const j:any=await payload(r);if(!r.ok){await ctx.db.rpc("mail_finalize_delivery",{p_log_id:logId,p_provider_id:j.id||null,p_status:"failed",p_error:j?.message||`Mail provider returned ${r.status}.`,p_sent_at:null});return Response.json({error:j?.message||`Mail provider returned ${r.status}.`,reference_id:referenceId},{status:r.status})}
  await ctx.db.rpc("mail_set_message_state",{p_address:address,p_provider_id:String(j.id),p_direction:"outbound",p_action:"read",p_folder:null});await ctx.db.rpc("mail_finalize_delivery",{p_log_id:logId,p_provider_id:j.id||null,p_status:"sent",p_error:null,p_sent_at:new Date().toISOString()});return Response.json({ok:true,id:j.id,reference_id:referenceId});
 }
