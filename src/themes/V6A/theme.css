@@ -2594,3 +2594,25 @@ html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .adminV3Layou
     .orbitReleaseChannelsReference,.licenseControllerPage
   ) .orbitReferenceGrantRow>div{flex:1 1 180px!important}
 }
+
+/* Order product workspace: readable product records and persistent inline editor. */
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductsWorkspace{display:grid;gap:16px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductCard{display:grid;gap:14px;padding:18px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,rgba(11,49,68,.72),rgba(7,23,37,.94))}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductHeader h3{margin:4px 0;font-size:19px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductHeader p{margin:0;color:var(--muted);line-height:1.55}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductHeader small,.orderDetailPage .orderProductFacts small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductStatus{flex:0 0 auto;padding:7px 10px;border:1px solid var(--line);border-radius:999px;font-size:11px;font-weight:800}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductFacts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(3,15,27,.45)}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductFacts b{display:block;margin-top:5px;overflow-wrap:anywhere}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductDescription,.orderDetailPage .orderProductAuthority{display:grid;gap:6px;padding:12px;border-top:1px solid var(--line)}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductDescription p,.orderDetailPage .orderProductAuthority span{margin:0;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductAuthority small{color:var(--muted)}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductConfig{display:grid;gap:7px}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductConfig>div{display:grid;grid-template-columns:minmax(120px,.45fr) minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductConfig span{color:var(--muted)}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductConfig b{overflow-wrap:anywhere}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductFooter{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid var(--line)}
+html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .embeddedEditor{display:grid;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;background:rgba(3,14,25,.72)}
+@media(max-width:720px){html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductFacts{grid-template-columns:repeat(2,minmax(0,1fr))}html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductHeader{flex-direction:column}}
+@media(max-width:460px){html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductFacts{grid-template-columns:1fr}html[data-orbitfs-theme="V6A"][data-orbitfs-theme-surface="admin"] .orderDetailPage .orderProductConfig>div{grid-template-columns:1fr;gap:4px}}
