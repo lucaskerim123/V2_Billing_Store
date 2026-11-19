@@ -3,6 +3,7 @@ import {wrapOrbitFsHtml,wrapOrbitFsText} from "@/lib/mail-branding";
 import {loadMailRuntimeConfig,resolveMailDeliveryIdentity} from "@/lib/mail-config-server";
 import {orbitfsStoreOrigin} from "@/lib/site-origin";
 import {customerAllowsMail} from "@/lib/mail-subscriptions-server";
+import {sendMailThroughConfiguredTransport} from "@/lib/mail-system-transport";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const pub=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -76,8 +77,7 @@ export async function POST(req:Request){
  if(!subject.trim()||!bodyText.trim())return Response.json({error:"Subject and message are required."},{status:400});
  if(!bodyHtml)bodyHtml=htmlFromText(bodyText);
 
- const key=process.env.RESEND_API_KEY;if(!key)return Response.json({error:"Outbound transport is not configured."},{status:503});
- const r=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify({from:`${identity.name} <${identity.from}>`,to:[snap.email],subject,text:wrapOrbitFsText(bodyText),html:wrapOrbitFsHtml(bodyHtml),reply_to:identity.replyTo,headers:{"X-OrbitFS-Reference":referenceId}}),cache:"no-store"}),j:any=await payload(r);
+ const r=await sendMailThroughConfiguredTransport({from:`${identity.name} <${identity.from}>`,to:[snap.email],subject,text:wrapOrbitFsText(bodyText),html:wrapOrbitFsHtml(bodyHtml),replyTo:identity.replyTo,headers:{"X-OrbitFS-Reference":referenceId}}),j:any=await payload(r);
  await c.db.rpc("mail_finalize_delivery",{p_log_id:logId,p_provider_id:j.id||null,p_status:r.ok?"sent":"failed",p_error:r.ok?null:(j.message||`Provider ${r.status}`),p_sent_at:r.ok?new Date().toISOString():null,p_subject:subject});
  return r.ok?Response.json({ok:true,id:j.id,reference_id:referenceId}):Response.json({error:j.message||"Email delivery failed.",reference_id:referenceId},{status:r.status});
 }
