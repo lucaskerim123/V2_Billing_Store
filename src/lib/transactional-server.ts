@@ -3,6 +3,7 @@ import {wrapOrbitFsHtml,wrapOrbitFsText} from "@/lib/mail-branding";
 import {loadMailRuntimeConfig,resolveMailDeliveryIdentity} from "@/lib/mail-config-server";
 import {orbitfsStoreOrigin} from "@/lib/site-origin";
 import {customerAllowsMail} from "@/lib/mail-subscriptions-server";
+import {sendMailThroughConfiguredTransport} from "@/lib/mail-system-transport";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -29,11 +30,8 @@ export async function sendAutomation(eventKey:string,to:string,vars:Record<strin
   const subject=render(t.subject,v);let bodyText=t.text_body?render(t.text_body,v):subject,bodyHtml=t.html?render(t.html,v):bodyText;
   if(!bodyText.includes(String(prep.reference_id)))bodyText+=`\n\nEmail reference: ${prep.reference_id}`;
   if(!bodyHtml.includes(String(prep.reference_id)))bodyHtml+=`<p style="margin-top:24px;font-size:12px;color:#6b7280">Email reference: <strong>${prep.reference_id}</strong></p>`;
-  const key=process.env.RESEND_API_KEY;
-  if(!key){await db.rpc("mail_finalize_delivery",{p_log_id:String(prep.id),p_provider_id:null,p_status:"failed",p_error:"Resend transport is not configured.",p_sent_at:null});throw new Error("Resend transport is not configured.");}
-  const payload:any={from:`${identity.name} <${identity.from}>`,to:[to],subject,reply_to:identity.replyTo,headers:{"X-OrbitFS-Reference":String(prep.reference_id)},text:wrapOrbitFsText(bodyText),html:wrapOrbitFsHtml(bodyHtml)};
   try{
-    const r=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:JSON.stringify(payload),cache:"no-store"});
+    const r=await sendMailThroughConfiguredTransport({from:`${identity.name} <${identity.from}>`,to:[to],subject,replyTo:identity.replyTo,headers:{"X-OrbitFS-Reference":String(prep.reference_id)},text:wrapOrbitFsText(bodyText),html:wrapOrbitFsHtml(bodyHtml)});
     const j:any=await providerJson(r);
     await db.rpc("mail_finalize_delivery",{p_log_id:String(prep.id),p_provider_id:j.id||null,p_status:r.ok?"sent":"failed",p_error:r.ok?null:(j.message||`Provider ${r.status}`),p_sent_at:r.ok?new Date().toISOString():null});
     if(!r.ok)throw new Error(j.message||"Email delivery failed.");
