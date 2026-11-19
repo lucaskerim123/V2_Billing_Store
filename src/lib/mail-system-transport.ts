@@ -6,6 +6,8 @@ export type MailTransportInput = {
   html?: string;
   replyTo?: string;
   headers?: Record<string, string>;
+  cc?: string[];
+  bcc?: string[];
 };
 
 const addressOf = (value: string) => {
@@ -57,6 +59,8 @@ export async function sendMailThroughConfiguredTransport(input: MailTransportInp
           html: input.html,
           reply_to: input.replyTo,
           headers: input.headers || {},
+          cc: input.cc,
+          bcc: input.bcc,
         }),
         cache: "no-store",
       });
@@ -84,6 +88,8 @@ export async function sendMailThroughConfiguredTransport(input: MailTransportInp
       html: input.html,
       reply_to: input.replyTo,
       headers: input.headers,
+      cc: input.cc,
+      bcc: input.bcc,
     }),
     cache: "no-store",
   });
