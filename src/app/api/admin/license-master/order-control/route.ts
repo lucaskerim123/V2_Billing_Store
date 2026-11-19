@@ -11,7 +11,7 @@ async function staff(req:Request){
   const sb=createClient(SUPABASE_URL,SUPABASE_KEY,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data:{user},error}=await sb.auth.getUser(token);if(error||!user)return null;
   const {data}=await sb.rpc("get_my_staff_access");const row=Array.isArray(data)?data[0]:data,p=row?.permissions;
-  const ok=p?.all===true||(Array.isArray(p)?["licenses.manage","license_api.manage","orders.activate","orders.override_payment"].some(key=>p.includes(key)):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]||p?.["orders.activate"]||p?.["orders.override_payment"]));
+  const ok=p?.all===true||(Array.isArray(p)?["licenses.manage","license_api.manage","orders.activate","orders.override_payment","orders.view"].some(key=>p.includes(key)):Boolean(p?.["licenses.manage"]||p?.["license_api.manage"]||p?.["orders.activate"]||p?.["orders.override_payment"]||p?.["orders.view"]));
   return ok&&row?{user,sb,permissions:p}:null;
 }
 
@@ -24,11 +24,11 @@ export async function GET(req:Request){
     if(orderError)throw orderError;if((orders||[]).length!==ids.length)return Response.json({error:"One or more orders were not found"},{status:404});
     const {data:bindings,error:bindingError}=await licenseDb().from("license_bindings").select("id,order_id,order_item_id,license_id,license_product_key,remote_state,desired_state,archived_at,last_synced_at,last_sync_error").in("order_id",ids).is("archived_at",null).order("created_at",{ascending:false});
     if(bindingError)throw bindingError;
-    const snapshot=await masterLicenses();const masterRows=Array.isArray(snapshot?.licenses)?snapshot.licenses:[];
+    let masterRows:any[]=[];let masterReadError:string|null=null;try{const snapshot=await masterLicenses();masterRows=Array.isArray(snapshot?.licenses)?snapshot.licenses:[]}catch(error:any){masterReadError=String(error?.message||"License Manager status request failed")}
     const checkedAt=new Date().toISOString();
     const result=(bindings||[]).map((binding:any)=>{const license=masterRows.find((row:any)=>String(row.id||row.license_id||"")===String(binding.license_id||""));const masterStatus=String(license?.canonical_status||license?.effective_status||license?.status||"").trim().toLowerCase();return {order_id:binding.order_id,order_item_id:binding.order_item_id,license_id:binding.license_id,product:binding.license_product_key,status:masterStatus||String(binding.remote_state||binding.desired_state||"unknown").toLowerCase(),status_source:masterStatus?"license_manager":"last_confirmed_binding",checked_at:checkedAt,last_synced_at:binding.last_synced_at,last_sync_error:binding.last_sync_error,archived_at:binding.archived_at}});
     const orderStates=ids.map(id=>{const rows=result.filter((binding:any)=>binding.order_id===id);const statuses=rows.map((binding:any)=>binding.status);const status=statuses.length&&statuses.every((value:string)=>value==="active")?"active":statuses.includes("suspended")||statuses.includes("restricted")?"suspended":statuses.length&&statuses.every((value:string)=>["revoked","terminated","expired"].includes(value))?"terminated":statuses.includes("active")?"partial":"pending";return {order_id:id,status,binding_count:rows.length,checked_at:checkedAt}});
-    return Response.json({ok:true,orderId:orderId||null,bindings:result,orders:orderStates},{headers:{"cache-control":"no-store"}});
+    return Response.json({ok:true,orderId:orderId||null,bindings:result,orders:orderStates,masterReadError},{headers:{"cache-control":"no-store"}});
   }catch(e:any){return Response.json({error:e?.message||"Could not read License Manager order status"},{status:e?.status||502,headers:{"cache-control":"no-store"}})}
 }
 
