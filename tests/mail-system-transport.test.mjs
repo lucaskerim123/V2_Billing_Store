@@ -22,6 +22,8 @@ test("central Mail System transport is preferred and sender-scoped", () => {
   assert.match(transport, /\/api\/mail/);
   assert.match(transport, /selected Billing Store sender is not assigned/);
   assert.match(transport, /RESEND_API_KEY/);
+  assert.match(transport, /attachments: input\.attachments/);
+  assert.match(manualRoute, /attachments:reqBody\.attachments/);
 });
 
 test("all Billing Store outbound email paths use the shared transport adapter", () => {
