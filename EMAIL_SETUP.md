@@ -12,13 +12,24 @@ OrbitFS stores the canonical address in Supabase as `site.public_url`. Customer-
 
 `NEXT_PUBLIC_ORBITFS_STORE_URL` may be used as an intentional deployment override. The older `NEXT_PUBLIC_SITE_URL` is accepted as a compatibility fallback, but normal Store URL changes should be reflected in `site.public_url`.
 
+## Central Mail System connection
+
+Billing Store uses the central Mail System as its preferred outbound transport. Configure `MAIL_SYSTEM_URL` and `MAIL_SYSTEM_API_KEY` in the Billing Store server environment. Create a dedicated Billing Store External System identity in Mail Admin and assign every sender mailbox used by Billing (system, support, billing and any template-specific senders). The integration helper validates each selected sender against the live sender directory before sending. The central service records delivery attribution and provider results. The existing Resend key remains available during migration and for direct inbound/mailbox retrieval; if the central variables are not configured, outbound sending temporarily falls back to the existing Resend transport.
+
+The central API key is send-only and must never be exposed to browser code. Do not reuse a human Mail administrator key.
+
 ## Vercel environment variables
 
 Set these on the V2_Billing_Store Vercel project for **Production, Preview and Development** as appropriate:
 
-### Required for outbound mail
+### Required for central outbound mail
 
-- `RESEND_API_KEY` — your private Resend API key. This is the primary OrbitFS Mail outbound transport key and is required for registration confirmation, password-reset mail, transactional mail, manual mail and the Mail test endpoint.
+- `MAIL_SYSTEM_URL` — the deployed central Mail System base URL.
+- `MAIL_SYSTEM_API_KEY` — the Billing Store External System send-only API key.
+
+### Compatibility and inbound mailbox transport
+
+- `RESEND_API_KEY` — temporary fallback outbound transport and direct mailbox/inbound retrieval. Keep configured until the central integration and any mailbox-reader dependency are verified.
 
 ### Optional separate inbound/mailbox key
 
