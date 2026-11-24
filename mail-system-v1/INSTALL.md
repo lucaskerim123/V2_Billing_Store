@@ -30,7 +30,7 @@ MAIL_SYSTEM_API_KEY=your-external-system-api-key
 
 Use the Mail System origin, without an `/api` suffix. Keep both variables server-only. Never prefix them with `NEXT_PUBLIC_`, render them into HTML, pass them as component props, or store them in browser storage.
 
-`MAIL_SYSTEM_API_KEY` must be the key issued for this host's External System in the central Mail System. The External System must be active. The key must have exactly the send-only scope `mail:send` for the sender-discovery endpoint, and at least one active sender mailbox must be assigned to it. A user login token, a general admin key, or a key with extra scopes is not a substitute for this integration key.
+`MAIL_SYSTEM_API_KEY` must be the key issued for this host's External System in the central Mail System. The External System must be active. The key must have `mail:send` or `mail:admin` scope for the sender-discovery endpoint. Send-only keys require assigned active sender mailboxes; admin-scoped keys discover active mailboxes across the system. A user login token, a general admin key, or a key with extra scopes is not a substitute for this integration key.
 
 ## 5. Verify the connection
 
@@ -46,12 +46,12 @@ The setup result is explicit:
 | Connected | Key accepted and one or more permitted active senders discovered. |
 | No sender assigned | Key is accepted, but no active sender mailbox is assigned to the External System. |
 | Invalid API key | Mail System returned 401; check the key value, revocation and whitespace. |
-| External System or scope invalid | Mail System returned 403; activate the External System and issue a key with exactly `mail:send`. |
+| External System or scope invalid | Mail System returned 403; activate the External System and issue a key with `mail:send` or `mail:admin`. |
 | Configuration missing | Set `MAIL_SYSTEM_URL` and `MAIL_SYSTEM_API_KEY` in the host's server environment. |
 | Network error | Check host outbound access, DNS, TLS and the Mail System URL. |
 | Mail System unavailable | The endpoint responded with a server error; inspect central Mail System logs. |
 
-The verification endpoint returns only senders assigned to that API key. It does not expose other mailboxes or message data.
+The verification endpoint returns only active mailboxes allowed by the API key. Admin scope can discover active mailboxes system-wide; it does not expose message data.
 
 ## 6. Create the host store
 
