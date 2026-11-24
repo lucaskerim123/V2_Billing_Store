@@ -1,0 +1,41 @@
+{
+  "name": "mail-configuration-module",
+  "displayName": "Mail Configuration",
+  "version": "1.0.0",
+  "scope": "application",
+  "serverOnly": true,
+  "requires": [
+    "MAIL_SYSTEM_URL",
+    "MAIL_SYSTEM_API_KEY"
+  ],
+  "owns": [
+    "templates",
+    "template_revisions",
+    "routing_rules",
+    "event_triggers",
+    "recipient_mapping",
+    "application_settings",
+    "appearance"
+  ],
+  "connectsTo": "Mail System API",
+  "entrypoints": {
+    "client": "./client.ts",
+    "configuration": "./configuration.ts",
+    "automation": "./module.ts",
+    "renderer": "./renderer.ts",
+    "adminUi": "./admin-ui.tsx",
+    "console": "./console.tsx",
+    "server": "./module.ts",
+    "store": "./supabase-store.ts"
+  },
+  "features": [
+    "template-management",
+    "template-preview",
+    "variable-discovery",
+    "event-triggers",
+    "conditional-sender-routing",
+    "scoped-api-key-capabilities",
+    "application-enable-disable",
+    "theme-customization"
+  ]
+}
