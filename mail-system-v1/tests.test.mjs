@@ -90,3 +90,12 @@ test("package and manifest return to the requested v1 version", async () => {
   assert.equal(manifest.version, "1.0.0");
   assert.equal(pkg.private, false);
 });
+
+
+test("connection verifier and API contract accept mail:admin as well as mail:send", async () => {
+  const [client, api, install] = await Promise.all([read("client.ts"), read("API.md"), read("INSTALL.md")]);
+  assert.match(client, /mail:send or mail:admin permission/);
+  assert.match(api, /\x60mail:admin\x60 discovers active sender mailboxes across the system/);
+  assert.match(install, /mail:send\x60 or \x60mail:admin\x60/);
+  assert.match(install, /admin-scoped keys discover active mailboxes across the system/);
+});
