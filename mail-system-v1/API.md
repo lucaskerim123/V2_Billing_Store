@@ -4,7 +4,7 @@
 
 - `getMailModuleConfig(env?)` reads and validates HTTPS `MAIL_SYSTEM_URL` and server-only `MAIL_SYSTEM_API_KEY`.
 - `verifyMailSystemConnection(config?)` calls the central sender-discovery endpoint and returns a typed status, safe message, sender list and `canSend` flag. It never returns the API key.
-- `getSenders(config?)` retrieves only sender mailboxes assigned to the connected External System.
+- `getSenders(config?)` retrieves active sender mailboxes permitted by the connected External System key. `mail:send` is restricted to assigned mailboxes; `mail:admin` can discover active mailboxes system-wide.
 - `sendMessage(input, config?)` verifies the connection and sender assignment before calling the central send endpoint.
 
 ## Host persistence
