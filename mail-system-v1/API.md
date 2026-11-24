@@ -30,7 +30,7 @@ Conditions use dotted context paths. A scalar means exact equality. Object opera
 
 `connected`, `no_senders_assigned`, `invalid_api_key`, `external_system_or_scope_invalid`, `configuration_missing`, `mail_system_unavailable`, `network_error`, and `unknown_error`.
 
-The central API's current sender-discovery contract is `GET /api/mail/senders`, authenticated with a Bearer API key. It requires an active External System and an API key with `mail:send` or `mail:admin` scope. `mail:admin` discovers active sender mailboxes across the system; send-only keys remain limited to explicitly assigned mailboxes. Sending uses `POST /api/mail`; the central API independently enforces mailbox access.
+The central API's current sender-discovery contract is `GET /api/mail/senders`, authenticated with a Bearer API key. It requires an active External System and an API key with `mail:send` or `mail:admin` scope. `mail:admin` grants mailbox administration across the system and system-wide active sender discovery, including read/send access; send-only keys remain limited to explicitly assigned mailboxes. Treat this as a privileged credential. Sending uses `POST /api/mail`; the central API independently enforces mailbox access.
 
 ## Security and responsibility boundary
 
