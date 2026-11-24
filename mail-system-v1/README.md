@@ -25,7 +25,7 @@ The module connects to the central Mail System using the host application's serv
 1. Copy this folder into the host application's source tree.
 2. Apply `schema.sql`, then `supabase-functions.sql` to the host application's database.
 3. Configure server-only `MAIL_SYSTEM_URL` and `MAIL_SYSTEM_API_KEY`.
-4. Register the host as an External System in Mail System. Issue an active key with the exact `mail:send` scope and assign at least one active sender mailbox.
+4. Register the host as an External System in Mail System. Issue an active key with `mail:send` (with mailbox assignments) or `mail:admin` (system-wide active mailbox access).
 5. Create the host's authenticated Supabase client, call `createSupabaseMailModuleStore(client)`, and mount `MailModuleConsole` behind the host's own admin authorization.
 6. Pass a server-side `onTestConnection` callback that calls `verifyMailSystemConnection()`. Do not pass the key to a Client Component.
 7. Test the connection, choose an assigned sender, configure templates/routes/triggers, then enable the module.
