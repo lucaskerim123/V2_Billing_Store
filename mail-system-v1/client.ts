@@ -79,7 +79,7 @@ export async function verifyMailSystemConnection(config?: MailModuleConfig): Pro
     };
     if (error instanceof MailSystemApiError && error.statusCode === 403) return {
       connected: false, canSend: false, status: "external_system_or_scope_invalid",
-      message: "The API key is not authorised. Check that the External System is active and the key has exactly the mail:send scope.",
+      message: "The API key is not authorised. Check that the External System is active and the key has mail:send or mail:admin permission.",
       sender: null, senders: [],
     };
     if (error instanceof MailSystemApiError && (error.statusCode || 0) >= 500) return {
