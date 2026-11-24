@@ -1,0 +1,33 @@
+{
+  "name": "mail-configuration-module",
+  "version": "1.0.0",
+  "type": "module",
+  "private": false,
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "exports": {
+    ".": "./module.ts",
+    "./client": "./client.ts",
+    "./config": "./config.ts",
+    "./types": "./types.ts",
+    "./configuration": "./configuration.ts",
+    "./renderer": "./renderer.ts",
+    "./routing": "./routing.ts",
+    "./admin-ui": "./admin-ui.tsx",
+    "./console": "./console.tsx",
+    "./supabase-store": "./supabase-store.ts",
+    "./server": "./module.ts"
+  },
+  "scripts": {
+    "test": "node --test tests.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "description": "Portable application-owned mail configuration module for Mail System",
+  "devDependencies": {
+    "@types/node": "^22.18.6",
+    "@types/react": "^19.1.13",
+    "typescript": "^5.9.2"
+  }
+}
