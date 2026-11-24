@@ -30,7 +30,7 @@ MAIL_SYSTEM_API_KEY=your-external-system-api-key
 
 Use the Mail System origin, without an `/api` suffix. Keep both variables server-only. Never prefix them with `NEXT_PUBLIC_`, render them into HTML, pass them as component props, or store them in browser storage.
 
-`MAIL_SYSTEM_API_KEY` must be the key issued for this host's External System in the central Mail System. The External System must be active. The key must have `mail:send` or `mail:admin` scope for the sender-discovery endpoint. Send-only keys require assigned active sender mailboxes; admin-scoped keys discover active mailboxes across the system. A user login token, a general admin key, or a key with extra scopes is not a substitute for this integration key.
+`MAIL_SYSTEM_API_KEY` must be the key issued for this host's External System in the central Mail System. The External System must be active. The key must have `mail:send` or `mail:admin` scope for the sender-discovery endpoint. Send-only keys require assigned active sender mailboxes; admin-scoped keys discover active mailboxes across the system. A user login token or a general user API key is not a substitute for this External System integration key.
 
 ## 5. Verify the connection
 
