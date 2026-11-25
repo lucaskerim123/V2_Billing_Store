@@ -5579,3 +5579,17 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-route
     min-width:0!important;
   }
 }
+
+
+/* Customer portal navigation readability and menu sizing correction. */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-appbar{height:auto;min-height:64px;padding:10px 20px;gap:14px;flex-wrap:nowrap;}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-globalnav{gap:5px;flex-wrap:nowrap;}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-globalnav>a{height:38px!important;padding:0 12px!important;font-size:12px!important;font-weight:650!important;}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-orbitfs-nav>summary{height:38px;padding:0 12px;font-size:12px;gap:7px;}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-orbitfs-nav>summary span{font-size:11px;}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-orbitfs-menu{width:220px;padding:7px;top:43px;}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-orbitfs-menu a{min-height:38px!important;padding:0 11px!important;font-size:12px!important;}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-app-search{width:170px!important;flex:0 1 170px!important;font-size:11px!important;}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-admin-toplink{font-size:12px;}
+@media(max-width:1050px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-appbar{gap:8px;padding:8px 12px;overflow-x:auto;}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-globalnav>a,html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-orbitfs-nav>summary{font-size:11px;padding:0 8px!important;}}
+@media(max-width:760px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-appbar{height:auto;min-height:56px;overflow-x:auto;padding:8px;gap:7px;}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-globalnav{overflow-x:auto;}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-app-search{display:none!important;}}
