@@ -53,17 +53,17 @@ function initials(name?:string,email?:string){
 }
 
 export default function V6CDesignShell({path,children,canAccessAdmin=false,loggingOut=false,onLogout,tools,banner,accountName,accountEmail}:Props){
-  const billingMenuRef=useRef<HTMLDetailsElement|null>(null);   const orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
+  const billingMenuRef=useRef<HTMLDetailsElement|null>(null);\n  const licenseMenuRef=useRef<HTMLDetailsElement|null>(null);   const orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
   const accountMenuRef=useRef<HTMLDetailsElement|null>(null);
   const closeMenus=useCallback((except?:HTMLDetailsElement|null)=>{
-    if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;     if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
+    if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;\n    if(licenseMenuRef.current&&licenseMenuRef.current!==except)licenseMenuRef.current.open=false;     if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
     if(accountMenuRef.current&&accountMenuRef.current!==except)accountMenuRef.current.open=false;
   },[]);
   useEffect(()=>{closeMenus()},[path,closeMenus]);
   useEffect(()=>{
     const onPointer=(event:PointerEvent)=>{
       const target=event.target as Node;
-      if(!billingMenuRef.current?.contains(target)&&!orbitfsMenuRef.current?.contains(target)&&!accountMenuRef.current?.contains(target))closeMenus();
+      if(!billingMenuRef.current?.contains(target)&&!licenseMenuRef.current?.contains(target)&&!orbitfsMenuRef.current?.contains(target)&&!accountMenuRef.current?.contains(target))closeMenus();
     };
     const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")closeMenus()};
     document.addEventListener("pointerdown",onPointer);
@@ -89,7 +89,7 @@ export default function V6CDesignShell({path,children,canAccessAdmin=false,loggi
           </div>
         </details>
         <Link href="/portal/support" className={active("Support",path)?"is-active":""}>Support</Link>
-        <Link href="/portal/orbitfs/license" className={path.startsWith("/portal/orbitfs/license")?"is-active":""}>License System</Link>
+        <details ref={licenseMenuRef} onToggle={event=>{const el=event.currentTarget;if(el.open)closeMenus(el)}} className={"v6c-orbitfs-nav "+(path.startsWith("/portal/orbitfs/license")?"is-active":"")}><summary>License System <span>⌄</span></summary><div className="v6c-orbitfs-menu"><Link onClick={()=>closeMenus()} href="/portal/orbitfs/license">License Controller</Link></div></details>
         <details ref={orbitfsMenuRef} onToggle={event=>{const el=event.currentTarget;if(el.open)closeMenus(el)}} className={"v6c-orbitfs-nav "+(path.startsWith("/portal/orbitfs")&&!path.startsWith("/portal/orbitfs/license")?"is-active":"")}>
           <summary>My OrbitFS <span>⌄</span></summary>
           <div className="v6c-orbitfs-menu">
