@@ -109,6 +109,7 @@ export default function V6CDesignShell({path,children,canAccessAdmin=false,loggi
         </summary>
         <div className="v6c-account-popover">
           <div className="v6c-account-identity"><span className="v6c-avatar large">{initials(accountName,accountEmail)}</span><div><b>{accountName||"OrbitFS Customer"}</b><small>{accountEmail||"Customer account"}</small></div></div>
+          <div className="v6c-account-menu-heading">ACCOUNT SETTINGS</div>
           <Link onClick={()=>closeMenus()} href="/portal/settings?tab=profile"><span>Profile</span><b>›</b></Link>
           <Link onClick={()=>closeMenus()} href="/portal/settings?tab=billing"><span>Billing Details</span><b>›</b></Link>
           <Link onClick={()=>closeMenus()} href="/portal/settings?tab=wallet"><span>Wallet Settings</span><b>›</b></Link>
