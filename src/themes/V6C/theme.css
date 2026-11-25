@@ -5593,3 +5593,5 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-app-s
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-admin-toplink{font-size:12px;}
 @media(max-width:1050px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-appbar{gap:8px;padding:8px 12px;overflow-x:auto;}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-globalnav>a,html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-orbitfs-nav>summary{font-size:11px;padding:0 8px!important;}}
 @media(max-width:760px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-appbar{height:auto;min-height:56px;overflow-x:auto;padding:8px;gap:7px;}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-globalnav{overflow-x:auto;}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-app-search{display:none!important;}}
+
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-account-menu-heading{padding:10px 12px 5px;color:#7f9db8;font-size:11px;font-weight:750;letter-spacing:.09em;}
