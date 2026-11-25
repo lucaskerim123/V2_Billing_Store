@@ -19,10 +19,7 @@ const nav=[
   ["Dashboard","/portal"],
   ["Store","/portal/products"],
   ["Support","/portal/support"],
-] as const;
-;
-
-type RouteInfo={key:string;eyebrow:string;title:string;description:string};
+] as const; type RouteInfo={key:string;eyebrow:string;title:string;description:string};
 function routeInfo(path:string):RouteInfo|null{
   if(path==="/portal")return {key:"dashboard",eyebrow:"COMPLETE PLATFORM",title:"Your OrbitFS, all in one place.",description:"Billing, support, products, deployments, licences and updates in one consistent customer portal."};
   if(path==="/portal/products")return {key:"store",eyebrow:"ORBITFS STORE",title:"Build your OrbitFS setup.",description:"Choose your core system, add the components you need and move through Basket and Checkout when you are ready."};
@@ -54,10 +51,10 @@ function initials(name?:string,email?:string){
 }
 
 export default function V6CDesignShell({path,children,canAccessAdmin=false,loggingOut=false,onLogout,tools,banner,accountName,accountEmail}:Props){
-  const billingMenuRef=useRef<HTMLDetailsElement|null>(null);\n  const orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
+  const billingMenuRef=useRef<HTMLDetailsElement|null>(null);   const orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
   const accountMenuRef=useRef<HTMLDetailsElement|null>(null);
   const closeMenus=useCallback((except?:HTMLDetailsElement|null)=>{
-    if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;\n    if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
+    if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;     if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
     if(accountMenuRef.current&&accountMenuRef.current!==except)accountMenuRef.current.open=false;
   },[]);
   useEffect(()=>{closeMenus()},[path,closeMenus]);
