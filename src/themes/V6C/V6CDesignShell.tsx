@@ -18,10 +18,9 @@ type Props={
 const nav=[
   ["Dashboard","/portal"],
   ["Store","/portal/products"],
-  ["Billing","/portal/orders"],
   ["Support","/portal/support"],
-  ["My OrbitFS","/portal/orbitfs"],
 ] as const;
+;
 
 type RouteInfo={key:string;eyebrow:string;title:string;description:string};
 function routeInfo(path:string):RouteInfo|null{
@@ -55,17 +54,17 @@ function initials(name?:string,email?:string){
 }
 
 export default function V6CDesignShell({path,children,canAccessAdmin=false,loggingOut=false,onLogout,tools,banner,accountName,accountEmail}:Props){
-  const orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
+  const billingMenuRef=useRef<HTMLDetailsElement|null>(null);\n  const orbitfsMenuRef=useRef<HTMLDetailsElement|null>(null);
   const accountMenuRef=useRef<HTMLDetailsElement|null>(null);
   const closeMenus=useCallback((except?:HTMLDetailsElement|null)=>{
-    if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
+    if(billingMenuRef.current&&billingMenuRef.current!==except)billingMenuRef.current.open=false;\n    if(orbitfsMenuRef.current&&orbitfsMenuRef.current!==except)orbitfsMenuRef.current.open=false;
     if(accountMenuRef.current&&accountMenuRef.current!==except)accountMenuRef.current.open=false;
   },[]);
   useEffect(()=>{closeMenus()},[path,closeMenus]);
   useEffect(()=>{
     const onPointer=(event:PointerEvent)=>{
       const target=event.target as Node;
-      if(!orbitfsMenuRef.current?.contains(target)&&!accountMenuRef.current?.contains(target))closeMenus();
+      if(!billingMenuRef.current?.contains(target)&&!orbitfsMenuRef.current?.contains(target)&&!accountMenuRef.current?.contains(target))closeMenus();
     };
     const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape")closeMenus()};
     document.addEventListener("pointerdown",onPointer);
@@ -79,12 +78,24 @@ export default function V6CDesignShell({path,children,canAccessAdmin=false,loggi
     <header className="v6c-appbar">
       <Link className="v6c-mark" href="/portal" aria-label="OrbitFS home"><span/><b>OrbitFS</b></Link>
       <nav className="v6c-globalnav" aria-label="Customer Portal">
-        {nav.filter(([label])=>label!=="My OrbitFS").map(([label,href])=><Link key={href} href={href} className={active(label,path)?"is-active":""}>{label}</Link>)}
-        <details ref={orbitfsMenuRef} onToggle={event=>{const el=event.currentTarget;if(el.open)closeMenus(el)}} className={"v6c-orbitfs-nav "+(path.startsWith("/portal/orbitfs")?"is-active":"")}>
+        <Link href="/portal" className={active("Dashboard",path)?"is-active":""}>Dashboard</Link>
+        <Link href="/portal/products" className={active("Store",path)?"is-active":""}>Store</Link>
+        <details ref={billingMenuRef} onToggle={event=>{const el=event.currentTarget;if(el.open)closeMenus(el)}} className={"v6c-orbitfs-nav "+((path.startsWith("/portal/orders")||path.startsWith("/portal/invoices")||path.startsWith("/portal/payment-history"))?"is-active":"")}>
+          <summary>Billing <span>⌄</span></summary>
+          <div className="v6c-orbitfs-menu">
+            <Link onClick={()=>closeMenus()} href="/portal/orders">Overview</Link>
+            <Link onClick={()=>closeMenus()} href="/portal/orders">Orders</Link>
+            <Link onClick={()=>closeMenus()} href="/portal/invoices">Invoices</Link>
+            <Link onClick={()=>closeMenus()} href="/portal/payment-history">Payment History</Link>
+          </div>
+        </details>
+        <Link href="/portal/support" className={active("Support",path)?"is-active":""}>Support</Link>
+        <Link href="/portal/orbitfs/license" className={path.startsWith("/portal/orbitfs/license")?"is-active":""}>License System</Link>
+        <details ref={orbitfsMenuRef} onToggle={event=>{const el=event.currentTarget;if(el.open)closeMenus(el)}} className={"v6c-orbitfs-nav "+(path.startsWith("/portal/orbitfs")&&!path.startsWith("/portal/orbitfs/license")?"is-active":"")}>
           <summary>My OrbitFS <span>⌄</span></summary>
           <div className="v6c-orbitfs-menu">
-            <Link onClick={()=>closeMenus()} href="/portal/orbitfs">Installation &amp; Updates</Link>
-            <Link onClick={()=>closeMenus()} href="/portal/orbitfs/license">License Controller</Link>
+            <Link onClick={()=>closeMenus()} href="/portal/orbitfs/base">Deployment system</Link>
+            <Link onClick={()=>closeMenus()} href="/portal/orbitfs/releases">Update system</Link>
             <Link onClick={()=>closeMenus()} href="/portal/orbitfs/channels">Release Channels</Link>
           </div>
         </details>
@@ -99,9 +110,11 @@ export default function V6CDesignShell({path,children,canAccessAdmin=false,loggi
         </summary>
         <div className="v6c-account-popover">
           <div className="v6c-account-identity"><span className="v6c-avatar large">{initials(accountName,accountEmail)}</span><div><b>{accountName||"OrbitFS Customer"}</b><small>{accountEmail||"Customer account"}</small></div></div>
-          <Link onClick={()=>closeMenus()} href="/portal/settings"><span>Account Settings</span><b>›</b></Link>
-          <Link onClick={()=>closeMenus()} href="/portal/support"><span>Help</span><b>›</b></Link>
-          <div className="v6c-account-future"><span>More coming soon</span><small>Future account tools will appear here.</small></div>
+          <Link onClick={()=>closeMenus()} href="/portal/settings?tab=profile"><span>Profile</span><b>›</b></Link>
+          <Link onClick={()=>closeMenus()} href="/portal/settings?tab=billing"><span>Billing Details</span><b>›</b></Link>
+          <Link onClick={()=>closeMenus()} href="/portal/settings?tab=wallet"><span>Wallet Settings</span><b>›</b></Link>
+          <Link onClick={()=>closeMenus()} href="/portal/settings?tab=preferences"><span>Preferences</span><b>›</b></Link>
+          <Link onClick={()=>closeMenus()} href="/portal/settings?tab=security"><span>Security</span><b>›</b></Link>
           {onLogout&&<button type="button" onClick={()=>{closeMenus();onLogout()}} disabled={loggingOut}><span>{loggingOut?"Logging out…":"Logout"}</span><b>↗</b></button>}
         </div>
       </details>
