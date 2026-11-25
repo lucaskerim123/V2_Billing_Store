@@ -42,12 +42,12 @@ export default function Portal(){
     <section className="v6c-dashboard-platform">
       <div className="v6c-dashboard-section-head">
         <div><span>MY ORBITFS</span><h2>Run your OrbitFS system.</h2><p>Deployment, updates, licensing and release access from one control area.</p></div>
-        <Link href="/portal/orbitfs">Open My OrbitFS →</Link>
+        <Link href="/portal/orbitfs/base">Open Deployment system →</Link>
       </div>
       <div className="v6c-dashboard-destinations">
-        <Link href="/portal/orbitfs"><i>01</i><div><small>INSTALLATION &amp; UPDATES</small><b>OrbitFS Control</b><p>Install Base, manage the deployed runtime and apply authorised Base or add-on updates from one page.</p></div><strong>→</strong></Link>
-        <Link href="/portal/orbitfs/license"><i>03</i><div><small>LICENSING</small><b>License Controller</b><p>Review the authoritative licence and customer actions.</p></div><strong>→</strong></Link>
-        <Link href="/portal/orbitfs/channels"><i>04</i><div><small>RELEASE ACCESS</small><b>Release Channels</b><p>Manage stable, preview and restricted channel access.</p></div><strong>→</strong></Link>
+        <Link href="/portal/orbitfs/base"><i>01</i><div><small>DEPLOYMENT SYSTEM</small><b>Deployment system</b><p>Install and manage your authorised OrbitFS Base deployment.</p></div><strong>→</strong></Link>
+        <Link href="/portal/orbitfs/releases"><i>02</i><div><small>UPDATE SYSTEM</small><b>Update system</b><p>Review published updates and apply authorised update operations.</p></div><strong>→</strong></Link>
+        <Link href="/portal/orbitfs/channels"><i>03</i><div><small>RELEASE ACCESS</small><b>Release Channels</b><p>Manage stable, preview and restricted channel access.</p></div><strong>→</strong></Link>
       </div>
     </section>
 
