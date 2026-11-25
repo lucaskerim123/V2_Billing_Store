@@ -1,1 +1,2 @@
-export default function UpdateReleaseHomePage(){return null;}
+import OrbitFSUpdateReleaseSystem from "./UpdateReleaseClient";
+export default function UpdateReleaseHomePage(){return <OrbitFSUpdateReleaseSystem/>;}
