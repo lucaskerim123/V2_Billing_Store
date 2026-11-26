@@ -5595,3 +5595,30 @@ html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-admin
 @media(max-width:760px){html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-appbar{height:auto;min-height:56px;overflow-x:auto;padding:8px;gap:7px;}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-globalnav{overflow-x:auto;}html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-app-search{display:none!important;}}
 
 html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-account-menu-heading{padding:10px 12px 5px;color:#7f9db8;font-size:11px;font-weight:750;letter-spacing:.09em;}
+
+
+/* V6C customer shell structural repair: the shell is now a header + banner + content stack, not a legacy sidebar grid. */
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-screen{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:100vh!important;
+  grid-template-columns:none!important;
+  grid-template-rows:none!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-appbar{
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  box-sizing:border-box!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-content{
+  width:100%!important;
+  max-width:1500px!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+  margin-inline:auto!important;
+}
+html[data-orbitfs-theme="V6C"][data-orbitfs-theme-surface="customer"] .v6c-content>*{
+  min-width:0!important;
+}
