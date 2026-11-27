@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase";
 
 type Props = { integration?: { id: string; name: string; version: string } };
 type ConnectionStatus = { configured: boolean; baseUrl: string; apiKeyConfigured: boolean };
@@ -13,23 +14,38 @@ export default function MailSettingsPage({ integration }: Props) {
   const [message, setMessage] = useState("");
   const [connected, setConnected] = useState(false);
 
-  const request = useCallback(async (action: "load" | "test" | "save") => {
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error("Administrator session expired. Sign in again.");
+        const response = await fetch("/api/admin/integrations/mailsystem/mail-connection", {
+          headers: { authorization: "Bearer " + session.access_token }, cache: "no-store"
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to load connection.");
+        if (active) {
+          setStatus(data); setBaseUrl(data.baseUrl || ""); setConnected(data.configured);
+        }
+      } catch (error) {
+        if (active) setMessage(error instanceof Error ? error.message : "Unable to load connection.");
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  async function submit(action: "test" | "save") {
     setBusy(true); setMessage("");
     try {
-      const { createClient } = await import("@/lib/supabase");
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error("Administrator session expired. Sign in again.");
-      const headers = { authorization: "Bearer " + session.access_token, "content-type": "application/json" };
-      if (action === "load") {
-        const response = await fetch("/api/admin/integrations/mailsystem/mail-connection", { headers, cache: "no-store" });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Unable to load connection.");
-        setStatus(data); setBaseUrl(data.baseUrl || ""); setConnected(data.configured);
-        return;
-      }
       const response = await fetch("/api/admin/integrations/mailsystem/mail-connection", {
-        method: "POST", headers, body: JSON.stringify({ action, baseUrl, apiKey })
+        method: "POST",
+        headers: { authorization: "Bearer " + session.access_token, "content-type": "application/json" },
+        body: JSON.stringify({ action, baseUrl, apiKey })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || data.message || "Mail System request failed.");
@@ -44,9 +60,7 @@ export default function MailSettingsPage({ integration }: Props) {
       setConnected(false);
       setMessage(error instanceof Error ? error.message : "Mail System request failed.");
     } finally { setBusy(false); }
-  }, [baseUrl, apiKey]);
-
-  useEffect(() => { void request("load"); }, [request]);
+  }
 
   return <main style={{ maxWidth: 920, margin: "0 auto", padding: 24, color: "var(--admin-text,inherit)" }}>
     <header style={{ marginBottom: 24 }}>
@@ -62,14 +76,14 @@ export default function MailSettingsPage({ integration }: Props) {
         <input value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="https://mail.example.com" autoComplete="url" style={{ display: "block", width: "100%", boxSizing: "border-box", marginTop: 6, padding: 11, borderRadius: 7, border: "1px solid var(--admin-border,#cbd5e1)", background: "var(--admin-input,transparent)", color: "inherit" }} />
       </label>
       <label style={{ display: "block", marginBottom: 14 }}>Mail System API key
-        <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={status.apiKeyConfigured ? "Saved securely — enter a new key to rotate it" : "Paste the External System API key"} autoComplete="new-password" style={{ display: "block", width: "100%", boxSizing: "border-box", marginTop: 6, padding: 11, borderRadius: 7, border: "1px solid var(--admin-border,#cbd5e1)", background: "var(--admin-input,transparent)", color: "inherit" }} />
+        <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={status.apiKeyConfigured ? "Saved securely — enter a new key to replace it" : "Paste the External System API key"} autoComplete="new-password" style={{ display: "block", width: "100%", boxSizing: "border-box", marginTop: 6, padding: 11, borderRadius: 7, border: "1px solid var(--admin-border,#cbd5e1)", background: "var(--admin-input,transparent)", color: "inherit" }} />
       </label>
       <p style={{ fontSize: 13, opacity: .7 }}>Status: {connected ? "Connected" : status.configured ? "Saved — connection not currently verified" : "Not configured"}</p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button disabled={busy || !baseUrl.trim() || (!apiKey.trim() && !status.apiKeyConfigured)} onClick={() => void request("test")}>Test connection</button>
-        <button disabled={busy || !baseUrl.trim() || (!apiKey.trim() && !status.apiKeyConfigured)} onClick={() => void request("save")}>Save connection</button>
+        <button disabled={busy || !baseUrl.trim() || (!apiKey.trim() && !status.apiKeyConfigured)} onClick={() => void submit("test")}>Test connection</button>
+        <button disabled={busy || !baseUrl.trim() || (!apiKey.trim() && !status.apiKeyConfigured)} onClick={() => void submit("save")}>Save connection</button>
       </div>
     </section>
-    <p style={{ fontSize: 12, opacity: .65, marginTop: 18 }}>The API key is stored encrypted in Billing Store’s integration registry. It is only decrypted on the server when the integration needs to communicate with Mail System.</p>
+    <p style={{ fontSize: 12, opacity: .65, marginTop: 18 }}>The API key is encrypted in Billing Store’s integration registry. It is only decrypted on the server when the integration needs to communicate with Mail System.</p>
   </main>;
 }

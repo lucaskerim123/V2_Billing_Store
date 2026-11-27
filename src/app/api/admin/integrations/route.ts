@@ -15,7 +15,14 @@ export async function GET(req:Request){
   const {db,access}=await requireIntegrationAdmin(req,["integrations.view","integrations.manage"]);
   const {data:rows,error}=await db.from("app_integrations").select("integration_id,display_name,version,installed,enabled,updated_at").order("display_name");
   if(error)throw Object.assign(new Error(error.message),{status:503});
-  const integrations=BUILTIN_INTEGRATIONS.map(manifest=>{const row=(rows||[]).find((item:any)=>item.integration_id===manifest.id);return {...manifest,state:{installed:row?.installed===true,enabled:row?.enabled===true,version:row?.version||manifest.version,updated_at:row?.updated_at||null},configured:manifest.requiredEnvironment.every((key:string)=>Boolean(process.env[key]?.trim()))};});
+  const {data:secureRows,error:secureError}=await serviceDb().from("app_integrations").select("integration_id,config");
+  if(secureError)throw Object.assign(new Error(secureError.message),{status:503});
+  const integrations=BUILTIN_INTEGRATIONS.map(manifest=>{
+   const row=(rows||[]).find((item:any)=>item.integration_id===manifest.id);
+   const secure=(secureRows||[]).find((item:any)=>item.integration_id===manifest.id);
+   const connectionConfigured=manifest.id==="mailsystem"?Boolean(secure?.config?.mailSystemConnection?.encryptedApiKey):manifest.requiredEnvironment.every((key:string)=>Boolean(process.env[key]?.trim()));
+   return {...manifest,state:{installed:row?.installed===true,enabled:row?.enabled===true,version:row?.version||manifest.version,updated_at:row?.updated_at||null},configured:manifest.requiredEnvironment.every((key:string)=>Boolean(process.env[key]?.trim())),connectionConfigured};
+  });
   const menu=integrations.filter(item=>item.state.enabled).flatMap(item=>item.contributions.adminMenu.map((entry:any)=>({...entry,integrationId:item.id})));
   return Response.json({integrations,menu,summary:{installedCount:integrations.filter(item=>item.state.installed).length,installableCount:integrations.filter(item=>item.installable).length},permissions:{canView:hasIntegrationPermission(access,"integrations.view")||hasIntegrationPermission(access,"integrations.manage"),canManage:hasIntegrationPermission(access,"integrations.manage")}},{headers:{"cache-control":"no-store"}});
  }catch(error){return integrationErrorResponse(error,"Unable to load integrations.");}
