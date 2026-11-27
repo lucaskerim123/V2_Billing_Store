@@ -11,11 +11,6 @@ import {SuperadminCustomerPasswordControl} from "@/components/SuperadminDeleteBa
 import {canonicalAccountStatus,canonicalStatusLabel} from "@/lib/license-status";
 
 const money=(cents:any,currency="AUD")=>new Intl.NumberFormat("en-AU",{style:"currency",currency}).format(Number(cents||0)/100);
-const mailVarLabel=(v:string)=>v.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase());
-function templateVariables(t:any){
- const all=`${t?.subject||""}\n${t?.text_body||""}\n${t?.html||""}`;
- return [...new Set([...all.matchAll(/{{\s*([\w.]+)\s*}}/g)].map(x=>String(x[1]).toLowerCase()))].filter(v=>!AUTO_MAIL_VARS.has(v));
-}
 
 export default function Customer({params}:{params:Promise<{id:string}>}){
  const {id}=use(params),sb=createClient();
