@@ -1,4 +1,6 @@
-export type IntegrationContribution = { adminPages:ReadonlyArray<{label:string;route:string;entrypoint:string}>;adminMenu:ReadonlyArray<{label:string;route:string;permission:string}> };
+export type IntegrationPageContribution = {label:string;route:string;entrypoint:string;permission:string};
+export type IntegrationMenuContribution = {label:string;route:string;permission:string};
+export type IntegrationContribution = {adminPages:ReadonlyArray<IntegrationPageContribution>;adminMenu:ReadonlyArray<IntegrationMenuContribution>};
 export type BuiltinIntegration = {
   id:string; name:string; description:string; version:string; publisher:string;
   distribution:"bundled"; installable:boolean; sourceRepository:string; sourcePath:string; billingExtensionPath:string;
