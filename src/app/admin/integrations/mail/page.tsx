@@ -10,7 +10,7 @@ import type {RemoteStaffState,RemoteStaffSyncResult} from "@/integrations/mail/r
 
 export default function BillingMailIntegrationPage(){
   const sb=useMemo(()=>createClient(),[]);
-  const store=useMemo(()=>createSupabaseMailModuleStore(sb),[sb]);
+  const store=useMemo(()=>createSupabaseMailModuleStore(sb as any),[sb]);
   const [canManage,setCanManage]=useState(false);
   const [installed,setInstalled]=useState(false);
   const [enabled,setEnabled]=useState(false);
