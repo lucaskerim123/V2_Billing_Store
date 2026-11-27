@@ -256,7 +256,7 @@ export default function AdminLayoutClient({
           if(response.ok){const payload=await response.json();if(live)setIntegrationMenu((payload.menu||[]).map((item:any)=>({label:item.label,href:item.route,permission:item.permission})));}
         }
       }catch{/* Navigation contributions are optional; core admin navigation must still load. */}
-      setReady(true);
+      if(live)setReady(true);
     })();
     return()=>{live=false};
   },[sb,pathname]);
