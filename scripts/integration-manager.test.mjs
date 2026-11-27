@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync,mkdtempSync,mkdirSync,writeFileSync,rmSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {BILLING_EMAIL_EVENTS,getBillingEmailEvent} from "../src/lib/billing-email-events.ts";
+import {BILLING_EMAIL_EVENTS,getBillingEmailEvent} from "../src/lib/billing-email-events.mjs";
 import {BUILTIN_INTEGRATIONS,discoverIntegrations} from "../src/lib/integrations/registry.mjs";
 
 test("the Billing Store integration destination contains no installable modules",()=>{
