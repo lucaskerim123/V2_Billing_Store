@@ -36,7 +36,7 @@ export async function deliverInitialLicenseKey(input:{
 
   const origin=await orbitfsStoreOrigin();
   const revealUrl=`${origin}/license-key?token=${encodeURIComponent(token)}`;
-  await sendAutomation(
+  const emailEvent=await sendAutomation(
     "license.key_issued",
     input.recipient,
     {
@@ -47,5 +47,5 @@ export async function deliverInitialLicenseKey(input:{
     "order",
     input.orderId,
   );
-  return {ok:true,expiresAt};
+  return {ok:true,expiresAt,emailEvent};
 }
