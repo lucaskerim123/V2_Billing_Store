@@ -181,3 +181,8 @@ do $$ declare t text; begin
   end loop;
 end $$;
 
+
+grant select, insert, update, delete on public.app_mail_templates, public.app_mail_template_revisions,
+  public.app_mail_routes, public.app_mail_triggers, public.app_mail_settings to authenticated;
+grant all on public.app_mail_templates, public.app_mail_template_revisions,
+  public.app_mail_routes, public.app_mail_triggers, public.app_mail_settings to service_role;
