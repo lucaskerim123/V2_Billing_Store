@@ -189,6 +189,7 @@ export default function AdminLayoutClient({
   const [siteTitle,setSiteTitle]=useState("OrbitFS");
   const [adminName,setAdminName]=useState("Admin");
   const [adminEmail,setAdminEmail]=useState("");
+  const [integrationMenu,setIntegrationMenu]=useState<NavItem[]>([]);
   const sb=useMemo(()=>createClient(),[]);
 
   const activeGroup=groups.find(group=>group.match(pathname));
@@ -248,6 +249,11 @@ export default function AdminLayoutClient({
       const {data:identity}=await sb.from("app_settings").select("key,value").eq("category","identity");
       const id=Object.fromEntries((identity||[]).map((x:any)=>[x.key.split(".").pop(),x.value]));
       setSiteTitle(id.admin_name||id.site_name||"OrbitFS");
+      const {data:{session}}=await sb.auth.getSession();
+      if(session?.access_token){
+        const response=await fetch("/api/admin/integrations",{headers:{authorization:`Bearer ${session.access_token}`},cache:"no-store"});
+        if(response.ok){const payload=await response.json();if(live)setIntegrationMenu((payload.menu||[]).map((item:any)=>({label:item.label,href:item.route,permission:item.permission})));}
+      }
       setReady(true);
     })();
     return()=>{live=false};
@@ -260,9 +266,9 @@ export default function AdminLayoutClient({
   if(!ready)return <div className="adminLoading">Loading admin…</div>;
 
   const visibleGroups=groups
-    .map(group=>({...group,items:group.items.filter(item=>allowed(permissions,item.permission))}))
+    .map(group=>({...group,items:[...group.items,...(group===systemGroup?integrationMenu:[])].filter(item=>allowed(permissions,item.permission))}))
     .filter(group=>group.items.length);
-  const contextItems=activeGroup?.items.filter(item=>allowed(permissions,item.permission))||[];
+  const contextItems=activeGroup?[...activeGroup.items,...(activeGroup===systemGroup?integrationMenu:[])].filter(item=>allowed(permissions,item.permission)):[];
 
   async function logout(){
     await sb.auth.signOut();
