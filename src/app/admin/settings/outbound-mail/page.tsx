@@ -5,6 +5,7 @@ import {createClient} from "@/lib/supabase";
 import {usePermissions} from "@/lib/usePermissions";
 import {createSupabaseMailModuleStore} from "@/modules/mail-configuration/supabase-store";
 import {MailModuleConsole} from "@/modules/mail-configuration/console";
+import RemoteStaffSyncPanel from "@/components/RemoteStaffSyncPanel";
 
 export default function OutboundMailSettings(){
   const sb=useMemo(()=>createClient(),[]);
@@ -29,5 +30,6 @@ export default function OutboundMailSettings(){
   return <main className="adminShell">
     <header className="adminTop"><div><p className="eyebrow">BILLING · INTEGRATIONS</p><h1>Outbound Mail</h1><p className="muted">Application-owned templates, sender routing, event triggers and automation, delivered through the central Mail System.</p></div></header>
     <MailModuleConsole store={store} onTestConnection={testConnection} canManage={can("communications.mail.manage")}/>
+    <RemoteStaffSyncPanel/>
   </main>;
 }
