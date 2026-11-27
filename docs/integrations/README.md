@@ -20,7 +20,7 @@ Billing Store owns event creation and trusted event payloads. An integration may
 
 ## Ownership boundaries
 
-Billing Store owns customers, orders, subscriptions, payments, business workflows, event definitions, event payloads, authentication and authorisation. Modules must not delete or redefine Billing-owned records. Uninstall cleanup is limited to the module's registration and data in `app_integration_data`, plus external resources explicitly removed by `onUninstall`.
+Billing Store owns customers, orders, subscriptions, payments, business workflows, event definitions, event payloads, authentication and authorisation. Modules must not delete or redefine Billing-owned records. Uninstall cleanup is limited to the module's registration and data in `app_integrations.config`, plus external resources explicitly removed by `onUninstall`.
 
 ## Database and deployment
 
