@@ -31,5 +31,6 @@ test("an integration can execute only when installed and enabled", () => {
   assert.equal(canRunIntegration({ installed: true, enabled: false }), false);
   assert.equal(canRunIntegration({ installed: false, enabled: true }), false);
   assert.equal(canRunIntegration(null), false);
-  assert.equal(BUILTIN_INTEGRATIONS.length, 1);
+  const ids = BUILTIN_INTEGRATIONS.map((item) => item.id);
+  assert.equal(new Set(ids).size, ids.length);
 });
