@@ -33,3 +33,12 @@ html[data-admin-theme="v3"] .adminV3SystemSource-primary strong{color:#b9bbff}
 html[data-admin-theme="v3"] .adminV3SystemSource-unknown{border-color:#68343a;background:#1b0e10}
 html[data-admin-theme="v3"] .adminV3SystemSource-unknown strong{color:#f1a7af}
 @media(max-width:1100px){html[data-admin-theme="v3"] .adminV3SystemSource{display:none}}
+
+
+/* Account menu hierarchy: initials → dropdown → Account → Logout. */
+html[data-admin-theme="v3"] .adminV6AccountSection{border-top:1px solid #283241;margin-top:5px;padding-top:5px}
+html[data-admin-theme="v3"] .adminV6AccountSection>summary{list-style:none;cursor:pointer;padding:8px 10px;border-radius:6px;color:#d4dbe4;font-size:11px}
+html[data-admin-theme="v3"] .adminV6AccountSection>summary::-webkit-details-marker{display:none}
+html[data-admin-theme="v3"] .adminV6AccountSection>summary:hover{background:#151c27;color:#fff}
+html[data-admin-theme="v3"] .adminV6AccountSection>button{display:block;width:100%;text-align:left;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:#f0a2a2;font:inherit;font-size:11px;cursor:pointer}
+html[data-admin-theme="v3"] .adminV6AccountSection>button:hover{background:#2a171b;color:#ffd1d1}

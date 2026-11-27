@@ -46,15 +46,13 @@ const permissionAliases:Record<string,string[]>={
 const billingGroup:NavGroup={
   label:"Billing",
   shortLabel:"Billing",
-  match:path=>["/admin/orders","/admin/fulfillment","/admin/invoices","/admin/coupons","/admin/payments","/admin/billing","/admin/product-licenses","/admin/product-groups"].some(x=>path.startsWith(x)),
+  match:path=>["/admin/orders","/admin/fulfillment","/admin/invoices","/admin/coupons","/admin/payments","/admin/billing"].some(x=>path.startsWith(x)),
   items:[
     {label:"Orders",href:"/admin/orders",permission:"orders.view"},
-    {label:"Fulfilment",href:"/admin/fulfillment",permission:"licenses.manage"},
-    {label:"Product Licences",href:"/admin/product-licenses",permission:"licenses.manage"},
+    {label:"Fulfillment",href:"/admin/fulfillment",permission:"licenses.manage"},
     {label:"Invoices",href:"/admin/invoices",permission:"invoices.view"},
     {label:"Coupons",href:"/admin/coupons",permission:"coupons.view"},
-    {label:"Payments",href:"/admin/payments",permission:"payments.view"},
-    {label:"Gateway setup",href:"/admin/payments/setup",permission:"payments.manage"}
+    {label:"Payments",href:"/admin/payments",permission:"payments.view"}
   ]
 };
 
@@ -74,10 +72,8 @@ const supportGroup:NavGroup={
   match:path=>path.startsWith("/admin/support"),
   items:[
     {label:"Tickets",href:"/admin/support",permission:"support.view"},
-    {label:"New ticket",href:"/admin/support/new",permission:"support.create"},
     {label:"Knowledge Base",href:"/admin/support/knowledge-base",permission:"support.kb"},
-    {label:"Premade Messages",href:"/admin/support/premade-messages",permission:"support.templates"},
-    {label:"Support settings",href:"/admin/support/settings",permission:"support.settings"}
+    {label:"Pre-made Messages",href:"/admin/support/premade-messages",permission:"support.templates"}
   ]
 };
 
@@ -87,23 +83,30 @@ const productsGroup:NavGroup={
   match:path=>path.startsWith("/admin/products")||path.startsWith("/admin/product-groups")||path.startsWith("/admin/news")||path.startsWith("/admin/downloads"),
   items:[
     {label:"Products",href:"/admin/products",permission:"products.view"},
-    {label:"Product Groups",href:"/admin/product-groups",permission:"licenses.manage"},
+    {label:"Product Groups",href:"/admin/product-groups",permission:"products.view"},
     {label:"News",href:"/admin/news",permission:"news.view"},
     {label:"Downloads",href:"/admin/downloads",permission:"downloads.view"}
+  ]
+};
+
+const licenseSystemGroup:NavGroup={
+  label:"License System",
+  shortLabel:"License System",
+  match:path=>path.startsWith("/admin/license-controller")||path.startsWith("/admin/licensing")||path.startsWith("/admin/product-licenses")||path.startsWith("/admin/settings/license-master")||path.startsWith("/admin/orbitfs/installations"),
+  items:[
+    {label:"Licenses",href:"/admin/license-controller",permission:"licenses.manage"},
+    {label:"License System & Product Connections",href:"/admin/settings/license-master",permission:"licenses.view"},
+    {label:"Installations",href:"/admin/orbitfs/installations",permission:"licenses.view"}
   ]
 };
 
 const orbitfsGroup:NavGroup={
   label:"OrbitFS",
   shortLabel:"OrbitFS",
-  match:path=>path.startsWith("/admin/orbitfs")||path.startsWith("/admin/license-controller")||path.startsWith("/admin/licensing")||path.startsWith("/admin/settings/license-master")||path.startsWith("/admin/releases"),
+  match:path=>path.startsWith("/admin/orbitfs/release-control")||path.startsWith("/admin/orbitfs/update-release-deployer")||path.startsWith("/admin/orbitfs/releases")||path.startsWith("/admin/releases")||path.startsWith("/admin/orbitfs/release-channels")||path.startsWith("/admin/orbitfs/base-deployment")||path.startsWith("/admin/orbitfs/base-deploy"),
   items:[
-    {label:"Installations",href:"/admin/orbitfs/installations",permission:"licenses.view"},
-    {label:"Release Review",href:"/admin/orbitfs/release-control",permission:"licenses.manage"},
-    {label:"Release Channels",href:"/admin/orbitfs/release-channels",permission:"licenses.manage"},
-    {label:"Customer Licences",href:"/admin/license-controller",permission:"licenses.manage"},
-    {label:"License System",href:"/admin/licensing",permission:"licenses.view"},
-    {label:"Product Connections",href:"/admin/settings/license-master",permission:"licenses.manage"}
+    {label:"Deployment Controller",href:"/admin/orbitfs/release-control",permission:"licenses.manage"},
+    {label:"Release Channels",href:"/admin/orbitfs/release-channels",permission:"licenses.manage"}
   ]
 };
 
@@ -117,11 +120,11 @@ const systemGroup:NavGroup={
     {label:"Alerts",href:"/admin/alerts",permission:"admin.access"},
     {label:"Themes",href:"/admin/settings/themes",permission:"settings.view"},
     {label:"Analytics",href:"/admin/analytics",permission:"analytics.view"},
-    {label:"Audit log",href:"/admin/audit",permission:"audit.view"}
+    {label:"Audit Log",href:"/admin/audit",permission:"audit.view"}
   ]
 };
 
-const groups:NavGroup[]=[billingGroup,customersGroup,supportGroup,productsGroup,orbitfsGroup,systemGroup];
+const groups:NavGroup[]=[billingGroup,customersGroup,supportGroup,productsGroup,licenseSystemGroup,orbitfsGroup,systemGroup];
 
 function normalizePermissions(raw:any){
   const set=new Set<string>();
@@ -198,9 +201,11 @@ export default function AdminLayoutClient({
           ?"support"
           :activeGroup===productsGroup
             ?"products"
-            :activeGroup===orbitfsGroup
-              ?"orbitfs"
-              :"system";
+            :activeGroup===licenseSystemGroup
+              ?"licenses"
+              :activeGroup===orbitfsGroup
+                ?"orbitfs"
+                :"system";
   const routeKey=adminRouteKey(pathname);
   const v6aExempt=routeKey==="base-deployment"||routeKey==="update-release";
 
@@ -282,15 +287,17 @@ export default function AdminLayoutClient({
             <span>Source</span>
             <strong>{githubProfile==="fallback"?"Fallback":githubProfile==="primary"?"Primary":"Unknown"}</strong>
           </div>
-          {allowed(permissions,"mail.access")&&<Link className="adminV6UtilityLink" href="/mail">Mail</Link>}
+          {allowed(permissions,"mail.access")&&<Link className="adminV6UtilityLink" href="/mail">Mail (WIP)</Link>}
           <Link className="adminV6UtilityLink" href="/portal">Portal</Link>
           <AdminNotifications/>
           <details className="adminV6Account">
             <summary aria-label="Admin account"><span>{adminName.slice(0,2).toUpperCase()}</span></summary>
             <div className="adminV6AccountMenu">
               <div className="adminV6Identity"><b>{adminName}</b><small>{adminEmail}</small><em>{role||"staff"}</em></div>
-              <Link href="/portal">Customer portal</Link>
-              <button type="button" onClick={()=>void logout()}>Log out</button>
+              <details className="adminV6AccountSection">
+                <summary>Account</summary>
+                <button type="button" onClick={()=>void logout()}>Logout</button>
+              </details>
             </div>
           </details>
         </div>
