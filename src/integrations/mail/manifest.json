@@ -1,0 +1,36 @@
+{
+  "format": "orbitfs-billing-integration-v1",
+  "id": "mail",
+  "displayName": "Mail System",
+  "version": "2.0.0",
+  "publisher": "OrbitFS",
+  "sourceRepository": "remipetrovich-design/Mail-system",
+  "sourcePath": "mail-configuration-module/Billing",
+  "sourceWorkspaceBuildOnly": true,
+  "hostAdapted": true,
+  "distribution": "bundled",
+  "installable": true,
+  "serverOnly": true,
+  "requires": ["MAIL_SYSTEM_URL", "MAIL_SYSTEM_API_KEY"],
+  "features": [
+    "template-management",
+    "template-preview",
+    "variable-discovery",
+    "event-triggers",
+    "conditional-sender-routing",
+    "scoped-api-key-capabilities",
+    "application-enable-disable",
+    "theme-customization",
+    "remote-staff-provisioning",
+    "employment-lifecycle-sync",
+    "remote-user-session-exchange"
+  ],
+  "entrypoints": {
+    "console": "./console.tsx",
+    "configuration": "./configuration.ts",
+    "server": "./module.ts",
+    "store": "./supabase-store.ts",
+    "remoteStaff": "./remote-staff.ts",
+    "remoteStaffAdmin": "./remote-staff-admin.tsx"
+  }
+}
