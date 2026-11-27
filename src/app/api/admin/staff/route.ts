@@ -19,7 +19,7 @@ async function context(req:Request){
   return {token,db,user,access:(access||{}) as Access};
 }
 
-function cleanPermissions(v:any){const out:Record<string,boolean>={};if(v&&typeof v==="object")for(const [k,x] of Object.entries(v))if(typeof x==="boolean")out[k]=x;return out}
+function cleanPermissions(v:any){const out:Record<string,boolean>={};if(v&&typeof v==="object")for(const [k,x] of Object.entries(v))if(typeof x==="boolean"&&!k.startsWith("mail."))out[k]=x;return out}
 function slugify(v:string){return v.trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)}
 async function audit(db:any,userId:string,action:string,targetType:string,targetId:string,detail:any){try{await db.from("admin_audit_log").insert({actor_id:userId,action,target_type:targetType,target_id:targetId,detail})}catch{}}
 async function staffNotice(userId:string,eventType:string,title:string,message:string,surface:"admin"|"portal"="admin",severity:"info"|"warning"|"error"="info"){
@@ -45,6 +45,7 @@ export async function GET(req:Request){
     if(de)return Response.json({error:de.message},{status:400});
     if(dse)return Response.json({error:dse.message},{status:400});
     const snap:any=data||{members:[],groups:[],availableCustomers:[],can:{}};
+    snap.groups=(snap.groups||[]).map((group:any)=>({...group,permissions:cleanPermissions(group.permissions)}));
     const byUser=new Map<string,string[]>();
     for(const row of deptStaff||[]){const arr=byUser.get(String(row.user_id))||[];arr.push(String(row.department_id));byUser.set(String(row.user_id),arr)}
     const depMap=new Map((departments||[]).map((d:any)=>[String(d.id),d]));
