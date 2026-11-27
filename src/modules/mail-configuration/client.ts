@@ -106,8 +106,9 @@ export async function testConnection(config?: MailModuleConfig) {
   return result;
 }
 
-export async function sendMessage(input: SendMessage, config?: MailModuleConfig) {
-  const result = await verifyMailSystemConnection(config);
+export async function sendMessage(input: SendMessage, config?: MailModuleConfig, actorSessionToken?: string) {
+  const resolvedConfig = config || getMailModuleConfig();
+  const result = await verifyMailSystemConnection(resolvedConfig);
   if (!result.connected) throw new Error(result.message);
   const sender = input.from_address || result.sender;
   if (!sender || !result.senders.some((item) => item.address.toLowerCase() === sender.toLowerCase())) {
@@ -115,5 +116,5 @@ export async function sendMessage(input: SendMessage, config?: MailModuleConfig)
   }
   return call<{ ok: boolean; id: string; providerId?: string }>("/api/mail", {
     method: "POST", body: JSON.stringify({ ...input, from_address: sender }),
-  }, config);
+  }, resolvedConfig, actorSessionToken || resolvedConfig.apiKey);
 }
