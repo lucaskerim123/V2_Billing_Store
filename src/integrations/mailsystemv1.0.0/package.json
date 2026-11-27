@@ -1,0 +1,94 @@
+{
+  "name": "billing-mail-configuration",
+  "version": "1.0.0",
+  "description": "Portable Mail System configuration and Remote Staff add-on for external applications such as Billing Store.",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "main": "./dist/module.js",
+  "module": "./dist/module.js",
+  "types": "./dist/module.d.ts",
+  "files": [
+    "dist/",
+    "schema.sql",
+    "supabase-functions.sql",
+    "README.md",
+    "INSTALL.md",
+    "INTEGRATION.md",
+    "API.md",
+    "manifest.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/module.d.ts",
+      "import": "./dist/module.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./configuration": {
+      "types": "./dist/configuration.d.ts",
+      "import": "./dist/configuration.js"
+    },
+    "./renderer": {
+      "types": "./dist/renderer.d.ts",
+      "import": "./dist/renderer.js"
+    },
+    "./routing": {
+      "types": "./dist/routing.d.ts",
+      "import": "./dist/routing.js"
+    },
+    "./admin-ui": {
+      "types": "./dist/admin-ui.d.ts",
+      "import": "./dist/admin-ui.js"
+    },
+    "./console": {
+      "types": "./dist/console.d.ts",
+      "import": "./dist/console.js"
+    },
+    "./supabase-store": {
+      "types": "./dist/supabase-store.d.ts",
+      "import": "./dist/supabase-store.js"
+    },
+    "./server": {
+      "types": "./dist/module.d.ts",
+      "import": "./dist/module.js"
+    },
+    "./remote-staff": {
+      "types": "./dist/remote-staff.d.ts",
+      "import": "./dist/remote-staff.js"
+    },
+    "./remote-staff-types": {
+      "types": "./dist/remote-staff-types.d.ts",
+      "import": "./dist/remote-staff-types.js"
+    },
+    "./remote-staff-admin": {
+      "types": "./dist/remote-staff-admin.d.ts",
+      "import": "./dist/remote-staff-admin.js"
+    }
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test tests.test.mjs",
+    "check": "npm run typecheck && npm test",
+    "prepack": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.6",
+    "@types/react": "^19.1.13",
+    "typescript": "^5.9.2"
+  }
+}

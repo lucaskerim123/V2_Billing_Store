@@ -1,0 +1,2 @@
+export function renderVariable(source,context){return String(source??"").replace(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g,(_,path)=>{const value=path.split(".").reduce((v,k)=>v&&typeof v==="object"?v[k]:undefined,context);return value==null?"":String(value)})}
+export function renderTemplate(template,context){return{subject:renderVariable(template.subject,context),text:template.text?renderVariable(template.text,context):undefined,html:template.html?renderVariable(template.html,context):undefined}}
