@@ -2,7 +2,7 @@ import {notFound} from "next/navigation";
 import {cookies} from "next/headers";
 import {createServerClient} from "@supabase/ssr";
 import {INTEGRATION_PAGE_RUNTIME} from "@/lib/integrations/generated-runtime";
-import {getBuiltinIntegration,canRunIntegration} from "@/lib/integrations/registry";
+import {getBuiltinIntegration,canRunIntegration} from "@/lib/integrations/runtime";
 import {hasIntegrationPermission} from "@/lib/integrations/admin-context";
 
 export const dynamic = "force-dynamic";
