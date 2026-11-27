@@ -3,6 +3,7 @@ import {cookies} from "next/headers";
 import {createServerClient} from "@supabase/ssr";
 import {INTEGRATION_PAGE_RUNTIME} from "@/lib/integrations/generated-runtime";
 import {getBuiltinIntegration,canRunIntegration} from "@/lib/integrations/registry";
+import {hasIntegrationPermission} from "@/lib/integrations/admin-context";
 
 export const dynamic = "force-dynamic";
 export default async function IntegrationContributionPage({params}:{params:Promise<{moduleId:string}>}){
@@ -20,7 +21,7 @@ export default async function IntegrationContributionPage({params}:{params:Promi
   const access=Array.isArray(accessRows)?accessRows[0]:accessRows;
   const permissions=access?.permissions;
   const canView=access?.all===true||permissions?.all===true||permissions?.["*"]===true||permissions?.["integrations.view"]===true||permissions?.["integrations.manage"]===true||(Array.isArray(permissions)&&(permissions.includes("*")||permissions.includes("integrations.view")||permissions.includes("integrations.manage")));
-  if(accessError||!canView)notFound();
+  if(accessError||!canView||!hasIntegrationPermission(access,runtime.permission))notFound();
   const {data:state,error}=await db.from("app_integrations").select("installed,enabled").eq("integration_id",moduleId).maybeSingle();
   if(error||!canRunIntegration(state))notFound();
   const Component=runtime.component;
