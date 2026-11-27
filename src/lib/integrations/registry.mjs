@@ -11,14 +11,14 @@ function normalizeManifest(manifest) {
   if (typeof manifest.displayName !== "string" || !manifest.displayName.trim() || typeof manifest.version !== "string" || !manifest.version.trim() || typeof manifest.publisher !== "string" || !manifest.publisher.trim()) return null;
   if (manifest.distribution !== "bundled" || manifest.installable !== true || manifest.serverOnly !== true) return null;
   if (!Array.isArray(manifest.requires) || !manifest.requires.every(item => typeof item === "string" && /^[A-Z][A-Z0-9_]*$/.test(item))) return null;
-  if (!manifest.entrypoints || typeof manifest.entrypoints !== "object" || Array.isArray(manifest.entrypoints)) return null;
+  if (!manifest.entrypoints || typeof manifest.entrypoints !== "object" || Array.isArray(manifest.entrypoints) || Object.keys(manifest.entrypoints).length===0) return null;
   for (const [name,target] of Object.entries(manifest.entrypoints)) if (!/^[a-z][A-Za-z0-9]*$/.test(name) || typeof target !== "string" || !target.startsWith("./") || target.includes("..") || target.includes("\\") || target.includes("/")) return null;
   const contributions=manifest.contributions||{};
   if (typeof contributions !== "object" || Array.isArray(contributions)) return null;
   const pages=Array.isArray(contributions.adminPages)?contributions.adminPages:[];
   if (!pages.every(p=>p&&typeof p==="object"&&typeof p.label==="string"&&p.label.trim()&&typeof p.route==="string"&&p.route===`/admin/integrations/${manifest.id}`&&typeof p.entrypoint==="string"&&Object.hasOwn(manifest.entrypoints,p.entrypoint)&&typeof p.permission==="string"&&/^[a-z][a-z0-9_.]+$/.test(p.permission))) return null;
   const menus=Array.isArray(contributions.adminMenu)?contributions.adminMenu:[];
-  if (!menus.every(m=>m&&typeof m==="object"&&typeof m.label==="string"&&m.label.trim()&&typeof m.route==="string"&&ROUTE_PATTERN.test(m.route)&&typeof m.permission==="string"&&/^[a-z][a-z0-9_.]+$/.test(m.permission))) return null;
+  if (!menus.every(m=>m&&typeof m==="object"&&typeof m.label==="string"&&m.label.trim()&&typeof m.route==="string"&&pages.some(p=>p.route===m.route)&&typeof m.permission==="string"&&/^[a-z][a-z0-9_.]+$/.test(m.permission))) return null;
   return Object.freeze({
     id:manifest.id,name:manifest.displayName,description:typeof manifest.description==="string"?manifest.description:"",
     version:manifest.version,publisher:manifest.publisher,distribution:"bundled",installable:true,
