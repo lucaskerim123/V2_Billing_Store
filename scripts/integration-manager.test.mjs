@@ -41,6 +41,7 @@ test("the folder scanner discovers valid modules and ignores invalid folders", (
     };
     mkdirSync(join(root, "example-module"));
     writeFileSync(join(root, "example-module", "manifest.json"), JSON.stringify(valid));
+    writeFileSync(join(root, "example-module", "console.tsx"), "export default function Console() { return null; }");
     mkdirSync(join(root, "not-a-module"));
     writeFileSync(join(root, "not-a-module", "manifest.json"), JSON.stringify({ ...valid, id: "different-id" }));
     mkdirSync(join(root, "invalid"));
