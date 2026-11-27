@@ -66,7 +66,7 @@ export default function CustomerMailPanel({customerId}:{customerId:string}){
             <label className="form"><span>Email template</span><select value={selected} onChange={e=>{setSelected(e.target.value);setValues({})}}>{templates.map(item=><option key={item.template_key} value={item.template_key}>{item.display_name}</option>)}</select></label>
             {template&&<div className="form">
               <p className="muted">Subject preview: {template.subject||"Uses template variables"}</p>
-              {editableVariables.map(key=><label key={key}><span>{key.replaceAll("_"," ")}</span><input value={values[key]||""} onChange={e=>setValues(current=>({...current,[key]:e.target.value}))} maxLength={2000}/></label>)}
+              {editableVariables.map(key=><label key={key}><span>{key.replace(/_/g," ")}</span><input value={values[key]||""} onChange={e=>setValues(current=>({...current,[key]:e.target.value}))} maxLength={2000}/></label>)}
               <p className="muted">Customer identity fields are resolved from Billing and cannot be overridden here.</p>
               <button type="button" onClick={()=>void send()} disabled={busy||!email}>{busy?"Sending…":"Send email"}</button>
             </div>}
