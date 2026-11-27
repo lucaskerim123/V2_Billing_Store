@@ -1,0 +1,53 @@
+{
+  "name": "billing-mail-configuration-build",
+  "displayName": "Billing Mail Configuration + Remote Staff",
+  "version": "2.0.0",
+  "scope": "installed-host-module",
+  "serverOnly": true,
+  "requires": [
+    "MAIL_SYSTEM_URL",
+    "MAIL_SYSTEM_API_KEY"
+  ],
+  "owns": [
+    "templates",
+    "template_revisions",
+    "routing_rules",
+    "event_triggers",
+    "recipient_mapping",
+    "application_settings",
+    "appearance",
+    "remote_staff_sync_integration",
+    "remote_identity_session_integration"
+  ],
+  "connectsTo": "Mail System API",
+  "entrypoints": {
+    "client": "./client.ts",
+    "configuration": "./configuration.ts",
+    "automation": "./module.ts",
+    "renderer": "./renderer.ts",
+    "adminUi": "./admin-ui.tsx",
+    "console": "./console.tsx",
+    "server": "./module.ts",
+    "store": "./supabase-store.ts",
+    "remoteStaff": "./remote-staff.ts",
+    "remoteStaffTypes": "./remote-staff-types.ts",
+    "remoteStaffAdmin": "./remote-staff-admin.tsx"
+  },
+  "features": [
+    "template-management",
+    "template-preview",
+    "variable-discovery",
+    "event-triggers",
+    "conditional-sender-routing",
+    "scoped-api-key-capabilities",
+    "application-enable-disable",
+    "theme-customization",
+    "remote-staff-provisioning",
+    "remote-user-session-exchange",
+    "delegated-mailbox-access",
+    "employment-lifecycle-sync",
+    "remote-staff-admin-component"
+  ],
+  "installable": true,
+  "buildOnly": false
+}
