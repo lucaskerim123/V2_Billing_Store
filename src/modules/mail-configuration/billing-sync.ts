@@ -74,6 +74,7 @@ export async function syncBillingRemoteStaff(userId:string){
   if(!process.env.MAIL_SYSTEM_URL||!process.env.MAIL_SYSTEM_API_KEY)return {skipped:true as const,reason:"Mail System connection is not configured."};
   const staff=(await listBillingRemoteStaff()).find(x=>x.external_user_id===userId);
   if(!staff)return {skipped:true as const,reason:"Billing staff record no longer exists."};
+  if(staff.status==="terminated")return terminateBillingRemoteStaff(userId,"Billing staff record marked terminated");
   const source_revision=await nextRevision(userId);
   return syncRemoteStaff({event_id:randomUUID(),source_revision,user:staff});
 }
