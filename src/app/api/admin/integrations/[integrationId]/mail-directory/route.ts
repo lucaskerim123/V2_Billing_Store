@@ -1,6 +1,6 @@
 import { requireIntegrationAdmin, integrationErrorResponse, hasIntegrationPermission } from "@/lib/integrations/admin-context";
-import { getMailModuleConfig } from "@/integrations/Mailsystem/Data/config";
-import { randomUUID } from "node:crypto";
+import { getMailModuleConfig, getMailRemoteIdentityConfig } from "@/integrations/Mailsystem/Data/config";
+import { randomUUID, createPublicKey } from "node:crypto";
 
 export const runtime = "nodejs";
 
@@ -45,6 +45,14 @@ export async function POST(req: Request) {
     const groupDirectory = groups.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name || item.slug), permissions: Object.entries(item.permissions || {}).filter(([, enabled]) => enabled === true).map(([permission]) => permission) }));
 
     const config = await getMailModuleConfig();
+    const identity = await getMailRemoteIdentityConfig();
+    const publicJwk = createPublicKey(identity.privateKey).export({ format: "jwk" });
+    const trustResponse = await fetch(config.baseUrl + "/api/integrations/remote-staff/register-key", {
+      method: "POST", headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({kid: identity.keyId, issuer: identity.issuer, audience: identity.audience, public_jwk: publicJwk}), cache: "no-store",
+    });
+    const trustResult = await trustResponse.json().catch(() => ({}));
+    if (!trustResponse.ok) throw Object.assign(new Error(trustResult.error?.message || trustResult.error || "Could not register the saved Mail System connection."), { status: trustResponse.status });
     const directoryResponse = await fetch(config.baseUrl + "/api/integrations/remote-staff/directory", {
       method: "POST",
       headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json" },
