@@ -1,5 +1,5 @@
 {
-  "name": "billing-mail-configuration-build",
+  "name": "billing-mail-configuration",
   "displayName": "Billing Mail Configuration + Remote Staff",
   "version": "1.0.0",
   "scope": "installed-host-module",
