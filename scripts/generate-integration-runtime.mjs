@@ -4,7 +4,7 @@ import {join,resolve,relative,sep} from "node:path";
 const root=resolve("src/integrations");
 const output=resolve("src/lib/integrations/generated-runtime.ts");
 const idPattern=/^[a-z0-9][a-z0-9-]{1,47}$/;
-const imports=[],entries=[];
+const imports=[],entries=[],routes=new Set();
 try{
  for(const dir of readdirSync(root,{withFileTypes:true})){
   if(!dir.isDirectory()||!idPattern.test(dir.name))continue;
@@ -19,7 +19,9 @@ try{
     const file=resolve(base,target.slice(2));
     if(!file.startsWith(base+sep)||!statSync(file).isFile())throw new Error("Missing integration entrypoint");
     const route=page.route;
-    if(typeof route!=="string"||!route.startsWith("/admin/integrations/")||route.split("/").length!==4)throw new Error("Integration pages must use /admin/integrations/<module-id>");
+    if(route!==`/admin/integrations/${dir.name}`||routes.has(route))throw new Error("Each module must contribute one unique /admin/integrations/<module-id> page");
+    if(typeof page.label!=="string"||!page.label.trim()||typeof page.permission!=="string"||! /^[a-z][a-z0-9_.]+$/.test(page.permission))throw new Error("Invalid page label or permission");
+    routes.add(route);
     const symbol="IntegrationPage"+imports.length;
     imports.push(`import ${symbol} from "${relative(resolve("src/lib/integrations"),file).split(sep).join("/").replace(/\.(tsx|ts|jsx|js)$/,"")}"`);
     entries.push(`  ${JSON.stringify(route)}: { integrationId: ${JSON.stringify(dir.name)}, label: ${JSON.stringify(page.label)}, permission: ${JSON.stringify(page.permission||"integrations.view")}, component: ${symbol} }`);
