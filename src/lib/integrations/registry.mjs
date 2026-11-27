@@ -27,7 +27,7 @@ function normalizeManifest(manifest) {
     billingExtensionPath:typeof manifest.billingExtensionPath==="string"?manifest.billingExtensionPath:"",
     sourceWorkspaceBuildOnly:manifest.sourceWorkspaceBuildOnly===true,hostAdapted:manifest.hostAdapted===true,
     requiredEnvironment:[...manifest.requires],features:Array.isArray(manifest.features)?manifest.features.filter(x=>typeof x==="string"):[],
-    route:`/admin/integrations/${manifest.id}`,entrypoints:Object.freeze({...manifest.entrypoints}),
+    route:pages.length?`/admin/integrations/${manifest.id}`:"",entrypoints:Object.freeze({...manifest.entrypoints}),
     contributions:Object.freeze({adminPages:Object.freeze(pages.map(p=>Object.freeze({...p}))),adminMenu:Object.freeze(menus.map(m=>Object.freeze({...m})))})
   });
 }
