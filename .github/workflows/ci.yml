@@ -60,6 +60,9 @@ jobs:
       - name: Verify integration manager contracts
         run: npm run test:integrations
 
+      - name: Verify staff department hierarchy contracts
+        run: node --test scripts/staff-department-hierarchy.test.mjs
+
       - name: Verify Base updater component selection
         run: |
           node --test scripts/orbitfs-update-targets.test.mjs
