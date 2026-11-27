@@ -6,9 +6,9 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const { db, access } = await requireIntegrationAdmin(req, ["integrations.manage"]);
-    if (!hasIntegrationPermission(access, "integrations.manage")) {
-      throw Object.assign(new Error("Integration management permission required."), { status: 403 });
+    const { db, access } = await requireIntegrationAdmin(req, ["integrations.manage", "staff.manage", "staff.groups.manage", "settings.permissions"]);
+    if (!["integrations.manage", "staff.manage", "staff.groups.manage", "settings.permissions"].some((permission) => hasIntegrationPermission(access, permission))) {
+      throw Object.assign(new Error("Staff or integration management permission required."), { status: 403 });
     }
     const { data: state, error: stateError } = await db.from("app_integrations")
       .select("installed,enabled").eq("integration_id", "mailsystem").maybeSingle();
