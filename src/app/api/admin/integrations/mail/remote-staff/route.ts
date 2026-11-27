@@ -73,10 +73,10 @@ export async function POST(req:Request){
     const person=staff.find((row:any)=>row.external_user_id===userId);
     if(!person)return Response.json({error:"Billing staff record was not found."},{status:404});
 
-    const {data:prior,error:priorError}=await db.from("app_remote_staff_sync_state")
-      .select("source_revision").eq("user_id",userId).maybeSingle();
-    if(priorError)throw Object.assign(new Error(priorError.message),{status:503});
-    const source_revision=Math.max(Date.now(),Number(prior?.source_revision||0)+1);
+    const {data:revisionData,error:revisionError}=await db.rpc("app_mail_next_remote_staff_revision",{p_user_id:userId});
+    if(revisionError)throw Object.assign(new Error(revisionError.message),{status:503});
+    const source_revision=Number(revisionData);
+    if(!Number.isSafeInteger(source_revision)||source_revision<1)throw Object.assign(new Error("Remote Staff revision allocator returned an invalid revision."),{status:500});
     const event_id=randomUUID();
     let result:any;
     if(action==="sync"){
