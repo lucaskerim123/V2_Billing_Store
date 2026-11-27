@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/generate-integration-runtime.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/generate-integration-runtime.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -18,7 +20,7 @@
     "test:update-master-database-readiness": "node --test scripts/update-master-database-readiness.test.mjs",
     "test:product-agnostic": "node --test scripts/product-agnostic-licensing.test.mjs",
     "test:product-store-groups": "node --test scripts/product-store-groups.test.mjs",
-    "test:integrations": "node --test scripts/integration-manager.test.mjs"
+    "test:integrations": "node --test scripts/integration-manager.test.mjs scripts/integration-contributions.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
