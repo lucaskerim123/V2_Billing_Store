@@ -59,7 +59,7 @@ test("host schema starts disabled and enables row-level security on every module
 
 test("module documentation states the host and central service responsibility boundary", async () => {
   const [readme, install, api] = await Promise.all([read("README.md"), read("INSTALL.md"), read("API.md")]);
-  assert.match(readme, /central Mail System.*owns mail transports, domains, sender mailboxes, API credentials/i);
+  assert.match(readme, /central Mail System owns External System credentials\/scopes, sender mailbox assignments, transport/i);
   assert.match(install, /server-only/i);
   assert.match(api, /trusted server-side host code/i);
 });
