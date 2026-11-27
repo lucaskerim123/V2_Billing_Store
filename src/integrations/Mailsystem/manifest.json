@@ -21,7 +21,11 @@
     "remote-login-provisioning",
     "delegated-remote-admin-permissions",
     "remote-user-session-exchange",
-    "manager-configured-encrypted-secrets"
+    "manager-configured-encrypted-secrets",
+    "directory-discovery",
+    "group-permission-mapping",
+    "department-mailbox-mapping",
+    "automatic-revocation"
   ],
   "entrypoints": {
     "server": "./Data/module.ts",
