@@ -15,6 +15,7 @@ export default function IntegrationManagerPage(){
   const sb=useMemo(()=>createClient(),[]);
   const [rows,setRows]=useState<IntegrationRow[]>([]);
   const [canManage,setCanManage]=useState(false);
+  const [counts,setCounts]=useState({installed:0,installable:0});
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState("");
   const [message,setMessage]=useState("");
@@ -32,6 +33,7 @@ export default function IntegrationManagerPage(){
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||"Could not load Integration Manager.");
       setRows(data.integrations||[]);
+      setCounts({installed:Number(data.summary?.installedCount||0),installable:Number(data.summary?.installableCount||0)});
       setCanManage(data.permissions?.canManage===true);
     }catch(error:any){setMessage(error?.message||"Could not load Integration Manager.");}
     finally{setLoading(false);}
@@ -56,7 +58,7 @@ export default function IntegrationManagerPage(){
   return <main style={{maxWidth:1120,margin:"0 auto",padding:"24px 18px 48px",color:"var(--admin-text,inherit)"}}>
     <header style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,flexWrap:"wrap",marginBottom:22}}>
       <div><p style={{fontSize:12,letterSpacing:1.2,opacity:.65,margin:0}}>SYSTEM / EXTENSIONS</p><h1 style={{margin:"6px 0"}}>Integration Manager</h1><p style={{margin:0,opacity:.75}}>Manage separately registered integrations installed in Billing Store.</p></div>
-      <span style={{fontSize:12,opacity:.7}}>Installed: {rows.filter(item=>item.state.installed).length} · Installable: {rows.filter(item=>item.installable).length}</span>
+      <span style={{fontSize:12,opacity:.7}}>Installed: {counts.installed} · Installable: {counts.installable}</span>
     </header>
     {message&&<p role="status" style={{padding:12,border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:8}}>{message}</p>}
     {loading?<p>Loading registered integrations…</p>:rows.length===0?<p>No modules installed or installable. The integration installation folder is empty and ready for a module package.</p>:rows.map(item=>{
