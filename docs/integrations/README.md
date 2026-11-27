@@ -4,8 +4,10 @@ The Integration Manager belongs to V2 Billing Store only. It is a permanent admi
 
 ## Runtime model
 
-- Executable integration code is bundled with the Billing Store application and registered in `src/lib/integrations/registry.mjs`.
-- The registry is a code allowlist. Unknown IDs, unregistered manifests and runtime-uploaded code are not executable.
+- Put each Billing Store integration in `src/integrations/<integration-id>/` at the repository root under `src/` (for example, `src/integrations/mail/`). The folder name must match the manifest `id`.
+- Every integration folder must contain `manifest.json` using the `orbitfs-billing-integration-v1` format. The Integration Manager scans `src/integrations/` at server startup/build import time and automatically lists valid manifests; no separate hard-coded registry entry is needed.
+- The manifest declares display name, version, publisher, required environment variables, features and relative entrypoint paths. Entrypoints must stay inside the integration folder.
+- Discovery reads metadata only. It never dynamically imports or executes code declared by a manifest. Integration code is bundled with the Billing Store application and must be connected through reviewed host-side code/routes before it can run.
 - Install/uninstall changes the persistent registration state. It does not download or execute code.
 - Enable/disable changes runtime availability. Disabling stops Billing Store event dispatch and leaves integration configuration and data intact.
 - A new executable integration is added as a separately maintained module, given a manifest and registry entry, tested, then included in a manually authorised production deployment.
@@ -21,4 +23,4 @@ Live Billing Store database migrations remain manual-only. A source migration co
 
 ## Current registration
 
-The first registered integration is Mail System. Its host-adapted package lives in `src/integrations/mail`. See [Mail integration](./mail.md).
+The first discovered integration is Mail System. Its host-adapted package lives in `src/integrations/mail`. See [Mail integration](./mail.md).
