@@ -33,8 +33,8 @@ export async function PATCH(req:Request){
   if(action==="install"){
    const registration={display_name:manifest.name,version:manifest.version,manifest:{id:manifest.id,publisher:manifest.publisher,distribution:manifest.distribution,entrypoints:manifest.entrypoints,contributions:manifest.contributions,features:manifest.features,requires:manifest.requiredEnvironment},updated_at:new Date().toISOString()};
    const result=current
-    ?await service.from("app_integrations").update(registration).eq("integration_id",id)
-    :await service.from("app_integrations").insert({integration_id:id,...registration,installed:false,enabled:false,config:{}});
+    ?await service!.from("app_integrations").update(registration).eq("integration_id",id)
+    :await service!.from("app_integrations").insert({integration_id:id,...registration,installed:false,enabled:false,config:{}});
    if(result.error)throw Object.assign(new Error(result.error.message),{status:503});
    if(!current){const lookup=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();if(lookup.error)throw Object.assign(new Error(lookup.error.message),{status:503});current=lookup.data;}
   }
