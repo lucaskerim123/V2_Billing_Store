@@ -92,7 +92,7 @@ const productsGroup:NavGroup={
 const licenseSystemGroup:NavGroup={
   label:"License System",
   shortLabel:"License System",
-  match:path=>path.startsWith("/admin/license-controller")||path.startsWith("/admin/licensing")||path.startsWith("/admin/settings/license-master")||path.startsWith("/admin/orbitfs/installations"),
+  match:path=>path.startsWith("/admin/license-controller")||path.startsWith("/admin/licensing")||path.startsWith("/admin/product-licenses")||path.startsWith("/admin/settings/license-master")||path.startsWith("/admin/orbitfs/installations"),
   items:[
     {label:"Licenses",href:"/admin/license-controller",permission:"licenses.manage"},
     {label:"License System & Product Connections",href:"/admin/settings/license-master",permission:"licenses.view"},
@@ -201,9 +201,11 @@ export default function AdminLayoutClient({
           ?"support"
           :activeGroup===productsGroup
             ?"products"
-            :activeGroup===orbitfsGroup
-              ?"orbitfs"
-              :"system";
+            :activeGroup===licenseSystemGroup
+              ?"licenses"
+              :activeGroup===orbitfsGroup
+                ?"orbitfs"
+                :"system";
   const routeKey=adminRouteKey(pathname);
   const v6aExempt=routeKey==="base-deployment"||routeKey==="update-release";
 
