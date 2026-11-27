@@ -3,7 +3,6 @@ import { join, resolve, sep } from "node:path";
 
 const DEFAULT_INTEGRATIONS_DIR = resolve(process.cwd(), "src/integrations");
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,47}$/;
-const ROUTE_PATTERN = /^\/admin\/[a-z0-9\/-]+$/;
 
 function normalizeManifest(manifest) {
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) return null;
