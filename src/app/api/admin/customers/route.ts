@@ -97,8 +97,8 @@ export async function POST(req:Request){
   const {data:profile,error:profileError}=await service.from("user_profiles").update(patch).eq("id",created.user.id).select("id").maybeSingle();
   if(profileError||!profile)return Response.json({error:profileError?.message||"Customer was created but its profile was not provisioned. Contact an administrator."},{status:500});
   await service.from("admin_audit_log").insert({actor_id:user.id,action:"customer.created",target_type:"customer",target_id:created.user.id,detail:{email,source:"admin"}});
-  let welcomeError:string|null=null,setupError:string|null=null;
-  try{await sendAutomation("customer.created",email,{customer_name:patch.display_name},"customer",created.user.id)}catch(e:any){welcomeError=e?.message||String(e)}
-  try{await issuePasswordReset({id:created.user.id,email,name:patch.display_name},new URL(req.url).origin,user.id,(req.headers.get("x-forwarded-for")||"").split(",")[0].trim()||null)}catch(e:any){setupError=e?.message||String(e)}
-  return Response.json({ok:true,id:created.user.id,mail_sent:!setupError,mail_error:setupError,welcome_mail_error:welcomeError});
+  let welcomeEvent:any=null,setupError:string|null=null,setupEvent:any=null;
+  try{welcomeEvent=await sendAutomation("customer.created",email,{customer_name:patch.display_name},"customer",created.user.id)}catch(e:any){setupError=e?.message||String(e)}
+  try{const reset=await issuePasswordReset({id:created.user.id,email,name:patch.display_name},new URL(req.url).origin,user.id,(req.headers.get("x-forwarded-for")||"").split(",")[0].trim()||null);setupEvent=reset.emailEvent||null}catch(e:any){setupError=e?.message||String(e)}
+  return Response.json({ok:true,id:created.user.id,email_events:{customerCreated:welcomeEvent,passwordReset:setupEvent},email_delivery_available:false,...(setupError?{email_event_error:setupError}:{})});
 }
