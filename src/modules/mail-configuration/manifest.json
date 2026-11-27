@@ -6,7 +6,8 @@
   "serverOnly": true,
   "requires": [
     "MAIL_SYSTEM_URL",
-    "MAIL_SYSTEM_API_KEY"
+    "MAIL_SYSTEM_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY"
   ],
   "owns": [
     "templates",
@@ -31,7 +32,8 @@
     "store": "./supabase-store.ts",
     "remoteStaff": "./remote-staff.ts",
     "remoteStaffTypes": "./remote-staff-types.ts",
-    "remoteStaffAdmin": "./remote-staff-admin.tsx"
+    "remoteStaffAdmin": "./remote-staff-admin.tsx",
+    "billingStaffSync": "./billing-sync.ts"
   },
   "features": [
     "template-management",
