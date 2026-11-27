@@ -8,7 +8,8 @@ export const BUILTIN_INTEGRATIONS = Object.freeze([
     distribution: "bundled",
     installable: true,
     sourceRepository: "remipetrovich-design/Mail-system",
-    sourcePath: "mail-configuration-module/Billing",
+    sourcePath: "mail-configuration-module",
+    billingExtensionPath: "mail-configuration-module/Billing",
     sourceWorkspaceBuildOnly: true,
     hostAdapted: true,
     requiredEnvironment: ["MAIL_SYSTEM_URL", "MAIL_SYSTEM_API_KEY"],
@@ -41,6 +42,8 @@ export function validateBuiltinIntegration(manifest) {
     && manifest.version === trusted.version
     && manifest.sourceRepository === trusted.sourceRepository
     && manifest.sourcePath === trusted.sourcePath
+    && manifest.billingExtensionPath === trusted.billingExtensionPath
+    && manifest.sourceWorkspaceBuildOnly === true
     && manifest.distribution === "bundled"
     && manifest.hostAdapted === true;
 }
