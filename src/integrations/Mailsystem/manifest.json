@@ -3,19 +3,12 @@
   "id": "mailsystem",
   "displayName": "Mail System",
   "description": "Mail System connection, sender settings, templates, routing, event triggers and optional Remote Staff integration.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "OrbitFS",
   "distribution": "bundled",
   "installable": true,
   "serverOnly": true,
-  "requires": [
-    "MAIL_SYSTEM_URL",
-    "MAIL_SYSTEM_API_KEY",
-    "MAIL_SYSTEM_REMOTE_ASSERTION_ISSUER",
-    "MAIL_SYSTEM_REMOTE_ASSERTION_AUDIENCE",
-    "MAIL_SYSTEM_REMOTE_ASSERTION_KID",
-    "MAIL_SYSTEM_REMOTE_ASSERTION_PRIVATE_KEY"
-  ],
+  "requires": [],
   "features": [
     "mail-connection",
     "sender-management",
@@ -27,7 +20,8 @@
     "remote-staff-provisioning",
     "remote-login-provisioning",
     "delegated-remote-admin-permissions",
-    "remote-user-session-exchange"
+    "remote-user-session-exchange",
+    "manager-configured-encrypted-secrets"
   ],
   "entrypoints": {
     "server": "./Data/module.ts",
