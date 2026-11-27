@@ -64,3 +64,10 @@ test("Billing Store directory sync detects roles, departments, groups and permis
   assert.match(directoryRoute, /complete_snapshot/);
   assert.doesNotMatch(directoryRoute, /\\n\\s+failures:/, "directory response must use valid TypeScript line breaks, not an escaped newline token");
 });
+
+const accessManager = readFileSync(new URL("../src/integrations/Mailsystem/Data/access-manager.tsx", import.meta.url), "utf8");
+
+test("Mail access manager keeps permission mappings and role options strongly typed", () => {
+  assert.match(accessManager, /new Map<string, string\[\]>\(/);
+  assert.match(accessManager, /new Map<string, Row>\(/);
+});
