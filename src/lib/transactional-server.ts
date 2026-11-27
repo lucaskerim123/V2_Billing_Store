@@ -1,22 +1,20 @@
-import {sendBillingMailEvent} from "@/lib/integrations/mail/server";
+import {getBillingEmailEvent} from "@/lib/billing-email-events";
 
 /**
- * Compatibility entrypoint for existing trusted Billing Store event producers.
- * Templates, recipient resolution, sender routing and delivery are owned by the
- * registered Mail integration. No legacy transport or queue is used.
+ * Billing-owned event publisher boundary.
+ * Business event keys and payload contracts live in Billing Store. Delivery is
+ * intentionally unavailable until a separately installed integration provides
+ * the transport/configuration adapter.
  */
 export async function sendAutomation(
   eventKey:string,
-  to:string,
-  vars:Record<string,string>,
-  relatedType?:string,
-  relatedId?:string
+  _to:string,
+  _vars:Record<string,string>,
+  _relatedType?:string,
+  _relatedId?:string
 ){
-  return sendBillingMailEvent({
-    eventKey,
-    recipient:to,
-    variables:vars,
-    relatedType,
-    relatedId
-  });
+  if(!getBillingEmailEvent(eventKey)){
+    throw new Error("Unknown Billing Store email event: "+eventKey);
+  }
+  return {ok:true,skipped:true as const,reason:"no_email_integration_installed"};
 }
