@@ -71,3 +71,9 @@ test("Mail access manager keeps permission mappings and role options strongly ty
   assert.match(accessManager, /new Map<string, string\[\]>\(/);
   assert.match(accessManager, /new Map<string, Row>\(/);
 });
+
+test("Mail access manager types grouped mailbox rules and normalises mailbox identifiers", () => {
+  assert.match(accessManager, /const existing: Rule = grouped\\.get\\(key\\)/);
+  assert.match(accessManager, /const mailboxId = String\\(row\\.mailbox_id \\|\\| ""\\)/);
+  assert.match(accessManager, /existing\\.mailbox_ids\\.includes\\(mailboxId\\)/);
+});
