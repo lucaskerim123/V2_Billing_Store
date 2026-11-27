@@ -36,9 +36,10 @@ export async function POST(req: Request) {
       deptByUser.set(String(row.user_id), values);
     }
     const groupById = new Map(groups.map((group: any) => [String(group.id), group]));
+    const roleCode = (member: any) => String(member.profile_role || member.primary_role || member.role || "staff").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_");
     const roleRows = [...new Map(members.map((member: any) => {
-      const code = String(member.profile_role || member.primary_role || member.role || "staff").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_");
-      return [code, { code, name: String(member.primary_role || member.role || "Staff") }];
+      const code = roleCode(member);
+      return [code, { code, name: String(member.profile_role || member.primary_role || member.role || "Staff") }];
     })).values()];
     const departmentDirectory = departmentRows.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name) }));
     const groupDirectory = groups.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name || item.slug), permissions: Object.entries(item.permissions || {}).filter(([, enabled]) => enabled === true).map(([permission]) => permission) }));
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
         .map((id) => departmentRows.find((item: any) => String(item.id) === id))
         .filter(Boolean)
         .map((item: any) => String(item.slug || item.id));
-      const role = String(member.primary_role || member.role || "staff").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_");
+      const role = roleCode(member);
       const status = member.status === "disabled" ? "disabled"
         : member.status === "suspended" ? "suspended"
         : member.status === "pending" ? "pending" : "active";
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
     return Response.json({
       ok: failed.length === 0,
       directory: directoryResult.detected,
-      users: { total: outcomes.length, synced: outcomes.length - failed.length, failed: failed.length },
+      users: { total: outcomes.length, synced: outcomes.filter((item) => item.ok).length, failed: outcomes.filter((item) => !item.ok).length },
       disabledRemoteUsers: reconciliation?.disabled_users || 0,
       failures: failed.slice(0, 20),
       event_id: randomUUID(),
