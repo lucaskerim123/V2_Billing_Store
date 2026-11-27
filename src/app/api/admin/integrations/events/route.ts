@@ -1,4 +1,4 @@
-import {BILLING_EMAIL_EVENTS} from "@/lib/billing-email-events";
+import {BILLING_EMAIL_EVENTS} from "@/lib/billing-email-events.mjs";
 import {requireIntegrationAdmin,integrationErrorResponse,hasIntegrationPermission} from "@/lib/integrations/admin-context";
 
 /** Read-only host contract for trusted integrations. Events are defined by Billing Store. */
