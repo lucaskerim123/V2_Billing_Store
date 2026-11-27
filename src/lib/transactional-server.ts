@@ -1,4 +1,4 @@
-import {getBillingEmailEvent} from "@/lib/billing-email-events";
+import {getBillingEmailEvent} from "@/lib/billing-email-events.mjs";
 
 /**
  * Billing-owned event publisher boundary.
