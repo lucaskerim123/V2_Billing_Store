@@ -29,7 +29,7 @@ export async function getMailModuleConfig(): Promise<MailModuleConfig> {
 }
 export async function getMailRemoteIdentityConfig(): Promise<MailRemoteIdentityConfig> {
   const { saved, serviceKey } = await readSavedConfig();
-  if (!saved?.encryptedRemoteIdentity) throw new Error("Remote identity signing credentials must be configured in Mail Settings.");
+  if (!saved?.encryptedRemoteIdentity) throw new Error("Remote login trust is configured automatically in Integration Manager.");
   const value = JSON.parse(decryptSecret(saved.encryptedRemoteIdentity, serviceKey));
   if (!value.issuer || !value.audience || !value.keyId || !value.privateKey) throw new Error("Remote identity signing configuration is incomplete.");
   return value as MailRemoteIdentityConfig;
