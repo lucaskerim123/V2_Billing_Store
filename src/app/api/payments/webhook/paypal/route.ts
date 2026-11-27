@@ -1,6 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {paymentRuntime} from '@/lib/paymentRuntime';
-import {sendPaidLifecycleForInvoice} from '@/lib/mail-lifecycle-server';
+import {sendPaidLifecycleForInvoice} from '@/lib/billing-lifecycle-events';
 import {orbitfsStoreOrigin} from '@/lib/site-origin';
 import {syncPaidOrderToLicenseMaster} from '@/lib/license-master-sync';
 
