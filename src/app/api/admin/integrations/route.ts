@@ -1,4 +1,5 @@
 import {BUILTIN_INTEGRATIONS} from "@/lib/integrations/registry.mjs";
+import {INTEGRATION_MODULE_RUNTIME} from "@/lib/integrations/generated-runtime";
 import {requireIntegrationAdmin,integrationErrorResponse,hasIntegrationPermission} from "@/lib/integrations/admin-context";
 
 export async function GET(req:Request){
@@ -19,6 +20,9 @@ export async function PATCH(req:Request){
     if(!["install","enable","disable","uninstall"].includes(action))return Response.json({error:"Unsupported integration action."},{status:400});
     if(action==="enable"&&!manifest.requiredEnvironment.every((key:string)=>Boolean(process.env[key]?.trim())))return Response.json({error:"Required server environment variables are missing."},{status:409});
     const installed=action!=="uninstall",enabled=action==="enable";
+    const serverEntry=(INTEGRATION_MODULE_RUNTIME as any)[id]?.entrypoints?.server;
+    const hook=action==="install"?serverEntry?.onInstall:action==="enable"?serverEntry?.onEnable:action==="disable"?serverEntry?.onDisable:serverEntry?.onUninstall;
+    if(hook)await hook({integration:{id,name:manifest.name,version:manifest.version},action});
     const {data,error}=await db.rpc("admin_set_integration_state",{p_integration_id:id,p_installed:installed,p_enabled:enabled,p_action:action,p_display_name:manifest.name,p_version:manifest.version});
     if(error)throw Object.assign(new Error(error.message),{status:error.code==="42501"?403:503});
     return Response.json({ok:true,...(data||{})},{headers:{"cache-control":"no-store"}});
