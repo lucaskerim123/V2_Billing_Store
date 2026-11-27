@@ -32,3 +32,34 @@ test("integration manifest advertises remote login and delegated permission feat
   assert.ok(manifest.features.includes("remote-login-provisioning"));
   assert.ok(manifest.features.includes("delegated-remote-admin-permissions"));
 });
+
+const managerPage = readFileSync(new URL("../src/app/admin/integrations/page.tsx", import.meta.url), "utf8");
+const mailSettingsPage = readFileSync(new URL("../src/integrations/Mailsystem/Pages/mail-settings/page.tsx", import.meta.url), "utf8");
+const connectionRoute = readFileSync(new URL("../src/app/api/admin/integrations/[integrationId]/mail-connection/route.ts", import.meta.url), "utf8");
+const directoryRoute = readFileSync(new URL("../src/app/api/admin/integrations/[integrationId]/mail-directory/route.ts", import.meta.url), "utf8");
+
+test("Integration Manager owns Mail System lifecycle, credentials and automatic remote trust setup", () => {
+  assert.match(managerPage, /Mail System Core URL/);
+  assert.match(managerPage, /Save connection & set up trust/);
+  assert.match(managerPage, /Install/);
+  assert.match(managerPage, /Uninstall/);
+  assert.match(connectionRoute, /generateKeyPairSync\("rsa"/);
+  assert.match(connectionRoute, /register-key/);
+  assert.match(connectionRoute, /encryptedRemoteIdentity/);
+});
+
+test("Mail Settings contains working templates and routing UI without core credentials", () => {
+  assert.match(mailSettingsPage, /MailModuleConsole/);
+  assert.doesNotMatch(mailSettingsPage, /privateKey|apiKey|baseUrl/);
+  assert.match(managerPage, /Open Mail Settings/);
+});
+
+test("Billing Store directory sync detects roles, departments, groups and permission flags", () => {
+  assert.match(directoryRoute, /admin_get_staff_snapshot/);
+  assert.match(directoryRoute, /profile_role/);
+  assert.match(directoryRoute, /support_department_staff/);
+  assert.match(directoryRoute, /group_ids/);
+  assert.match(directoryRoute, /permissions: Object\.entries/);
+  assert.match(directoryRoute, /remote-staff\/sync/);
+  assert.match(directoryRoute, /complete_snapshot/);
+});
