@@ -91,13 +91,13 @@ export default function LicenseMasterSettings(){
  return <main className="adminShell orbitPhaseOne orbitProductConnectionsPage">
   <header className="orbitReferenceHero orbitPhaseHero">
    <div>
-    <p className="eyebrow">MY ORBITFS · PRODUCT CONNECTIONS</p>
-    <h1>Product Connections</h1>
+    <p className="eyebrow">LICENSE SYSTEM · AUTHORITY & PRODUCT CONNECTIONS</p>
+    <h1>License System &amp; Product Connections</h1>
     <p className="muted">Billing Store connects commerce products to the canonical License Manager catalogue. Licensing, release, deployment and runtime policy remain authoritative in License Manager.</p>
    </div>
    <div className="orbitReferenceHeroActions">
     <a className="buttonlink secondary" href={masterSettings} target="_blank" rel="noreferrer">Open authoritative settings ↗</a>
-    <Link className="buttonlink secondary" href="/admin/licensing">Authority status</Link>
+    
     <button className="secondary" type="button" onClick={()=>void load({test:true})} disabled={!!busy}>{busy==="test"?"Testing…":"Test connection"}</button>
     <button type="button" onClick={()=>void load()} disabled={!!busy}>{busy==="load"?"Refreshing…":"Refresh"}</button>
    </div>
