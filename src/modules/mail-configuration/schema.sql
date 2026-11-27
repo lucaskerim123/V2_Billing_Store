@@ -103,3 +103,11 @@ alter table app_mail_template_revisions enable row level security;
 alter table app_mail_routes enable row level security;
 alter table app_mail_triggers enable row level security;
 alter table app_mail_settings enable row level security;
+
+-- Monotonic source revision for Billing -> Mail System Remote Staff sync.
+create table if not exists app_mail_remote_staff_sync_state (
+  user_id uuid primary key,
+  source_revision bigint not null default 0 check (source_revision >= 0),
+  updated_at timestamptz not null default now()
+);
+alter table app_mail_remote_staff_sync_state enable row level security;
