@@ -6,9 +6,8 @@ import {join} from "node:path";
 import {BILLING_EMAIL_EVENTS,getBillingEmailEvent} from "../src/lib/billing-email-events.mjs";
 import {BUILTIN_INTEGRATIONS,discoverIntegrations,canRunIntegration} from "../src/lib/integrations/registry.mjs";
 
-test("the Billing Store integration destination contains no installable modules",()=>{
-  assert.deepEqual(BUILTIN_INTEGRATIONS,[]);
-  assert.deepEqual(discoverIntegrations(),[]);
+test("the built-in registry exactly matches packages discovered from src/integrations",()=>{
+  assert.deepEqual(BUILTIN_INTEGRATIONS.map(item=>item.id),discoverIntegrations().map(item=>item.id));
 });
 test("Billing email events are hard-coded independently of installed integrations",()=>{
   const keys=BILLING_EMAIL_EVENTS.map(event=>event.key);
