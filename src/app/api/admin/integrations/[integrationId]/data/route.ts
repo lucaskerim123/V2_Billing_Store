@@ -21,7 +21,8 @@ async function mutateConfig(db:any,integrationId:string,key:string,value:unknown
   if(remove)delete config[key];else config[key]=value;
   const serialized=JSON.stringify(config);
   if(serialized.length>262144)throw Object.assign(new Error("Integration configuration is limited to 256 KB."),{status:413});
-  let query=db.from("app_integrations").update({config,updated_at:new Date().toISOString()}).eq("integration_id",integrationId);
+  const nextUpdatedAt=new Date(Math.max(Date.now(),Date.parse(row.updated_at||"1970-01-01T00:00:00.000Z")+1)).toISOString();
+  let query=db.from("app_integrations").update({config,updated_at:nextUpdatedAt}).eq("integration_id",integrationId);
   if(row.updated_at)query=query.eq("updated_at",row.updated_at);
   const {data,error}=await query.select("updated_at").maybeSingle();
   if(error)throw Object.assign(new Error(error.message),{status:503});
