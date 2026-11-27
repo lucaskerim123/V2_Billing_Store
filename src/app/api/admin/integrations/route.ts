@@ -28,8 +28,9 @@ export async function PATCH(req:Request){
   if(!["install","enable","disable","uninstall"].includes(action))return Response.json({error:"Unsupported integration action."},{status:400});
   let {data:current,error:lookupError}=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();
   if(lookupError)throw Object.assign(new Error(lookupError.message),{status:503});
+  if(action==="install"&&current?.installed)return Response.json({error:"Integration is already installed."},{status:409});
+  const service=(action==="install"||action==="uninstall")?serviceDb():null;
   if(action==="install"){
-   const service=serviceDb();
    const registration={display_name:manifest.name,version:manifest.version,manifest:{id:manifest.id,publisher:manifest.publisher,distribution:manifest.distribution,entrypoints:manifest.entrypoints,contributions:manifest.contributions,features:manifest.features,requires:manifest.requiredEnvironment},updated_at:new Date().toISOString()};
    const result=current
     ?await service.from("app_integrations").update(registration).eq("integration_id",id)
@@ -37,7 +38,6 @@ export async function PATCH(req:Request){
    if(result.error)throw Object.assign(new Error(result.error.message),{status:503});
    if(!current){const lookup=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();if(lookup.error)throw Object.assign(new Error(lookup.error.message),{status:503});current=lookup.data;}
   }
-  if(action==="install"&&current?.installed)return Response.json({error:"Integration is already installed."},{status:409});
   if(action==="enable"&&current?.installed!==true)return Response.json({error:"Install this integration before enabling it."},{status:409});
   if(action==="enable"&&current?.enabled===true)return Response.json({error:"Integration is already enabled."},{status:409});
   if(action==="disable"&&current?.enabled!==true)return Response.json({error:"Integration is not enabled."},{status:409});
@@ -49,8 +49,7 @@ export async function PATCH(req:Request){
   const {data,error}=await db.rpc("admin_set_integration_state",{p_integration_id:id,p_installed:action!=="uninstall",p_enabled:action==="enable",p_action:action});
   if(error)throw Object.assign(new Error(error.message),{status:error.code==="42501"?403:["23505","23514"].includes(error.code)?409:503});
   if(action==="uninstall"){
-   const service=serviceDb();
-   const {error:deleteError}=await service.from("app_integrations").delete().eq("integration_id",id);
+   const {error:deleteError}=await service!.from("app_integrations").delete().eq("integration_id",id);
    if(deleteError)throw Object.assign(new Error("Integration was disabled but its central registration could not be fully removed: "+deleteError.message),{status:503});
   }
   return Response.json({ok:true,...(data||{}),cleaned:action==="uninstall"},{headers:{"cache-control":"no-store"}});
