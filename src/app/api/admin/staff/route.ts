@@ -1,7 +1,6 @@
 import {randomBytes,createHash} from "node:crypto";
 import {sendAutomation} from "@/lib/transactional-server";
 import {createClient} from "@supabase/supabase-js";
-import {syncBillingStaffToMail,syncBillingStaffGroupToMail,terminateBillingStaffInMail} from "@/lib/integrations/mail/staff-lifecycle";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
 const publicKey=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"";
@@ -71,10 +70,8 @@ export async function POST(req:Request){
       const target=String(body.user_id||"");if(!target)return Response.json({error:"Missing staff member."},{status:400});
       const {error}=await db.rpc("admin_remove_staff_member",{p_user_id:target});
       if(error)return Response.json({error:error.message},{status:400});
-      let mailSyncWarning:string|null=null;
-      try{await terminateBillingStaffInMail(db,target)}catch(e:any){mailSyncWarning=e?.message||"Mail Remote Staff termination failed.";console.error("[mail/remote-staff] Termination sync failed:",mailSyncWarning)}
       await staffNotice(target,"staff.access.removed","Staff access removed","Your staff access has been removed. Your customer account remains active.","portal","warning");
-      return Response.json({ok:true,...(mailSyncWarning?{mail_sync_warning:mailSyncWarning}:{})});
+      return Response.json({ok:true});
     }
 
     if(action==="group.create"||action==="group.save"||action==="group.delete"){
@@ -113,9 +110,7 @@ export async function POST(req:Request){
       await audit(db,user.id,"staff.group_updated","staff_group",id,{slug:existing.slug,permission_count:Object.values(permissions).filter(Boolean).length});
       const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
       if(key){const service=createClient(url,key,{auth:{persistSession:false}});const {data:assigned}=await service.from("staff_member_groups").select("user_id").eq("group_id",id);for(const uid of new Set((assigned||[]).map((member:any)=>String(member.user_id))))await staffNotice(uid,"staff.group.permissions_updated","Staff group permissions changed","Your assigned staff group permissions have been updated.","admin","warning");}
-      let mailSyncWarning:string|null=null;
-      try{await syncBillingStaffGroupToMail(db,id)}catch(e:any){mailSyncWarning=e?.message||"Mail Remote Staff group sync failed.";console.error("[mail/remote-staff] Group sync failed:",mailSyncWarning)}
-      return Response.json({ok:true,group:data,...(mailSyncWarning?{mail_sync_warning:mailSyncWarning}:{})});
+      return Response.json({ok:true,group:data});
     }
 
     if(action!=="member.save")return Response.json({error:"Unknown staff action."},{status:400});
@@ -185,8 +180,6 @@ export async function POST(req:Request){
     const {error:departmentSaveError}=await db.rpc("admin_set_staff_departments",{p_user_id:target,p_department_ids:requestedDepartments});
     if(departmentSaveError)return Response.json({error:departmentSaveError.message},{status:400});
     await staffNotice(target,"staff.permissions.changed","Staff permissions updated","Your staff groups or permissions were updated.","admin",groupRows.some((g:any)=>g.slug==="superadmin")?"warning":"info");
-    let mailSyncWarning:string|null=null;
-    try{await syncBillingStaffToMail(db,target)}catch(e:any){mailSyncWarning=e?.message||"Mail Remote Staff sync failed.";console.error("[mail/remote-staff] Staff sync failed:",mailSyncWarning)}
-    return Response.json({ok:true,id:target,result:data,department_ids:requestedDepartments,...(mailSyncWarning?{mail_sync_warning:mailSyncWarning}:{})});
+    return Response.json({ok:true,id:target,result:data,department_ids:requestedDepartments});
   }catch(e:any){return Response.json({error:e.message||"Staff operation failed."},{status:e.status||500})}
 }
