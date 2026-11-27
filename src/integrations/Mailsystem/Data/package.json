@@ -8,77 +8,24 @@
   "main": "./dist/module.js",
   "module": "./dist/module.js",
   "types": "./dist/module.d.ts",
-  "files": [
-    "dist/",
-    "schema.sql",
-    "supabase-functions.sql",
-    "README.md",
-    "INSTALL.md",
-    "INTEGRATION.md",
-    "API.md",
-    "manifest.json"
-  ],
+  "files": ["dist/"],
   "exports": {
-    ".": {
-      "types": "./dist/module.d.ts",
-      "import": "./dist/module.js"
-    },
-    "./client": {
-      "types": "./dist/client.d.ts",
-      "import": "./dist/client.js"
-    },
-    "./config": {
-      "types": "./dist/config.d.ts",
-      "import": "./dist/config.js"
-    },
-    "./types": {
-      "types": "./dist/types.d.ts",
-      "import": "./dist/types.js"
-    },
-    "./configuration": {
-      "types": "./dist/configuration.d.ts",
-      "import": "./dist/configuration.js"
-    },
-    "./renderer": {
-      "types": "./dist/renderer.d.ts",
-      "import": "./dist/renderer.js"
-    },
-    "./routing": {
-      "types": "./dist/routing.d.ts",
-      "import": "./dist/routing.js"
-    },
-    "./admin-ui": {
-      "types": "./dist/admin-ui.d.ts",
-      "import": "./dist/admin-ui.js"
-    },
-    "./console": {
-      "types": "./dist/console.d.ts",
-      "import": "./dist/console.js"
-    },
-    "./supabase-store": {
-      "types": "./dist/supabase-store.d.ts",
-      "import": "./dist/supabase-store.js"
-    },
-    "./server": {
-      "types": "./dist/module.d.ts",
-      "import": "./dist/module.js"
-    },
-    "./remote-staff": {
-      "types": "./dist/remote-staff.d.ts",
-      "import": "./dist/remote-staff.js"
-    },
-    "./remote-staff-types": {
-      "types": "./dist/remote-staff-types.d.ts",
-      "import": "./dist/remote-staff-types.js"
-    },
-    "./remote-staff-admin": {
-      "types": "./dist/remote-staff-admin.d.ts",
-      "import": "./dist/remote-staff-admin.js"
-    }
+    ".": { "types": "./dist/module.d.ts", "import": "./dist/module.js" },
+    "./client": { "types": "./dist/client.d.ts", "import": "./dist/client.js" },
+    "./config": { "types": "./dist/config.d.ts", "import": "./dist/config.js" },
+    "./types": { "types": "./dist/types.d.ts", "import": "./dist/types.js" },
+    "./configuration": { "types": "./dist/configuration.d.ts", "import": "./dist/configuration.js" },
+    "./renderer": { "types": "./dist/renderer.d.ts", "import": "./dist/renderer.js" },
+    "./routing": { "types": "./dist/routing.d.ts", "import": "./dist/routing.js" },
+    "./admin-ui": { "types": "./dist/admin-ui.d.ts", "import": "./dist/admin-ui.js" },
+    "./console": { "types": "./dist/console.d.ts", "import": "./dist/console.js" },
+    "./supabase-store": { "types": "./dist/supabase-store.d.ts", "import": "./dist/supabase-store.js" },
+    "./server": { "types": "./dist/module.d.ts", "import": "./dist/module.js" },
+    "./remote-staff": { "types": "./dist/remote-staff.d.ts", "import": "./dist/remote-staff.js" },
+    "./remote-staff-types": { "types": "./dist/remote-staff-types.d.ts", "import": "./dist/remote-staff-types.js" },
+    "./remote-staff-admin": { "types": "./dist/remote-staff-admin.d.ts", "import": "./dist/remote-staff-admin.js" }
   },
-  "peerDependencies": {
-    "react": ">=18"
-  },
+  "peerDependencies": { "react": ">=18" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
