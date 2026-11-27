@@ -24,12 +24,17 @@ export async function sendAutomation(
   const db=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
   const store=createSupabaseMailModuleStore(db as any);
   const context:Record<string,unknown>={...vars,event_key:eventKey,related_type:relatedType||"",related_id:relatedId||""};
-  return dispatchMailEvent({
-    store,eventKey,context,
-    resolveRecipients:async(mapping,values)=>{
-      const field=typeof mapping.field==="string"?mapping.field:"";
-      const mapped=field?values[field]:null;
-      return typeof mapped==="string"&&mapped.trim()?mapped:to;
-    }
-  });
+  try{
+    return await dispatchMailEvent({
+      store,eventKey,context,
+      resolveRecipients:async(mapping,values)=>{
+        const field=typeof mapping.field==="string"?mapping.field:"";
+        const mapped=field?values[field]:null;
+        return typeof mapped==="string"&&mapped.trim()?mapped:to;
+      }
+    });
+  }catch(error){
+    console.error("[mail-module] Event dispatch failed:",eventKey,error);
+    return {ok:false,skipped:true as const,reason:error instanceof Error?error.message:"mail_delivery_failed"};
+  }
 }
