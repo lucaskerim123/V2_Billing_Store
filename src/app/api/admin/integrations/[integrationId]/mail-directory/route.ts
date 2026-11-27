@@ -115,7 +115,8 @@ export async function POST(req: Request) {
       ok: failed.length === 0,
       directory: directoryResult.detected,
       users: { total: outcomes.length, synced: outcomes.length - failed.length, failed: failed.length },
-      disabledRemoteUsers: reconciliation?.disabled_users || 0,\n      failures: failed.slice(0, 20),
+      disabledRemoteUsers: reconciliation?.disabled_users || 0,
+      failures: failed.slice(0, 20),
       event_id: randomUUID(),
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
