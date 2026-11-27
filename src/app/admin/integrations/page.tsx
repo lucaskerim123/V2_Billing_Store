@@ -5,7 +5,7 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 
 type IntegrationRow={
-  id:string;name:string;description:string;version:string;route:string;
+  id:string;name:string;description:string;version:string;route:string;installable:boolean;
   requiredEnvironment:string[];features:string[];
   state:{installed:boolean;enabled:boolean;version:string;updated_at:string|null};
   configured:boolean;
