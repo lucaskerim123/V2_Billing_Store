@@ -2,16 +2,17 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 
 const DEFAULT_INTEGRATIONS_DIR = resolve(process.cwd(), "src/integrations");
-const ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,47}$/;
+const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{1,47}$/;
+const ENTRYPOINT_PATTERN = /^\.\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9._-]+\.(tsx|ts|jsx|js)$/;
 
 function normalizeManifest(manifest) {
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) return null;
-  if (manifest.format !== "orbitfs-billing-integration-v1" || typeof manifest.id !== "string" || !ID_PATTERN.test(manifest.id)) return null;
+  if (manifest.format !== "orbitfs-billing-integration-v1" || typeof manifest.id !== "string" || !/^[a-z0-9][a-z0-9-]{1,47}$/.test(manifest.id)) return null;
   if (typeof manifest.displayName !== "string" || !manifest.displayName.trim() || typeof manifest.version !== "string" || !manifest.version.trim() || typeof manifest.publisher !== "string" || !manifest.publisher.trim()) return null;
   if (manifest.distribution !== "bundled" || manifest.installable !== true || manifest.serverOnly !== true) return null;
   if (!Array.isArray(manifest.requires) || !manifest.requires.every(item => typeof item === "string" && /^[A-Z][A-Z0-9_]*$/.test(item))) return null;
   if (!manifest.entrypoints || typeof manifest.entrypoints !== "object" || Array.isArray(manifest.entrypoints) || Object.keys(manifest.entrypoints).length===0) return null;
-  for (const [name,target] of Object.entries(manifest.entrypoints)) if (!/^[a-z][A-Za-z0-9]*$/.test(name) || typeof target !== "string" || !/^\.\/[A-Za-z0-9._-]+\.(tsx|ts|jsx|js)$/.test(target) || target.includes("..")) return null;
+  for (const [name,target] of Object.entries(manifest.entrypoints)) if (!/^[a-z][A-Za-z0-9]*$/.test(name) || typeof target !== "string" || !ENTRYPOINT_PATTERN.test(target) || target.includes("..")) return null;
   const contributions=manifest.contributions||{};
   if (typeof contributions !== "object" || Array.isArray(contributions)) return null;
   const pages=Array.isArray(contributions.adminPages)?contributions.adminPages:[];
@@ -31,7 +32,7 @@ function normalizeManifest(manifest) {
   });
 }
 
-/** Scan src/integrations/<id>/manifest.json. Discovery is metadata-only: code is not loaded or run. */
+/** Scan src/integrations/<folder>/manifest.json. Discovery is metadata-only: code is not loaded or run. */
 export function discoverIntegrations(directory=DEFAULT_INTEGRATIONS_DIR){
   let entries;try{entries=readdirSync(directory,{withFileTypes:true});}catch(error){if(error?.code==="ENOENT")return Object.freeze([]);throw error;}
   const found=[],ids=new Set(),root=resolve(directory);
@@ -40,7 +41,7 @@ export function discoverIntegrations(directory=DEFAULT_INTEGRATIONS_DIR){
     const moduleDirectory=resolve(directory,entry.name);if(!moduleDirectory.startsWith(root+sep))continue;
     try{
       const manifestPath=join(moduleDirectory,"manifest.json");if(!statSync(manifestPath).isFile())continue;
-      const manifest=normalizeManifest(JSON.parse(readFileSync(manifestPath,"utf8")));if(!manifest||manifest.id!==entry.name||ids.has(manifest.id))continue;
+      const manifest=normalizeManifest(JSON.parse(readFileSync(manifestPath,"utf8")));if(!manifest||manifest.id.toLowerCase()!==entry.name.toLowerCase()||ids.has(manifest.id))continue;
       const validFiles=Object.values(manifest.entrypoints).every(target=>{const path=resolve(moduleDirectory,target.slice(2));return path.startsWith(moduleDirectory+sep)&&statSync(path).isFile();});
       if(!validFiles)continue;ids.add(manifest.id);found.push(manifest);
     }catch{/* Invalid/incomplete folders are ignored. */}

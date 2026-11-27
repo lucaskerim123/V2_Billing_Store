@@ -1,0 +1,52 @@
+{
+  "format": "orbitfs-billing-integration-v1",
+  "id": "mailsystem",
+  "displayName": "Mail System",
+  "description": "Mail System connection, sender settings, templates, routing, event triggers and optional Remote Staff integration.",
+  "version": "1.0.0",
+  "publisher": "OrbitFS",
+  "distribution": "bundled",
+  "installable": true,
+  "serverOnly": true,
+  "requires": [
+    "MAIL_SYSTEM_URL",
+    "MAIL_SYSTEM_API_KEY"
+  ],
+  "features": [
+    "mail-connection",
+    "sender-management",
+    "template-management",
+    "template-preview",
+    "event-triggers",
+    "conditional-sender-routing",
+    "theme-customization",
+    "remote-staff-provisioning",
+    "remote-user-session-exchange"
+  ],
+  "entrypoints": {
+    "server": "./Data/module.ts",
+    "client": "./Data/client.ts",
+    "store": "./Data/supabase-store.ts",
+    "adminPage": "./Pages/mail-settings/page.tsx",
+    "adminConsole": "./Data/console.tsx",
+    "adminSettings": "./Data/admin-ui.tsx"
+  },
+  "contributions": {
+    "adminPages": [
+      {
+        "label": "Mail Settings",
+        "route": "/admin/integrations/mailsystem",
+        "entrypoint": "adminPage",
+        "permission": "integrations.mail.manage"
+      }
+    ],
+    "adminMenu": [
+      {
+        "label": "Mail Settings",
+        "route": "/admin/integrations/mailsystem",
+        "permission": "integrations.mail.manage",
+        "group": "System"
+      }
+    ]
+  }
+}
