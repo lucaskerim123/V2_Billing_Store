@@ -121,3 +121,25 @@ test("Billing Remote Staff client uses server-side credentials and idempotent li
   assert.match(sdk, /\/api\/integrations\/remote-staff\/terminate/);
   assert.match(sdk, /X-Remote-Actor-Assertion/);
 });
+
+test("customer profile mail endpoint resolves the recipient from the Billing customer record", async () => {
+  const route = await read("../../app/api/admin/customers/[id]/mail/route.ts");
+  assert.match(route, /resolveRecipients:async\(\)=>customer\.email/);
+  assert.doesNotMatch(route, /body\.to|body\.recipient/);
+  assert.match(route, /communications\.mail\.send/);
+});
+
+test("Remote Staff sync derives access codes from Billing staff groups and departments", async () => {
+  const source = await read("billing-sync.ts");
+  assert.match(source, /app_mail_next_remote_staff_revision/);
+  assert.match(source, /group_codes/);
+  assert.match(source, /department_codes/);
+  assert.match(source, /syncRemoteStaff/);
+  assert.match(source, /terminateRemoteStaff/);
+});
+
+test("staff permission editor exposes separate mail management and send capabilities", async () => {
+  const source = await read("../../lib/staff-capabilities.ts");
+  assert.match(source, /communications\.mail\.manage/);
+  assert.match(source, /communications\.mail\.send/);
+});
