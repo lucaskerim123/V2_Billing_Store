@@ -17,6 +17,7 @@ export async function sendPaidLifecycleForInvoice(invoiceId:string){
     .eq("id",invoiceId).maybeSingle();
   if(error)throw new Error("Could not load paid invoice for Mail integration: "+error.message);
   if(!invoice)return {ok:true,skipped:true as const,reason:"invoice_not_found"};
+  if(!invoice.auth_user_id)return {ok:true,skipped:true as const,reason:"invoice_customer_identity_missing"};
 
   const [{data:customer},{data:profile}]=await Promise.all([
     db.from("customers").select("email,name").eq("auth_user_id",invoice.auth_user_id).maybeSingle(),
