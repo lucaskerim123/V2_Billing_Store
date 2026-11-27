@@ -28,13 +28,14 @@ export async function PATCH(req:Request){
   if(!["install","enable","disable","uninstall"].includes(action))return Response.json({error:"Unsupported integration action."},{status:400});
   let {data:current,error:lookupError}=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();
   if(lookupError)throw Object.assign(new Error(lookupError.message),{status:503});
-  if(action==="install"&&!current){
+  if(action==="install"){
    const service=serviceDb();
-   const {error}=await service.from("app_integrations").insert({integration_id:id,display_name:manifest.name,version:manifest.version,installed:false,enabled:false,manifest:{id:manifest.id,publisher:manifest.publisher,distribution:manifest.distribution,entrypoints:manifest.entrypoints,contributions:manifest.contributions,features:manifest.features,requires:manifest.requiredEnvironment},config:{}});
-   if(error)throw Object.assign(new Error(error.message),{status:503});
-   const result=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();
+   const registration={display_name:manifest.name,version:manifest.version,manifest:{id:manifest.id,publisher:manifest.publisher,distribution:manifest.distribution,entrypoints:manifest.entrypoints,contributions:manifest.contributions,features:manifest.features,requires:manifest.requiredEnvironment},updated_at:new Date().toISOString()};
+   const result=current
+    ?await service.from("app_integrations").update(registration).eq("integration_id",id)
+    :await service.from("app_integrations").insert({integration_id:id,...registration,installed:false,enabled:false,config:{}});
    if(result.error)throw Object.assign(new Error(result.error.message),{status:503});
-   current=result.data;
+   if(!current){const lookup=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();if(lookup.error)throw Object.assign(new Error(lookup.error.message),{status:503});current=lookup.data;}
   }
   if(action==="install"&&current?.installed)return Response.json({error:"Integration is already installed."},{status:409});
   if(action==="enable"&&current?.installed!==true)return Response.json({error:"Install this integration before enabling it."},{status:409});
