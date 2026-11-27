@@ -39,7 +39,6 @@ const permissionAliases:Record<string,string[]>={
   "settings.view":["settings.view","settings.general"],
   "analytics.view":["analytics.view"],
   "audit.view":["audit.view"],
-  "mail.access":["mail.view","mail.admin","mail.admin.send","mail.settings","mail.templates","mail.queue.view","mail.queue.manage"]
 };
 
 const billingGroup:NavGroup={
