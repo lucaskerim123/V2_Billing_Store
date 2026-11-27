@@ -1,5 +1,6 @@
 import {randomBytes,createHash} from "node:crypto";
-import {sendAutomation} from "@/lib/transactional-server";
+import {createSupabaseMailModuleStore} from "@/modules/mail-configuration/supabase-store";
+import {sendConfiguredMail} from "@/modules/mail-configuration/module";
 import {syncBillingRemoteStaff,terminateBillingRemoteStaff} from "@/modules/mail-configuration/billing-sync";
 import {createClient} from "@supabase/supabase-js";
 
@@ -151,8 +152,8 @@ export async function POST(req:Request){
       try{
         const origin=new URL(req.url).origin;
         const invitationUrl=`${origin}/portal/staff-invite?token=${encodeURIComponent(tokenValue)}`;
-        const delivery=await sendAutomation("staff.invite",email,{invite_url:invitationUrl},"staff_invitation",pending.id);
-        if("skipped" in delivery && delivery.skipped)throw new Error("Staff invite automation was skipped; no email was sent.");
+        const mailStore=createSupabaseMailModuleStore(service as any);
+        await sendConfiguredMail({store:mailStore,templateKey:"staff.invite",context:{invite_url:invitationUrl,invite_email:email},resolveRecipients:async()=>email});
       }catch(e:any){
         await service.from("staff_invitations").delete().eq("id",pending.id);
         return Response.json({error:e?.message||"Invitation email failed."},{status:502});
