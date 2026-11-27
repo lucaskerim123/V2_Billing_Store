@@ -36,7 +36,7 @@ export default function RemoteStaffSyncPanel(){
     if(actionName==="sync"){if(data.result?.skipped)throw new Error(data.result.reason||"Remote Staff sync is not configured.");return data.result as RemoteStaffSyncResult;}
     await load();
   }
-  if(loading)return <div className="panel"><h2>Remote Staff</h2><p className="muted">Loading Billing employee records…</p></section>;
+  if(loading)return <section className="panel"><h2>Remote Staff</h2><p className="muted">Loading Billing employee records…</p></section>;
   return <section className="panel">
     <div className="panelTitle"><div><p className="eyebrow">DELEGATED ACCESS</p><h2>Remote Staff synchronisation</h2><p className="muted">Billing remains the source of truth for employees, roles, groups and departments. Mail System applies only the mappings and capability ceilings approved for this External System.</p></div><button type="button" className="secondary" onClick={()=>void load()}>Refresh</button></div>
     <RemoteStaffAdmin staff={staff} canManage onSync={person=>action("sync",person) as Promise<RemoteStaffSyncResult>} onTerminate={person=>action("terminate",person).then(()=>undefined)}/>
