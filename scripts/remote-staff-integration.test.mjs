@@ -62,4 +62,5 @@ test("Billing Store directory sync detects roles, departments, groups and permis
   assert.match(directoryRoute, /permissions: Object\.entries/);
   assert.match(directoryRoute, /remote-staff\/sync/);
   assert.match(directoryRoute, /complete_snapshot/);
+  assert.doesNotMatch(directoryRoute, /\\n\\s+failures:/, "directory response must use valid TypeScript line breaks, not an escaped newline token");
 });
