@@ -19,6 +19,7 @@ async function context(req:Request){
   return {token,db,user,access:(access||{}) as Access};
 }
 
+const GROUP_RANKS:Record<string,number>={support:1,"customer-service-officer":2,"senior-support":3,"customer-service-supervisor":4,"customer-service-manager":5,"operations-manager":6,admin:7,developer:8,superadmin:9};
 function cleanPermissions(v:any){const out:Record<string,boolean>={};if(v&&typeof v==="object")for(const [k,x] of Object.entries(v))if(typeof x==="boolean"&&!k.startsWith("mail."))out[k]=x;return out}
 function slugify(v:string){return v.trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)}
 
@@ -54,20 +55,21 @@ export async function GET(req:Request){
     const [{data,error},{data:departments,error:de},{data:deptStaff,error:dse}]=await Promise.all([
       db.rpc("admin_get_staff_snapshot"),
       db.from("support_departments").select("id,name,slug,description,enabled,min_support_rank,sort_order").eq("enabled",true).order("sort_order").order("name"),
-      db.from("support_department_staff").select("department_id,user_id")
+      db.from("support_department_staff").select("department_id,user_id,position_rank")
     ]);
     if(error)return Response.json({error:error.message},{status:400});
     if(de)return Response.json({error:de.message},{status:400});
     if(dse)return Response.json({error:dse.message},{status:400});
     const snap:any=data||{members:[],groups:[],availableCustomers:[],can:{}};
-    snap.groups=(snap.groups||[]).map((group:any)=>({...group,permissions:cleanPermissions(group.permissions)}));
+    snap.groups=(snap.groups||[]).map((group:any)=>({...group,rank:GROUP_RANKS[group.slug]||0,permissions:cleanPermissions(group.permissions)}));
     const byUser=new Map<string,string[]>();
-    for(const row of deptStaff||[]){const arr=byUser.get(String(row.user_id))||[];arr.push(String(row.department_id));byUser.set(String(row.user_id),arr)}
+    const positionsByUser=new Map<string,Record<string,number>>();
+    for(const row of deptStaff||[]){const arr=byUser.get(String(row.user_id))||[];arr.push(String(row.department_id));byUser.set(String(row.user_id),arr);if(row.position_rank!=null){const positions=positionsByUser.get(String(row.user_id))||{};positions[String(row.department_id)]=Number(row.position_rank);positionsByUser.set(String(row.user_id),positions)}}
     const depMap=new Map((departments||[]).map((d:any)=>[String(d.id),d]));
     snap.members=(snap.members||[]).map((m:any)=>{
       const department_ids=byUser.get(String(m.user_id))||[];
       const department_names=department_ids.map(id=>depMap.get(id)?.name).filter(Boolean);
-      return {...m,department_ids,department_names,primary_department_id:department_ids[0]||""};
+      return {...m,department_ids,department_names,department_positions:positionsByUser.get(String(m.user_id))||{},primary_department_id:department_ids[0]||""};
     });
     snap.departments=departments||[];
     return Response.json(snap);
@@ -137,8 +139,12 @@ export async function POST(req:Request){
     if(!requestedGroups.length)return Response.json({error:"Choose at least one staff group."},{status:400});
     const {data:groupRows,error:ge}=await db.from("staff_groups").select("id,slug,name").in("id",requestedGroups);
     if(ge||!groupRows||groupRows.length!==requestedGroups.length)return Response.json({error:ge?.message||"One or more staff groups are invalid."},{status:400});
-    if(groupRows.some((g:any)=>g.slug==="superadmin")&&!allowed(access,"settings.permissions"))return Response.json({error:"Only permission administrators can assign Superadmin."},{status:403});
+    if(groupRows.some((g:any)=>g.slug==="superadmin")&&!allowed(access,"settings.permissions"))return Response.json({error:"Only permission administrators can assign Chief Executive Officer."},{status:403});
 
+    const requestedDepartments:string[]=[...new Set<string>((Array.isArray(body.department_ids)?body.department_ids:[]).map(String).filter(Boolean))];
+    const requestedPositions:Record<string,number>={};
+    if(body.department_positions!=null&&(typeof body.department_positions!=="object"||Array.isArray(body.department_positions)))return Response.json({error:"Invalid department positions."},{status:400});
+    for(const [id,rank] of Object.entries(body.department_positions||{})){if(!requestedDepartments.includes(id)||typeof rank!=="number"||!Number.isInteger(rank)||rank<1||rank>5||!groupRows.some((g:any)=>GROUP_RANKS[g.slug]===rank))return Response.json({error:"Each department position must match a selected staff group."},{status:400});requestedPositions[id]=rank;}
     const target=String(body.existing_user_id||body.user_id||"");
     // New staff membership must be accepted by email, never granted on invitation.
     const {data:existingStaff}=target?await db.from("staff_members").select("user_id").eq("user_id",target).maybeSingle():{data:null};
@@ -156,13 +162,14 @@ export async function POST(req:Request){
       if(!email||!email.includes("@"))return Response.json({error:"Valid recipient email required."},{status:400});
       const tokenValue=randomBytes(32).toString("hex");
       const tokenHash=createHash("sha256").update(tokenValue).digest("hex");
-      const requestedDepartments=[...new Set<string>((Array.isArray(body.department_ids)?body.department_ids:[]).map(String).filter(Boolean))];
+      const {error:positionError}=await service.rpc("validate_staff_department_positions",{p_group_ids:requestedGroups,p_department_ids:requestedDepartments,p_positions:requestedPositions});
+      if(positionError)return Response.json({error:positionError.message},{status:400});
       const primaryDepartment=requestedDepartments.includes(String(body.primary_department_id||""))?String(body.primary_department_id):requestedDepartments[0]||null;
       const {data:pending,error:pendingError}=await service.from("staff_invitations").insert({
         email,user_id:target||null,token_hash:tokenHash,group_ids:requestedGroups,
         primary_group_id:requestedGroups.includes(String(body.primary_group_id||""))?String(body.primary_group_id):requestedGroups[0],
         title:String(body.title||""),staff_notes:String(body.staff_notes||""),
-        department_ids:requestedDepartments,primary_department_id:primaryDepartment,created_by:user.id
+        department_ids:requestedDepartments,department_positions:requestedPositions,primary_department_id:primaryDepartment,created_by:user.id
       }).select("id").single();
       if(pendingError||!pending)return Response.json({error:pendingError?.message||"Unable to create invitation."},{status:400});
       try{
@@ -177,7 +184,6 @@ export async function POST(req:Request){
       await audit(db,user.id,"staff.invitation_sent","staff_invitation",pending.id,{email,group_count:requestedGroups.length});
       return Response.json({ok:true,pending:true,message:"Invitation emailed. Staff permissions activate only after acceptance."});
     }
-    const requestedDepartments:string[]=[...new Set<string>((Array.isArray(body.department_ids)?body.department_ids:[]).map((x:any)=>String(x)).filter(Boolean))];
     let departmentName="";
     if(requestedDepartments.length){
       const {data:departmentRows,error:dve}=await db.from("support_departments").select("id,name").in("id",requestedDepartments).eq("enabled",true);
@@ -186,18 +192,19 @@ export async function POST(req:Request){
       departmentName=departmentRows.find((d:any)=>String(d.id)===primaryDepartment)?.name||departmentRows[0]?.name||"";
     }
     const primary=requestedGroups.includes(String(body.primary_group_id||""))?String(body.primary_group_id):requestedGroups[0];
-    const {data,error}=await db.rpc("admin_save_staff_member",{
+    const {data,error}=await db.rpc("admin_save_staff_member_with_departments",{
       p_user_id:target,
       p_title:String(body.title||""),
       p_department:departmentName,
       p_staff_notes:String(body.staff_notes||""),
       p_status:body.status==="disabled"?"disabled":"active",
       p_group_ids:requestedGroups,
-      p_primary_group_id:primary||null
+      p_primary_group_id:primary||null,
+      p_department_ids:requestedDepartments,
+      p_department_positions:requestedPositions,
+      p_employment_type:String(body.employment_type||"full_time")
     });
     if(error)return Response.json({error:error.message},{status:400});
-    const {error:departmentSaveError}=await db.rpc("admin_set_staff_departments",{p_user_id:target,p_department_ids:requestedDepartments});
-    if(departmentSaveError)return Response.json({error:departmentSaveError.message},{status:400});
     await staffNotice(target,"staff.permissions.changed","Staff permissions updated","Your staff groups or permissions were updated.","admin",groupRows.some((g:any)=>g.slug==="superadmin")?"warning":"info");
     await syncMailDirectoryAfterStaffChange(req);
     return Response.json({ok:true,id:target,result:data,department_ids:requestedDepartments});
