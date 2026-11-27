@@ -49,6 +49,8 @@ export async function PATCH(req:Request){
   const {data,error}=await db.rpc("admin_set_integration_state",{p_integration_id:id,p_installed:action!=="uninstall",p_enabled:action==="enable",p_action:action});
   if(error)throw Object.assign(new Error(error.message),{status:error.code==="42501"?403:["23505","23514"].includes(error.code)?409:503});
   if(action==="uninstall"){
+   const {error:clearError}=await service!.from("app_integrations").update({config:{},enabled:false,installed:false,updated_at:new Date().toISOString()}).eq("integration_id",id);
+   if(clearError)throw Object.assign(new Error("Integration was disabled but its central configuration could not be cleared: "+clearError.message),{status:503});
    const {error:deleteError}=await service!.from("app_integrations").delete().eq("integration_id",id);
    if(deleteError)throw Object.assign(new Error("Integration was disabled but its central registration could not be fully removed: "+deleteError.message),{status:503});
   }
