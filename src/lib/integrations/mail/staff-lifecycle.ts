@@ -96,7 +96,7 @@ export async function terminateBillingStaffInMail(db:any,userId:string){
 export async function syncBillingStaffGroupToMail(db:any,groupId:string){
   const {data:rows,error}=await db.from("staff_member_groups").select("user_id").eq("group_id",groupId);
   if(error)throw new Error("Could not load staff group members for Mail sync: "+error.message);
-  const ids=[...new Set((rows||[]).map((row:any)=>String(row.user_id)))];
+  const ids: string[] = Array.from(new Set<string>((rows || []).map((row: any): string => String(row.user_id))));
   const results:any[]=[];
   const failures:string[]=[];
   for(const userId of ids){
