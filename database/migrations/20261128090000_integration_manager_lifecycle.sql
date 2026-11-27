@@ -52,6 +52,12 @@ begin
     or (jsonb_typeof(v_permissions) = 'array' and v_permissions ? 'integrations.manage')
     or v_permissions ? '*';
   if not v_allowed then raise exception 'Integration Manager permission required' using errcode = '42501'; end if;
+  select installed,enabled into v_current from public.app_integrations where integration_id=p_integration_id for update;
+  v_exists := found;
+  if p_action='install' and v_exists and v_current.installed then raise exception 'Integration is already installed' using errcode = '23505'; end if;
+  if p_action='enable' and (not v_exists or not v_current.installed or v_current.enabled) then raise exception 'Integration must be installed and disabled before enabling' using errcode = '23514'; end if;
+  if p_action='disable' and (not v_exists or not v_current.installed or not v_current.enabled) then raise exception 'Integration must be enabled before disabling' using errcode = '23514'; end if;
+  if p_action='uninstall' and (not v_exists or not v_current.installed) then raise exception 'Integration is not installed' using errcode = '23514'; end if;
   if p_action = 'uninstall' then
     delete from public.app_integrations where integration_id = p_integration_id;
     return jsonb_build_object('ok',true,'integration_id',p_integration_id,'action',p_action,'installed',false,'enabled',false,'cleaned',true);
