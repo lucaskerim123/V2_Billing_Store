@@ -64,3 +64,17 @@ revoke all on function public.app_mail_save_template_with_revision(jsonb) from p
 revoke all on function public.app_mail_restore_template_revision(uuid,integer) from public;
 grant execute on function public.app_mail_save_template_with_revision(jsonb) to authenticated, service_role;
 grant execute on function public.app_mail_restore_template_revision(uuid,integer) to authenticated, service_role;
+
+create or replace function public.app_mail_next_remote_staff_revision(p_user_id uuid)
+returns bigint language plpgsql security definer set search_path=public as $$
+declare v_revision bigint;
+begin
+  if p_user_id is null then raise exception 'Staff user is required'; end if;
+  insert into public.app_mail_remote_staff_sync_state(user_id,source_revision) values(p_user_id,1)
+  on conflict(user_id) do update set source_revision=public.app_mail_remote_staff_sync_state.source_revision+1,updated_at=now()
+  returning source_revision into v_revision;
+  return v_revision;
+end;
+$$;
+revoke all on function public.app_mail_next_remote_staff_revision(uuid) from public,anon,authenticated;
+grant execute on function public.app_mail_next_remote_staff_revision(uuid) to service_role;
