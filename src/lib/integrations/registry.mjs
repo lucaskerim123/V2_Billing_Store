@@ -16,7 +16,7 @@ function normalizeManifest(manifest) {
   if (!Array.isArray(manifest.requires) || !manifest.requires.every((item) => typeof item === "string" && /^[A-Z][A-Z0-9_]*$/.test(item))) return null;
   if (!manifest.entrypoints || typeof manifest.entrypoints !== "object" || Array.isArray(manifest.entrypoints)) return null;
   for (const [name, target] of Object.entries(manifest.entrypoints)) {
-    if (!/^[a-z][A-Za-z0-9]*$/.test(name) || typeof target !== "string" || !target.startsWith("./") || target.includes("..") || target.includes("\\\\")) return null;
+    if (!/^[a-z][A-Za-z0-9]*$/.test(name) || typeof target !== "string" || !target.startsWith("./") || target.includes("..") || target.includes("\\")) return null;
   }
   return Object.freeze({
     id: manifest.id,
