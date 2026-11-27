@@ -22,13 +22,13 @@ export class MailSystemApiError extends Error {
   }
 }
 
-async function call<T>(path: string, init: RequestInit = {}, config = getMailModuleConfig()): Promise<T> {
+async function call<T>(path: string, init: RequestInit = {}, config = getMailModuleConfig(), bearerToken = config.apiKey): Promise<T> {
   let response: Response;
   try {
     response = await fetch(config.baseUrl + path, {
       ...init,
       headers: {
-        Authorization: "Bearer " + config.apiKey,
+        Authorization: "Bearer " + bearerToken,
         ...(init.body ? { "Content-Type": "application/json" } : {}),
         ...init.headers,
       },
