@@ -57,6 +57,9 @@ jobs:
       - name: Verify product-independent licensing contracts
         run: npm run test:product-agnostic
 
+      - name: Verify integration manager contracts
+        run: npm run test:integrations
+
       - name: Verify Base updater component selection
         run: |
           node --test scripts/orbitfs-update-targets.test.mjs
