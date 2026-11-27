@@ -249,11 +249,13 @@ export default function AdminLayoutClient({
       const {data:identity}=await sb.from("app_settings").select("key,value").eq("category","identity");
       const id=Object.fromEntries((identity||[]).map((x:any)=>[x.key.split(".").pop(),x.value]));
       setSiteTitle(id.admin_name||id.site_name||"OrbitFS");
-      const {data:{session}}=await sb.auth.getSession();
-      if(session?.access_token){
-        const response=await fetch("/api/admin/integrations",{headers:{authorization:`Bearer ${session.access_token}`},cache:"no-store"});
-        if(response.ok){const payload=await response.json();if(live)setIntegrationMenu((payload.menu||[]).map((item:any)=>({label:item.label,href:item.route,permission:item.permission})));}
-      }
+      try{
+        const {data:{session}}=await sb.auth.getSession();
+        if(session?.access_token){
+          const response=await fetch("/api/admin/integrations",{headers:{authorization:`Bearer ${session.access_token}`},cache:"no-store"});
+          if(response.ok){const payload=await response.json();if(live)setIntegrationMenu((payload.menu||[]).map((item:any)=>({label:item.label,href:item.route,permission:item.permission})));}
+        }
+      }catch{/* Navigation contributions are optional; core admin navigation must still load. */}
       setReady(true);
     })();
     return()=>{live=false};
