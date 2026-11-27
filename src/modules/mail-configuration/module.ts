@@ -35,6 +35,7 @@ export async function sendConfiguredMail(input: {
   routeKey?: string | null;
   context: Record<string, unknown>;
   resolveRecipients: (context: Record<string, unknown>) => Promise<string | string[]>;
+  actorSessionToken?: string;
 }) {
   const settings = await input.store.getSettings();
   if (!settings.enabled) throw new Error("Mail module is disabled for this application.");
@@ -78,7 +79,7 @@ export async function sendConfiguredMail(input: {
     text: rendered.text,
     html: rendered.html,
     from_address: selection.sender,
-  });
+  }, undefined, input.actorSessionToken);
 }
 
 export async function dispatchMailEvent(input: {
@@ -89,6 +90,7 @@ export async function dispatchMailEvent(input: {
     mapping: Record<string, unknown>,
     context: Record<string, unknown>,
   ) => Promise<string | string[]>;
+  actorSessionToken?: string;
 }) {
   const settings = await input.store.getSettings();
   if (!settings.enabled) return { skipped: true as const, reason: "Module disabled" };
@@ -102,6 +104,7 @@ export async function dispatchMailEvent(input: {
     routeKey: trigger.route_key,
     context: input.context,
     resolveRecipients: (context) => input.resolveRecipients(trigger.recipient_mapping, context),
+    actorSessionToken: input.actorSessionToken,
   });
 }
 
