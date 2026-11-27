@@ -100,5 +100,5 @@ export async function POST(req:Request){
   let welcomeEvent:any=null,setupError:string|null=null,setupEvent:any=null;
   try{welcomeEvent=await sendAutomation("customer.created",email,{customer_name:patch.display_name},"customer",created.user.id)}catch(e:any){setupError=e?.message||String(e)}
   try{const reset=await issuePasswordReset({id:created.user.id,email,name:patch.display_name},new URL(req.url).origin,user.id,(req.headers.get("x-forwarded-for")||"").split(",")[0].trim()||null);setupEvent=reset.emailEvent||null}catch(e:any){setupError=e?.message||String(e)}
-  return Response.json({ok:true,id:created.user.id,email_events:{customerCreated:welcomeEvent,passwordReset:setupEvent},email_delivery_available:false,...(setupError?{email_event_error:setupError}:{})});
+  return Response.json({ok:true,id:created.user.id,email_events:{customerCreated:welcomeEvent,passwordReset:setupEvent},email_delivery_available:welcomeEvent?.skipped!==true&&setupEvent?.skipped!==true,...(setupError?{email_event_error:setupError}:{})});
 }
