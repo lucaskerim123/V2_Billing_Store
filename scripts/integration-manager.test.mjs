@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {
   BUILTIN_INTEGRATIONS,
   canRunIntegration,
@@ -22,6 +23,8 @@ test("Billing Mail integration is registered as a bundled host-adapted module", 
 test("only the hard-coded trusted integration manifest is accepted", () => {
   const mail = getBuiltinIntegration("mail");
   assert.equal(validateBuiltinIntegration(mail), true);
+  const manifest = JSON.parse(readFileSync(new URL("../src/integrations/mail/manifest.json", import.meta.url), "utf8"));
+  assert.equal(validateBuiltinIntegration(manifest), true);
   assert.equal(validateBuiltinIntegration({ ...mail, publisher: "untrusted" }), false);
   assert.equal(validateBuiltinIntegration({ ...mail, sourceRepository: "other/repo" }), false);
   assert.equal(validateBuiltinIntegration({ ...mail, id: "unknown" }), false);
