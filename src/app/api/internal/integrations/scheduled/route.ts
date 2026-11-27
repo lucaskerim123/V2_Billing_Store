@@ -1,6 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
 import {INTEGRATION_MODULE_RUNTIME} from "@/lib/integrations/generated-runtime";
-import {BUILTIN_INTEGRATIONS,canRunIntegration} from "@/lib/integrations/registry";
+import {BUILTIN_INTEGRATIONS,canRunIntegration} from "@/lib/integrations/runtime";
 
 export const dynamic="force-dynamic";
 export async function GET(req:Request){
@@ -12,7 +12,7 @@ export async function GET(req:Request){
  const db=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
  const {data:states,error}=await db.from("app_integrations").select("integration_id,installed,enabled").eq("installed",true).eq("enabled",true);
  if(error)return Response.json({error:"Unable to load enabled integrations."},{status:503});
- const results=[];
+ const results:Array<{id:string;ok:boolean;error?:string}>=[];
  for(const state of states||[]){
   if(!canRunIntegration(state))continue;
   const manifest=BUILTIN_INTEGRATIONS.find(item=>item.id===state.integration_id);
