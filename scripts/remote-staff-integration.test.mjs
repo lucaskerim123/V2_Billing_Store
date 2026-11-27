@@ -77,3 +77,11 @@ test("Mail access manager types grouped mailbox rules and normalises mailbox ide
   assert.match(accessManager, /const mailboxId = String\(row\.mailbox_id \|\| ""\)/);
   assert.match(accessManager, /existing\.mailbox_ids\.includes\(mailboxId\)/);
 });
+
+
+test("directory catalogue and staff sync use the same canonical profile role", () => {
+  assert.match(directoryRoute, /const roleCode = .*member\.profile_role/);
+  assert.match(directoryRoute, /const code = roleCode\(member\)/);
+  assert.match(directoryRoute, /const role = roleCode\(member\)/);
+  assert.match(directoryRoute, /role_codes: \[role\]/);
+});
