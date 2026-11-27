@@ -5,7 +5,6 @@ import {useEffect,useMemo,useState} from "react";
 import {usePathname} from "next/navigation";
 import {createClient} from "@/lib/supabase";
 import SuperadminDeleteBar from "@/components/SuperadminDeleteBar";
-import AdminRecordQuickSend from "@/components/AdminRecordQuickSend";
 import AdminGuestSupportContext from "@/components/AdminGuestSupportContext";
 import AdminNotifications from "@/components/AdminNotifications";
 import ThemeRuntime from "@/components/ThemeRuntime";
@@ -287,7 +286,6 @@ export default function AdminLayoutClient({
             <span>Source</span>
             <strong>{githubProfile==="fallback"?"Fallback":githubProfile==="primary"?"Primary":"Unknown"}</strong>
           </div>
-          {allowed(permissions,"mail.access")&&<Link className="adminV6UtilityLink" href="/mail">Mail (WIP)</Link>}
           <Link className="adminV6UtilityLink" href="/portal">Portal</Link>
           <AdminNotifications/>
           <details className="adminV6Account">
@@ -320,7 +318,6 @@ export default function AdminLayoutClient({
 
     <main className="masterContent adminV6Content">{children}</main>
     <AdminGuestSupportContext/>
-    <AdminRecordQuickSend/>
     <SuperadminDeleteBar role={role}/>
   </div>;
 }
