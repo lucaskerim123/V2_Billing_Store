@@ -55,7 +55,7 @@ export async function sendBillingMailEvent(input:SendMailEventInput){
   }
 
   try{
-    const store=createSupabaseMailModuleStore(db);
+    const store=createSupabaseMailModuleStore(db as any);
     const result=await dispatchMailEvent({
       store,
       eventKey:input.eventKey,
