@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     }
     const groupById = new Map(groups.map((group: any) => [String(group.id), group]));
     const roleRows = [...new Map(members.map((member: any) => {
-      const code = String(member.primary_role || member.role || "staff").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_");
+      const code = String(member.profile_role || member.primary_role || member.role || "staff").trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_");
       return [code, { code, name: String(member.primary_role || member.role || "Staff") }];
     })).values()];
     const departmentDirectory = departmentRows.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name) }));
