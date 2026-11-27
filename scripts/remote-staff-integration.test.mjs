@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../src/integrations/Mailsystem/Data/remote-staff.ts", import.meta.url), "utf8");
-const moduleSource = readFileSync(new URL("../src/integrations/Mailsystem/Data/module.ts", import.meta.url), "utf8");\nconst typesSource = readFileSync(new URL("../src/integrations/Mailsystem/Data/remote-staff-types.ts", import.meta.url), "utf8");
+const moduleSource = readFileSync(new URL("../src/integrations/Mailsystem/Data/module.ts", import.meta.url), "utf8");
+const typesSource = readFileSync(new URL("../src/integrations/Mailsystem/Data/remote-staff-types.ts", import.meta.url), "utf8");
 const manifest = JSON.parse(readFileSync(new URL("../src/integrations/Mailsystem/manifest.json", import.meta.url), "utf8"));
 
 test("remote login provisioning requires an active, fully mapped remote identity", () => {
@@ -13,9 +14,9 @@ test("remote login provisioning requires an active, fully mapped remote identity
   assert.match(source, /exchangeRemoteIdentity\(assertion\)/);
 });
 
-test("remote actor assertions are short-lived RS256 assertions with configured issuer and audience", () => {
+test("remote actor assertions are short-lived RS256 assertions with manager-configured issuer and audience", () => {
   assert.match(source, /createSign\("RSA-SHA256"\)/);
-  assert.match(source, /MAIL_SYSTEM_REMOTE_ASSERTION_PRIVATE_KEY/);
+  assert.match(source, /getMailRemoteIdentityConfig/);
   assert.match(source, /exp: nowSeconds \+ 120/);
   assert.match(source, /jti: randomUUID\(\)/);
 });
