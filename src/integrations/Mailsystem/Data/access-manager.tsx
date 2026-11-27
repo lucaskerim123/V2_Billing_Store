@@ -13,8 +13,15 @@ function groupMappings(rows: Row[]): Rule[] {
     const selector_code = row.external_group_code || row.external_department_code || row.external_role_code;
     if (!selector_code) continue;
     const key = [selector_type, selector_code, row.access_profile_id].join("|");
-    const existing = grouped.get(key) || { selector_type, selector_code, access_profile_id: row.access_profile_id, mailbox_ids: [] };
-    if (!existing.mailbox_ids.includes(row.mailbox_id)) existing.mailbox_ids.push(row.mailbox_id);
+    const mailboxId = String(row.mailbox_id || "");
+    if (!mailboxId) continue;
+    const existing: Rule = grouped.get(key) || {
+      selector_type,
+      selector_code,
+      access_profile_id: String(row.access_profile_id || ""),
+      mailbox_ids: [],
+    };
+    if (!existing.mailbox_ids.includes(mailboxId)) existing.mailbox_ids.push(mailboxId);
     grouped.set(key, existing);
   }
   return [...grouped.values()];
