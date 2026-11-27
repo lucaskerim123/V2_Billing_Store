@@ -11,7 +11,8 @@ test("Billing Mail integration is registered as a bundled host-adapted module", 
   const mail = getBuiltinIntegration("mail");
   assert.ok(mail);
   assert.equal(mail.sourceRepository, "remipetrovich-design/Mail-system");
-  assert.equal(mail.sourcePath, "mail-configuration-module/Billing");
+  assert.equal(mail.sourcePath, "mail-configuration-module");
+  assert.equal(mail.billingExtensionPath, "mail-configuration-module/Billing");
   assert.equal(mail.sourceWorkspaceBuildOnly, true);
   assert.equal(mail.hostAdapted, true);
   assert.equal(mail.distribution, "bundled");
