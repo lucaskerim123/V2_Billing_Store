@@ -18,6 +18,12 @@ test("Billing email events are hard-coded independently of installed integration
   assert.ok(getBillingEmailEvent("account.email_verification"));
   assert.ok(getBillingEmailEvent("staff.invite"));
   assert.ok(getBillingEmailEvent("invoice.paid"));
+  assert.ok(getBillingEmailEvent("invoice.refund"));
+  assert.ok(getBillingEmailEvent("cancellation.requested"));
+  assert.ok(getBillingEmailEvent("release.update_available"));
+  assert.ok(getBillingEmailEvent("deployment.failed"));
+  assert.ok(getBillingEmailEvent("news.announcement"));
+  assert.ok(getBillingEmailEvent("support.ticket.reopened"));
   assert.equal(getBillingEmailEvent("mail.module.custom_event"),null);
 });
 
