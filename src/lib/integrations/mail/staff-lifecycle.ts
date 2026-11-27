@@ -94,7 +94,12 @@ export async function syncBillingStaffGroupToMail(db:any,groupId:string){
   const {data:rows,error}=await db.from("staff_member_groups").select("user_id").eq("group_id",groupId);
   if(error)throw new Error("Could not load staff group members for Mail sync: "+error.message);
   const ids=[...new Set((rows||[]).map((row:any)=>String(row.user_id)))];
-  const results=[];
-  for(const userId of ids)results.push(await syncBillingStaffToMail(db,userId));
+  const results:any[]=[];
+  const failures:string[]=[];
+  for(const userId of ids){
+    try{results.push(await syncBillingStaffToMail(db,userId))}
+    catch(error){failures.push(error instanceof Error?error.message:"Remote Staff sync failed for "+userId)}
+  }
+  if(failures.length)throw new Error(failures.join("; "));
   return {ok:true,processed:results.length,results};
 }
