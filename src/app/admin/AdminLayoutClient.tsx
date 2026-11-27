@@ -36,6 +36,7 @@ const permissionAliases:Record<string,string[]>={
   "news.view":["news.view","settings.general"],
   "downloads.view":["downloads.view","products.manage"],
   "staff.view":["staff.view"],
+  "integrations.view":["integrations.view","integrations.manage"],
   "settings.view":["settings.view","settings.general"],
   "analytics.view":["analytics.view"],
   "audit.view":["audit.view"],
@@ -111,9 +112,10 @@ const orbitfsGroup:NavGroup={
 const systemGroup:NavGroup={
   label:"System",
   shortLabel:"System",
-  match:path=>path.startsWith("/admin/settings")||path.startsWith("/admin/audit")||path.startsWith("/admin/analytics")||path.startsWith("/admin/staff")||path.startsWith("/admin/alerts"),
+  match:path=>path.startsWith("/admin/integrations")||path.startsWith("/admin/settings")||path.startsWith("/admin/audit")||path.startsWith("/admin/analytics")||path.startsWith("/admin/staff")||path.startsWith("/admin/alerts"),
   items:[
     {label:"Settings",href:"/admin/settings",permission:"settings.view"},
+    {label:"Integrations",href:"/admin/integrations",permission:"integrations.view"},
     {label:"Staff",href:"/admin/settings/staff",permission:"staff.view"},
     {label:"Alerts",href:"/admin/alerts",permission:"admin.access"},
     {label:"Themes",href:"/admin/settings/themes",permission:"settings.view"},
@@ -168,6 +170,7 @@ function adminRouteKey(path:string){
   if(path.startsWith("/admin/audit"))return "audit";
   if(path.startsWith("/admin/alerts"))return "alerts";
   if(path.startsWith("/admin/payments"))return "payments";
+  if(path.startsWith("/admin/integrations"))return "integrations";
   if(path.startsWith("/admin/settings"))return "settings";
   return "admin";
 }
