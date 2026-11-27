@@ -21,7 +21,7 @@ export function RemoteStaffAdmin({ staff, onSync, onTerminate, canManage }: Remo
   }
   async function sync(person:RemoteStaffState){
     setBusy(person.external_user_id);setMessage("");
-    try{const result=await onSync(person);setMessage(result.access.pending_review?"Remote identity synced; Mail System access is pending review. Check the approved role, group and department mappings.":"Remote identity and access mappings synchronized.");}
+    try{const result:any=await onSync(person);setMessage(result?.access?.pending_review?"Remote identity synced; Mail System access is pending review. Check the approved role, group and department mappings.":result?.status==="terminated"?"Remote User terminated and sessions revoked.":"Remote identity and access mappings synchronized.");}
     catch(error){setMessage(error instanceof Error?error.message:"Remote Staff synchronization failed.");}
     finally{setBusy("");}
   }
