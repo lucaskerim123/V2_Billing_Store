@@ -2,7 +2,6 @@ import {masterRequest} from "@/lib/master-api";
 import {licenseDb} from "@/lib/license-api";
 import {httpError,requireOrbitAdmin} from "@/lib/orbitfs-deployment";
 import {reportDevPanelReleaseEvent} from "@/lib/dev-panel-events";
-import {announcePublishedUpdate} from "@/lib/release-announcement-mail";
 
 const allowed=new Set(["publish","republish","withdraw","archive","restore","revert","promote","revise","return_to_dev","delete_billing_copy","delete_return_to_dev"]);
 export async function POST(req:Request){
@@ -77,13 +76,6 @@ export async function POST(req:Request){
     if(action==="promote")payload.target_channel=String(body.targetChannel||body.target_channel||"").trim().toLowerCase();
     if(action==="revise"){for(const key of ["title","description","changelog","customer_notes","internal_notes","severity","required","rollout","minimum_version","rollback_version"]){if(Object.prototype.hasOwnProperty.call(body,key))payload[key]=body[key];}}
     const result=await masterRequest(`/api/v1/releases/${encodeURIComponent(id)}`,{method:"POST",body:JSON.stringify(payload)},"billing");
-    // Customer communication never authorizes, publishes or deploys a release.
-    // Only announce a newly published update after License Manager confirms success.
-    let announcement:any=null;
-    if(action==="publish"&&String(release.status||"").toLowerCase()!=="published"&&String(result?.release?.status||"").toLowerCase()==="published"){
-      try{announcement=await announcePublishedUpdate(result.release)}
-      catch(error:any){console.error("[orbitfs/release-announcement] Delivery failed",error);announcement={error:error?.message||"Release email delivery failed"}}
-    }
-    return Response.json({...result,...(announcement?{announcement}: {})},{headers:{"cache-control":"no-store"}});
+    return Response.json(result,{headers:{"cache-control":"no-store"}});
   }catch(e){return httpError(e)}
 }
