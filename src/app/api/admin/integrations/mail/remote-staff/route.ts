@@ -57,6 +57,9 @@ export async function GET(req:Request){
 export async function POST(req:Request){
   try{
     const {db,user,access}=await requireIntegrationAdmin(req,["integrations.manage"]);
+    const {data:integration,error:integrationError}=await db.from("app_integrations").select("installed,enabled").eq("integration_id","mail").maybeSingle();
+    if(integrationError)throw Object.assign(new Error(integrationError.message),{status:503});
+    if(!integration?.installed||!integration?.enabled)return Response.json({error:"Enable the Mail integration before running Remote Staff operations."},{status:409});
     if(!hasIntegrationPermission(access,"staff.view")&&!hasIntegrationPermission(access,"staff.manage")&&!hasIntegrationPermission(access,"settings.permissions")){
       return Response.json({error:"Staff view permission is required for Remote Staff."},{status:403});
     }
