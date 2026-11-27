@@ -92,12 +92,11 @@ test("package and manifest return to the requested v1 version", async () => {
 });
 
 
-test("connection verifier and API contract accept mail:admin as well as mail:send", async () => {
-  const [client, api, install] = await Promise.all([read("client.ts"), read("API.md"), read("INSTALL.md")]);
+test("Billing installation documents least-privilege External System scopes", async () => {
+  const [client, install] = await Promise.all([read("client.ts"), read("INSTALL.md")]);
   assert.match(client, /mail:send or mail:admin permission/);
-  assert.match(api, /mail:admin.*active sender mailboxes across the system/);
-  assert.match(install, /mail:send.*mail:admin/);
-  assert.match(install, /admin-scoped keys discover active mailboxes across the system/);
+  assert.match(install, /Remote Staff provisioning\/termination scopes/);
+  assert.match(install, /Do not grant `mail:admin` solely for Remote Staff synchronisation/);
 });
 
 
