@@ -51,6 +51,11 @@ export async function PATCH(req:Request){
   if(action==="disable"&&current?.enabled!==true)return Response.json({error:"Integration is not enabled."},{status:409});
   if(action==="uninstall"&&current?.installed!==true)return Response.json({error:"Integration is not installed."},{status:409});
   if(action==="enable"&&!manifest.requiredEnvironment.every((key:string)=>Boolean(process.env[key]?.trim())))return Response.json({error:"Required server environment variables are missing."},{status:409});
+  if(action==="enable"&&id==="mailsystem"){
+   const {data:secure,error:secureError}=await serviceDb().from("app_integrations").select("config").eq("integration_id",id).maybeSingle();
+   if(secureError)throw Object.assign(new Error(secureError.message),{status:503});
+   if(!secure?.config?.mailSystemConnection?.encryptedApiKey)return Response.json({error:"Configure and verify the Mail System Core connection in Integration Manager before enabling this integration."},{status:409});
+  }
   const serverEntry=(INTEGRATION_MODULE_RUNTIME as any)[id]?.entrypoints?.server;
   const hook=action==="install"?serverEntry?.onInstall:action==="enable"?serverEntry?.onEnable:action==="disable"?serverEntry?.onDisable:serverEntry?.onUninstall;
   if(hook)await hook({integration:{id,name:manifest.name,version:manifest.version},action});
