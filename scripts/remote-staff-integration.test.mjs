@@ -85,3 +85,10 @@ test("directory catalogue and staff sync use the same canonical profile role", (
   assert.match(directoryRoute, /const role = roleCode\(member\)/);
   assert.match(directoryRoute, /role_codes: \[role\]/);
 });
+
+test("directory sync repairs signing trust using the saved connection", () => {
+  assert.match(directoryRoute, /getMailRemoteIdentityConfig/);
+  assert.match(directoryRoute, /register-key/);
+  assert.match(directoryRoute, /createPublicKey/);
+  assert.ok(directoryRoute.indexOf("register-key") < directoryRoute.indexOf("/remote-staff/directory"));
+});
