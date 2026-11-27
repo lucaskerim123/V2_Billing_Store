@@ -51,8 +51,19 @@ export function MailAccessManager({
       setAllowedMailboxIds(delegation.allowed_mailbox_ids || []);
       setAllowedProfileIds(delegation.allowed_profile_ids || []);
       setRules(groupMappings(core.mappings || []));
-      const existing = new Map((core.permissionMappings || []).filter((row: Row) => row.active).map((row: Row) => [row.external_permission_code, row.mail_permission_ids || []]));
-      const codes = [...new Set((core.groupPermissions || []).map((row: Row) => row.external_permission_code))].sort();
+      const existing = new Map<string, string[]>(
+        (core.permissionMappings || [])
+          .filter((row: Row) => row.active)
+          .map((row: Row): [string, string[]] => [
+            String(row.external_permission_code),
+            Array.isArray(row.mail_permission_ids) ? row.mail_permission_ids : [],
+          ]),
+      );
+      const codes: string[] = [...new Set<string>(
+        (core.groupPermissions || [])
+          .map((row: Row) => String(row.external_permission_code || ""))
+          .filter(Boolean),
+      )].sort();
       setPermissionRules(codes.map((code: any) => ({ external_permission_code: code, mail_permission_ids: (existing.get(code) as string[]) || [] })));
     } catch (error: any) {
       setStatus(error?.message || "Could not load users and access rules.");
@@ -69,7 +80,13 @@ export function MailAccessManager({
   const profiles: Row[] = core.accessProfiles || [];
   const groups: Row[] = directory.groups || [];
   const departments: Row[] = directory.departments || [];
-  const roles: Row[] = [...new Map((directory.users || []).map((user: Row) => [String(user.role || "staff"), { code: String(user.role || "staff"), name: String(user.role || "Staff") }])).values()];
+  const roleOptions = new Map<string, Row>(
+    (directory.users || []).map((user: Row): [string, Row] => {
+      const role = String(user.role || "staff");
+      return [role, { code: role, name: role }];
+    }),
+  );
+  const roles: Row[] = [...roleOptions.values()];
   const adminCeiling: string[] = core.delegation?.admin_permission_ceiling || [];
   const userRows: Row[] = (directory.users || []).map((user: Row) => {
     const remote = (core.remoteUsers || []).find((item: Row) => item.external_user_id === user.id);
