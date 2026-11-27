@@ -179,7 +179,7 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
  }
 
  if(!p)return <main className="adminShell">Loading customer…</main>;
- const accountStatus=canonicalAccountStatus(p),tabs=[["general","General info / settings"],["installed","Installed product"],["orders","Orders"],["invoices","Invoices"],["support","Support tickets"],["notes","Notes"],["emails","Emails"],["history","History / IP details"]];
+ const accountStatus=canonicalAccountStatus(p),tabs=[["general","General info / settings"],["installed","Installed product"],["orders","Orders"],["invoices","Invoices"],["support","Support tickets"],["notes","Notes"],["history","History / IP details"]];
 
  return <main className="adminShell">
   <header className="adminTop"><div><p className="eyebrow">CUSTOMER CONTROL</p><h1>{[p.first_name,p.last_name].map((name:string|undefined)=>String(name||"").trim()).filter(Boolean).join(" ")||p.display_name||p.name||p.username||"Customer"}</h1><p className="muted">{p.customer_number||"Customer"} · {p.email||"No email"}{p.username?` · @${p.username}`:""} · {p.email_verified_at?"verified":"unverified"} · {canonicalStatusLabel(accountStatus)}</p></div></header>
