@@ -1,6 +1,7 @@
 import { requireIntegrationAdmin, integrationErrorResponse, hasIntegrationPermission } from "@/lib/integrations/admin-context";
 import { getMailModuleConfig, getMailRemoteIdentityConfig } from "@/integrations/Mailsystem/Data/config";
 import { randomUUID, createPublicKey } from "node:crypto";
+import type { RemoteStaffSyncInput } from "@/integrations/Mailsystem/Data/remote-staff-types";
 
 export const runtime = "nodejs";
 
@@ -95,7 +96,7 @@ export async function POST(req: Request) {
           department_codes: departmentCodes,
           group_codes: groupCodes,
         },
-      };
+      } satisfies RemoteStaffSyncInput;
       const response = await fetch(config.baseUrl + "/api/integrations/remote-staff/sync", {
         method: "POST",
         headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json", "Idempotency-Key": payload.event_id },
