@@ -17,8 +17,8 @@ export async function issueEmailVerification(user:{id:string,email:string,name:s
  const {error}=await db.from("orbitfs_email_verification_tokens").insert({user_id:user.id,token_hash:tokenHash,expires_at:new Date(Date.now()+expiresHours*3600_000).toISOString(),request_ip:requestIp||null});
  if(error)throw error;
  const site=await orbitfsStoreOrigin(origin),verificationUrl=`${site}/verify-email?token=${encodeURIComponent(token)}`;
- await sendAutomation("account.email_verification",user.email,{customer_name:user.name,verification_url:verificationUrl,expires_hours:String(expiresHours)},"customer",user.id);
- return {ok:true};
+ const emailEvent=await sendAutomation("account.email_verification",user.email,{customer_name:user.name,verification_url:verificationUrl,expires_hours:String(expiresHours)},"customer",user.id);
+ return {ok:true,emailEvent};
 }
 
 export async function completeEmailVerification(token:string){
