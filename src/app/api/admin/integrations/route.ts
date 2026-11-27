@@ -4,10 +4,14 @@ import {requireIntegrationAdmin,integrationErrorResponse,hasIntegrationPermissio
 export async function GET(req:Request){
   try{
     const {db,access}=await requireIntegrationAdmin(req,["integrations.view","integrations.manage"]);
-    const {data:rows,error}=await db.from("app_integrations")
-      .select("integration_id,display_name,version,installed,enabled,updated_at")
-      .order("display_name");
-    if(error)throw Object.assign(new Error(error.message),{status:503});
+    let rows:any[]=[];
+    if(BUILTIN_INTEGRATIONS.length){
+      const {data,error}=await db.from("app_integrations")
+        .select("integration_id,display_name,version,installed,enabled,updated_at")
+        .order("display_name");
+      if(error)throw Object.assign(new Error(error.message),{status:503});
+      rows=data||[];
+    }
     const integrations=BUILTIN_INTEGRATIONS.map(manifest=>{
       const row=(rows||[]).find((item:any)=>item.integration_id===manifest.id);
       return {
