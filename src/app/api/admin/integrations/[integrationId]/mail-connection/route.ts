@@ -29,7 +29,7 @@ function decrypt(value: any): string {
   return Buffer.concat([decipher.update(Buffer.from(value.ciphertext, "base64")), decipher.final()]).toString("utf8");
 }
 async function admin(req: Request) {
-  const context = await requireIntegrationAdmin(req, ["integrations.manage"]);
+  const context = await requireIntegrationAdmin(req, ["integrations.manage", "integrations.mail.manage"]);
   if (!hasIntegrationPermission(context.access, "integrations.mail.manage") && !hasIntegrationPermission(context.access, "integrations.manage")) throw Object.assign(new Error("Mail System integration management permission required."), { status: 403 });
   if (!getBuiltinIntegration(INTEGRATION_ID)) throw Object.assign(new Error("Mail System integration is not registered."), { status: 404 });
   const service = db();
