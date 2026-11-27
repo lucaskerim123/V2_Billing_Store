@@ -16,7 +16,7 @@ function normalizeManifest(manifest) {
   const contributions=manifest.contributions||{};
   if (typeof contributions !== "object" || Array.isArray(contributions)) return null;
   const pages=Array.isArray(contributions.adminPages)?contributions.adminPages:[];
-  if (!pages.every(p=>p&&typeof p==="object"&&typeof p.label==="string"&&p.label.trim()&&typeof p.route==="string"&&ROUTE_PATTERN.test(p.route)&&typeof p.entrypoint==="string"&&Object.hasOwn(manifest.entrypoints,p.entrypoint))) return null;
+  if (!pages.every(p=>p&&typeof p==="object"&&typeof p.label==="string"&&p.label.trim()&&typeof p.route==="string"&&p.route===`/admin/integrations/${manifest.id}`&&typeof p.entrypoint==="string"&&Object.hasOwn(manifest.entrypoints,p.entrypoint)&&typeof p.permission==="string"&&/^[a-z][a-z0-9_.]+$/.test(p.permission))) return null;
   const menus=Array.isArray(contributions.adminMenu)?contributions.adminMenu:[];
   if (!menus.every(m=>m&&typeof m==="object"&&typeof m.label==="string"&&m.label.trim()&&typeof m.route==="string"&&ROUTE_PATTERN.test(m.route)&&typeof m.permission==="string"&&/^[a-z][a-z0-9_.]+$/.test(m.permission))) return null;
   return Object.freeze({
