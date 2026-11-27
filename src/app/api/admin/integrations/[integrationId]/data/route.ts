@@ -1,6 +1,6 @@
 import {createClient} from "@supabase/supabase-js";
 import {requireIntegrationAdmin,integrationErrorResponse} from "@/lib/integrations/admin-context";
-import {getBuiltinIntegration} from "@/lib/integrations/registry";
+import {getBuiltinIntegration} from "@/lib/integrations/runtime";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"",serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY||"";
 const KEY=/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/;
