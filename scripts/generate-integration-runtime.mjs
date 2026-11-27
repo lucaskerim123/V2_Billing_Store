@@ -1,32 +1,25 @@
-import {readdirSync,readFileSync,statSync,writeFileSync,mkdirSync} from "node:fs";
+import {writeFileSync,mkdirSync} from "node:fs";
 import {join,resolve,relative,sep} from "node:path";
+import {discoverIntegrations} from "../src/lib/integrations/registry.mjs";
+
 const root=resolve("src/integrations"),output=resolve("src/lib/integrations/generated-runtime.ts");
-const idPattern=/^[a-z0-9][a-z0-9-]{1,47}$/,imports=[],modules=[],pages=[],routes=new Set();
-for(const dir of readdirSync(root,{withFileTypes:true})){
- if(!dir.isDirectory()||!idPattern.test(dir.name))continue;
- const base=join(root,dir.name);
- try{
-  const manifest=JSON.parse(readFileSync(join(base,"manifest.json"),"utf8"));
-  if(manifest.format!=="orbitfs-billing-integration-v1"||manifest.id!==dir.name||manifest.distribution!=="bundled"||manifest.serverOnly!==true)throw new Error("Invalid package identity or distribution");
-  const entrypointSymbols={};
-  for(const [key,target] of Object.entries(manifest.entrypoints||{})){
-   if(!/^[a-z][A-Za-z0-9]*$/.test(key)||typeof target!=="string"||!/^\.\/[A-Za-z0-9._-]+\.(tsx|ts|jsx|js)$/.test(target)||target.includes(".."))throw new Error("Unsafe entrypoint");
-   const file=resolve(base,target.slice(2));
-   if(!file.startsWith(base+sep)||!statSync(file).isFile())throw new Error("Missing entrypoint file");
-   const symbol="IntegrationModule"+imports.length;
-   imports.push('import * as '+symbol+' from "'+relative(resolve("src/lib/integrations"),file).split(sep).join("/").replace(/\.(tsx|ts|jsx|js)$/,"")+'"');
-   entrypointSymbols[key]=symbol;
-  }
-  modules.push(JSON.stringify(dir.name)+': { entrypoints: { '+Object.entries(entrypointSymbols).map(([k,v])=>JSON.stringify(k)+": "+v).join(", ")+' } }');
-  for(const page of manifest.contributions?.adminPages||[]){
-   const route=page.route;
-   if(route!=="/admin/integrations/"+dir.name||routes.has(route))throw new Error("Each module must contribute one unique /admin/integrations/<module-id> page");
-   if(typeof page.label!=="string"||!page.label.trim()||typeof page.permission!=="string"||! /^[a-z][a-z0-9_.]+$/.test(page.permission))throw new Error("Invalid page label or permission");
-   const symbol=entrypointSymbols[page.entrypoint];if(!symbol)throw new Error("Page references an undeclared entrypoint");
-   pages.push(JSON.stringify(route)+': { integrationId: '+JSON.stringify(dir.name)+', label: '+JSON.stringify(page.label)+', permission: '+JSON.stringify(page.permission)+', component: '+symbol+'.default }');
-   routes.add(route);
-  }
- }catch(error){if(error?.code==="ENOENT")continue;throw new Error("Invalid integration package "+dir.name+": "+error.message)}
+const imports=[],modules=[],pages=[],routes=new Set();
+for(const manifest of discoverIntegrations()){
+ const base=join(root,manifest.id),symbols={};
+ for(const [key,target] of Object.entries(manifest.entrypoints)){
+  const file=resolve(base,target.slice(2));
+  const symbol="IntegrationModule"+imports.length;
+  imports.push('import * as '+symbol+' from "'+relative(resolve("src/lib/integrations"),file).split(sep).join("/").replace(/\.(tsx|ts|jsx|js)$/,"")+'"');
+  symbols[key]=symbol;
+ }
+ modules.push(JSON.stringify(manifest.id)+': { entrypoints: { '+Object.entries(symbols).map(([key,symbol])=>JSON.stringify(key)+": "+symbol).join(", ")+' } }');
+ for(const page of manifest.contributions.adminPages){
+  if(routes.has(page.route))throw new Error("Duplicate integration admin route: "+page.route);
+  const symbol=symbols[page.entrypoint];
+  if(!symbol)throw new Error("Missing statically imported page entrypoint: "+page.entrypoint);
+  pages.push(JSON.stringify(page.route)+': { integrationId: '+JSON.stringify(manifest.id)+', label: '+JSON.stringify(page.label)+', permission: '+JSON.stringify(page.permission)+', component: '+symbol+'.default }');
+  routes.add(page.route);
+ }
 }
 mkdirSync(join("src","lib","integrations"),{recursive:true});
 const outputLines=[
@@ -35,10 +28,10 @@ const outputLines=[
  ...imports,
  "",
  "export const INTEGRATION_MODULE_RUNTIME: Record<string,{entrypoints:Record<string,Record<string,any>>}> = {",
- modules.map(x=>"  "+x).join(",\n"),
+ modules.map(item=>"  "+item).join(",\n"),
  "};",
  "export const INTEGRATION_PAGE_RUNTIME: Record<string,{integrationId:string;label:string;permission:string;component:ComponentType<any>}> = {",
- pages.map(x=>"  "+x).join(",\n"),
+ pages.map(item=>"  "+item).join(",\n"),
  "};",
  ""
 ];
