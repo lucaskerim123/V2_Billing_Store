@@ -1,11 +1,13 @@
-import {writeFileSync,mkdirSync} from "node:fs";
+import {writeFileSync,mkdirSync,readdirSync} from "node:fs";
 import {join,resolve,relative,sep} from "node:path";
 import {discoverIntegrations} from "../src/lib/integrations/registry.mjs";
 
 const root=resolve("src/integrations"),output=resolve("src/lib/integrations/generated-runtime.ts");
 const imports=[],modules=[],pages=[],routes=new Set(),metadata=[];
 for(const manifest of discoverIntegrations()){
- const base=join(root,manifest.id),symbols={};
+ const folder=readdirSync(root,{withFileTypes:true}).find(entry=>entry.isDirectory()&&entry.name.toLowerCase()===manifest.id.toLowerCase());
+ if(!folder)throw new Error("Could not resolve integration folder for "+manifest.id);
+ const base=join(root,folder.name),symbols={};
  metadata.push(JSON.stringify(manifest));
  for(const [key,target] of Object.entries(manifest.entrypoints)){
   const file=resolve(base,target.slice(2));

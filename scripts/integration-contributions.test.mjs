@@ -16,3 +16,19 @@ test("discovery exposes only validated generic admin page and menu contributions
   assert.equal(discoverIntegrations(root).length,0);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test("discovery supports capitalised integration folders and nested entrypoints",()=>{
+ const root=mkdtempSync(join(tmpdir(),"orbitfs-capitalised-"));
+ try{
+  const folder=join(root,"Mailsystem"),pages=join(folder,"Pages","mail-settings");
+  mkdirSync(pages,{recursive:true});
+  const manifest={format:"orbitfs-billing-integration-v1",id:"mailsystem",displayName:"Mail System",version:"1.0.0",publisher:"OrbitFS",distribution:"bundled",installable:true,serverOnly:true,requires:["MAIL_SYSTEM_URL"],entrypoints:{adminPage:"./Pages/mail-settings/page.tsx"},contributions:{adminPages:[{label:"Mail Settings",route:"/admin/integrations/mailsystem",entrypoint:"adminPage",permission:"integrations.mail.manage"}],adminMenu:[{label:"Mail Settings",route:"/admin/integrations/mailsystem",permission:"integrations.mail.manage",group:"System"}]}};
+  writeFileSync(join(folder,"manifest.json"),JSON.stringify(manifest));
+  writeFileSync(join(pages,"page.tsx"),"export default function Page(){return null}");
+  const result=discoverIntegrations(root);
+  assert.equal(result.length,1);
+  assert.equal(result[0].id,"mailsystem");
+  assert.equal(result[0].entrypoints.adminPage,"./Pages/mail-settings/page.tsx");
+  assert.equal(result[0].contributions.adminMenu[0].group,"System");
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
