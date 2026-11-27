@@ -75,7 +75,7 @@ export default function IntegrationManagerPage(){
             <p style={{fontSize:12,opacity:.65,margin:"10px 0 0"}}>Features: {item.features.join(" · ")}</p>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            {item.state.installed&&<Link href={item.route} style={{padding:"8px 12px",border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:8,textDecoration:"none"}}>Configure</Link>}
+            {item.state.installed&&item.route&&<Link href={item.route} style={{padding:"8px 12px",border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:8,textDecoration:"none"}}>Configure</Link>}
             {canManage&&!item.state.installed&&<button disabled={!!busy} onClick={()=>void change(item.id,"install")}>Install</button>}
             {canManage&&item.state.installed&&!item.state.enabled&&<button disabled={!!busy||!item.configured} title={!item.configured?"Required server environment variables are missing.":undefined} onClick={()=>void change(item.id,"enable")}>Enable</button>}
             {canManage&&item.state.enabled&&<button disabled={!!busy} onClick={()=>void change(item.id,"disable")}>Disable</button>}
