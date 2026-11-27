@@ -45,6 +45,9 @@ export async function PATCH(req:Request){
     if(lookupError)throw Object.assign(new Error(lookupError.message),{status:503});
     if(!current)return Response.json({error:"Integration database registration is missing. Apply the Billing Storefront database migration first."},{status:503});
     if(action==="enable"&&current.installed!==true)return Response.json({error:"Install this integration before enabling it."},{status:409});
+    if(action==="enable"&&!manifest.requiredEnvironment.every((key:string)=>Boolean(process.env[key]?.trim()))){
+      return Response.json({error:"Configure the required server-only environment variables before enabling this integration."},{status:409});
+    }
     const installed=action==="install"||action==="enable"||action==="disable";
     const enabled=action==="enable";
     const {data,error}=await db.rpc("admin_set_integration_state",{
