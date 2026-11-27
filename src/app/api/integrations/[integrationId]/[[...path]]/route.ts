@@ -1,9 +1,9 @@
 import {createClient} from "@supabase/supabase-js";
 import {INTEGRATION_MODULE_RUNTIME} from "@/lib/integrations/generated-runtime";
-import {getBuiltinIntegration,canRunIntegration} from "@/lib/integrations/registry";
+import {getBuiltinIntegration,canRunIntegration} from "@/lib/integrations/runtime";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"",key=process.env.SUPABASE_SERVICE_ROLE_KEY||"";
-async function dispatch(request:Request,params:Promise<{integrationId:string;path?:string[]}>){
+async function dispatch(request:Request,{params}:{params:Promise<{integrationId:string;path?:string[]}>}){
  const {integrationId,path=[]}=await params;
  const manifest=getBuiltinIntegration(integrationId);
  const server=(INTEGRATION_MODULE_RUNTIME as any)[integrationId]?.entrypoints?.server;
