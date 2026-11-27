@@ -26,9 +26,13 @@ async function customerFor(db:any,id:string){
   const {data:customer,error}=await db.from("customers").select("id,auth_user_id,user_id,email,name,display_name,first_name,last_name,customer_number,company_name,phone,country_code,currency").or(`auth_user_id.eq.${id},user_id.eq.${id}`).maybeSingle();
   if(error)throw error;
   if(!customer)return null;
-  const {data:profile,error:profileError}=await db.from("user_profiles").select("display_name,first_name,last_name,company_name,phone,country_code,currency").eq("id",id).maybeSingle();
+  const [{data:profile,error:profileError},{data:user,error:userError}]=await Promise.all([
+    db.from("user_profiles").select("display_name,first_name,last_name,company_name,phone,country_code,currency").eq("id",id).maybeSingle(),
+    db.from("users").select("email,display_name,first_name,last_name").eq("id",id).maybeSingle()
+  ]);
   if(profileError)throw profileError;
-  return {...customer,...(profile||{}),email:customer.email};
+  if(userError)throw userError;
+  return {...customer,...(user||{}),...(profile||{}),email:customer.email||user?.email||null};
 }
 
 export async function GET(req:Request,{params}:{params:Promise<{id:string}>}){
