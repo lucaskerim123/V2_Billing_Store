@@ -20,7 +20,7 @@ const sections:Section[]=[
  {title:"Commerce & billing",description:"Money movement, invoice behaviour, gateways and catalogue defaults.",cards:[
   {title:"Billing & Wallet",description:"Currency, Wallet behaviour, recharge limits, tax and payment rules.",href:"/admin/settings/billing",badge:"Billing",tags:["Currency","Wallet","Tax"]},
   {title:"Invoices",description:"Numbering, due dates, reminders, overdue actions, branding and invoice content.",href:"/admin/settings/invoices",badge:"Invoices",tags:["Lifecycle","Numbering","Reminders"]},
-  {title:"Payment gateways",description:"Stripe, PayPal and other providers, webhooks, supported currencies and availability.",href:"/admin/payments/setup",badge:"Gateways",tags:["Stripe","PayPal","Webhooks"]},
+  {title:"Gateway Setup",description:"Configure and verify payment gateways, webhooks, supported currencies and provider availability.",href:"/admin/payments/setup",badge:"Gateways",tags:["Stripe","PayPal","Webhooks"]},
   {title:"Products & catalogue",description:"Fulfilment, addons, upgrades, coupons, quantities, stock and checkout defaults.",href:"/admin/settings/products",badge:"Catalogue",tags:["Fulfilment","Add-ons","Stock"]}
  ]},
  {title:"Licensing, operations & access",description:"License Manager connectivity, staff access, messaging, alerts and account enforcement.",cards:[
@@ -30,8 +30,8 @@ const sections:Section[]=[
   {title:"Staff System",description:"Staff identities, groups, primary roles and exact inherited permission maps.",href:"/admin/settings/staff",badge:"Access",tags:["Staff","Groups","Permissions"]},
   {title:"Permission map",description:"Inspect and maintain administrative permission definitions used by staff groups.",href:"/admin/settings/permissions",badge:"Permissions",tags:["RBAC","Capabilities","Audit"]},
   {title:"Themes",description:"Installed themes and active Store/Admin presentation packages.",href:"/admin/settings/themes",badge:"Themes",tags:["Store","Admin","Appearance"]},
-  {title:"Support settings",description:"Ticket defaults, customer actions, guest support and support lifecycle behaviour.",href:"/admin/settings/support",badge:"Support",tags:["Tickets","Guest access","Lifecycle"]},
-  {title:"Support workflow",description:"Departments, routing, staffing, escalations and automatic ticket messages.",href:"/admin/support/settings",badge:"Support ops",tags:["Departments","Routing","Escalation"]},
+  {title:"Support Settings",description:"Ticket defaults, customer actions, guest support, departments, routing and support lifecycle behaviour.",href:"/admin/settings/support",badge:"Support",tags:["Tickets","Departments","Lifecycle"]},
+  
   {title:"OrbitFS Alert System",description:"Configure alert delivery, composer defaults, safety limits and available alert types.",href:"/admin/settings/alerts",badge:"Alerts",tags:["Types","Delivery","Targeting"]},
   {title:"Outbound Mail",description:"System email behaviour, sender identities, automation and reusable templates.",href:"/admin/settings/outbound-mail",badge:"Messaging",tags:["Senders","Automation","Templates"]},
   {title:"Account enforcement",description:"View and manage currently suspended or terminated customer accounts, reasons and expiry times.",href:"/admin/settings/enforcement/accounts",badge:"Enforcement",tags:["Suspensions","Terminations","Expiry"]}
