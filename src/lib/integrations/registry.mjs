@@ -1,8 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, resolve, sep } from "node:path";
 
-const DEFAULT_INTEGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../integrations");
+const DEFAULT_INTEGRATIONS_DIR = resolve(process.cwd(), "src/integrations");
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,47}$/;
 
 function normalizeManifest(manifest) {
@@ -59,8 +58,14 @@ export function discoverIntegrations(directory = DEFAULT_INTEGRATIONS_DIR) {
     const manifestPath = join(moduleDirectory, "manifest.json");
     try {
       if (!statSync(manifestPath).isFile()) continue;
-      const manifest = normalizeManifest(JSON.parse(readFileSync(manifestPath, "utf8")));
+      const rawManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      const manifest = normalizeManifest(rawManifest);
       if (!manifest || manifest.id !== entry.name || ids.has(manifest.id)) continue;
+      const entrypointsExist = Object.values(manifest.entrypoints).every((target) => {
+        const entrypointPath = resolve(moduleDirectory, target.slice(2));
+        return entrypointPath.startsWith(moduleDirectory + sep) && statSync(entrypointPath).isFile();
+      });
+      if (!entrypointsExist) continue;
       ids.add(manifest.id);
       found.push(manifest);
     } catch {
