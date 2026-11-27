@@ -92,11 +92,15 @@ export async function PUT(req: Request) {
       return Response.json({ error: "Access mapping configuration is required." }, { status: 400 });
     }
     const config = await getMailModuleConfig();
+    let delegation: any = null;
+    if (body.delegation && typeof body.delegation === "object") {
+      delegation = await coreRequest(config.baseUrl, config.apiKey, "/api/integrations/remote-staff/delegation", "PUT", body.delegation);
+    }
     const result = await coreRequest(config.baseUrl, config.apiKey, "/api/integrations/remote-staff/access-mappings", "PUT", {
       mappings: Array.isArray(body.mappings) ? body.mappings : [],
       permission_mappings: Array.isArray(body.permission_mappings) ? body.permission_mappings : [],
     });
-    return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ ...result, delegation }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return integrationErrorResponse(error, "Unable to save Mail System access mappings.");
   }
