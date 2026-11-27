@@ -30,11 +30,8 @@ function decrypt(value: any): string {
 }
 async function admin(req: Request) {
   const context = await requireIntegrationAdmin(req, ["integrations.manage"]);
-  if (!hasIntegrationPermission(context.access, "integrations.mail.manage") && !hasIntegrationPermission(context.access, "integrations.manage")) {
-    throw Object.assign(new Error("Mail System integration management permission required."), { status: 403 });
-  }
-  const manifest = getBuiltinIntegration(INTEGRATION_ID);
-  if (!manifest) throw Object.assign(new Error("Mail System integration is not registered."), { status: 404 });
+  if (!hasIntegrationPermission(context.access, "integrations.mail.manage") && !hasIntegrationPermission(context.access, "integrations.manage")) throw Object.assign(new Error("Mail System integration management permission required."), { status: 403 });
+  if (!getBuiltinIntegration(INTEGRATION_ID)) throw Object.assign(new Error("Mail System integration is not registered."), { status: 404 });
   const service = db();
   const { data: row, error } = await service.from("app_integrations").select("installed,enabled,config").eq("integration_id", INTEGRATION_ID).maybeSingle();
   if (error) throw Object.assign(new Error(error.message), { status: 503 });
@@ -43,29 +40,42 @@ async function admin(req: Request) {
 }
 export async function GET(req: Request) {
   try {
-    const { row } = await admin(req), stored = row.config?.[SECRET_KEY];
-    return Response.json({ configured: !!stored, baseUrl: stored?.baseUrl || "", apiKeyConfigured: !!stored?.encryptedApiKey }, { headers: { "cache-control": "no-store" } });
+    const { row } = await admin(req), saved = row.config?.[SECRET_KEY];
+    let remoteIdentityConfigured = false;
+    if (saved?.encryptedRemoteIdentity) {
+      try { const identity = JSON.parse(decrypt(saved.encryptedRemoteIdentity)); remoteIdentityConfigured = !!(identity.issuer && identity.audience && identity.keyId && identity.privateKey); } catch { remoteIdentityConfigured = false; }
+    }
+    return Response.json({ configured: !!saved?.encryptedApiKey, baseUrl: saved?.baseUrl || "", apiKeyConfigured: !!saved?.encryptedApiKey, remoteIdentityConfigured }, { headers: { "cache-control": "no-store" } });
   } catch (error) { return integrationErrorResponse(error, "Unable to load Mail System connection settings."); }
 }
 export async function POST(req: Request) {
   try {
     const { service, row } = await admin(req);
-    const body = await req.json().catch(() => ({}));
-    const action = body.action;
-    const baseUrl = String(body.baseUrl || row.config?.[SECRET_KEY]?.baseUrl || "").trim().replace(/\/$/, "");
+    const body = await req.json().catch(() => ({})), action = body.action;
+    const existing = row.config?.[SECRET_KEY] || {};
+    const baseUrl = String(body.baseUrl || existing.baseUrl || "").trim().replace(/\/$/, "");
     const apiKey = String(body.apiKey || "").trim();
     if (!/^https:\/\//i.test(baseUrl)) return Response.json({ error: "Enter a valid HTTPS Mail System URL." }, { status: 400 });
     let credential = apiKey;
-    if (!credential && row.config?.[SECRET_KEY]?.encryptedApiKey) credential = decrypt(row.config[SECRET_KEY].encryptedApiKey);
+    if (!credential && existing.encryptedApiKey) credential = decrypt(existing.encryptedApiKey);
     if (!credential) return Response.json({ error: "Enter the Mail System API key." }, { status: 400 });
     const result = await verifyMailSystemConnection({ baseUrl, apiKey: credential });
     if (action === "test") return Response.json({ ...result, apiKey: undefined }, { headers: { "cache-control": "no-store" } });
     if (action !== "save") return Response.json({ error: "Unsupported action." }, { status: 400 });
     if (!result.connected) return Response.json({ ...result, error: result.message }, { status: 422 });
+    const identityFields = [body.issuer, body.audience, body.keyId, body.privateKey].map(value => String(value || "").trim());
+    const identityProvided = identityFields.some(Boolean);
+    let encryptedRemoteIdentity = existing.encryptedRemoteIdentity;
+    if (identityProvided) {
+      const [issuer, audience, keyId, privateKey] = identityFields;
+      if (!issuer || !audience || !keyId || !privateKey) return Response.json({ error: "Complete all four remote identity signing fields, or leave all four blank to keep the existing signing configuration." }, { status: 400 });
+      if (!privateKey.includes("BEGIN PRIVATE KEY") && !privateKey.includes("BEGIN RSA PRIVATE KEY")) return Response.json({ error: "Remote identity private key must be a PEM-encoded private key." }, { status: 400 });
+      encryptedRemoteIdentity = encrypt(JSON.stringify({ issuer, audience, keyId, privateKey }));
+    }
     const config = row.config && typeof row.config === "object" && !Array.isArray(row.config) ? { ...row.config } : {};
-    config[SECRET_KEY] = { baseUrl, encryptedApiKey: encrypt(credential), savedAt: new Date().toISOString() };
+    config[SECRET_KEY] = { baseUrl, encryptedApiKey: encrypt(credential), encryptedRemoteIdentity, savedAt: new Date().toISOString() };
     const { error } = await service.from("app_integrations").update({ config, updated_at: new Date().toISOString() }).eq("integration_id", INTEGRATION_ID);
     if (error) throw Object.assign(new Error(error.message), { status: 503 });
-    return Response.json({ ok: true, configured: true, baseUrl, connected: true, canSend: result.canSend, status: result.status, message: "Mail System connection saved and verified." }, { headers: { "cache-control": "no-store" } });
+    return Response.json({ ok: true, configured: true, baseUrl, connected: true, canSend: result.canSend, status: result.status, remoteIdentityConfigured: !!encryptedRemoteIdentity, message: "Mail System connection saved and verified." }, { headers: { "cache-control": "no-store" } });
   } catch (error) { return integrationErrorResponse(error, "Unable to update Mail System connection."); }
 }
