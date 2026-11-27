@@ -28,7 +28,7 @@ export function RemoteStaffAdmin({ staff, onSync, onTerminate, canManage }: Remo
           <div><strong>{person.display_name||person.external_user_id}</strong><div>{person.email||"No email"} · {person.external_user_id}</div><small>{person.status}</small></div>
           <div style={{display:"flex",gap:8}}>
             <button type="button" disabled={!canManage||!!busy} onClick={()=>void run(person.external_user_id,()=>onSync(person),"Staff access recalculated.")}>Sync access</button>
-            <button type="button" disabled={!canManage||!!busy||person.status==="terminated"} onClick={()=>{if(window.confirm("Terminate this Remote User and revoke Mail System access?"))void run(person.external_user_id,()=>onTerminate(person),"Remote User terminated and sessions revoked.");}}>Terminate</button>
+            <button type="button" disabled={!canManage||!!busy||person.status==="terminated"||person.status==="active"} onClick={()=>{if(window.confirm("Terminate this Remote User and revoke Mail System access?"))void run(person.external_user_id,()=>onTerminate(person),"Remote User terminated and sessions revoked.");}}>Terminate</button>
           </div>
         </div>
       </article>)}
