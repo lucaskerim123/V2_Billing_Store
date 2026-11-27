@@ -26,8 +26,9 @@ export async function PATCH(req:Request){
   const id=String(body.integration_id||""),action=String(body.action||"");const manifest=BUILTIN_INTEGRATIONS.find(item=>item.id===id);
   if(!manifest)return Response.json({error:"Integration is not registered in this Billing Store build."},{status:404});
   if(!["install","enable","disable","uninstall"].includes(action))return Response.json({error:"Unsupported integration action."},{status:400});
-  let {data:current,error:lookupError}=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();
+  const {data:initialCurrent,error:lookupError}=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();
   if(lookupError)throw Object.assign(new Error(lookupError.message),{status:503});
+  let current=initialCurrent;
   if(action==="install"&&current?.installed)return Response.json({error:"Integration is already installed."},{status:409});
   const service=(action==="install"||action==="uninstall")?serviceDb():null;
   if(action==="install"){
