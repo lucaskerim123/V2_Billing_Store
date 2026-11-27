@@ -27,7 +27,8 @@ async function billingStaffSnapshot(db:any){
   ]);
   if(de)throw new Error(de.message);
   if(ae)throw new Error(ae.message);
-  const groupSlugs=new Map<string,string>((snapshot?.groups||[]).map((group:any):[string,string]=>[String(group.id),String(group.slug||group.name||"")]));
+  const groups: Array<{id:unknown;slug?:unknown;name?:unknown}> = Array.isArray(snapshot?.groups) ? snapshot.groups : [];
+  const groupSlugs = new Map<string,string>(groups.map((group):[string,string]=>[String(group.id),String(group.slug||group.name||"")]));
   const departmentSlugs=new Map<string,string>((departments||[]).map((department:any):[string,string]=>[String(department.id),String(department.slug||department.name||"")]));
   const departmentIds=new Map<string,string[]>();
   for(const row of assignments||[]){
@@ -42,8 +43,8 @@ async function billingStaffSnapshot(db:any){
     status:member.status==="active"?"active":"disabled",
     profile:{title:member.title||null,department:member.department||null,profile_role:member.profile_role||null},
     role_codes:member.profile_role?[String(member.profile_role)]:[],
-    department_codes:(departmentIds.get(String(member.user_id))||[]).map(id=>departmentSlugs.get(id)).filter((code):code is string=>typeof code==="string"&&code.length>0),
-    group_codes:(Array.isArray(member.group_ids)?member.group_ids:[]).map((id:any)=>groupSlugs.get(String(id))).filter((code):code is string=>typeof code==="string"&&code.length>0)
+    department_codes:(departmentIds.get(String(member.user_id))||[]).flatMap((id:string):string[]=>{const code=departmentSlugs.get(id);return code?[code]:[]}),
+    group_codes:(Array.isArray(member.group_ids)?(member.group_ids as unknown[]):[]).flatMap((id:unknown):string[]=>{const code=groupSlugs.get(String(id));return code?[code]:[]})
   }));
 }
 
