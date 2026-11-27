@@ -97,11 +97,25 @@ export async function POST(req: Request) {
       outcomes.push({ external_user_id: userId, ok: response.ok, status: response.status, result: response.ok ? result : (typeof result.error === "object" ? result.error.message : result.error) || "Sync failed" });
     }
     const failed = outcomes.filter((item) => !item.ok);
+    let reconciliation: any = null;
+    if (failed.length === 0) {
+      const completeResponse = await fetch(config.baseUrl + "/api/integrations/remote-staff/directory", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roles: roleRows, departments: departmentDirectory, groups: groupDirectory,
+          complete_snapshot: true, user_ids: members.map((member: any) => String(member.user_id || member.id || "")).filter(Boolean),
+        }),
+        cache: "no-store",
+      });
+      reconciliation = await completeResponse.json().catch(() => ({}));
+      if (!completeResponse.ok) failed.push({ external_user_id: "directory-reconcile", ok: false, status: completeResponse.status, result: reconciliation.error?.message || reconciliation.error || "Directory reconciliation failed" });
+    }
     return Response.json({
       ok: failed.length === 0,
       directory: directoryResult.detected,
       users: { total: outcomes.length, synced: outcomes.length - failed.length, failed: failed.length },
-      failures: failed.slice(0, 20),
+      disabledRemoteUsers: reconciliation?.disabled_users || 0,\n      failures: failed.slice(0, 20),
       event_id: randomUUID(),
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
