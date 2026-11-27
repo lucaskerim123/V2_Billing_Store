@@ -115,6 +115,7 @@ const systemGroup:NavGroup={
   items:[
     {label:"Settings",href:"/admin/settings",permission:"settings.view"},
     {label:"Staff",href:"/admin/settings/staff",permission:"staff.view"},
+    {label:"Outbound Mail",href:"/admin/settings/outbound-mail",permission:"communications.mail.manage"},
     {label:"Alerts",href:"/admin/alerts",permission:"admin.access"},
     {label:"Themes",href:"/admin/settings/themes",permission:"settings.view"},
     {label:"Analytics",href:"/admin/analytics",permission:"analytics.view"},
