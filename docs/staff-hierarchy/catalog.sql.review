@@ -1,0 +1,83 @@
+-- OrbitFS Billing Store: approved user-group names, catalog phase.
+-- REVIEW ONLY: intentionally outside database/migrations and not a .sql file.
+-- MAIN and FALLBACK currently share the same production database. Do not move
+-- into the migration stream until shared-database approval and the department
+-- authorization, escalation and UI changes are complete and verified.
+-- Customer is the existing non-staff account, not a staff_members assignment.
+-- Preserve existing group IDs and compatibility slugs. Do not rewrite historical
+-- staff assignments, invitations, customer accounts or ticket foreign keys.
+-- Scope: catalog and conservative permissions only; NOT the department RBAC rollout.
+
+begin;
+do $$
+begin
+  if current_setting('orbitfs.shared_billing_hierarchy_approved', true) is distinct from 'yes' then
+    raise exception 'Shared Billing Store hierarchy rollout requires explicit approval';
+  end if;
+  if not exists (select 1 from public.staff_groups where slug='superadmin' and permissions->>'all'='true') then
+    raise exception 'Existing executive group is missing';
+  end if;
+  if exists (
+    select 1 from public.staff_member_groups m join public.staff_groups g on g.id=m.group_id
+    where g.slug in ('support','senior-support','admin')
+  ) then
+    raise exception 'Existing non-executive assignments require explicit migration mapping';
+  end if;
+end $$;
+
+-- These are group catalog permissions only. Department-sensitive actions require
+-- separate server-side enforcement before these groups may be made assignable.
+with desired(slug,name,description,sort_order,capabilities) as (
+  values
+    ('support','Customer Service Representative','Support | Tier 1 | Assigned department only',90,
+      array['admin.access','portal','support.manage','support.claim','support.reply','support.kb.view','support.premade.use','support.escalate']),
+    ('customer-service-officer','Customer Service Officer','Support | Tier 2 | Assigned department only',80,
+      array['admin.access','portal','support.manage','support.claim','support.reply','support.kb.view','support.premade.use','support.escalate','support.ticket_create','support.close']),
+    ('senior-support','Senior Customer Service Officer','Support | Tier 3 | Advanced support within assigned departments',70,
+      array['admin.access','portal','support.manage','support.claim','support.reply','support.kb.view','support.premade.use','support.escalate','support.ticket_create','support.close','support.priority']),
+    ('customer-service-supervisor','Customer Service Supervisor','Supervision Team | Customer Service Supervisor of assigned department',60,
+      array['admin.access','portal','support.manage','support.claim','support.reply','support.kb.view','support.premade.use','support.escalate','support.ticket_create','support.close','support.priority']),
+    ('customer-service-manager','Customer Service Manager','Supervision Team | Customer Service Manager of assigned department',50,
+      array['admin.access','portal','support.manage','support.claim','support.reply','support.kb.view','support.premade.use','support.escalate','support.ticket_create','support.close','support.priority']),
+    ('operations-manager','Operations Manager','Management | Daily operational oversight and escalations',40,
+      array['admin.access','portal','support.manage','support.claim','support.reply','support.kb.view','support.premade.use','support.escalate','support.ticket_create','support.close','support.priority']),
+    ('admin','Senior Customer Service Manager','Management | Oversees all departments and Operations Managers',30,
+      array['admin.access','portal','support.manage','support.claim','support.reply','support.kb.view','support.premade.use','support.escalate','support.ticket_create','support.close','support.priority']),
+    ('developer','Developer','Executive | Technical diagnostics and integrations; no inherent commerce or staff-management authority',20,
+      array['admin.access','integrations.view'])
+)
+insert into public.staff_groups(slug,name,description,sort_order,permissions,is_system)
+select slug,name,description,sort_order,
+  (select jsonb_object_agg(capability,true) from unnest(capabilities) as capability),true
+from desired
+on conflict(slug) do update set name=excluded.name,description=excluded.description,
+  sort_order=excluded.sort_order,permissions=excluded.permissions,is_system=true,updated_at=now();
+
+update public.staff_groups set name='Chief Executive Officer',
+  description='Executive | Highest executive and administrative authority',
+  sort_order=10,updated_at=now() where slug='superadmin';
+
+-- Postconditions: the executive group keeps its original ID, assignments and all
+-- permission; no other catalog group receives wildcard or permission-editor access.
+do $$
+begin
+  if (select count(*) from public.staff_groups where slug in (
+    'support','customer-service-officer','senior-support','customer-service-supervisor',
+    'customer-service-manager','operations-manager','admin','developer','superadmin'
+  )) <> 9 then raise exception 'Expected nine staff groups'; end if;
+  if exists (select 1 from public.staff_groups where slug in (
+    'support','customer-service-officer','senior-support','customer-service-supervisor',
+    'customer-service-manager','operations-manager','admin','developer'
+  ) and (permissions->>'all'='true' or permissions->>'settings.permissions'='true'
+    or permissions->>'staff.manage'='true' or permissions->>'staff.groups.manage'='true'
+    or permissions->>'licenses.rotate'='true')) then
+    raise exception 'Unexpected privileged permission in non-executive catalog';
+  end if;
+end $$;
+commit;
+
+-- Required before release: implement per-department ranks and capability checks
+-- (including mixed-rank assignments), remove legacy cross-department bypasses,
+-- update queue/routing/escalation and notification functions, update the staff
+-- editor and legacy role checks, and run role-isolation/assignment tests.
+-- Advanced department minimum: Tier 3. Keep all existing department IDs.
