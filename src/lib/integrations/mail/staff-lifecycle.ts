@@ -48,9 +48,11 @@ async function billingStaffSnapshot(db:any){
 }
 
 async function nextRevision(service:any,userId:string){
-  const {data,error}=await service.from("app_remote_staff_sync_state").select("source_revision").eq("user_id",userId).maybeSingle();
-  if(error)throw new Error("Remote Staff revision lookup failed: "+error.message);
-  return Math.max(Date.now(),Number(data?.source_revision||0)+1);
+  const {data,error}=await service.rpc("app_mail_next_remote_staff_revision",{p_user_id:userId});
+  if(error)throw new Error("Remote Staff revision allocation failed: "+error.message);
+  const revision=Number(data);
+  if(!Number.isSafeInteger(revision)||revision<1)throw new Error("Remote Staff revision allocator returned an invalid revision.");
+  return revision;
 }
 
 async function saveReceipt(service:any,userId:string,revision:number,eventId:string,status:string){
