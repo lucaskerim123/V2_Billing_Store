@@ -1,14 +1,22 @@
+import {sendBillingMailEvent} from "@/lib/integrations/mail/server";
+
 /**
- * Legacy mail automation compatibility shim.
- * Delivery, templates, and queued automations have been retired.
- * Callers may continue their primary business operation without attempting email.
+ * Compatibility entrypoint for existing trusted Billing Store event producers.
+ * Templates, recipient resolution, sender routing and delivery are owned by the
+ * registered Mail integration. No legacy transport or queue is used.
  */
 export async function sendAutomation(
-  _eventKey: string,
-  _to: string,
-  _vars: Record<string, string>,
-  _relatedType?: string,
-  _relatedId?: string,
-) {
-  return { ok: true, skipped: true, reason: "mail_system_retired" as const };
+  eventKey:string,
+  to:string,
+  vars:Record<string,string>,
+  relatedType?:string,
+  relatedId?:string
+){
+  return sendBillingMailEvent({
+    eventKey,
+    recipient:to,
+    variables:vars,
+    relatedType,
+    relatedId
+  });
 }
