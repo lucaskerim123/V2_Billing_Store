@@ -21,6 +21,21 @@ async function context(req:Request){
 
 function cleanPermissions(v:any){const out:Record<string,boolean>={};if(v&&typeof v==="object")for(const [k,x] of Object.entries(v))if(typeof x==="boolean"&&!k.startsWith("mail."))out[k]=x;return out}
 function slugify(v:string){return v.trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)}
+
+async function syncMailDirectoryAfterStaffChange(req: Request) {
+  const authorization = req.headers.get("authorization");
+  if (!authorization) return;
+  try {
+    await fetch(new URL("/api/admin/integrations/mailsystem/mail-directory", req.url), {
+      method: "POST",
+      headers: { authorization, "content-type": "application/json" },
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("[mailsystem-directory-sync] Deferred sync failed:", error);
+  }
+}
+
 async function audit(db:any,userId:string,action:string,targetType:string,targetId:string,detail:any){try{await db.from("admin_audit_log").insert({actor_id:userId,action,target_type:targetType,target_id:targetId,detail})}catch{}}
 async function staffNotice(userId:string,eventType:string,title:string,message:string,surface:"admin"|"portal"="admin",severity:"info"|"warning"|"error"="info"){
  try{
@@ -71,6 +86,7 @@ export async function POST(req:Request){
       const {error}=await db.rpc("admin_remove_staff_member",{p_user_id:target});
       if(error)return Response.json({error:error.message},{status:400});
       await staffNotice(target,"staff.access.removed","Staff access removed","Your staff access has been removed. Your customer account remains active.","portal","warning");
+      await syncMailDirectoryAfterStaffChange(req);
       return Response.json({ok:true});
     }
 
@@ -84,6 +100,7 @@ export async function POST(req:Request){
         const {data,error}=await db.from("staff_groups").insert({slug,name,description:description||null,permissions,is_system:false,sort_order:Number(body.sort_order||100)}).select().single();
         if(error)return Response.json({error:error.message},{status:400});
         await audit(db,user.id,"staff.group_created","staff_group",data.id,{slug});
+        await syncMailDirectoryAfterStaffChange(req);
         return Response.json({ok:true,group:data});
       }
 
@@ -98,6 +115,7 @@ export async function POST(req:Request){
         if((count||0)>0)return Response.json({error:"Reassign staff members before deleting this group."},{status:400});
         const {error}=await db.from("staff_groups").delete().eq("id",id);if(error)return Response.json({error:error.message},{status:400});
         await audit(db,user.id,"staff.group_deleted","staff_group",id,{slug:existing.slug});
+        await syncMailDirectoryAfterStaffChange(req);
         return Response.json({ok:true});
       }
 
@@ -110,6 +128,7 @@ export async function POST(req:Request){
       await audit(db,user.id,"staff.group_updated","staff_group",id,{slug:existing.slug,permission_count:Object.values(permissions).filter(Boolean).length});
       const key=process.env.SUPABASE_SERVICE_ROLE_KEY;
       if(key){const service=createClient(url,key,{auth:{persistSession:false}});const {data:assigned}=await service.from("staff_member_groups").select("user_id").eq("group_id",id);for(const uid of new Set((assigned||[]).map((member:any)=>String(member.user_id))))await staffNotice(uid,"staff.group.permissions_updated","Staff group permissions changed","Your assigned staff group permissions have been updated.","admin","warning");}
+      await syncMailDirectoryAfterStaffChange(req);
       return Response.json({ok:true,group:data});
     }
 
@@ -180,6 +199,7 @@ export async function POST(req:Request){
     const {error:departmentSaveError}=await db.rpc("admin_set_staff_departments",{p_user_id:target,p_department_ids:requestedDepartments});
     if(departmentSaveError)return Response.json({error:departmentSaveError.message},{status:400});
     await staffNotice(target,"staff.permissions.changed","Staff permissions updated","Your staff groups or permissions were updated.","admin",groupRows.some((g:any)=>g.slug==="superadmin")?"warning":"info");
+    await syncMailDirectoryAfterStaffChange(req);
     return Response.json({ok:true,id:target,result:data,department_ids:requestedDepartments});
   }catch(e:any){return Response.json({error:e.message||"Staff operation failed."},{status:e.status||500})}
 }
