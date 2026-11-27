@@ -37,7 +37,7 @@ The admin console tests the connection server-side and displays only the verific
 
 ## Remote Staff
 
-Billing Store remains the source of truth for staff status, roles, departments and group assignments. The Remote Staff panel sends a Billing staff snapshot to the Mail System or requests termination. The Mail System recalculates mailbox capabilities and revokes Remote User sessions/grants on termination.
+Billing Store remains the source of truth for staff status, roles, departments and group assignments. Trusted Billing server code synchronizes staff changes and group/department changes to the Mail System when the integration is enabled. Removing a Billing staff member requests Remote User termination. The Remote Staff panel also supports manual synchronization and termination. The Mail System recalculates mailbox capabilities and revokes Remote User sessions/grants on termination.
 
 The module exposes an identity-exchange client, but this admin integration does not yet mint actor assertions. That flow requires the Mail System's registered public JWK, a Billing-only private signing key, issuer/audience configuration and the exact assertion claim contract. Do not generate assertions in the browser or invent claims.
 
