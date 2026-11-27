@@ -1,5 +1,4 @@
 import {BUILTIN_INTEGRATIONS} from "@/lib/integrations/registry.mjs";
-import {verifyMailSystemConnection} from "@/integrations/mail/client";
 import {requireIntegrationAdmin,integrationErrorResponse,hasIntegrationPermission} from "@/lib/integrations/admin-context";
 
 export async function GET(req:Request){
@@ -48,10 +47,6 @@ export async function PATCH(req:Request){
     if(action==="enable"&&current.installed!==true)return Response.json({error:"Install this integration before enabling it."},{status:409});
     if(action==="enable"&&!manifest.requiredEnvironment.every((key:string)=>Boolean(process.env[key]?.trim()))){
       return Response.json({error:"Configure the required server-only environment variables before enabling this integration."},{status:409});
-    }
-    if(action==="enable"&&id==="mail"){
-      const connection=await verifyMailSystemConnection();
-      if(!connection.connected)return Response.json({error:connection.message||"Mail System connection verification failed."},{status:409});
     }
     const installed=action==="install"||action==="enable"||action==="disable";
     const enabled=action==="enable";
