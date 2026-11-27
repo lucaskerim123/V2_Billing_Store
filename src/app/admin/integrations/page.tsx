@@ -18,7 +18,6 @@ export default function IntegrationManagerPage(){
   const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState("");
   const [message,setMessage]=useState("");
-  const [health,setHealth]=useState<Record<string,any>>({});
 
   const headers=useCallback(async()=>{
     const {data:{session}}=await sb.auth.getSession();
@@ -52,25 +51,15 @@ export default function IntegrationManagerPage(){
     finally{setBusy("")}
   }
 
-  async function testConnection(id:string){
-    setBusy(id);setMessage("");
-    try{
-      const response=await fetch("/api/admin/integrations/mail/test",{method:"POST",headers:await headers()});
-      const data=await response.json();
-      if(!response.ok)throw new Error(data.error||"Connection test failed.");
-      setHealth(current=>({...current,[id]:data}));
-      setMessage(data.message||"Connection test completed.");
-    }catch(error:any){setHealth(current=>({...current,[id]:{connected:false,message:error?.message||"Connection test failed."}}));setMessage(error?.message||"Connection test failed.");}
-    finally{setBusy("")}
-  }
+
 
   return <main style={{maxWidth:1120,margin:"0 auto",padding:"24px 18px 48px",color:"var(--admin-text,inherit)"}}>
     <header style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:16,flexWrap:"wrap",marginBottom:22}}>
       <div><p style={{fontSize:12,letterSpacing:1.2,opacity:.65,margin:0}}>SYSTEM / EXTENSIONS</p><h1 style={{margin:"6px 0"}}>Integration Manager</h1><p style={{margin:0,opacity:.75}}>Manage separately registered integrations installed in Billing Store.</p></div>
-      <span style={{fontSize:12,opacity:.7}}>Built-in, trusted modules only</span>
+      <span style={{fontSize:12,opacity:.7}}>Installed: {rows.filter(item=>item.state.installed).length} · Installable: {rows.filter(item=>item.installable).length}</span>
     </header>
     {message&&<p role="status" style={{padding:12,border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:8}}>{message}</p>}
-    {loading?<p>Loading registered integrations…</p>:rows.length===0?<p>No integrations are registered in this Billing Store build.</p>:rows.map(item=>{
+    {loading?<p>Loading registered integrations…</p>:rows.length===0?<p>No modules installed or installable. The integration installation folder is empty and ready for a module package.</p>:rows.map(item=>{
       const result=health[item.id];
       return <section key={item.id} style={{border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:12,padding:18,marginBottom:14,background:"var(--admin-surface,transparent)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:18,flexWrap:"wrap"}}>
@@ -82,7 +71,6 @@ export default function IntegrationManagerPage(){
             </div>
             <p style={{margin:"8px 0",opacity:.8}}>{item.description}</p>
             <p style={{fontSize:13,margin:"8px 0"}}>Server credentials: {item.configured?"Configured":"Missing"} · Runtime: bundled</p>
-            {result&&<p role="status" style={{fontSize:13,margin:"8px 0"}}>Connection: {result.connected?(result.canSend?"Connected · sender access verified":"Connected · no sender assigned"):"Not connected"} — {result.message}</p>}
             <p style={{fontSize:12,opacity:.65,margin:"10px 0 0"}}>Features: {item.features.join(" · ")}</p>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
@@ -91,12 +79,11 @@ export default function IntegrationManagerPage(){
             {canManage&&item.state.installed&&!item.state.enabled&&<button disabled={!!busy||!item.configured} title={!item.configured?"Configure the server environment first.":undefined} onClick={()=>void change(item.id,"enable")}>Enable</button>}
             {canManage&&item.state.enabled&&<button disabled={!!busy} onClick={()=>void change(item.id,"disable")}>Disable</button>}
             {canManage&&item.state.installed&&<button disabled={!!busy} onClick={()=>{if(window.confirm("Uninstall this integration from Billing Store? Its stored settings and data will be retained."))void change(item.id,"uninstall")}}>Uninstall</button>}
-            {canManage&&item.state.installed&&<button disabled={!!busy} onClick={()=>void testConnection(item.id)}>Test connection</button>}
           </div>
         </div>
       </section>
     })}
     {!canManage&&!loading&&<p style={{fontSize:13,opacity:.7}}>You have view access. Integration changes require the integrations.manage permission.</p>}
-    <p style={{fontSize:12,opacity:.65,marginTop:20}}>Disabling or uninstalling stops Billing Store from using the module. It does not delete Mail System data or Billing-owned templates and configuration.</p>
+    <p style={{fontSize:12,opacity:.65,marginTop:20}}>Billing Store owns business events independently of installed modules. Modules may configure how those events are handled, but cannot define or remove Billing events.</p>
   </main>;
 }
