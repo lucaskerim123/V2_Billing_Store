@@ -83,7 +83,7 @@ const productsGroup:NavGroup={
   match:path=>path.startsWith("/admin/products")||path.startsWith("/admin/product-groups")||path.startsWith("/admin/news")||path.startsWith("/admin/downloads"),
   items:[
     {label:"Products",href:"/admin/products",permission:"products.view"},
-    {label:"Product Groups",href:"/admin/product-groups",permission:"licenses.manage"},
+    {label:"Product Groups",href:"/admin/product-groups",permission:"products.view"},
     {label:"News",href:"/admin/news",permission:"news.view"},
     {label:"Downloads",href:"/admin/downloads",permission:"downloads.view"}
   ]
