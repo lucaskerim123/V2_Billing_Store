@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       return [code, { code, name: String(member.primary_role || member.role || "Staff") }];
     })).values()];
     const departmentDirectory = departmentRows.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name) }));
-    const groupDirectory = groups.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name || item.slug) }));
+    const groupDirectory = groups.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name || item.slug), permissions: Object.entries(item.permissions || {}).filter(([, enabled]) => enabled === true).map(([permission]) => permission) }));
 
     const config = await getMailModuleConfig();
     const directoryResponse = await fetch(config.baseUrl + "/api/integrations/remote-staff/directory", {
