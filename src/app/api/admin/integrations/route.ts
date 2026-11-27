@@ -23,6 +23,7 @@ export async function GET(req:Request){
     });
     return Response.json({
       integrations,
+      summary:{installedCount:integrations.filter((item:any)=>item.state.installed).length,installableCount:integrations.filter((item:any)=>item.installable).length},
       permissions:{
         canView:hasIntegrationPermission(access,"integrations.view")||hasIntegrationPermission(access,"integrations.manage"),
         canManage:hasIntegrationPermission(access,"integrations.manage")
