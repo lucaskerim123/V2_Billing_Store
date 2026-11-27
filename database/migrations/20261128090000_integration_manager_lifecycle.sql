@@ -20,6 +20,13 @@ alter table public.app_integrations enable row level security;
 alter table public.app_integration_data enable row level security;
 revoke all on public.app_integrations, public.app_integration_data from anon, authenticated;
 grant select, insert, update, delete on public.app_integrations, public.app_integration_data to service_role;
+grant select on public.app_integrations to authenticated;
+drop policy if exists app_integrations_staff_read on public.app_integrations;
+create policy app_integrations_staff_read on public.app_integrations for select to authenticated using (
+  coalesce((public.get_my_staff_access()->'permissions'->>'all')::boolean,false)
+  or coalesce((public.get_my_staff_access()->'permissions'->>'integrations.view')::boolean,false)
+  or coalesce((public.get_my_staff_access()->'permissions'->>'integrations.manage')::boolean,false)
+);
 
 create or replace function public.admin_set_integration_state(
   p_integration_id text, p_installed boolean, p_enabled boolean, p_action text,
@@ -37,8 +44,7 @@ begin
      or (p_action <> 'uninstall' and not p_installed) then
     raise exception 'Invalid integration lifecycle transition' using errcode = '22023';
   end if;
-  select * into v_access from public.get_my_staff_access() limit 1;
-  v_access_json := to_jsonb(v_access);
+  select public.get_my_staff_access() into v_access_json;
   v_permissions := coalesce(v_access_json->'permissions','{}'::jsonb);
   v_allowed := coalesce((v_access_json->>'all')::boolean,false)
     or coalesce((v_permissions->>'all')::boolean,false)
