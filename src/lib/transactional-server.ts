@@ -16,5 +16,5 @@ export async function sendAutomation(
   if(!getBillingEmailEvent(eventKey)){
     throw new Error("Unknown Billing Store email event: "+eventKey);
   }
-  return {ok:true,skipped:true as const,reason:"no_email_integration_installed"};
+  return {ok:true,skipped:true as const,eventKey,reason:"no_email_integration_installed"};
 }
