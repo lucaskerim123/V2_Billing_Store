@@ -1,5 +1,6 @@
 import {randomBytes,createHash} from "node:crypto";
 import {sendAutomation} from "@/lib/transactional-server";
+import {syncBillingRemoteStaff,terminateBillingRemoteStaff} from "@/modules/mail-configuration/billing-sync";
 import {createClient} from "@supabase/supabase-js";
 
 const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
@@ -70,6 +71,7 @@ export async function POST(req:Request){
       const target=String(body.user_id||"");if(!target)return Response.json({error:"Missing staff member."},{status:400});
       const {error}=await db.rpc("admin_remove_staff_member",{p_user_id:target});
       if(error)return Response.json({error:error.message},{status:400});
+      try{await terminateBillingRemoteStaff(target,"Billing staff access removed");}catch(syncError:any){await audit(db,user.id,"remote_staff.termination_sync_failed","staff_member",target,{error:syncError?.message||String(syncError)});}
       await staffNotice(target,"staff.access.removed","Staff access removed","Your staff access has been removed. Your customer account remains active.","portal","warning");
       return Response.json({ok:true});
     }
@@ -179,6 +181,7 @@ export async function POST(req:Request){
     if(error)return Response.json({error:error.message},{status:400});
     const {error:departmentSaveError}=await db.rpc("admin_set_staff_departments",{p_user_id:target,p_department_ids:requestedDepartments});
     if(departmentSaveError)return Response.json({error:departmentSaveError.message},{status:400});
+    try{await syncBillingRemoteStaff(target);}catch(syncError:any){await audit(db,user.id,"remote_staff.sync_failed","staff_member",target,{error:syncError?.message||String(syncError)});}
     await staffNotice(target,"staff.permissions.changed","Staff permissions updated","Your staff groups or permissions were updated.","admin",groupRows.some((g:any)=>g.slug==="superadmin")?"warning":"info");
     return Response.json({ok:true,id:target,result:data,department_ids:requestedDepartments});
   }catch(e:any){return Response.json({error:e.message||"Staff operation failed."},{status:e.status||500})}
