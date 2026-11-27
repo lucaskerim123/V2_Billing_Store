@@ -31,8 +31,8 @@ export async function issuePasswordReset(user:{id:string,email:string,name:strin
  const site=await orbitfsStoreOrigin(origin);
  const resetUrl=`${site}/reset-password?token=${encodeURIComponent(token)}`;
  // Billing Store publishes the password-reset event; an installed integration handles delivery.
- await sendAutomation("account.password_reset",user.email,{customer_name:user.name,reset_url:resetUrl,expires_minutes:String(expiresMinutes)},"account",user.id);
- return {ok:true};
+ const emailEvent=await sendAutomation("account.password_reset",user.email,{customer_name:user.name,reset_url:resetUrl,expires_minutes:String(expiresMinutes)},"account",user.id);
+ return {ok:true,emailEvent};
 }
 
 export async function completePasswordReset(token:string,password:string){
