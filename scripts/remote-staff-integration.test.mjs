@@ -40,7 +40,7 @@ const directoryRoute = readFileSync(new URL("../src/app/api/admin/integrations/[
 
 test("Integration Manager owns Mail System lifecycle, credentials and automatic remote trust setup", () => {
   assert.match(managerPage, /Mail System Core URL/);
-  assert.match(managerPage, /Save connection & set up trust/);
+  assert.match(managerPage, /Save connection/);
   assert.match(managerPage, /Install/);
   assert.match(managerPage, /Uninstall/);
   assert.match(connectionRoute, /generateKeyPairSync\("rsa"/);
@@ -67,17 +67,11 @@ test("Billing Store directory sync detects roles, departments, groups and permis
 
 const accessManager = readFileSync(new URL("../src/integrations/Mailsystem/Data/access-manager.tsx", import.meta.url), "utf8");
 
-test("Mail access manager keeps permission mappings and role options strongly typed", () => {
-  assert.match(accessManager, /new Map<string, string\[\]>\(/);
-  assert.match(accessManager, /new Map<string, Row>\(/);
+test("Billing Store access screen is read-only and does not write mailbox permissions", () => {
+  assert.match(accessManager, /Manage mailbox access and administrator permissions in Mail System/);
+  assert.doesNotMatch(accessManager, /onSave\(/);
+  assert.doesNotMatch(accessManager, /allowedMailboxIds|permissionRules|Save access and user mappings/);
 });
-
-test("Mail access manager types grouped mailbox rules and normalises mailbox identifiers", () => {
-  assert.match(accessManager, /const existing: Rule = grouped\.get\(key\)/);
-  assert.match(accessManager, /const mailboxId = String\(row\.mailbox_id \|\| ""\)/);
-  assert.match(accessManager, /existing\.mailbox_ids\.includes\(mailboxId\)/);
-});
-
 
 test("directory catalogue and staff sync use the same canonical profile role", () => {
   assert.match(directoryRoute, /const roleCode = .*member\.profile_role/);
