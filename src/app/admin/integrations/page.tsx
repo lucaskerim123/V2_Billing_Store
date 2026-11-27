@@ -48,7 +48,7 @@ export default function IntegrationManagerPage(){
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||"Integration update failed.");
       await load();
-      setMessage(action==="uninstall"?"Integration uninstalled. Its configuration and data were retained.":`Integration ${action} completed.`);
+      setMessage(action==="uninstall"?"Integration uninstalled. Its registration, configuration and integration-owned data were removed.":`Integration ${action} completed.`);
     }catch(error:any){setMessage(error?.message||"Integration update failed.");}
     finally{setBusy("")}
   }
@@ -75,11 +75,11 @@ export default function IntegrationManagerPage(){
             <p style={{fontSize:12,opacity:.65,margin:"10px 0 0"}}>Features: {item.features.join(" · ")}</p>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            {item.state.installed&&<Link href={item.route} style={{padding:"8px 12px",border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:8,textDecoration:"none"}}>Configure</Link>}
+            {item.state.installed&&item.route&&<Link href={item.route} style={{padding:"8px 12px",border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:8,textDecoration:"none"}}>Configure</Link>}
             {canManage&&!item.state.installed&&<button disabled={!!busy} onClick={()=>void change(item.id,"install")}>Install</button>}
-            {canManage&&item.state.installed&&!item.state.enabled&&<button disabled={!!busy||!item.configured} title={!item.configured?"Configure the server environment first.":undefined} onClick={()=>void change(item.id,"enable")}>Enable</button>}
+            {canManage&&item.state.installed&&!item.state.enabled&&<button disabled={!!busy||!item.configured} title={!item.configured?"Required server environment variables are missing.":undefined} onClick={()=>void change(item.id,"enable")}>Enable</button>}
             {canManage&&item.state.enabled&&<button disabled={!!busy} onClick={()=>void change(item.id,"disable")}>Disable</button>}
-            {canManage&&item.state.installed&&<button disabled={!!busy} onClick={()=>{if(window.confirm("Uninstall this integration from Billing Store? Its stored settings and data will be retained."))void change(item.id,"uninstall")}}>Uninstall</button>}
+            {canManage&&item.state.installed&&<button disabled={!!busy} onClick={()=>{if(window.confirm("Uninstall this integration? Its registration, configuration and all data stored in the integration data store will be permanently deleted."))void change(item.id,"uninstall")}}>Uninstall</button>}
           </div>
         </div>
       </section>

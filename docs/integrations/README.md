@@ -1,32 +1,29 @@
 # Billing Store Integration Manager
 
-The Integration Manager is a permanent Billing Store admin feature. Individual integrations are separate modules and are not part of Billing Store's core event system.
+The Integration Manager is a permanent core feature in Billing Store. Individual add-ons live separately under `src/integrations/<id>/`; the manager and host runtime live under `src/lib/integrations/`.
 
-## Installation destination
+## Package discovery and execution
 
-- The only installation destination is `src/integrations/`.
-- That directory is intentionally empty in this build (apart from its Git keep-file). Do not develop, store, or maintain the Mail module here until it is transferred from the Mail System repository.
-- A future module is placed in `src/integrations/<module-id>/` and discovered from its manifest.
-- The manager must report zero installed and zero installable modules while this directory contains no valid module packages.
-- Discovery reads and validates metadata only. It does not execute arbitrary module code, run package scripts, or apply SQL automatically.
-- Installing executable code requires trusted package validation, host integration review, an explicit installation action, and a manually authorised production release. It never deploys automatically.
+- The only add-on installation destination is `src/integrations/`. It is intentionally empty in this build apart from its Git keep-file. Do not copy or develop the Mail module here.
+- A valid package is discovered from its `manifest.json`. Invalid or incomplete packages are ignored by discovery and rejected by the build-time runtime generator.
+- `npm run dev` and `npm run build` generate static imports before Next.js starts/builds. This is required for Next.js to bundle package entrypoints safely; module top-level code must have no side effects.
+- Install registers a package. Enable runs its optional `onEnable` hook and exposes its admin page, navigation and service handler. Disable runs `onDisable` and blocks the page, navigation, service handler and scheduled work without deleting configuration. Uninstall runs `onUninstall`, calls the central lifecycle RPC, then deletes the registry row and its `config`; central audit history is retained.
+- Optional `server` entrypoint hooks are `onInstall`, `onEnable`, `onDisable`, `onUninstall`, `handleRequest`, and `runScheduled`. Hooks must be idempotent; failures block the requested state transition.
+- Module-owned configuration and records use `/api/admin/integrations/<id>/data` and are stored in the central `app_integrations.config` JSON field. Module service requests are dispatched through `/api/integrations/<id>/*` only while enabled. Module handlers remain responsible for caller-level authentication and authorization.
+- Scheduled module work is dispatched daily through `/api/internal/integrations/scheduled`; Vercel must have `CRON_SECRET` configured.
 
 ## Billing-owned events
 
-Business events are defined in `src/lib/billing-email-events.ts`. They are part of Billing Store and exist independently of any installed integration. Password reset, email verification, customer creation, staff invitations, license delivery, invoice/order/service lifecycle, support and deployment events are examples.
+Business events are defined in `src/lib/billing-email-events.ts` and exist independently of integrations. The read-only authenticated endpoint `GET /api/admin/integrations/events` exposes stable event keys, descriptions and variable names. Sensitive token values are never included.
 
-The read-only authenticated endpoint `GET /api/admin/integrations/events` exposes the event catalogue to authorised integrations. It includes stable event keys, descriptions and variable names. Sensitive values such as reset, verification, invitation and guest-access links are marked sensitive; actual token values are never included in the catalogue.
-
-Billing Store owns event creation and trusted event payloads. A future email integration may configure templates, sender selection, recipient rules, routing, conditions and enablement for those existing events. It must not create, rename, or own Billing business events.
+Billing Store owns event creation and trusted event payloads. An integration may configure handling for existing events, but cannot create, rename, or own Billing business events.
 
 ## Ownership boundaries
 
-- Billing Store owns customers, orders, subscriptions, payments, business workflows, event definitions, event payloads, authentication and authorisation.
-- Mail System owns mail infrastructure, mailboxes, transport, sending/receiving, credentials, delivery processing and delivery logs.
-- The installed integration connects the two and owns configurable event-to-email mappings. It does not replace Billing's event definitions or Mail System's transport.
+Billing Store owns customers, orders, subscriptions, payments, business workflows, event definitions, event payloads, authentication and authorisation. Modules must not delete or redefine Billing-owned records. Uninstall cleanup is limited to the module's registration and data in `app_integrations.config`, plus external resources explicitly removed by `onUninstall`.
 
 ## Database and deployment
 
-Integration state and authoritative database ownership remain with the central Master Database System. This repository change does not apply migrations, delete database records, or alter live Supabase data.
+The central database already defines `app_integrations`, its staff permission policy, audit history and `admin_set_integration_state` RPC. This Billing Store change consumes that existing contract; it adds no local database migration and does not modify the Master Database System.
 
-Production deployment remains manual-only. A commit or Full Scan must never deploy production.
+Production deployment remains manual-only. This work does not deploy, merge the PR, or modify the separate Master Database System or Mail System repositories.
