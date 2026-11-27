@@ -65,7 +65,7 @@ jobs:
       - name: Verify Master Database Update readiness and package provenance
         run: npm run test:update-master-database-readiness
 
-      - name: Run complete production preflight
+      - name: Billing mail module contract tests\n        run: npm run test:mail-module\n\n      - name: Run complete production preflight
         run: npm run preflight
 
       - name: TypeScript validation
