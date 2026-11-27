@@ -62,7 +62,6 @@ export default function IntegrationManagerPage(){
     </header>
     {message&&<p role="status" style={{padding:12,border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:8}}>{message}</p>}
     {loading?<p>Loading registered integrations…</p>:rows.length===0?<p>No modules installed or installable. The integration installation folder is empty and ready for a module package.</p>:rows.map(item=>{
-      const result=health[item.id];
       return <section key={item.id} style={{border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:12,padding:18,marginBottom:14,background:"var(--admin-surface,transparent)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:18,flexWrap:"wrap"}}>
           <div style={{minWidth:220,flex:"1 1 400px"}}>
