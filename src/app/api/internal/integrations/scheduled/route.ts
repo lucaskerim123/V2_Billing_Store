@@ -4,7 +4,7 @@ import {BUILTIN_INTEGRATIONS,canRunIntegration} from "@/lib/integrations/registr
 
 export const dynamic="force-dynamic";
 export async function GET(req:Request){
- const secret=process.env.INTEGRATION_SCHEDULER_SECRET||"";
+ const secret=process.env.CRON_SECRET||"";
  const authorization=req.headers.get("authorization")||"";
  if(!secret||authorization!==`Bearer ${secret}`)return Response.json({error:"Unauthorized scheduler request."},{status:401});
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL||"",key=process.env.SUPABASE_SERVICE_ROLE_KEY||"";
