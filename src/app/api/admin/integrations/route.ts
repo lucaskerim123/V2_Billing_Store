@@ -1,5 +1,5 @@
 import {createClient} from "@supabase/supabase-js";
-import {BUILTIN_INTEGRATIONS} from "@/lib/integrations/registry.mjs";
+import {BUILTIN_INTEGRATIONS} from "@/lib/integrations/runtime";
 import {INTEGRATION_MODULE_RUNTIME} from "@/lib/integrations/generated-runtime";
 import {requireIntegrationAdmin,integrationErrorResponse,hasIntegrationPermission} from "@/lib/integrations/admin-context";
 
