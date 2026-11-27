@@ -1,5 +1,5 @@
 import {NextRequest,NextResponse} from 'next/server';
-import {sendPaidLifecycleForInvoice} from '@/lib/mail-lifecycle-server';
+import {sendPaidLifecycleForInvoice} from '@/lib/billing-lifecycle-events';
 import {syncPaidOrderToLicenseMaster} from '@/lib/license-master-sync';
 
 const SUPABASE_URL=process.env.NEXT_PUBLIC_SUPABASE_URL||"";
