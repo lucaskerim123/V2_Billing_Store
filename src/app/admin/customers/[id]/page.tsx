@@ -9,6 +9,7 @@ import AdminNotesPanel from "@/components/AdminNotesPanel";
 import CustomerStaffAccess from "@/components/CustomerStaffAccess";
 import {SuperadminCustomerPasswordControl} from "@/components/SuperadminDeleteBar";
 import {canonicalAccountStatus,canonicalStatusLabel} from "@/lib/license-status";
+import CustomerMailPanel from "@/components/CustomerMailPanel";
 
 const money=(cents:any,currency="AUD")=>new Intl.NumberFormat("en-AU",{style:"currency",currency}).format(Number(cents||0)/100);
 
@@ -94,7 +95,7 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
  }
 
  if(!p)return <main className="adminShell">Loading customer…</main>;
- const accountStatus=canonicalAccountStatus(p),tabs=[["general","General info / settings"],["installed","Installed product"],["orders","Orders"],["invoices","Invoices"],["support","Support tickets"],["notes","Notes"],["history","History / IP details"]];
+ const accountStatus=canonicalAccountStatus(p),tabs=[["general","General info / settings"],["installed","Installed product"],["orders","Orders"],["invoices","Invoices"],["support","Support tickets"],["notes","Notes"],...(can("communications.mail.send")||can("communications.mail.manage")?[["emails","Emails"]]:[]),["history","History / IP details"]];
 
  return <main className="adminShell">
   <header className="adminTop"><div><p className="eyebrow">CUSTOMER CONTROL</p><h1>{[p.first_name,p.last_name].map((name:string|undefined)=>String(name||"").trim()).filter(Boolean).join(" ")||p.display_name||p.name||p.username||"Customer"}</h1><p className="muted">{p.customer_number||"Customer"} · {p.email||"No email"}{p.username?` · @${p.username}`:""} · {p.email_verified_at?"verified":"unverified"} · {canonicalStatusLabel(accountStatus)}</p></div></header>
@@ -188,6 +189,7 @@ export default function Customer({params}:{params:Promise<{id:string}>}){
   {tab==="invoices"&&<section className="panel"><h2>Invoices</h2>{invoices.length?invoices.map(i=><Link className="adminItem" href={`/admin/invoices/${i.id}`} key={i.id}><div><b>{i.invoice_number}</b><span>{i.status} · due {i.due_at?new Date(i.due_at).toLocaleDateString():"—"}</span></div><span>${(i.total_cents/100).toFixed(2)} →</span></Link>):<p className="muted">No invoices.</p>}</section>}
   {tab==="support"&&<section className="panel"><h2>Support tickets</h2>{tickets.length?tickets.map(t=><Link className="adminItem" href={`/admin/support/${t.id}`} key={t.id}><div><b>#{t.ticket_number} {t.subject}</b><span>{t.status} · {t.priority}</span></div><span>Open →</span></Link>):<p className="muted">No tickets.</p>}</section>}
   {tab==="notes"&&<AdminNotesPanel entityType="customer" entityId={id} title="Customer notes"/>}
+  {tab==="emails"&&(can("communications.mail.send")||can("communications.mail.manage"))&&<CustomerMailPanel customerId={id}/>}
 
   
 
