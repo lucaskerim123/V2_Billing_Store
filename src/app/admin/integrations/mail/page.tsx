@@ -89,7 +89,7 @@ export default function BillingMailIntegrationPage(){
     <section style={{marginTop:24,border:"1px solid var(--admin-border,#d5dbe5)",borderRadius:10,padding:18}}>
       <h2 style={{marginTop:0}}>Remote Staff</h2>
       <p style={{opacity:.75}}>Billing Store remains the source of truth for staff employment status, roles, departments and groups. Mail System receives authorised staff snapshots and enforces its own mailbox capabilities.</p>
-      {staffError?<p role="status">{staffError}</p>:<RemoteStaffAdmin staff={staff} canManage={canManage} onSync={person=>remoteAction("sync",person)} onTerminate={async person=>{await remoteAction("terminate",person)}}/>}
+      {staffError?<p role="status">{staffError}</p>:<RemoteStaffAdmin staff={staff} canManage={canManage&&enabled} onSync={person=>remoteAction("sync",person)} onTerminate={async person=>{await remoteAction("terminate",person)}}/>}
     </section>
   </main>;
 }
