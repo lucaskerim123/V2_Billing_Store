@@ -3,7 +3,6 @@
 import {useEffect,useMemo,useState} from "react";
 import {useRouter} from "next/navigation";
 import {createClient} from "@/lib/supabase";
-import "@/app/admin/support-system-v2.css";
 
 type Props={open:boolean;onClose:()=>void};
 
