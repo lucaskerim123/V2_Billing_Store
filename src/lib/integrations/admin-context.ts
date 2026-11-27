@@ -17,7 +17,7 @@ export function hasIntegrationPermission(access:IntegrationAccess|undefined,key:
 }
 
 export async function requireIntegrationAdmin(req:Request,required:string[]=["integrations.view"]){
-  const token=(req.headers.get("authorization")||"").replace(/^Bearer\\s+/i,"").trim();
+  const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
   if(!token)throw Object.assign(new Error("Authentication required."),{status:401});
   if(!SUPABASE_URL||!SUPABASE_KEY)throw Object.assign(new Error("Billing Store Supabase configuration is missing."),{status:503});
   const db=createClient(SUPABASE_URL,SUPABASE_KEY,{
