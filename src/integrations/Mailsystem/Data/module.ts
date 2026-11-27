@@ -105,5 +105,5 @@ export async function dispatchMailEvent(input: {
   });
 }
 
-export { syncRemoteStaff, terminateRemoteStaff, exchangeRemoteIdentity, revokeRemoteSession, refreshRemoteSession } from "./remote-staff";
+export { syncRemoteStaff, provisionRemoteStaffLogin, createRemoteActorAssertion, terminateRemoteStaff, exchangeRemoteIdentity, assignRemoteAdminPermissions, revokeRemoteSession, refreshRemoteSession } from "./remote-staff";
 export type { RemoteStaffState, RemoteStaffSyncInput, RemoteStaffSyncResult, RemoteStaffSession } from "./remote-staff-types";
