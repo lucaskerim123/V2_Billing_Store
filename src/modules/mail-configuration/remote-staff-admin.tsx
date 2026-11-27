@@ -19,7 +19,13 @@ export function RemoteStaffAdmin({ staff, onSync, onTerminate, canManage }: Remo
     catch(error) { setMessage(error instanceof Error?error.message:"Remote Staff operation failed."); }
     finally { setBusy(""); }
   }
-  async function sync(person:RemoteStaffState){\n    setBusy(person.external_user_id);setMessage("");\n    try{const result=await onSync(person);setMessage(result.access.pending_review?"Remote identity synced; Mail System access is pending review. Check the approved role, group and department mappings.":"Remote identity and access mappings synchronized.");}\n    catch(error){setMessage(error instanceof Error?error.message:"Remote Staff synchronization failed.");}\n    finally{setBusy("");}\n  }\n  return <section aria-label="Remote Staff synchronization">
+  async function sync(person:RemoteStaffState){
+    setBusy(person.external_user_id);setMessage("");
+    try{const result=await onSync(person);setMessage(result.access.pending_review?"Remote identity synced; Mail System access is pending review. Check the approved role, group and department mappings.":"Remote identity and access mappings synchronized.");}
+    catch(error){setMessage(error instanceof Error?error.message:"Remote Staff synchronization failed.");}
+    finally{setBusy("");}
+  }
+  return <section aria-label="Remote Staff synchronization">
     <header><h2>Remote Staff</h2><p>Synchronize employment status and role assignments with Mail System.</p></header>
     {message&&<p role="status">{message}</p>}
     <div style={{display:"grid",gap:10}}>
