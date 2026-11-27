@@ -152,7 +152,7 @@ export function MailModuleConsole({
         </div>
         <label>
           <input type="checkbox" checked={settings.enabled} disabled={!canManage || busy}
-            onChange={(event) => run(() => updateModuleSettings(store, { ...settings, enabled: event.target.checked }), event.target.checked ? "Module enabled" : "Module disabled")} />
+            onChange={(event) => run(() => updateModuleSettings(store, { ...settings, enabled: event.target.checked }), event.target.checked ? "Automated mail dispatch enabled" : "Module disabled")} />
           Module enabled
         </label>
       </header>
