@@ -85,3 +85,21 @@ The optional `RemoteStaffAdmin` component is presentation only. Its callbacks mu
 6. Add contextual profile actions only where useful.
 7. Add Remote Staff lifecycle sync only if the host needs delegated Mail System access.
 8. Test with the module and triggers disabled first; enable only after review.
+
+
+## Remote login provisioning and delegated permissions
+
+Billing Store provisions the Remote User record by calling `syncRemoteStaff` from a trusted server-side lifecycle handler. Include stable `external_user_id`, a monotonically increasing `source_revision`, a unique `event_id`, and the user's current `role_codes`, `department_codes` and `group_codes`. Mail System resolves those codes against the External System's delegated access mappings. Unmapped assignments and assignments requiring approval remain pending; the host must not grant access locally based on a pending result.
+
+To create a login session after provisioning, call `provisionRemoteStaffLogin`. It first syncs the staff state, refuses inactive users and refuses to issue a login while access is pending review, then creates a short-lived RS256 actor assertion and exchanges it for a revocable Remote User session. The matching public JWK, key ID, issuer and audience must already be registered in Mail System for this External System. Configure these server-only Billing Store secrets:
+
+- `MAIL_SYSTEM_REMOTE_ASSERTION_ISSUER`
+- `MAIL_SYSTEM_REMOTE_ASSERTION_AUDIENCE`
+- `MAIL_SYSTEM_REMOTE_ASSERTION_KID`
+- `MAIL_SYSTEM_REMOTE_ASSERTION_PRIVATE_KEY` (PEM private key; escaped newlines are supported)
+
+The private key must match the public JWK registered in Mail System. Never send the private key or External System API key to the browser. Assertions are short-lived (two minutes), one-use and bound to the external user ID.
+
+A Remote User session is separate from the Billing Store session. It is revoked when the remote user's status or permission revision changes, and can be explicitly refreshed or revoked using the exported session helpers. For Mail System administrator appointments, use `assignRemoteAdminPermissions` with a Remote User session. Mail System enforces the actor's own appointment, configured permission ceiling, appointment capacity and delegation settings; Billing Store cannot bypass those checks.
+
+The current authority boundary remains explicit: Billing Store is authoritative for staff identity and its role/department/group codes; Mail System is authoritative for its permission catalogue, mailbox grants, delegated permission mappings and Remote User sessions. A successful sync response reports applied grants, revocations and unmapped assignments. A `pending_review` response is not a successful login-ready state.
