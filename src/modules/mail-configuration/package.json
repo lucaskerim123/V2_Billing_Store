@@ -1,8 +1,8 @@
 {
   "name": "billing-mail-configuration-build",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "type": "module",
-  "private": true,
+  "private": false,
   "peerDependencies": {
     "react": ">=18"
   },
@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test"
   },
-  "description": "Billing host integration module",
+  "description": "Installable Billing host integration module",
   "devDependencies": {
     "@types/node": "^22.18.6",
     "@types/react": "^19.1.13",
