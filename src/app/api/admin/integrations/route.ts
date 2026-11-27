@@ -18,6 +18,13 @@ export async function PATCH(req:Request){
     const id=String(body.integration_id||""),action=String(body.action||"");const manifest=BUILTIN_INTEGRATIONS.find(item=>item.id===id);
     if(!manifest)return Response.json({error:"Integration is not registered in this Billing Store build."},{status:404});
     if(!["install","enable","disable","uninstall"].includes(action))return Response.json({error:"Unsupported integration action."},{status:400});
+    const {data:current,error:lookupError}=await db.from("app_integrations").select("installed,enabled").eq("integration_id",id).maybeSingle();
+    if(lookupError)throw Object.assign(new Error(lookupError.message),{status:503});
+    if(action==="install"&&current?.installed)return Response.json({error:"Integration is already installed."},{status:409});
+    if(action==="enable"&&current?.installed!==true)return Response.json({error:"Install this integration before enabling it."},{status:409});
+    if(action==="enable"&&current?.enabled===true)return Response.json({error:"Integration is already enabled."},{status:409});
+    if(action==="disable"&&current?.enabled!==true)return Response.json({error:"Integration is not enabled."},{status:409});
+    if(action==="uninstall"&&current?.installed!==true)return Response.json({error:"Integration is not installed."},{status:409});
     if(action==="enable"&&!manifest.requiredEnvironment.every((key:string)=>Boolean(process.env[key]?.trim())))return Response.json({error:"Required server environment variables are missing."},{status:409});
     const installed=action!=="uninstall",enabled=action==="enable";
     const serverEntry=(INTEGRATION_MODULE_RUNTIME as any)[id]?.entrypoints?.server;
