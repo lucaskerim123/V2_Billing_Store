@@ -31,13 +31,13 @@ export async function listBillingRemoteStaff():Promise<RemoteStaffState[]>{
     db.from("staff_groups").select("id,slug,name"),
     db.from("support_departments").select("id,slug,name"),
     db.from("user_profiles").select("id,display_name,first_name,last_name").in("id",ids),
-    db.from("customers").select("auth_user_id,email,name").in("auth_user_id",ids)
+    db.from("users").select("id,email,display_name,first_name,last_name").in("id",ids)
   ]);
   for(const result of [membershipResult,departmentResult,groupResult,deptResult,profileResult,customerResult])if(result.error)throw result.error;
   const groups=new Map((groupResult.data||[]).map((x:any)=>[String(x.id),x]));
   const departments=new Map((deptResult.data||[]).map((x:any)=>[String(x.id),x]));
   const profiles=new Map((profileResult.data||[]).map((x:any)=>[String(x.id),x]));
-  const customers=new Map((customerResult.data||[]).map((x:any)=>[String(x.auth_user_id),x]));
+  const users=new Map((customerResult.data||[]).map((x:any)=>[String(x.id),x]));
   return (staff||[]).map((person:any)=>{
     const id=String(person.user_id);
     const memberships=(membershipResult.data||[]).filter((x:any)=>String(x.user_id)===id)
@@ -45,13 +45,13 @@ export async function listBillingRemoteStaff():Promise<RemoteStaffState[]>{
     const groupRows=memberships.map((x:any)=>groups.get(String(x.group_id))).filter(Boolean) as any[];
     const departmentRows=(departmentResult.data||[]).filter((x:any)=>String(x.user_id)===id)
       .map((x:any)=>departments.get(String(x.department_id))).filter(Boolean) as any[];
-    const profile:any=profiles.get(id)||{},customer:any=customers.get(id)||{};
-    const displayName=profile.display_name||[profile.first_name,profile.last_name].filter(Boolean).join(" ")||customer.name||id;
+    const profile:any=profiles.get(id)||{},user:any=users.get(id)||{};
+    const displayName=profile.display_name||user.display_name||[profile.first_name||user.first_name,profile.last_name||user.last_name].filter(Boolean).join(" ")||id;
     const departmentCodes=departmentRows.map((x:any)=>String(x.slug||code(x.name||""))).filter(Boolean);
     if(!departmentCodes.length&&person.department)departmentCodes.push(code(String(person.department)));
     return {
       external_user_id:id,
-      email:customer.email||null,
+      email:user.email||null,
       display_name:displayName,
       status:statusOf(String(person.status||"disabled")),
       profile:{title:person.title||null,department:person.department||null},
