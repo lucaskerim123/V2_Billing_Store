@@ -20,7 +20,7 @@
     "event-triggers",
     "conditional-sender-routing",
     "theme-customization",
-    "remote-staff-provisioning",
+    "remote-staff-provisioning",\n    "remote-login-provisioning",\n    "delegated-remote-admin-permissions",
     "remote-user-session-exchange"
   ],
   "entrypoints": {
