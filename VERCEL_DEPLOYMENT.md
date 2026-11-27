@@ -22,7 +22,7 @@ License Master API authority is fixed at `https://incendiarynetworks.cc/api/v1`;
 
 `DEPLOYER_API_TOKEN` — server-only deployment/update credential for License Master deployment operations
 
-`CRON_SECRET` — random secret used by the scheduled mail reconciliation endpoint
+`CRON_SECRET` — random secret used by scheduled reconciliation endpoints
 
 `SITE_URL` or `NEXT_PUBLIC_ORBITFS_STORE_URL` — canonical public Store origin
 
@@ -61,5 +61,5 @@ Do not commit `.env.local`, Supabase service-role keys, License Master API token
 
 The repository can be imported into a different Vercel account/team without changing application code. After import, add the values from `.env.example` and this document. No old License API URL, old Supabase URL, or old database credentials are required.
 
-## Free-tier cron
-`vercel.json` schedules `/api/cron/mail-automations` once daily at 03:00 UTC. The route requires `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY`.
+## Scheduled reconciliation
+`vercel.json` schedules `/api/admin/license-master/reconcile` at 17:05 UTC. The route requires `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY`. Legacy mail automation and delivery scheduling have been retired.
