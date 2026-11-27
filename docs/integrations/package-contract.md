@@ -1,9 +1,13 @@
-# Integration package contract (core manager)
+# Integration package contract
 
-Place a package in `src/integrations/<id>/`. Discovery scans folders at build/runtime for a valid `manifest.json`; the scan reads metadata and checks declared entrypoint files only. It does not execute code, package scripts, or SQL.
+Place each add-on in `src/integrations/<id>/`. The core Integration Manager is in `src/lib/integrations/`; it is not an add-on. Discovery validates each package manifest and declared files. `npm run dev` and `npm run build` generate a static import registry before Next.js starts/builds, so Next can bundle module code without unsafe runtime filesystem imports.
 
-Optional generic contribution metadata may declare `contributions.adminPages` (label, route, entrypoint key) and `contributions.adminMenu` (label, route, permission). These declarations are metadata only: they do not automatically create routes, inject navigation, or load entrypoint code. Host code must implement and authorize any contribution before it becomes operational. This is deliberate; metadata cannot grant arbitrary route execution.
+Each package uses `orbitfs-billing-integration-v1`, `distribution: "bundled"`, and `serverOnly: true`. Entrypoints are statically imported from the package. An `adminPages` contribution can provide one page at `/admin/integrations/<id>`; an `adminMenu` contribution adds navigation only while the module is enabled. Both are checked against the installed/enabled database state and the declared staff permission.
 
-Install/enable/disable/uninstall state is delegated to the central database RPC. Enable requires declared server environment keys. Disable sets enabled=false. Uninstall sets installed=false and enabled=false. **The current central RPC contract has not been verified to erase package-specific configuration, secrets, or data.** This manager must not claim complete data destruction until the central RPC/schema and cleanup behavior are verified and implemented. Production DB changes and deployment are out of scope.
+An optional `server` entrypoint may export async `onInstall`, `onEnable`, `onDisable`, and `onUninstall` hooks. Hooks must be idempotent. The host invokes the relevant hook before committing the lifecycle transition; a thrown error blocks the transition. Use these hooks to register/unregister module-owned external services. Never put credentials in client components or manifest files.
 
-Mail integration remains a future package and must not be copied into this repository by this change.
+Persist module configuration and owned records through `/api/admin/integrations/<id>/data`. The data API is server-side, restricted to staff with `integrations.manage`, and stores records under the module id. Uninstall atomically deletes the module registration and cascades every record in this store. Do not create module-owned tables for ordinary settings/data unless a separately reviewed migration explicitly defines their uninstall cleanup.
+
+Billing-owned events, orders, customers, invoices, and other core records are not module-owned and must never be deleted by module uninstall. Module routes and services must independently authorize their callers. Environment requirements are server-only and are checked before enabling.
+
+Mail remains a future add-on package; this change does not copy or modify the separate Mail System repository or Master Database System. No production database mutation or deployment is performed by this code change.
