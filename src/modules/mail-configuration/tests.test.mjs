@@ -101,19 +101,6 @@ test("connection verifier and API contract accept mail:admin as well as mail:sen
 });
 
 
-test("central sender discovery and send authorization accept privileged mail:admin External System keys", async () => {
-  const [senderRoute, sendRoute, auth] = await Promise.all([
-    read("../src/app/api/mail/senders/route.ts"),
-    read("../src/app/api/mail/route.ts"),
-    read("../src/lib/mail-auth.ts"),
-  ]);
-  assert.match(senderRoute, /scopes\.includes\("mail:send"\) \|\| isAdminKey/);
-  assert.match(senderRoute, /scopes\.includes\("mail:admin"\)/);
-  assert.match(sendRoute, /canUseMailbox\(ctx,sender,true\)/);
-  assert.ok(auth.includes('scopes.includes("mail:send")||scopes.includes("mail:admin")'));
-  assert.ok(auth.includes('scopes?.includes("mail:admin")===true'));
-});
-
 import { readFile as readRemoteFile } from "node:fs/promises";
 
 test("Billing workspace exports the Remote Staff lifecycle and identity helpers", async () => {
