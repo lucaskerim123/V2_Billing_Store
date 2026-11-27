@@ -10,7 +10,11 @@
   "serverOnly": true,
   "requires": [
     "MAIL_SYSTEM_URL",
-    "MAIL_SYSTEM_API_KEY"
+    "MAIL_SYSTEM_API_KEY",
+    "MAIL_SYSTEM_REMOTE_ASSERTION_ISSUER",
+    "MAIL_SYSTEM_REMOTE_ASSERTION_AUDIENCE",
+    "MAIL_SYSTEM_REMOTE_ASSERTION_KID",
+    "MAIL_SYSTEM_REMOTE_ASSERTION_PRIVATE_KEY"
   ],
   "features": [
     "mail-connection",
