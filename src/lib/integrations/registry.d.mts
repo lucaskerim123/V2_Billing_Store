@@ -1,6 +1,6 @@
 export type BuiltinIntegration = {
   id:string; name:string; description:string; version:string; publisher:string;
-  distribution:"bundled"; installable:boolean; sourceRepository:string; sourcePath:string;
+  distribution:"bundled"; installable:boolean; sourceRepository:string; sourcePath:string; billingExtensionPath:string;
   sourceWorkspaceBuildOnly:boolean; hostAdapted:boolean; requiredEnvironment:string[];
   features:string[]; route:string;
 };
