@@ -94,15 +94,15 @@ export default function MailSettingsPage({integration}:Props){
   try{
    const result=await request("mail-directory","POST",{});
    const failures=(result.failures||[]).map((item:{result?:string})=>item.result||"Sync failed");
-   await load();setAccessRevision(old=>old+1);
+   const refreshed=await load();setAccessRevision(old=>old+1);
    if(result.ok===false)throw new Error("Directory sync incomplete: "+failures.join("; "));
-   setSyncStatus("Staff synchronized: "+(result.users?.synced??0)+" of "+(result.users?.total??0)+". Mailbox catalogue refreshed.");
+   setSyncStatus("Staff synchronized: "+(result.users?.synced??0)+" of "+(result.users?.total??0)+". "+(result.users?.pendingReview?result.users.pendingReview+" staff need access review. ":"")+(refreshed.connection.connected?"Mailbox catalogue refreshed.":"Mailbox catalogue unavailable: "+refreshed.connection.message));
   }catch(reason){setSyncStatus(reason instanceof Error?reason.message:"Directory synchronization failed.");}
   finally{setSyncing(false);}
  },[request,load]);
  const saveConfiguration=useCallback(async(body:unknown)=>{
   const result=await request("mail-discovery","PUT",body);
-  await load();
+  await load(true);
   const rows=(result.results||[]) as {key:string;status:string}[];
   const review=rows.filter(row=>isReview(row.status));
   setMessage(rows.length?rows.length+" events processed. "+review.length+" need review.":"Configuration saved.");
@@ -131,7 +131,7 @@ export default function MailSettingsPage({integration}:Props){
   void run("save-template",async()=>{
    if(custom){
     await request("mail-discovery","PUT",{action:"custom_template",templateKey:customKey,edit:customExisting,template:draft,active:templateActive});
-    await load();setCustomExisting(true);setMessage("Custom template saved.");
+    await load(true);setCustomExisting(true);setMessage("Custom template saved.");
    }else{
     const rows=await saveConfiguration({eventKey:selected,template:draft,...(templateSender&&templateSender!==selectedEvent?.sender?{sender:templateSender}:{}),...(templateActive!==selectedEvent?.active?{active:templateActive}:{})});
     if(rows.some(row=>row.status==="needs_sender"))setMessage("Template saved. Assign a mailbox before enabling delivery.");
@@ -190,6 +190,6 @@ export default function MailSettingsPage({integration}:Props){
   </>}
   {snapshot&&section==="access"&&<><section className="panel"><h2>Detected directory</h2><p>{snapshot.directory.available? snapshot.directory.users+" staff · "+snapshot.directory.groups+" groups · "+snapshot.directory.departments+" departments":"Directory unavailable. Check administrator permissions."}</p></section><MailAccessManager key={accessRevision} onLoad={loadAccess} onSave={saveAccess} canManage={snapshot.integrationEnabled}/></>}
   {snapshot&&section==="templates"&&<><section className="panel"><div className="panelTitle"><div><h2>Custom templates</h2><p className="muted">Automated templates are edited directly on their event. Create reusable custom templates here.</p></div><button disabled={!!busy} type="button" onClick={()=>selectCustom()}>New template</button></div>{snapshot.customTemplates.map(template=><div className="listrow" key={template.id}><div><b>{template.display_name}</b><p className="muted">{template.template_key} · {template.active?"Active":"Disabled"}</p></div><button type="button" className="secondary" disabled={!!busy} onClick={()=>selectCustom(template)}>Edit</button></div>)}{!snapshot.customTemplates.length&&<p className="muted">No custom templates created.</p>}</section>{customKey&&editor(true)}</>}
-  {snapshot&&section==="delivery"&&<section className="panel"><div className="panelTitle"><div><h2>Automated delivery</h2><p className="muted">Global delivery switch. Individual events must also be enabled and have a valid sender.</p></div><strong>{snapshot.deliveryEnabled?"Enabled":"Disabled"}</strong></div><label className="toggle"><input type="checkbox" checked={snapshot.deliveryEnabled} disabled={!!busy||(!snapshot.deliveryEnabled&&(!snapshot.connection.canSend||!snapshot.integrationEnabled))} onChange={event=>void run("delivery",async()=>{await request("mail-discovery","PUT",{action:"delivery",enabled:event.target.checked});await load();setMessage("Delivery setting saved.")})}/> Enable automated email delivery</label><p className="muted">Integration installation, API credentials and lifecycle remain in Integration Manager.</p></section>}
+  {snapshot&&section==="delivery"&&<section className="panel"><div className="panelTitle"><div><h2>Automated delivery</h2><p className="muted">Global delivery switch. Individual events must also be enabled and have a valid sender.</p></div><strong>{snapshot.deliveryEnabled?"Enabled":"Disabled"}</strong></div><label className="toggle"><input type="checkbox" checked={snapshot.deliveryEnabled} disabled={!!busy||(!snapshot.deliveryEnabled&&(!snapshot.connection.canSend||!snapshot.integrationEnabled))} onChange={event=>void run("delivery",async()=>{await request("mail-discovery","PUT",{action:"delivery",enabled:event.target.checked});await load(true);setMessage("Delivery setting saved.")})}/> Enable automated email delivery</label><p className="muted">Integration installation, API credentials and lifecycle remain in Integration Manager.</p></section>}
  </main>;
 }

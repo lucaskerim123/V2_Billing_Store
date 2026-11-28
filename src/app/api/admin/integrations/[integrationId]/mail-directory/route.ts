@@ -89,7 +89,7 @@ export async function POST(req: Request) {
 
     const sourceRevision = Date.now();
     const outcomes: any[] = [];
-    for (const member of members) {
+    const syncMember=async(member:any)=>{
       const userId = String(member.user_id || member.id).trim();
       const groupCodes = (Array.isArray(member.group_ids) ? member.group_ids : [])
         .map((id: unknown) => groupById.get(String(id)))
@@ -115,14 +115,23 @@ export async function POST(req: Request) {
           group_codes: [...new Set<string>([...groupCodes,...staffDepartmentMailGroups(groupCodes,memberships.filter((row:any)=>String(row.user_id)===userId),departmentRows)])],
         },
       };
-      const response = await fetch(config.baseUrl + "/api/integrations/remote-staff/sync", {
-        method: "POST",
-        headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json", "Idempotency-Key": payload.event_id },
-        body: JSON.stringify(payload),
-        cache: "no-store", signal: AbortSignal.timeout(12000),
-      });
-      const result: any = await response.json().catch(() => ({}));
-      outcomes.push({ external_user_id: userId, ok: response.ok, status: response.status, result: response.ok ? result : (typeof result.error === "object" ? result.error.message : result.error) || "Sync failed" });
+      try{
+        const response = await fetch(config.baseUrl + "/api/integrations/remote-staff/sync", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json", "Idempotency-Key": payload.event_id },
+          body: JSON.stringify(payload),
+          cache: "no-store", signal: AbortSignal.timeout(12000),
+        });
+        const result: any = await response.json().catch(() => ({}));
+        const applied=response.ok&&response.status!==202&&result.ok===true;
+        return {external_user_id:userId,ok:applied,status:response.status,pendingReview:applied&&(result.access?.state==="pending_review"||result.access?.pending_review===true),result:applied?result:response.status===202?"Remote sync still processing; retry synchronization.":(typeof result.error==="object"?result.error.message:result.error)||"Sync was not confirmed"};
+      }catch(error){
+        return {external_user_id:userId,ok:false,status:503,pendingReview:false,result:error instanceof Error?error.message:String(error)};
+      }
+    };
+    // Bounded batches prevent a slow or failed member from blocking every subsequent record.
+    for(let offset=0;offset<members.length;offset+=4){
+      outcomes.push(...await Promise.all(members.slice(offset,offset+4).map(syncMember)));
     }
     const failed = outcomes.filter((item) => !item.ok);
     let reconciliation: any = null;
@@ -142,7 +151,7 @@ export async function POST(req: Request) {
     return Response.json({
       ok: failed.length === 0,
       directory: directoryResult.detected,
-      users: { total: outcomes.length, synced: outcomes.filter((item) => item.ok).length, failed: outcomes.filter((item) => !item.ok).length },
+      users: { total: outcomes.length, synced: outcomes.filter((item) => item.ok).length, failed: outcomes.filter((item) => !item.ok).length, pendingReview:outcomes.filter(item=>item.pendingReview).length },
       disabledRemoteUsers: reconciliation?.disabled_users || 0,
       failures: failed.slice(0, 20),
       event_id: randomUUID(),
