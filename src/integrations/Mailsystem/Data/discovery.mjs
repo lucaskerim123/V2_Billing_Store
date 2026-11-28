@@ -24,8 +24,10 @@ export function planMailDiscovery({events=[],senders=[],triggers=[],routes=[],te
   }:null);
   const candidates=[...allowed].filter(address=>(categories[event.category]??[]).includes(address.split("@")[0]));
   const preferred=normalize(legacy?.from_account);
+  const sameDomain=new Set(candidates.map(address=>address.split("@")[1])).size===1;
+  const ranked=sameDomain?[...candidates].sort((a,b)=>(categories[event.category]??[]).indexOf(a.split("@")[0])-(categories[event.category]??[]).indexOf(b.split("@")[0])):[];
   const sender=existing?(allowed.has(normalize(route?.sender_address))?normalize(route.sender_address):null):
-   allowed.has(preferred)?preferred:candidates.length===1?candidates[0]:null;
+   allowed.has(preferred)?preferred:candidates.length===1?candidates[0]:ranked[0]??null;
   return {...event,template,sender,existing:!!existing,active:!!(existing?.active&&route?.active&&template?.active),routeKey:existing?.route_key||null,templateKey:existing?.template_key||event.key,
    status:existing?(sender?"configured":"needs_sender"):!sender?"needs_sender":!template?"needs_template":"ready_to_configure"};
  });
