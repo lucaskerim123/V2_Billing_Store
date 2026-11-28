@@ -4,14 +4,12 @@ import {BILLING_EMAIL_EVENTS} from "@/lib/billing-email-events.mjs";
 import {planMailDiscovery} from "@/integrations/Mailsystem/Data/discovery.mjs";
 import {defaultBillingMailTemplates} from "@/integrations/Mailsystem/Data/billing-defaults.mjs";
 import {verifyMailSystemConnection,type MailConnectionResult} from "@/integrations/Mailsystem/Data/client";
-import {getMailModuleConfig} from "@/integrations/Mailsystem/Data/config";
 import {createSupabaseMailModuleStore} from "@/integrations/Mailsystem/Data/supabase-store";
 import {configureTemplate} from "@/integrations/Mailsystem/Data/configuration";
 export const runtime="nodejs";
 
 const noCache={headers:{"cache-control":"no-store"}};
 const defaults=defaultBillingMailTemplates(BILLING_EMAIL_EVENTS);
-const errorMessage=(error:unknown)=>error instanceof Error?error.message:String(error);
 const reject=(message:string,status=400)=>Object.assign(new Error(message),{status});
 type Box={id:string;address:string;kind?:string};
 type TemplateDraft={display_name:string;subject:string;body_text:string|null;body_html:string|null};
@@ -38,7 +36,7 @@ async function discover(req:Request,localOnly=false){
  const directory=staff.error||departments.error||!Array.isArray(staff.data?.members)||!Array.isArray(staff.data?.groups)?{available:false,users:0,groups:0,departments:0}:{available:true,users:staff.data.members.length,groups:staff.data.groups.length,departments:departments.data?.length||0};
  const events=planMailDiscovery({events:BILLING_EMAIL_EVENTS,senders:permitted,catalogueAvailable:verified.connected,templates,triggers,routes,defaultTemplates:defaults});
  const eventTemplateKeys=new Set(events.map(event=>event.templateKey));
- return {db,store,connection:scopedConnection,events,directory,provisioningDomains,departmentRows:departments.data||[],settings,integrationEnabled:state.enabled===true,customTemplates:templates.filter(template=>!eventTemplateKeys.has(template.template_key))};
+ return {db,store,templates,triggers,connection:scopedConnection,events,directory,provisioningDomains,departmentRows:departments.data||[],settings,integrationEnabled:state.enabled===true,customTemplates:templates.filter(template=>!eventTemplateKeys.has(template.template_key))};
 }
 
 export async function GET(req:Request){
@@ -50,56 +48,31 @@ export async function GET(req:Request){
 
 export async function POST(req:Request){
  try{
-  const initial=await discover(req);
-  const {db,store,provisioningDomains,departmentRows,integrationEnabled}=initial;
-  let {connection,events}=initial;
-  const body=await req.json().catch(()=>({}));
-  const domain=typeof body.domain==="string"?body.domain:provisioningDomains.length===1?provisioningDomains[0]:"";
+  const initial=await discover(req,true);
+  const {db,store,templates,triggers,events,settings}=initial;
+  const existingKeys=new Set(templates.map(template=>template.template_key));
+  const missing=new Map(events.filter(event=>event.template&&!existingKeys.has(event.templateKey)).map(event=>[event.templateKey,event.template!]));
   const warnings:string[]=[];
-  let provisioning:unknown=null;
-  if(domain&&provisioningDomains.includes(domain)&&connection.connected&&integrationEnabled){
-   try{
-    const config=await getMailModuleConfig();
-    const candidates=[{address:"system@"+domain,kind:"system",display_name:"System"},{address:"noreply@"+domain,kind:"system",display_name:"No reply"},...departmentRows.map(row=>({address:row.email||String(row.slug||"").replace(/[^a-z0-9._-]/gi,"").toLowerCase()+"@"+domain,kind:"department",display_name:String(row.name||row.slug||"Department")}))];
-    const assigned=new Set(connection.senders.map(mailbox=>mailbox.address.toLowerCase()));
-    const unique=new Map(candidates.filter(item=>typeof item.address==="string"&&item.address.toLowerCase().endsWith("@"+domain)&&!assigned.has(item.address.toLowerCase())).map(item=>[item.address.toLowerCase(),item]));
-    if(unique.size){
-     const response=await fetch(config.baseUrl+"/api/integrations/mailboxes",{method:"POST",headers:{Authorization:"Bearer "+config.apiKey,"Content-Type":"application/json"},body:JSON.stringify({mailboxes:[...unique.values()]}),cache:"no-store",signal:AbortSignal.timeout(15000)});
-     const result=await response.json().catch(()=>({}));provisioning=result;
-     if(!response.ok)throw new Error(typeof result.error==="string"?result.error:result.error?.message||"Mailbox provisioning failed.");
-     for(const item of result.results||[])if(!item.ok)warnings.push(String(item.address)+": "+String(item.error||"Provisioning rejected"));
-     const refreshed=await discover(req);connection=refreshed.connection;events=refreshed.events;
+  // Bound concurrency and keep the revision RPC; never replace an existing template.
+  const pending=[...missing.entries()];
+  for(let offset=0;offset<pending.length;offset+=6){
+   await Promise.all(pending.slice(offset,offset+6).map(async ([key,template])=>{
+    try{await store.saveTemplate({...template,template_key:key,active:false});existingKeys.add(key);}
+    catch(error){
+     if(await store.getTemplateByKey(key))existingKeys.add(key);
+     else warnings.push(key+": "+(error instanceof Error?error.message:String(error)));
     }
-   }catch(error){warnings.push(errorMessage(error));}
+   }));
   }
-  const results:{key:string;status:string}[]=[];
-  // Seed templates even when the Mail System is offline or has no assigned mailbox.
-  // Existing templates/routes/triggers are never overwritten during discovery.
-  for(const event of events){
-   if(!event.template){results.push({key:event.key,status:"needs_template"});continue;}
-   const templateKey=event.templateKey;
-   if(!await store.getTemplateByKey(templateKey)){
-    try{await store.saveTemplate({...event.template,template_key:templateKey,active:false});}
-    catch(error){if(!await store.getTemplateByKey(templateKey))throw error;}
-   }
-   let routeKey=event.routeKey;
-   if(!routeKey&&event.sender&&!event.active){
-    const proposed="auto."+event.key;
-    const r=await db.from("app_mail_routes").upsert({route_key:proposed,sender_address:event.sender,priority:0,conditions:{},active:false},{onConflict:"route_key",ignoreDuplicates:true});
-    if(r.error)throw r.error;
-    const route=(await store.listRoutes()).find(row=>row.route_key===proposed);
-    if(route&&route.sender_address.toLowerCase()===event.sender.toLowerCase())routeKey=proposed;
-   }
-   const g=await db.from("app_mail_triggers").upsert({event_key:event.key,template_key:templateKey,route_key:routeKey,recipient_mapping:{source:"host_event"},active:false},{onConflict:"event_key",ignoreDuplicates:true});
-   if(g.error)throw g.error;
-   if(routeKey&&!event.routeKey&&!event.active){
-    const repaired=await db.from("app_mail_triggers").update({route_key:routeKey}).eq("event_key",event.key).eq("active",false).is("route_key",null);
-    if(repaired.error)throw repaired.error;
-   }
-   results.push({key:event.key,status:routeKey&&event.sender?"configured":"needs_sender"});
+  const existingTriggers=new Set(triggers.map(trigger=>trigger.event_key));
+  const rows=events.filter(event=>existingKeys.has(event.templateKey)&&!existingTriggers.has(event.key)).map(event=>({event_key:event.key,template_key:event.templateKey,route_key:null,recipient_mapping:{source:"host_event"},active:false}));
+  if(rows.length){
+   const result=await db.from("app_mail_triggers").upsert(rows,{onConflict:"event_key",ignoreDuplicates:true});
+   if(result.error)throw result.error;
   }
-  return Response.json({configured:results.filter(row=>row.status==="configured").map(row=>row.key),results,provisioning,warnings,requiresReview:results.filter(row=>row.status!=="configured"),deliveryEnabled:(await store.getSettings()).enabled},noCache);
- }catch(error){return integrationErrorResponse(error,"Automatic mail configuration failed.");}
+  const results=events.map(event=>({key:event.key,status:!existingKeys.has(event.templateKey)?"needs_template":event.routeKey&&event.sender?"configured":"needs_sender"}));
+  return Response.json({ok:warnings.length===0,detected:events.length,templatesPrepared:pending.filter(([key])=>existingKeys.has(key)).length,triggersPrepared:rows.length,configured:results.filter(row=>row.status==="configured").map(row=>row.key),results,warnings,requiresReview:results.filter(row=>row.status!=="configured"),deliveryEnabled:settings.enabled},noCache);
+ }catch(error){return integrationErrorResponse(error,"Local event detection failed.");}
 }
 
 function draft(input:unknown):TemplateDraft{
