@@ -1,3 +1,4 @@
+import {POST as syncMailDirectory} from "@/app/api/admin/integrations/[integrationId]/mail-directory/route";
 import {createClient} from "@supabase/supabase-js";
 import {INTEGRATION_MODULE_RUNTIME} from "@/lib/integrations/generated-runtime";
 import {BUILTIN_INTEGRATIONS,canRunIntegration} from "@/lib/integrations/runtime";
@@ -15,6 +16,10 @@ export async function GET(req:Request){
  const results:Array<{id:string;ok:boolean;error?:string}>=[];
  for(const state of states||[]){
   if(!canRunIntegration(state))continue;
+  if(state.integration_id==="mailsystem"){
+   try{const response=await syncMailDirectory(req);const result=await response.json();if(!response.ok||result.ok!==true)throw new Error(result.error||"Mail directory sync incomplete.");results.push({id:state.integration_id,ok:true});}catch(error){results.push({id:state.integration_id,ok:false,error:error instanceof Error?error.message:"Mail directory sync failed."});}
+   continue;
+  }
   const manifest=BUILTIN_INTEGRATIONS.find(item=>item.id===state.integration_id);
   const job=(INTEGRATION_MODULE_RUNTIME as any)[state.integration_id]?.entrypoints?.server?.runScheduled;
   if(!manifest||typeof job!=="function")continue;
