@@ -41,3 +41,30 @@ test("a module only runs when installed and enabled",()=>{
   assert.equal(canRunIntegration({installed:true,enabled:false}),false);
   assert.equal(canRunIntegration({installed:false,enabled:true}),false);
 });
+
+test("automatic mail discovery preserves existing mappings and only picks an unambiguous permitted sender",async()=>{
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const events=[{key:"invoice.created",name:"Invoice created",category:"billing",variables:[]},{key:"account.password_reset",name:"Password reset",category:"account",variables:[{name:"reset_url",sensitive:true}]}];
+ const senders=[{id:"a",address:"billing@orbitfs.cc"},{id:"b",address:"system@one.example"},{id:"c",address:"system@two.example"}];
+ const result=planMailDiscovery({events,senders,triggers:[{event_key:"invoice.created",template_key:"custom",route_key:"custom"}],routes:[{route_key:"custom",sender_address:"billing@orbitfs.cc"}]});
+ assert.equal(result[0].status,"configured");
+ assert.equal(result[0].sender,"billing@orbitfs.cc");
+ assert.equal(result[1].sender,null);
+ assert.equal(result[1].status,"needs_sender");
+ assert.equal(result[1].variables[0].sensitive,true);
+});
+test("automatic mail discovery restores matching legacy template and sender without enabling it",async()=>{
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const result=planMailDiscovery({events:[{key:"account.password_reset",name:"Password reset",category:"account",variables:[{name:"reset_url"}]}],senders:[{id:"a",address:"noreply@orbitfs.cc"}],legacyTemplates:[{template_key:"account_password_reset",name:"Reset",subject:"Reset",text_body:"{{reset_url}}",from_account:"noreply@orbitfs.cc"}]});
+ assert.equal(result[0].sender,"noreply@orbitfs.cc");
+ assert.equal(result[0].template.body_text,"{{reset_url}}");
+ assert.equal(result[0].status,"ready_to_configure");
+ assert.equal(result[0].template.active,false);
+});
+test("automatic mail discovery never guesses a template or routes through an unrelated mailbox",async()=>{
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const result=planMailDiscovery({events:[{key:"support.ticket.created",name:"Ticket",category:"support",variables:[]}],senders:[{id:"a",address:"personal@orbitfs.cc"}]});
+ assert.equal(result[0].sender,null);
+ assert.equal(result[0].template,null);
+ assert.equal(result[0].status,"needs_sender");
+});
