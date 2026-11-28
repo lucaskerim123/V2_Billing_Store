@@ -1,6 +1,10 @@
+// @ts-check
 // Host-neutral discovery: never overwrite existing mappings or guess ambiguous senders.
+/** @param {unknown} value */
 const normalize = value => String(value ?? "").trim().toLowerCase();
+/** @param {unknown} value */
 const canonical = value => normalize(value).replace(/[._-]+/g, ".");
+/** @type {Partial<Record<string, readonly string[]>>} */
 const categories = {
  account:["system","noreply","no-reply"], customers:["system","noreply","no-reply"],
  staff:["system","noreply","no-reply"], licensing:["system","noreply","no-reply"],
@@ -8,6 +12,16 @@ const categories = {
  support:["support"], services:["technical","system"], deployments:["technical","system"],
  releases:["system","noreply","no-reply"], news:["news","announcements"]
 };
+/**
+ * @typedef {{key: string, name: string, category: string, description?: string, variables: readonly {name: string, sensitive?: boolean}[]}} DiscoveryEvent
+ * @typedef {Pick<import("./types").MailTemplate, "template_key" | "display_name" | "subject" | "body_text" | "body_html" | "variables" | "active">} DiscoveryTemplate
+ * @typedef {{template_key: string, name?: string | null, subject?: string | null, text_body?: string | null, html?: string | null, from_account?: string | null}} LegacyTemplate
+ * @typedef {{event_key: string, template_key?: string | null}} LegacyAutomation
+ * @typedef {{events?: readonly DiscoveryEvent[], senders?: readonly Pick<import("./types").MailSender, "address">[], triggers?: readonly Pick<import("./types").MailTrigger, "event_key" | "template_key" | "route_key" | "active">[], routes?: readonly Pick<import("./types").MailRoute, "route_key" | "sender_address" | "active">[], templates?: readonly DiscoveryTemplate[], legacyTemplates?: readonly LegacyTemplate[], legacyAutomations?: readonly LegacyAutomation[]}} DiscoveryInput
+ * @typedef {DiscoveryEvent & {template: DiscoveryTemplate | null, sender: string | null, existing: boolean, active: boolean, routeKey: string | null, templateKey: string, status: "configured" | "needs_sender" | "needs_template" | "ready_to_configure"}} DiscoveryResult
+ * @param {DiscoveryInput} input
+ * @returns {DiscoveryResult[]}
+ */
 export function planMailDiscovery({events=[],senders=[],triggers=[],routes=[],templates=[],legacyTemplates=[],legacyAutomations=[]}){
  const allowed=new Set(senders.map(s=>normalize(s.address)).filter(a=>a.includes("@")));
  return events.map(event=>{
@@ -26,7 +40,7 @@ export function planMailDiscovery({events=[],senders=[],triggers=[],routes=[],te
   const preferred=normalize(legacy?.from_account);
   const sameDomain=new Set(candidates.map(address=>address.split("@")[1])).size===1;
   const ranked=sameDomain?[...candidates].sort((a,b)=>(categories[event.category]??[]).indexOf(a.split("@")[0])-(categories[event.category]??[]).indexOf(b.split("@")[0])):[];
-  const sender=existing?(allowed.has(normalize(route?.sender_address))?normalize(route.sender_address):null):
+  const sender=existing?(allowed.has(normalize(route?.sender_address))?normalize(route?.sender_address):null):
    allowed.has(preferred)?preferred:candidates.length===1?candidates[0]:ranked[0]??null;
   return {...event,template,sender,existing:!!existing,active:!!(existing?.active&&route?.active&&template?.active),routeKey:existing?.route_key||null,templateKey:existing?.template_key||event.key,
    status:existing?(sender?"configured":"needs_sender"):!sender?"needs_sender":!template?"needs_template":"ready_to_configure"};
