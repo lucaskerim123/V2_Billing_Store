@@ -26,7 +26,7 @@ export function planMailDiscovery({events=[],senders=[],triggers=[],routes=[],te
   const preferred=normalize(legacy?.from_account);
   const sender=existing?(allowed.has(normalize(route?.sender_address))?normalize(route.sender_address):null):
    allowed.has(preferred)?preferred:candidates.length===1?candidates[0]:null;
-  return {...event,template,sender,existing:!!existing,
+  return {...event,template,sender,existing:!!existing,active:!!(existing?.active&&route?.active&&template?.active),routeKey:existing?.route_key||null,templateKey:existing?.template_key||event.key,
    status:existing?(sender?"configured":"needs_sender"):!sender?"needs_sender":!template?"needs_template":"ready_to_configure"};
  });
 }
