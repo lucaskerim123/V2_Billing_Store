@@ -118,10 +118,13 @@ test("Billing Store directory sync detects roles, departments, groups and permis
 
 const accessManager = readFileSync(new URL("../src/integrations/Mailsystem/Data/access-manager.tsx", import.meta.url), "utf8");
 
-test("Billing Store access screen is read-only and does not write mailbox permissions", () => {
-  assert.match(accessManager, /Manage mailbox access and administrator permissions in Mail System/);
-  assert.doesNotMatch(accessManager, /onSave\(/);
-  assert.doesNotMatch(accessManager, /allowedMailboxIds|permissionRules|Save access and user mappings/);
+test("Billing Store owns access configuration and provides manual sync", () => {
+  assert.match(accessManager, /Save access and sync/);
+  assert.match(accessManager, /onSave\(/);
+  assert.match(accessManager, /Sync now/);
+  assert.match(mailSettingsPage, /MailAccessManager/);
+  assert.match(mailSettingsPage, /mail-directory/);
+  assert.match(mailSettingsPage, /Enable ready events/);
 });
 
 test("directory catalogue and staff sync use the same canonical profile role", () => {
