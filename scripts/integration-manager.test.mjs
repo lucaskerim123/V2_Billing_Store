@@ -116,3 +116,28 @@ test("missing saved template is not reported as configured",async()=>{
  const row=planMailDiscovery({events:[{key:"invoice.created",name:"Invoice",category:"billing",variables:[]}],senders:[{address:"billing@orbitfs.cc",kind:"department"}],triggers:[{event_key:"invoice.created",template_key:"custom",route_key:"custom",active:false}],routes:[{route_key:"custom",sender_address:"billing@orbitfs.cc",active:false}]})[0];
  assert.equal(row.status,"needs_template");
 });
+
+test("local detection retains saved routing without guessing remote senders",async()=>{
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const events=[{key:"invoice.created",name:"Invoice",category:"billing",variables:[]},{key:"invoice.paid",name:"Paid",category:"billing",variables:[]}];
+ const templates=events.map(event=>({template_key:event.key,display_name:event.name,subject:event.name,body_text:"Example",body_html:null,variables:[],active:true}));
+ const input={events,templates,triggers:[{event_key:events[0].key,template_key:events[0].key,route_key:"existing",active:true}],routes:[{route_key:"existing",sender_address:"billing@orbitfs.cc",active:true}]};
+ const offline=planMailDiscovery({...input,catalogueAvailable:false});
+ assert.equal(offline[0].sender,"billing@orbitfs.cc");
+ assert.equal(offline[0].active,true);
+ assert.equal(offline[0].status,"configured");
+ assert.equal(offline[1].sender,null);
+ const verified=planMailDiscovery({...input,senders:[],catalogueAvailable:true});
+ assert.equal(verified[0].sender,null);
+ assert.equal(verified[0].status,"needs_sender");
+});
+
+test("Mail Settings initial load is local and does not provision or run directory sync",()=>{
+ const page=readFileSync(new URL("../src/integrations/Mailsystem/Pages/mail-settings/page.tsx",import.meta.url),"utf8");
+ const start=page.indexOf('useEffect(()=>{void run("load"');
+ const end=page.indexOf("const syncAll",start);
+ assert.ok(start>=0&&end>start);
+ const mount=page.slice(start,end);
+ assert.match(mount,/await load\(true\)/);
+ assert.doesNotMatch(mount,/await discover\(|mail-directory|await load\(\);/);
+});

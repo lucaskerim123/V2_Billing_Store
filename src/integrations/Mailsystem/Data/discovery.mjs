@@ -17,12 +17,12 @@ const categories = {
  * @typedef {Pick<import("./types").MailTemplate, "template_key" | "display_name" | "subject" | "body_text" | "body_html" | "variables" | "active">} DiscoveryTemplate
  * @typedef {{template_key: string, name?: string | null, subject?: string | null, text_body?: string | null, html?: string | null, from_account?: string | null}} LegacyTemplate
  * @typedef {{event_key: string, template_key?: string | null}} LegacyAutomation
- * @typedef {{events?: readonly DiscoveryEvent[], senders?: readonly {address:string,kind?:string|null}[], triggers?: readonly Pick<import("./types").MailTrigger, "event_key" | "template_key" | "route_key" | "active">[], routes?: readonly Pick<import("./types").MailRoute, "route_key" | "sender_address" | "active">[], templates?: readonly DiscoveryTemplate[], defaultTemplates?: readonly DiscoveryTemplate[], legacyTemplates?: readonly LegacyTemplate[], legacyAutomations?: readonly LegacyAutomation[]}} DiscoveryInput
+ * @typedef {{events?: readonly DiscoveryEvent[], catalogueAvailable?: boolean, senders?: readonly {address:string,kind?:string|null}[], triggers?: readonly Pick<import("./types").MailTrigger, "event_key" | "template_key" | "route_key" | "active">[], routes?: readonly Pick<import("./types").MailRoute, "route_key" | "sender_address" | "active">[], templates?: readonly DiscoveryTemplate[], defaultTemplates?: readonly DiscoveryTemplate[], legacyTemplates?: readonly LegacyTemplate[], legacyAutomations?: readonly LegacyAutomation[]}} DiscoveryInput
  * @typedef {DiscoveryEvent & {template: DiscoveryTemplate | null, sender: string | null, existing: boolean, active: boolean, routeKey: string | null, templateKey: string, status: "configured" | "needs_sender" | "needs_template" | "ready_to_configure"}} DiscoveryResult
  * @param {DiscoveryInput} input
  * @returns {DiscoveryResult[]}
  */
-export function planMailDiscovery({events=[],senders=[],triggers=[],routes=[],templates=[],defaultTemplates=[],legacyTemplates=[],legacyAutomations=[]}){
+export function planMailDiscovery({events=[],catalogueAvailable=true,senders=[],triggers=[],routes=[],templates=[],defaultTemplates=[],legacyTemplates=[],legacyAutomations=[]}){
  const allowed=new Set(senders.map(s=>normalize(s.address)).filter(a=>a.includes("@")));
  return events.map(event=>{
   const existing=triggers.find(t=>t.event_key===event.key);
@@ -45,7 +45,7 @@ export function planMailDiscovery({events=[],senders=[],triggers=[],routes=[],te
   const sameDomain=new Set(pool.map(address=>address.split("@")[1])).size===1;
   const ranked=sameDomain?[...pool].sort((a,b)=>priority.indexOf(a.split("@")[0])-priority.indexOf(b.split("@")[0])):[];
   const explicit=!!(existing&&(existing.route_key||existing.active));
-  const sender=explicit?(allowed.has(normalize(route?.sender_address))?normalize(route?.sender_address):null):
+  const sender=explicit?((!catalogueAvailable||allowed.has(normalize(route?.sender_address)))?normalize(route?.sender_address)||null:null):
    automatic.has(preferred)&&allowed.has(preferred)?preferred:pool.length===1?pool[0]:ranked[0]??null;
   return {...event,template,sender,existing:!!existing,active:!!(existing?.active&&route?.active&&template?.active),routeKey:existing?.route_key||null,templateKey:existing?.template_key||event.key,
    status:!sender?"needs_sender":!template?"needs_template":existing&&route?"configured":"ready_to_configure"};

@@ -3,7 +3,7 @@ import {requireIntegrationAdmin,integrationErrorResponse} from "@/lib/integratio
 import {BILLING_EMAIL_EVENTS} from "@/lib/billing-email-events.mjs";
 import {planMailDiscovery} from "@/integrations/Mailsystem/Data/discovery.mjs";
 import {defaultBillingMailTemplates} from "@/integrations/Mailsystem/Data/billing-defaults.mjs";
-import {verifyMailSystemConnection} from "@/integrations/Mailsystem/Data/client";
+import {verifyMailSystemConnection,type MailConnectionResult} from "@/integrations/Mailsystem/Data/client";
 import {getMailModuleConfig} from "@/integrations/Mailsystem/Data/config";
 import {createSupabaseMailModuleStore} from "@/integrations/Mailsystem/Data/supabase-store";
 import {configureTemplate} from "@/integrations/Mailsystem/Data/configuration";
@@ -16,7 +16,7 @@ const reject=(message:string,status=400)=>Object.assign(new Error(message),{stat
 type Box={id:string;address:string;kind?:string};
 type TemplateDraft={display_name:string;subject:string;body_text:string|null;body_html:string|null};
 
-async function discover(req:Request){
+async function discover(req:Request,localOnly=false){
  const {db:adminDb}=await requireIntegrationAdmin(req,["integrations.manage","integrations.mail.manage"]);
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
  if(!url||!key)throw reject("Integration database unavailable.",503);
@@ -30,33 +30,20 @@ async function discover(req:Request){
   store.listTemplates(),store.listTriggers(),store.listRoutes(),store.getSettings(),
   adminDb.rpc("admin_get_staff_snapshot"),
   adminDb.from("support_departments").select("id,name,slug,email,enabled").eq("enabled",true),
-  verifyMailSystemConnection()
+  localOnly?Promise.resolve<MailConnectionResult>({connected:false,canSend:false,status:"unknown_error",message:"Billing configuration loaded. Mailbox connection not checked.",sender:null,senders:[]}):verifyMailSystemConnection()
  ]);
- let permitted:Box[]=[],provisioningDomains:string[]=[];
- let connection={...verified};
- if(verified.connected){
-  try{
-   const config=await getMailModuleConfig();
-   const response=await fetch(config.baseUrl+"/api/integrations/mailboxes",{headers:{Authorization:"Bearer "+config.apiKey},cache:"no-store",signal:AbortSignal.timeout(10000)});
-   const catalogue=await response.json().catch(()=>({}));
-   if(!response.ok||!Array.isArray(catalogue.mailboxes))throw new Error(typeof catalogue.error==="string"?catalogue.error:"Scoped mailbox discovery unavailable.");
-   permitted=catalogue.mailboxes.filter((box:Box)=>typeof box?.id==="string"&&typeof box?.address==="string");
-   provisioningDomains=Array.isArray(catalogue.provisioning_domains)?catalogue.provisioning_domains.filter((value:unknown)=>typeof value==="string"):[];
-  }catch(error){
-   // Configuration remains available offline. Never substitute global sender access.
-   connection={...verified,connected:false,canSend:false,status:"mail_system_unavailable",message:"Mail System catalogue: "+errorMessage(error)};
-  }
- }
- const scopedConnection={...connection,senders:permitted,sender:permitted.find(item=>item.address===connection.sender)?.address||null,canSend:connection.connected&&permitted.length>0};
+ const permitted:Box[]=verified.connected?verified.senders:[];
+ const provisioningDomains=verified.connected?(verified.provisioningDomains||[]):[];
+ const scopedConnection={...verified,senders:permitted,canSend:verified.connected&&permitted.length>0};
  const directory=staff.error||departments.error||!Array.isArray(staff.data?.members)||!Array.isArray(staff.data?.groups)?{available:false,users:0,groups:0,departments:0}:{available:true,users:staff.data.members.length,groups:staff.data.groups.length,departments:departments.data?.length||0};
- const events=planMailDiscovery({events:BILLING_EMAIL_EVENTS,senders:permitted,templates,triggers,routes,defaultTemplates:defaults});
+ const events=planMailDiscovery({events:BILLING_EMAIL_EVENTS,senders:permitted,catalogueAvailable:verified.connected,templates,triggers,routes,defaultTemplates:defaults});
  const eventTemplateKeys=new Set(events.map(event=>event.templateKey));
  return {db,store,connection:scopedConnection,events,directory,provisioningDomains,departmentRows:departments.data||[],settings,integrationEnabled:state.enabled===true,customTemplates:templates.filter(template=>!eventTemplateKeys.has(template.template_key))};
 }
 
 export async function GET(req:Request){
  try{
-  const {connection,events,directory,provisioningDomains,settings,integrationEnabled,customTemplates}=await discover(req);
+  const {connection,events,directory,provisioningDomains,settings,integrationEnabled,customTemplates}=await discover(req,new URL(req.url).searchParams.get("local")==="1");
   return Response.json({connection,events,directory,provisioningDomains,deliveryEnabled:settings.enabled,integrationEnabled,customTemplates},noCache);
  }catch(error){return integrationErrorResponse(error,"Mail discovery failed.");}
 }
@@ -125,9 +112,10 @@ function variablesUsed(source:TemplateDraft){
 
 export async function PUT(req:Request){
  try{
-  const {store,connection,events,integrationEnabled,settings}=await discover(req);
   const body=await req.json().catch(()=>null);
   if(!body||typeof body!=="object")throw reject("Configuration required.");
+  const localOnly=body.action==="custom_template"||(body.action==="delivery"?body.enabled===false:!body.sender&&body.active!==true);
+  const {store,connection,events,integrationEnabled,settings}=await discover(req,localOnly);
   if(body.action==="delivery"){
    if(typeof body.enabled!=="boolean")throw reject("Choose a delivery state.");
    if(body.enabled&&(!connection.canSend||!integrationEnabled))throw reject("Connect and enable Mail System with at least one assigned mailbox first.",409);
@@ -175,7 +163,7 @@ export async function PUT(req:Request){
     await store.saveTemplate({...source,id:existing?.id,template_key:key,variables:used,active:active||!!existing?.active});
    }
    let routeKey=event.routeKey;
-   if(selectedSender){
+   if(selectedSender&&(sender||body.active===true||!routeKey)){
     routeKey=sender||!routeKey?"auto."+event.key:routeKey;
     const route=(await store.listRoutes()).find(item=>item.route_key===routeKey);
     if(sender||!route||active&&!route.active)await store.saveRoute({id:route?.id,route_key:routeKey,sender_address:selectedSender,priority:route?.priority||0,conditions:route?.conditions||{},active:active||!!route?.active});

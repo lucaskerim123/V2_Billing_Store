@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback,useEffect,useMemo,useState} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase";
 import {MailAccessManager} from "../../Data/access-manager";
@@ -21,6 +21,7 @@ const isReview=(status:string)=>["needs_review","needs_sender","needs_template",
 
 export default function MailSettingsPage({integration}:Props){
  const supabase=useMemo(()=>createClient(),[]);
+ const loadGeneration=useRef(0);
  const [snapshot,setSnapshot]=useState<Snapshot|null>(null);
  const [section,setSection]=useState<typeof sections[number][0]>("events");
  const [busy,setBusy]=useState("");
@@ -43,15 +44,18 @@ export default function MailSettingsPage({integration}:Props){
  const request=useCallback(async(path:string,method="GET",body?:unknown)=>{
   const {data:{session}}=await supabase.auth.getSession();
   if(!session?.access_token)throw new Error("Administrator session expired. Sign in again.");
-  const response=await fetch("/api/admin/integrations/mailsystem/"+path,{method,headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:"no-store"});
+  const response=await fetch("/api/admin/integrations/mailsystem/"+path,{method,headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:"no-store",signal:AbortSignal.timeout(method==="GET"?20000:60000)});
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(typeof result.error==="string"?result.error:result.error?.message||result.message||"Mail operation failed.");
   return result;
  },[supabase]);
- const load=useCallback(async()=>{
-  const result:Snapshot=await request("mail-discovery");
-  setSnapshot(result);
-  setDomain(old=>result.provisioningDomains.includes(old)?old:result.provisioningDomains.length===1?result.provisioningDomains[0]:"");
+ const load=useCallback(async(localOnly=false)=>{
+  const generation=++loadGeneration.current;
+  const result:Snapshot=await request("mail-discovery"+(localOnly?"?local=1":""));
+  if(generation===loadGeneration.current){
+   setSnapshot(result);
+   setDomain(old=>result.provisioningDomains.includes(old)?old:result.provisioningDomains.length===1?result.provisioningDomains[0]:"");
+  }
   return result;
  },[request]);
  const discover=useCallback(async(selectedDomain="")=>{
@@ -65,10 +69,11 @@ export default function MailSettingsPage({integration}:Props){
   catch(reason){setError(reason instanceof Error?reason.message:"Mail operation failed.");}
   finally{setBusy("");}
  },[]);
- useEffect(()=>{void run("discover",async()=>{
-  // Load immediately so configuration remains visible even if provisioning fails.
-  await load();await discover();
- });},[load,discover,run]);
+ useEffect(()=>{void run("load",async()=>{
+  // Opening settings is read-only: local state renders before checking the remote catalogue.
+  await load(true);
+  void load().catch(reason=>setError(reason instanceof Error?reason.message:"Mailbox connection check failed."));
+ });},[load,run]);
  const syncAll=useCallback(async()=>{
   const refreshed=await discover(domain);
   if(!refreshed.connection.connected||!refreshed.integrationEnabled)throw new Error("Event configuration saved. Connect and enable Mail System before synchronizing users.");
@@ -92,7 +97,7 @@ export default function MailSettingsPage({integration}:Props){
  const displayed=events.filter(event=>(!category||event.category===category)&&(!query||[event.name,event.key,event.description||"",event.sender||""].join(" ").toLowerCase().includes(query.toLowerCase())));
  const selectedEvent=events.find(event=>event.key===selected);
  const ready=events.filter(event=>event.status==="configured");
- const loading=busy==="discover"&&!snapshot;
+ const loading=busy==="load"&&!snapshot;
  const mailboxOptions=mailboxes.map(box=><option key={box.id} value={box.address}>{box.address} · {box.kind||"mailbox"}</option>);
  const selectEvent=(event:EventRow)=>{
   setSelected(event.key);setDraft(event.template?{...event.template}: {...emptyDraft,display_name:event.name,subject:event.name});
@@ -135,11 +140,11 @@ export default function MailSettingsPage({integration}:Props){
    <div className="settingsSummaryV3"><article><small>Detected events</small><strong>{events.length}</strong></article><article><small>Configured</small><strong>{ready.length}</strong></article><article><small>Enabled</small><strong>{events.filter(event=>event.active).length}</strong></article><article><small>Assigned mailboxes</small><strong>{mailboxes.length}</strong></article></div>
    <div className="settingsLiveBarV3"><div className="settingsLiveStateV3"><div><b>{snapshot?.connection.connected?"Mail System connected":loading?"Detecting configuration…":"Mail System unavailable"}</b><small>{snapshot?.connection.message||"Loading live configuration."}</small></div></div><div className="settingsLiveActionsV3"><button type="button" className="secondary" disabled={!!busy} onClick={()=>void run("discover",async()=>{await discover(domain);setMessage("Events and templates detected.");})}>{busy==="discover"?"Detecting…":"Detect & configure"}</button><button type="button" disabled={!!busy} onClick={()=>void run("sync",async()=>{await syncAll();setMessage("Events, mailboxes and staff synchronized.");})}>{busy==="sync"?"Synchronizing…":"Sync now"}</button></div></div>
   </div>
-  <nav className="inlineActions" aria-label="Mail Settings sections">{sections.map(([id,label])=><button key={id} type="button" className={section===id?"":"secondary"} aria-pressed={section===id} disabled={!!busy} onClick={()=>{setSection(id);setSelected("");setCustomKey("");setPreview(false)}}>{label}</button>)}</nav>
+  <nav className="inlineActions" aria-label="Mail Settings sections">{sections.map(([id,label])=><button key={id} type="button" className={section===id?"":"secondary"} aria-pressed={section===id} onClick={()=>{setSection(id);setSelected("");setCustomKey("");setPreview(false)}}>{label}</button>)}</nav>
   {error&&<section className="panel" role="alert"><h2>Mail Settings needs attention</h2><p>{error}</p><button type="button" className="secondary" disabled={!!busy} onClick={()=>void run("reload",async()=>{await load()})}>Reload</button></section>}
   {message&&<p role="status">{message}</p>}
   {warnings.length>0&&<details className="panel"><summary>Mailbox provisioning needs review ({warnings.length})</summary><ul>{warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></details>}
-  {loading&&<section className="panel" role="status">Detecting Billing Store events and generating templates…</section>}
+  {loading&&<section className="panel" role="status">Loading Billing Store events and templates…</section>}
   {snapshot&&section==="events"&&<>
    <section className="panel">
     <div className="panelTitle"><div><h2>Automated emails</h2><p className="muted">Every registered event is detected automatically. Templates and routes are prepared without enabling live delivery.</p></div></div>
