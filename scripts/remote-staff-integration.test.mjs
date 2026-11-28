@@ -146,7 +146,7 @@ test("directory sync repairs signing trust using the saved connection", () => {
 
 
 // Execute the actual directory route with fake database and Mail System boundaries.
-function directoryHarness(snapshot) {
+function directoryHarness(snapshot, policy = {departmentMailGroups:()=>[],staffDepartmentMailGroups:()=>[]}) {
   const calls = [];
   const departments = [{ id: "dep-1", slug: "help", name: "Help" }];
   const db = {
@@ -159,6 +159,7 @@ function directoryHarness(snapshot) {
     },
   };
   const mockedModules = {
+    "@/integrations/Mailsystem/Data/department-mail-policy.mjs": policy,
     "@/lib/integrations/admin-context": {
       requireIntegrationAdmin: async () => ({ db, access: {} }),
       hasIntegrationPermission: () => true,
@@ -173,7 +174,7 @@ function directoryHarness(snapshot) {
   const exports = {};
   const compiled = ts.transpileModule(directoryRoute, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   runInNewContext(compiled, {
-    exports, Response,
+    exports, Response, AbortSignal,
     require: (name) => { if (!(name in mockedModules)) throw new Error("Unexpected module: " + name); return mockedModules[name]; },
     fetch: async (url, options) => { calls.push({ path: new URL(url).pathname, body: JSON.parse(options.body) }); return Response.json({ ok: true }); },
   });

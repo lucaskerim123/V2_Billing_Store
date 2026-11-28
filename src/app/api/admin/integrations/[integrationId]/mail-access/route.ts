@@ -1,3 +1,4 @@
+import {departmentMailGroups,staffDepartmentMailGroups} from "@/integrations/Mailsystem/Data/department-mail-policy.mjs";
 import { requireIntegrationAdmin, integrationErrorResponse, hasIntegrationPermission } from "@/lib/integrations/admin-context";
 import { createClient } from "@supabase/supabase-js";
 import { getMailModuleConfig } from "@/integrations/Mailsystem/Data/config";
@@ -26,7 +27,7 @@ async function coreRequest(baseUrl: string, apiKey: string, path: string, method
     method,
     headers: { Authorization: "Bearer " + apiKey, "Content-Type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    cache: "no-store",
+    cache: "no-store", signal: AbortSignal.timeout(12000),
   });
   const result: any = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
     const [{ data: snapshot, error: snapshotError }, { data: departments, error: departmentError }, { data: departmentStaff, error: departmentStaffError }] = await Promise.all([
       db.rpc("admin_get_staff_snapshot"),
       db.from("support_departments").select("id,name,slug,enabled").eq("enabled", true).order("name"),
-      db.from("support_department_staff").select("department_id,user_id"),
+      db.from("support_department_staff").select("department_id,user_id,position_rank"),
     ]);
     if (snapshotError || departmentError || departmentStaffError) {
       throw Object.assign(new Error(snapshotError?.message || departmentError?.message || departmentStaffError?.message || "Could not load Billing Store directory."), { status: 503 });
@@ -72,11 +73,12 @@ export async function GET(req: Request) {
       group_codes: (Array.isArray(member.group_ids) ? member.group_ids : []).map((id: unknown) => groupById.get(String(id))).filter(Boolean).map((group: any) => group.code),
       department_codes: (departmentsByUser.get(String(member.user_id)) || []).map((id) => departmentRows.find((department: any) => department.id === id)).filter(Boolean).map((department: any) => department.code),
     }));
-    const config = await getMailModuleConfig();
-    const core = await coreRequest(config.baseUrl, config.apiKey, "/api/integrations/remote-staff/access-catalogue");
+    const scopedGroups=departmentMailGroups(departments||[]);
+    let core:any={};let connectionError:string|null=null;
+    try{const config=await getMailModuleConfig();core=await coreRequest(config.baseUrl,config.apiKey,"/api/integrations/remote-staff/access-catalogue");}catch(error){connectionError=error instanceof Error?error.message:String(error);}
     const {data:rules,error:rulesError}=await serviceDb().from("app_mail_settings").select("key,value").like("key","host_access_rule:%");
     if(rulesError)throw rulesError;
-    return Response.json({ directory: { groups, departments: departmentRows, users }, core, rules:(rules||[]).map(row=>row.value) }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ directory: { groups:[...groups,...scopedGroups.map(group=>({...group,id:group.code}))], departments: departmentRows, users:users.map((user:any)=>({...user,group_codes:[...new Set([...user.group_codes,...staffDepartmentMailGroups(user.group_codes,(departmentStaff||[]).filter((row:any)=>String(row.user_id)===user.id),departments||[])])]})) }, core, connectionError, rules:(rules||[]).map(row=>row.value) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return integrationErrorResponse(error, "Unable to load Mail System access settings.");
   }
