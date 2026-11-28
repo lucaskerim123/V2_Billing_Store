@@ -146,7 +146,7 @@ test("directory sync repairs signing trust using the saved connection", () => {
 
 
 // Execute the actual directory route with fake database and Mail System boundaries.
-function directoryHarness(snapshot) {
+function directoryHarness(snapshot, policy = {departmentMailGroups:()=>[],staffDepartmentMailGroups:()=>[]}) {
   const calls = [];
   const departments = [{ id: "dep-1", slug: "help", name: "Help" }];
   const db = {
@@ -159,6 +159,7 @@ function directoryHarness(snapshot) {
     },
   };
   const mockedModules = {
+    "@/integrations/Mailsystem/Data/department-mail-policy.mjs": policy,
     "@/lib/integrations/admin-context": {
       requireIntegrationAdmin: async () => ({ db, access: {} }),
       hasIntegrationPermission: () => true,
@@ -173,7 +174,7 @@ function directoryHarness(snapshot) {
   const exports = {};
   const compiled = ts.transpileModule(directoryRoute, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   runInNewContext(compiled, {
-    exports, Response,
+    exports, Response, AbortSignal,
     require: (name) => { if (!(name in mockedModules)) throw new Error("Unexpected module: " + name); return mockedModules[name]; },
     fetch: async (url, options) => { calls.push({ path: new URL(url).pathname, body: JSON.parse(options.body) }); return Response.json({ ok: true }); },
   });
@@ -202,4 +203,16 @@ test("directory sync transmits group and department codes and preserves non-acti
   assert.equal(sync.body.user.status, "locked");
   assert.deepEqual(calls.at(-1).body.user_ids, ["user-1"]);
   assert.equal(calls.at(-1).body.complete_snapshot, true);
+});
+
+test("department mailbox rank derives only from valid department membership and assigned ranks",async()=>{
+ const {departmentMailGroups,staffDepartmentMailGroups}=await import("../src/integrations/Mailsystem/Data/department-mail-policy.mjs");
+ const deps=[{id:"a",slug:"general-support"},{id:"b",slug:"advanced-general-support"},{id:"c",slug:"technical-support"},{id:"d",slug:"sales-enquiries"}];
+ assert.equal(departmentMailGroups(deps).length,15);
+ assert.deepEqual(staffDepartmentMailGroups(["support","senior-support"],[{department_id:"a",position_rank:1},{department_id:"c",position_rank:3}],deps),["mail-dept-general-rank-1","mail-dept-technical-rank-3"]);
+ assert.deepEqual(staffDepartmentMailGroups(["support"],[{department_id:"b",position_rank:3}],deps),[]);
+ assert.deepEqual(staffDepartmentMailGroups(["support","senior-support"],[{department_id:"a",position_rank:null}],deps),["mail-dept-general-rank-1"]);
+ assert.deepEqual(staffDepartmentMailGroups(["senior-support"],[{department_id:"b",position_rank:3}],deps),["mail-dept-general-rank-3"]);
+ assert.deepEqual(staffDepartmentMailGroups(["senior-support"],[],deps),[]);
+ assert.deepEqual(staffDepartmentMailGroups(["support"],[{department_id:"d",position_rank:1}],deps),["mail-dept-sales-rank-1"]);
 });

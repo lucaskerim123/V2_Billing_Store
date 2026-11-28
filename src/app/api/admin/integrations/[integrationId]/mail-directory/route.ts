@@ -1,3 +1,4 @@
+import {departmentMailGroups,staffDepartmentMailGroups} from "@/integrations/Mailsystem/Data/department-mail-policy.mjs";
 import { requireIntegrationAdmin, integrationErrorResponse, hasIntegrationPermission } from "@/lib/integrations/admin-context";
 import { getMailModuleConfig, getMailRemoteIdentityConfig } from "@/integrations/Mailsystem/Data/config";
 import { randomUUID, createPublicKey } from "node:crypto";
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     const [{ data: snapshot, error: snapshotError }, { data: departments, error: departmentError }, { data: memberships, error: membershipError }] = await Promise.all([
       db.rpc(scheduled?"app_mail_staff_snapshot":"admin_get_staff_snapshot"),
       db.from("support_departments").select("id,name,slug,enabled").eq("enabled", true),
-      db.from("support_department_staff").select("department_id,user_id"),
+      db.from("support_department_staff").select("department_id,user_id,position_rank"),
     ]);
     if (snapshotError || departmentError || membershipError) {
       throw Object.assign(new Error(snapshotError?.message || departmentError?.message || membershipError?.message || "Could not read Billing Store staff directory."), { status: 503 });
@@ -64,12 +65,13 @@ export async function POST(req: Request) {
     const departmentDirectory = departmentRows.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name) }));
     const groupDirectory = groups.map((item: any) => ({ code: String(item.slug || item.id), name: String(item.name || item.slug), permissions: Object.entries(item.permissions || {}).filter(([, enabled]) => enabled === true).map(([permission]) => permission) }));
 
+    groupDirectory.push(...departmentMailGroups(departmentRows));
     const config = await getMailModuleConfig();
     const identity = await getMailRemoteIdentityConfig();
     const publicJwk = createPublicKey(identity.privateKey).export({ format: "jwk" });
     const trustResponse = await fetch(config.baseUrl + "/api/integrations/remote-staff/register-key", {
       method: "POST", headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({kid: identity.keyId, issuer: identity.issuer, audience: identity.audience, public_jwk: publicJwk}), cache: "no-store",
+      body: JSON.stringify({kid: identity.keyId, issuer: identity.issuer, audience: identity.audience, public_jwk: publicJwk}), cache: "no-store", signal: AbortSignal.timeout(12000),
     });
     const trustResult = await trustResponse.json().catch(() => ({}));
     if (!trustResponse.ok) throw Object.assign(new Error(trustResult.error?.message || trustResult.error || "Could not register the saved Mail System connection."), { status: trustResponse.status });
@@ -77,7 +79,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ roles: roleRows, departments: departmentDirectory, groups: groupDirectory }),
-      cache: "no-store",
+      cache: "no-store", signal: AbortSignal.timeout(12000),
     });
     const directoryResult: any = await directoryResponse.json().catch(() => ({}));
     if (!directoryResponse.ok) {
@@ -110,14 +112,14 @@ export async function POST(req: Request) {
           profile: { job_title: member.title || null, employee_number: member.employee_number || null },
           role_codes: [role],
           department_codes: departmentCodes,
-          group_codes: groupCodes,
+          group_codes: [...new Set<string>([...groupCodes,...staffDepartmentMailGroups(groupCodes,memberships.filter((row:any)=>String(row.user_id)===userId),departmentRows)])],
         },
       };
       const response = await fetch(config.baseUrl + "/api/integrations/remote-staff/sync", {
         method: "POST",
         headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json", "Idempotency-Key": payload.event_id },
         body: JSON.stringify(payload),
-        cache: "no-store",
+        cache: "no-store", signal: AbortSignal.timeout(12000),
       });
       const result: any = await response.json().catch(() => ({}));
       outcomes.push({ external_user_id: userId, ok: response.ok, status: response.status, result: response.ok ? result : (typeof result.error === "object" ? result.error.message : result.error) || "Sync failed" });
@@ -132,7 +134,7 @@ export async function POST(req: Request) {
           roles: roleRows, departments: departmentDirectory, groups: groupDirectory,
           complete_snapshot: true, user_ids: [...memberIds],
         }),
-        cache: "no-store",
+        cache: "no-store", signal: AbortSignal.timeout(12000),
       });
       reconciliation = await completeResponse.json().catch(() => ({}));
       if (!completeResponse.ok) failed.push({ external_user_id: "directory-reconcile", ok: false, status: completeResponse.status, result: reconciliation.error?.message || reconciliation.error || "Directory reconciliation failed" });
