@@ -7,8 +7,14 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const { db, access } = await requireIntegrationAdmin(req, ["integrations.manage", "integrations.mail.manage", "staff.view", "staff.manage", "staff.groups.view", "staff.groups.manage", "settings.permissions"]);
-    if (!["integrations.manage", "integrations.mail.manage", "staff.view", "staff.manage", "staff.groups.view", "staff.groups.manage", "settings.permissions"].some((permission) => hasIntegrationPermission(access, permission))) {
+    const scheduled = typeof process !== "undefined" && !!process.env.CRON_SECRET && req.headers.get("authorization") === "Bearer " + process.env.CRON_SECRET;
+    const { db, access } = scheduled ? await (async()=>{
+      const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if(!url||!key)throw new Error("Scheduled directory storage unavailable.");
+      const {createClient}=await import("@supabase/supabase-js");
+      return {db:createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}}),access:null};
+    })() : await requireIntegrationAdmin(req, ["integrations.manage", "integrations.mail.manage", "staff.view", "staff.manage", "staff.groups.view", "staff.groups.manage", "settings.permissions"]);
+    if (!scheduled && !["integrations.manage", "integrations.mail.manage", "staff.view", "staff.manage", "staff.groups.view", "staff.groups.manage", "settings.permissions"].some((permission) => hasIntegrationPermission(access!, permission))) {
       throw Object.assign(new Error("Staff or integration management permission required."), { status: 403 });
     }
     const { data: state, error: stateError } = await db.from("app_integrations")
@@ -19,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     const [{ data: snapshot, error: snapshotError }, { data: departments, error: departmentError }, { data: memberships, error: membershipError }] = await Promise.all([
-      db.rpc("admin_get_staff_snapshot"),
+      db.rpc(scheduled?"app_mail_staff_snapshot":"admin_get_staff_snapshot"),
       db.from("support_departments").select("id,name,slug,enabled").eq("enabled", true),
       db.from("support_department_staff").select("department_id,user_id"),
     ]);
