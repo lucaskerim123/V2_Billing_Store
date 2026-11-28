@@ -1,158 +1,170 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {useCallback,useEffect,useMemo,useState} from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase";
-import { createSupabaseMailModuleStore } from "../../Data/supabase-store";
-import { MailModuleConsole } from "../../Data/console";
-import { MailAccessManager } from "../../Data/access-manager";
+import {createClient} from "@/lib/supabase";
+import {MailAccessManager} from "../../Data/access-manager";
+import type {MailTemplate} from "../../Data/types";
+import "@/app/admin/settings-system-v2.css";
 
-type Props = { integration?: { id: string; name: string; version: string } };
+type Props={integration?:{id:string;name:string;version:string}};
+type Draft=Pick<MailTemplate,"display_name"|"subject"|"body_text"|"body_html">;
+type EventRow={key:string;name:string;category:string;description?:string;variables:readonly {name:string;sensitive?:boolean}[];sender:string|null;status:string;active:boolean;existing:boolean;templateKey:string;template:Draft|null};
+type Box={id:string;address:string;kind?:string};
+type Snapshot={events:EventRow[];connection:{connected:boolean;canSend:boolean;message:string;senders:Box[]};directory:{available:boolean;users:number;groups:number;departments:number};provisioningDomains:string[];deliveryEnabled:boolean;integrationEnabled:boolean;customTemplates:MailTemplate[]};
+const sections=[["events","Automated emails"],["mailboxes","Mailboxes"],["access","Users & access"],["templates","Custom templates"],["delivery","Delivery settings"]] as const;
+const kinds=["system","department","personal","shared"];
+const title=(value:string)=>value.charAt(0).toUpperCase()+value.slice(1);
+const emptyDraft:Draft={display_name:"",subject:"",body_text:"",body_html:""};
+const stateLabel=(row:EventRow)=>row.active?"Enabled":row.status==="configured"?"Configured · disabled":row.status==="needs_sender"?"Mailbox needed":row.status==="needs_template"?"Template needed":"Ready to configure";
+const isReview=(status:string)=>["needs_review","needs_sender","needs_template","template_variables_need_review"].includes(status);
 
-export default function MailSettingsPage({ integration }: Props) {
-  const supabase = useMemo(() => createClient(), []);
-  const store = useMemo(() => createSupabaseMailModuleStore(supabase as any), [supabase]);
-
-  const [discovered, setDiscovered] = useState<{key:string;name:string;category:string;sender:string|null;status:string;active:boolean}[]>([]);
-  const [mailboxes,setMailboxes]=useState<{id:string;address:string;kind?:string}[]>([]);
-  const [category,setCategory]=useState("");
-  const [domains,setDomains]=useState<string[]>([]);
-  const [provisionDomain,setProvisionDomain]=useState("");
-  const [newMailbox,setNewMailbox]=useState({address:"",kind:"department",display_name:""});
-  const [bulkSender,setBulkSender]=useState("");
-  const [consoleRevision,setConsoleRevision]=useState(0);
-  const [tab,setTab]=useState("events");
-  const [directory, setDirectory] = useState<{available:boolean;users:number;groups:number;departments:number}|null>(null);
-  const [discoveryMessage, setDiscoveryMessage] = useState("Detecting application email events…");
-  const [discoveryBusy, setDiscoveryBusy] = useState(false);
-  const request = useCallback(async (path:string,method="GET",body?:unknown)=>{
-    const {data:{session}}=await supabase.auth.getSession();
-    if(!session?.access_token)throw new Error("Administrator session expired.");
-    const response=await fetch("/api/admin/integrations/mailsystem/"+path,{method,headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:"no-store"});
-    const result=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(typeof result.error==="string"?result.error:result.error?.message||"Mail operation failed.");
-    return result;
-  },[supabase]);
-  const refreshDiscovery = useCallback(async (apply = true, domain = "") => {
-    setDiscoveryBusy(true);
-    try {
-      const {data:{session}} = await supabase.auth.getSession();
-      if(!session?.access_token) throw new Error("Administrator session expired.");
-      const endpoint = "/api/admin/integrations/mailsystem/mail-discovery";
-      const headers = {Authorization: "Bearer "+session.access_token};
-      let response = await fetch(endpoint,{headers,cache:"no-store"});
-      let result = await response.json();
-      if(!response.ok) throw new Error(result.error || "Discovery failed.");
-      let provisioningWarnings=0;
-      if(apply && result.connection?.connected){
-        response = await fetch(endpoint,{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify(domain?{domain}:{}),cache:"no-store"});
-        const applied = await response.json();
-        if(!response.ok) throw new Error(applied.error || "Automatic configuration failed.");
-        provisioningWarnings=(applied.provisioning?.results||[]).filter((item:{ok:boolean})=>!item.ok).length;
-        response = await fetch(endpoint,{headers,cache:"no-store"});
-        result = await response.json();
-        if(!response.ok) throw new Error(result.error || "Refresh failed.");
-      }
-      setDiscovered(result.events || []);
-      setDirectory(result.directory || null);
-      setMailboxes(result.connection?.senders||[]);
-      setDomains(result.provisioningDomains||[]);
-      setProvisionDomain(old=>result.provisioningDomains?.includes(old)?old:result.provisioningDomains?.length===1?result.provisioningDomains[0]:"");
-      setConsoleRevision(old=>old+1);
-      setDiscoveryMessage(result.connection?.connected ? "Detected events and routes. "+(provisioningWarnings?provisioningWarnings+" mailbox requests need review. ":"")+"Use Enable ready events to activate delivery." : result.connection?.message || "Connect the Mail System first.");
-    } catch(error) {
-      setDiscoveryMessage(error instanceof Error ? error.message : "Mail discovery failed.");
-    } finally {setDiscoveryBusy(false);}
-  },[supabase]);
-  useEffect(()=>{void refreshDiscovery();},[refreshDiscovery]);
-
-  const syncAll=useCallback(async()=>{
-    setDiscoveryBusy(true);
-    try{
-      const result=await request("mail-directory","POST",{});
-      if(result.ok===false)throw new Error("Directory sync incomplete: "+JSON.stringify(result.failures||[]));
-      await refreshDiscovery();
-      setDiscoveryMessage("Staff directory and email configuration synchronized.");
-      return result;
-    }catch(error){setDiscoveryMessage(error instanceof Error?error.message:"Synchronization failed.");throw error;}
-    finally{setDiscoveryBusy(false);}
-  },[request,refreshDiscovery]);
-  const configure=useCallback(async(body:unknown)=>{
-    setDiscoveryBusy(true);
-    try{
-      const result=await request("mail-discovery","PUT",body);
-      await refreshDiscovery(false);
-      const needsReview=(result.results||[]).filter((row:{status:string})=>["needs_review","template_variables_need_review"].includes(row.status)).length;
-      setDiscoveryMessage((result.results||[]).length+" events processed. "+needsReview+" require review.");
-    }catch(error){setDiscoveryMessage(error instanceof Error?error.message:"Configuration failed.");}
-    finally{setDiscoveryBusy(false);}
-  },[request,refreshDiscovery]);
-  const provisionMailbox=useCallback(async()=>{
-    setDiscoveryBusy(true);
-    try{
-      const result=await request("mail-mailboxes","POST",{mailboxes:[newMailbox]});
-      if(result.ok===false)throw new Error(result.results?.[0]?.error||"Provisioning rejected.");
-      setNewMailbox({address:"",kind:"department",display_name:""});
-      await refreshDiscovery();
-      setDiscoveryMessage("Mailbox provisioned successfully.");
-    }catch(error){setDiscoveryMessage(error instanceof Error?error.message:"Provisioning failed.");}
-    finally{setDiscoveryBusy(false);}
-  },[newMailbox,request,refreshDiscovery]);
-  const loadAccess=useCallback(()=>request("mail-access"),[request]);
-  const saveAccess=useCallback((body:unknown)=>request("mail-access","PUT",body),[request]);
-
-  const onTestConnection = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) throw new Error("Administrator session expired. Sign in again.");
-    const response = await fetch("/api/admin/integrations/mailsystem/mail-connection", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + session.access_token, "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "test" }),
-      cache: "no-store",
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || result.message || "Mail System connection test failed.");
-    if(result.connected) await refreshDiscovery();
-    return result;
-  }, [supabase, refreshDiscovery]);
-
-  return <main style={{ maxWidth: 1180, margin: "0 auto", padding: 24, color: "var(--admin-text,inherit)" }}>
-    <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
-      <div>
-        <p style={{ fontSize: 12, letterSpacing: 1.1, opacity: .65 }}>SYSTEM / INTEGRATIONS / MAIL SYSTEM</p>
-        <h1 style={{ margin: "6px 0" }}>Mail Settings</h1>
-        <p style={{ opacity: .75, margin: 0 }}>Manage templates, sender routing, event triggers and the Billing Store directory connection.</p>
-        {integration && <small>{integration.name} · v{integration.version}</small>}
-      </div>
-      <Link href="/admin/integrations">Integration Manager · connection and lifecycle</Link>
-    </header>
-    <nav aria-label="Mail Settings sections" style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
-      {[["events","Automated emails"],["mailboxes","Mailboxes"],["access","Users, groups & departments"],["templates","Templates & advanced settings"]].map(([id,label])=><button key={id} type="button" aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}
-    </nav>
-    <button type="button" disabled={discoveryBusy} onClick={()=>void syncAll().catch(()=>{})}>Sync now</button>
-    {tab!=="events"&&<p role="status">{discoveryMessage}</p>}
-    {tab==="events"&&<section aria-label="Automatic configuration" style={{marginBottom:24}}>
-      <h2>Automatic configuration</h2>
-      <p role="status">{discoveryMessage}</p>
-      {directory?.available ? <p>Detected {directory.users} staff members · {directory.groups} staff groups · {directory.departments} departments.</p> : directory && <p>Staff directory unavailable; no access changes have been made.</p>}
-      <button type="button" disabled={discoveryBusy} onClick={()=>void refreshDiscovery()}> {discoveryBusy ? "Discovering…" : "Rescan and configure"} </button>
-      {discovered.length>0 && <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"end"}}>
-        <label>Event category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">All categories</option>{[...new Set(discovered.map(event=>event.category))].map(value=><option key={value} value={value}>{value}</option>)}</select></label>
-        <label>Sender mailbox<select value={bulkSender} onChange={e=>setBulkSender(e.target.value)}><option value="">Choose mailbox</option>{mailboxes.map(box=><option key={box.id} value={box.address}>{box.address}</option>)}</select></label>
-        <button type="button" disabled={discoveryBusy||!bulkSender} onClick={()=>void configure({...(category?{category}:{all:true}),sender:bulkSender})}>Apply sender to category</button>
-        <button type="button" disabled={discoveryBusy} onClick={()=>void configure({...(category?{category}:{all:true}),active:true,enableModule:true})}>Enable ready events</button>
-        <button type="button" disabled={discoveryBusy} onClick={()=>void configure({...(category?{category}:{all:true}),active:false})}>Disable selected events</button>
-      </div>}
-      {discovered.length>0 && <details open>
-        <summary>{discovered.length} detected events · {discovered.filter(event=>event.status!=="configured").length} require review</summary>
-        <table style={{width:"100%",textAlign:"left",marginTop:12}}>
-          <thead><tr><th>Event</th><th>Category</th><th>Sender</th><th>Configuration</th></tr></thead>
-          <tbody>{discovered.filter(event=>!category||event.category===category).map(event=><tr key={event.key}><td>{event.name}</td><td>{event.category}</td><td><select aria-label={"Sender for "+event.name} value={event.sender||""} disabled={discoveryBusy} onChange={e=>{if(e.target.value)void configure({eventKey:event.key,sender:e.target.value})}}><option value="">Select mailbox</option>{mailboxes.map(box=><option key={box.id} value={box.address}>{box.address}</option>)}</select></td><td>{event.active?"Enabled":event.status==="configured"?"Configured · disabled":event.status==="needs_sender"?"Select mailbox":event.status==="needs_template"?"Template missing":"Ready to configure"}</td></tr>)}</tbody>
-        </table>
-      </details>}
-    </section>}
-    {tab==="mailboxes"&&<section><h2>Assigned mailboxes</h2><p>Mail System provisions and hosts these mailboxes. Configure access and sender routing here.</p><label>Provisioning domain<select value={provisionDomain} onChange={e=>setProvisionDomain(e.target.value)}><option value="">Select verified domain</option>{domains.map(domain=><option key={domain}>{domain}</option>)}</select></label><button type="button" disabled={!provisionDomain||discoveryBusy} onClick={()=>void refreshDiscovery(true,provisionDomain)}>Automatically create system and department mailboxes</button>{!domains.length&&<p>Authorize a verified provisioning domain in Mail System → Integrations once to allow automatic mailbox creation.</p>}<form onSubmit={e=>{e.preventDefault();void provisionMailbox();}} style={{display:"grid",gap:8,maxWidth:520}}><label>Mailbox address<input type="email" required value={newMailbox.address} onChange={e=>setNewMailbox(old=>({...old,address:e.target.value}))}/></label><label>Display name<input value={newMailbox.display_name} onChange={e=>setNewMailbox(old=>({...old,display_name:e.target.value}))}/></label><label>Type<select value={newMailbox.kind} onChange={e=>setNewMailbox(old=>({...old,kind:e.target.value}))}>{["system","department","personal","shared"].map(kind=><option key={kind} value={kind}>{kind}</option>)}</select></label><button disabled={!domains.length||discoveryBusy||!newMailbox.address}>Create mailbox</button></form>{["system","department","personal","shared"].map(kind=><details key={kind} open><summary>{kind[0].toUpperCase()+kind.slice(1)} · {mailboxes.filter(box=>box.kind===kind).length}</summary>{mailboxes.filter(box=>box.kind===kind).map(box=><p key={box.id}>{box.address}</p>)}</details>)}</section>}
-    {tab==="access"&&<MailAccessManager onLoad={loadAccess} onSave={saveAccess} onSync={syncAll} canManage/>}
-    {tab==="templates"&&<MailModuleConsole key={consoleRevision} store={store} onTestConnection={onTestConnection} canManage />}
-  </main>;
+export default function MailSettingsPage({integration}:Props){
+ const supabase=useMemo(()=>createClient(),[]);
+ const [snapshot,setSnapshot]=useState<Snapshot|null>(null);
+ const [section,setSection]=useState<typeof sections[number][0]>("events");
+ const [busy,setBusy]=useState("");
+ const [error,setError]=useState("");
+ const [message,setMessage]=useState("");
+ const [query,setQuery]=useState("");
+ const [category,setCategory]=useState("");
+ const [bulkSender,setBulkSender]=useState("");
+ const [selected,setSelected]=useState("");
+ const [draft,setDraft]=useState<Draft>(emptyDraft);
+ const [templateSender,setTemplateSender]=useState("");
+ const [templateActive,setTemplateActive]=useState(false);
+ const [customKey,setCustomKey]=useState("");
+ const [customExisting,setCustomExisting]=useState(false);
+ const [domain,setDomain]=useState("");
+ const [newBox,setNewBox]=useState({address:"",kind:"department",display_name:""});
+ const [warnings,setWarnings]=useState<string[]>([]);
+ const [accessRevision,setAccessRevision]=useState(0);
+ const [preview,setPreview]=useState(false);
+ const request=useCallback(async(path:string,method="GET",body?:unknown)=>{
+  const {data:{session}}=await supabase.auth.getSession();
+  if(!session?.access_token)throw new Error("Administrator session expired. Sign in again.");
+  const response=await fetch("/api/admin/integrations/mailsystem/"+path,{method,headers:{Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:"no-store"});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(typeof result.error==="string"?result.error:result.error?.message||result.message||"Mail operation failed.");
+  return result;
+ },[supabase]);
+ const load=useCallback(async()=>{
+  const result:Snapshot=await request("mail-discovery");
+  setSnapshot(result);
+  setDomain(old=>result.provisioningDomains.includes(old)?old:result.provisioningDomains.length===1?result.provisioningDomains[0]:"");
+  return result;
+ },[request]);
+ const discover=useCallback(async(selectedDomain="")=>{
+  const result=await request("mail-discovery","POST",selectedDomain?{domain:selectedDomain}:{});
+  setWarnings(Array.isArray(result.warnings)?result.warnings:[]);
+  return load();
+ },[request,load]);
+ const run=useCallback(async(name:string,operation:()=>Promise<unknown>)=>{
+  setBusy(name);setError("");setMessage("");
+  try{await operation();}
+  catch(reason){setError(reason instanceof Error?reason.message:"Mail operation failed.");}
+  finally{setBusy("");}
+ },[]);
+ useEffect(()=>{void run("discover",async()=>{
+  // Load immediately so configuration remains visible even if provisioning fails.
+  await load();await discover();
+ });},[load,discover,run]);
+ const syncAll=useCallback(async()=>{
+  const refreshed=await discover(domain);
+  if(!refreshed.connection.connected||!refreshed.integrationEnabled)throw new Error("Event configuration saved. Connect and enable Mail System before synchronizing users.");
+  const result=await request("mail-directory","POST",{});
+  if(result.ok===false)throw new Error("Directory sync incomplete: "+(result.failures||[]).map((item:{result?:string})=>item.result||"Sync failed").join("; "));
+  await load();setAccessRevision(old=>old+1);return result;
+ },[discover,domain,request,load]);
+ const saveConfiguration=useCallback(async(body:unknown)=>{
+  const result=await request("mail-discovery","PUT",body);
+  await load();
+  const rows=(result.results||[]) as {key:string;status:string}[];
+  const review=rows.filter(row=>isReview(row.status));
+  setMessage(rows.length?rows.length+" events processed. "+review.length+" need review.":"Configuration saved.");
+  if(review.some(row=>row.status==="template_variables_need_review"))throw new Error("Template variables need review. Use only the listed variables and include every required secure link or code.");
+  return rows;
+ },[request,load]);
+ const loadAccess=useCallback(()=>request("mail-access"),[request]);
+ const saveAccess=useCallback((body:unknown)=>request("mail-access","PUT",body),[request]);
+ const events=snapshot?.events||[],mailboxes=snapshot?.connection.senders||[];
+ const categories=[...new Set(events.map(event=>event.category))];
+ const displayed=events.filter(event=>(!category||event.category===category)&&(!query||[event.name,event.key,event.description||"",event.sender||""].join(" ").toLowerCase().includes(query.toLowerCase())));
+ const selectedEvent=events.find(event=>event.key===selected);
+ const ready=events.filter(event=>event.status==="configured");
+ const loading=busy==="discover"&&!snapshot;
+ const mailboxOptions=mailboxes.map(box=><option key={box.id} value={box.address}>{box.address} · {box.kind||"mailbox"}</option>);
+ const selectEvent=(event:EventRow)=>{
+  setSelected(event.key);setDraft(event.template?{...event.template}: {...emptyDraft,display_name:event.name,subject:event.name});
+  setTemplateSender(event.sender||"");setTemplateActive(event.active);setPreview(false);
+ };
+ const selectCustom=(template?:MailTemplate)=>{
+  setCustomKey(template?.template_key||"custom.");setCustomExisting(!!template);
+  setDraft(template?{...template}:emptyDraft);setTemplateActive(template?.active||false);setPreview(false);
+ };
+ const editor=(custom:boolean)=> <form className="panel" onSubmit={event=>{
+  event.preventDefault();
+  void run("save-template",async()=>{
+   if(custom){
+    await request("mail-discovery","PUT",{action:"custom_template",templateKey:customKey,edit:customExisting,template:draft,active:templateActive});
+    await load();setCustomExisting(true);setMessage("Custom template saved.");
+   }else{
+    const rows=await saveConfiguration({eventKey:selected,template:draft,...(templateSender?{sender:templateSender}:{}),active:templateActive});
+    if(rows.some(row=>row.status==="needs_sender"))setMessage("Template saved. Assign a mailbox before enabling delivery.");
+   }
+  });
+ }}>
+  <div className="panelTitle"><div><h2>{custom?(customExisting?"Edit custom template":"New custom template"):selectedEvent?.name+" template"}</h2><p className="muted">{custom?"Reusable template for manual email actions.":"Edit the automatically detected event, content and sender together."}</p></div><button type="button" className="secondary" onClick={()=>{setSelected("");setCustomKey("");setPreview(false)}}>Close</button></div>
+  {custom&&<label>Template key<input required value={customKey} readOnly={customExisting} onChange={event=>setCustomKey(event.target.value)}/></label>}
+  {!custom&&<p className="muted">{selectedEvent?.description} · {selectedEvent?.key}</p>}
+  <fieldset disabled={!!busy}>
+   <div className="two"><label>Template name<input required value={draft.display_name} onChange={event=>setDraft(old=>({...old,display_name:event.target.value}))}/></label><label>Subject<input required maxLength={998} value={draft.subject} onChange={event=>setDraft(old=>({...old,subject:event.target.value}))}/></label></div>
+   {!custom&&<div className="two"><label>Sender mailbox<select value={templateSender} onChange={event=>setTemplateSender(event.target.value)}><option value="">Not assigned</option>{mailboxOptions}</select></label><label className="toggle"><input type="checkbox" checked={templateActive} disabled={!templateSender||!snapshot?.connection.canSend||!snapshot?.integrationEnabled} onChange={event=>setTemplateActive(event.target.checked)}/> Enable this event</label></div>}
+   {custom&&<label className="toggle"><input type="checkbox" checked={templateActive} onChange={event=>setTemplateActive(event.target.checked)}/> Template active</label>}
+   <label>Plain text email<textarea rows={9} value={draft.body_text||""} onChange={event=>setDraft(old=>({...old,body_text:event.target.value}))}/></label>
+   <details><summary>HTML content (optional)</summary><label>HTML email<textarea rows={7} value={draft.body_html||""} onChange={event=>setDraft(old=>({...old,body_html:event.target.value}))}/></label></details>
+   {!custom&&<section><h3>Available event variables</h3><p className="muted">Select a variable to append it to the text. Required secure links and codes must remain in the template.</p><div className="inlineActions">{selectedEvent?.variables.map(variable=><button className="secondary" type="button" key={variable.name} onClick={()=>setDraft(old=>({...old,body_text:(old.body_text||"")+" {{"+variable.name+"}}"}))}>{variable.name}{variable.sensitive?" · required":""}</button>)}</div></section>}
+  </fieldset>
+  <div className="inlineActions"><button type="submit" disabled={!!busy||!draft.display_name.trim()||!draft.subject.trim()||!(draft.body_text||draft.body_html)||(!custom&&templateActive&&!templateSender)}>{busy==="save-template"?"Saving…":"Save template"+(custom?"":" & event")}</button><button type="button" className="secondary" onClick={()=>setPreview(old=>!old)}>{preview?"Hide preview":"Preview"}</button></div>
+  {preview&&<section className="panel"><h3>{draft.subject}</h3><p className="muted">Preview uses template placeholders, not live customer data.</p><pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{draft.body_text||draft.body_html}</pre></section>}
+ </form>;
+ return <main className="adminShell settingsEditorV3 settingsCompact">
+  <div className="settingsEditorTop">
+   <div className="settingsEditorBreadcrumbs"><Link href="/admin/integrations">Integrations</Link><span>›</span><span>Mail Settings</span></div>
+   <header className="settingsEditorHeader"><div><p className="eyebrow">MASTER ADMIN · MAIL CONFIGURATION</p><h1>Mail Settings</h1><p className="muted">Configure Billing Store email events, templates, sender mailboxes and staff access. Mail System provides the delivery and mailbox service.</p>{integration&&<small className="muted">{integration.name} · v{integration.version}</small>}</div><Link className="buttonlink secondary" href="/admin/integrations">Connection & lifecycle</Link></header>
+   <div className="settingsSummaryV3"><article><small>Detected events</small><strong>{events.length}</strong></article><article><small>Configured</small><strong>{ready.length}</strong></article><article><small>Enabled</small><strong>{events.filter(event=>event.active).length}</strong></article><article><small>Assigned mailboxes</small><strong>{mailboxes.length}</strong></article></div>
+   <div className="settingsLiveBarV3"><div className="settingsLiveStateV3"><div><b>{snapshot?.connection.connected?"Mail System connected":loading?"Detecting configuration…":"Mail System unavailable"}</b><small>{snapshot?.connection.message||"Loading live configuration."}</small></div></div><div className="settingsLiveActionsV3"><button type="button" className="secondary" disabled={!!busy} onClick={()=>void run("discover",async()=>{await discover(domain);setMessage("Events and templates detected.");})}>{busy==="discover"?"Detecting…":"Detect & configure"}</button><button type="button" disabled={!!busy} onClick={()=>void run("sync",async()=>{await syncAll();setMessage("Events, mailboxes and staff synchronized.");})}>{busy==="sync"?"Synchronizing…":"Sync now"}</button></div></div>
+  </div>
+  <nav className="inlineActions" aria-label="Mail Settings sections">{sections.map(([id,label])=><button key={id} type="button" className={section===id?"":"secondary"} aria-pressed={section===id} disabled={!!busy} onClick={()=>{setSection(id);setSelected("");setCustomKey("");setPreview(false)}}>{label}</button>)}</nav>
+  {error&&<section className="panel" role="alert"><h2>Mail Settings needs attention</h2><p>{error}</p><button type="button" className="secondary" disabled={!!busy} onClick={()=>void run("reload",async()=>{await load()})}>Reload</button></section>}
+  {message&&<p role="status">{message}</p>}
+  {warnings.length>0&&<details className="panel"><summary>Mailbox provisioning needs review ({warnings.length})</summary><ul>{warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></details>}
+  {loading&&<section className="panel" role="status">Detecting Billing Store events and generating templates…</section>}
+  {snapshot&&section==="events"&&<>
+   <section className="panel">
+    <div className="panelTitle"><div><h2>Automated emails</h2><p className="muted">Every registered event is detected automatically. Templates and routes are prepared without enabling live delivery.</p></div></div>
+    <div className="two"><label>Search events<input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search events…" /></label><label>Category<select value={category} onChange={event=>setCategory(event.target.value)}><option value="">All categories</option>{categories.map(item=><option key={item} value={item}>{title(item)}</option>)}</select></label></div>
+    <div className="two"><label>Assign sender to {category?title(category):"all categories"}<select value={bulkSender} onChange={event=>setBulkSender(event.target.value)}><option value="">Select mailbox</option>{mailboxOptions}</select></label><div className="inlineActions"><button className="secondary" type="button" disabled={!!busy||!bulkSender} onClick={()=>void run("routing",()=>saveConfiguration({...(category?{category}:{all:true}),sender:bulkSender}))}>Apply sender</button><button type="button" disabled={!!busy||!snapshot.connection.canSend||!snapshot.integrationEnabled} onClick={()=>void run("enable",()=>saveConfiguration({...(category?{category}:{all:true}),active:true,enableModule:true}))}>Enable ready events</button><button className="secondary" type="button" disabled={!!busy} onClick={()=>void run("disable",()=>saveConfiguration({...(category?{category}:{all:true}),active:false}))}>Disable category</button></div></div>
+   </section>
+   <div className="settingsGroupStack">{categories.filter(item=>!category||item===category).map(item=>{
+    const rows=displayed.filter(event=>event.category===item);
+    return rows.length>0&&<details key={item} className="settingsGroupV3" open={category===item||item==="account"||undefined}>
+     <summary className="settingsGroupHeadV3"><div><h2>{title(item)}</h2><p>{rows.filter(event=>event.status==="configured").length} configured · {rows.filter(event=>event.active).length} enabled</p></div><span>{rows.length} events</span><i aria-hidden="true">⌄</i></summary>
+     <div className="settingsListV3">{rows.map(event=><div key={event.key} className="settingV3">
+      <div className="settingInfoV3"><div className="settingTitleV3"><b>{event.name}</b></div><p className="muted">{event.description}</p><small>{event.key} · {stateLabel(event)}</small></div>
+      <div className="inlineActions"><label>Sender<select aria-label={"Sender for "+event.name} value={event.sender||""} disabled={!!busy||!snapshot.connection.connected} onChange={change=>{if(change.target.value)void run("routing",()=>saveConfiguration({eventKey:event.key,sender:change.target.value}))}}><option value="">Select mailbox</option>{mailboxOptions}</select></label><button className="secondary" type="button" disabled={!!busy} onClick={()=>selectEvent(event)}>Edit template</button><button type="button" className="secondary" disabled={!!busy||(!event.active&&(!event.sender||!snapshot.integrationEnabled||!snapshot.connection.canSend))} onClick={()=>void run("event",()=>saveConfiguration({eventKey:event.key,active:!event.active,enableModule:!event.active}))}>{event.active?"Disable":"Enable"}</button></div>
+     </div>)}</div>
+    </details>;
+   })}{!displayed.length&&<section className="panel">No events match the current filters.</section>}</div>
+   {selectedEvent&&editor(false)}
+  </>}
+  {snapshot&&section==="mailboxes"&&<>
+   <section className="panel"><div className="panelTitle"><div><h2>Automatic mailbox setup</h2><p className="muted">Create missing system and department mailboxes through Mail System. Existing assigned mailboxes are preserved.</p></div></div><div className="two"><label>Verified provisioning domain<select value={domain} onChange={event=>setDomain(event.target.value)}><option value="">Select domain</option>{snapshot.provisioningDomains.map(value=><option key={value}>{value}</option>)}</select></label><button type="button" disabled={!!busy||!domain||!snapshot.integrationEnabled} onClick={()=>void run("provision",async()=>{await discover(domain);setMessage("Mailbox discovery and provisioning processed.")})}>Provision system & department mailboxes</button></div>{!snapshot.provisioningDomains.length&&<p className="muted">No provisioning domain is authorized. Authorize a verified domain in Mail System once.</p>}</section>
+   <section className="panel"><h2>Create mailbox</h2><form onSubmit={event=>{event.preventDefault();void run("create-mailbox",async()=>{const result=await request("mail-mailboxes","POST",{mailboxes:[newBox]});if(result.ok===false)throw new Error(result.results?.[0]?.error||"Mailbox provisioning rejected.");setNewBox({address:"",kind:"department",display_name:""});await discover(domain);setMessage("Mailbox provisioned.")})}}><div className="two"><label>Address<input type="email" required value={newBox.address} onChange={event=>setNewBox(old=>({...old,address:event.target.value}))}/></label><label>Display name<input value={newBox.display_name} onChange={event=>setNewBox(old=>({...old,display_name:event.target.value}))}/></label></div><div className="two"><label>Mailbox type<select value={newBox.kind} onChange={event=>setNewBox(old=>({...old,kind:event.target.value}))}>{kinds.map(kind=><option key={kind} value={kind}>{title(kind)}</option>)}</select></label><button disabled={!!busy||!snapshot.integrationEnabled||!snapshot.provisioningDomains.length}>Create mailbox</button></div></form></section>
+   {kinds.map(kind=><details key={kind} className="settingsGroupV3" open><summary className="settingsGroupHeadV3"><div><h2>{title(kind)} mailboxes</h2></div><span>{mailboxes.filter(box=>box.kind===kind).length}</span><i aria-hidden="true">⌄</i></summary><div className="settingsListV3">{mailboxes.filter(box=>box.kind===kind).map(box=><div className="settingV3" key={box.id}><b>{box.address}</b><span className="muted">Assigned to Billing Store</span></div>)}{!mailboxes.some(box=>box.kind===kind)&&<p className="muted">No assigned {kind} mailboxes.</p>}</div></details>)}
+  </>}
+  {snapshot&&section==="access"&&<><section className="panel"><h2>Detected directory</h2><p>{snapshot.directory.available? snapshot.directory.users+" staff · "+snapshot.directory.groups+" groups · "+snapshot.directory.departments+" departments":"Directory unavailable. Check administrator permissions."}</p></section><MailAccessManager key={accessRevision} onLoad={loadAccess} onSave={saveAccess} canManage={snapshot.integrationEnabled}/></>}
+  {snapshot&&section==="templates"&&<><section className="panel"><div className="panelTitle"><div><h2>Custom templates</h2><p className="muted">Automated templates are edited directly on their event. Create reusable custom templates here.</p></div><button disabled={!!busy} type="button" onClick={()=>selectCustom()}>New template</button></div>{snapshot.customTemplates.map(template=><div className="listrow" key={template.id}><div><b>{template.display_name}</b><p className="muted">{template.template_key} · {template.active?"Active":"Disabled"}</p></div><button type="button" className="secondary" disabled={!!busy} onClick={()=>selectCustom(template)}>Edit</button></div>)}{!snapshot.customTemplates.length&&<p className="muted">No custom templates created.</p>}</section>{customKey&&editor(true)}</>}
+  {snapshot&&section==="delivery"&&<section className="panel"><div className="panelTitle"><div><h2>Automated delivery</h2><p className="muted">Global delivery switch. Individual events must also be enabled and have a valid sender.</p></div><strong>{snapshot.deliveryEnabled?"Enabled":"Disabled"}</strong></div><label className="toggle"><input type="checkbox" checked={snapshot.deliveryEnabled} disabled={!!busy||(!snapshot.deliveryEnabled&&(!snapshot.connection.canSend||!snapshot.integrationEnabled))} onChange={event=>void run("delivery",async()=>{await request("mail-discovery","PUT",{action:"delivery",enabled:event.target.checked});await load();setMessage("Delivery setting saved.")})}/> Enable automated email delivery</label><p className="muted">Integration installation, API credentials and lifecycle remain in Integration Manager.</p></section>}
+ </main>;
 }
