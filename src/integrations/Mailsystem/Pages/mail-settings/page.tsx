@@ -13,6 +13,7 @@ export default function MailSettingsPage({ integration }: Props) {
   const store = useMemo(() => createSupabaseMailModuleStore(supabase as any), [supabase]);
 
   const [discovered, setDiscovered] = useState<{key:string;name:string;category:string;sender:string|null;status:string}[]>([]);
+  const [directory, setDirectory] = useState<{available:boolean;users:number;groups:number;departments:number}|null>(null);
   const [discoveryMessage, setDiscoveryMessage] = useState("Detecting application email events…");
   const [discoveryBusy, setDiscoveryBusy] = useState(false);
   const refreshDiscovery = useCallback(async (apply = true) => {
@@ -34,6 +35,7 @@ export default function MailSettingsPage({ integration }: Props) {
         if(!response.ok) throw new Error(result.error || "Refresh failed.");
       }
       setDiscovered(result.events || []);
+      setDirectory(result.directory || null);
       setDiscoveryMessage(result.connection?.connected ? "Detected events and suggested routes. Imported mappings remain inactive until delivery is configured." : result.connection?.message || "Connect the Mail System first.");
     } catch(error) {
       setDiscoveryMessage(error instanceof Error ? error.message : "Mail discovery failed.");
@@ -69,6 +71,7 @@ export default function MailSettingsPage({ integration }: Props) {
     <section aria-label="Automatic configuration" style={{marginBottom:24}}>
       <h2>Automatic configuration</h2>
       <p role="status">{discoveryMessage}</p>
+      {directory?.available ? <p>Detected {directory.users} staff members · {directory.groups} staff groups · {directory.departments} departments.</p> : directory && <p>Staff directory unavailable; no access changes have been made.</p>}
       <button type="button" disabled={discoveryBusy} onClick={()=>void refreshDiscovery()}> {discoveryBusy ? "Discovering…" : "Rescan and configure"} </button>
       {discovered.length>0 && <details open>
         <summary>{discovered.length} detected events · {discovered.filter(event=>event.status!=="configured").length} require review</summary>
