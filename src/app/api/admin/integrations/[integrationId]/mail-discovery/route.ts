@@ -7,7 +7,6 @@ import {verifyMailSystemConnection} from "@/integrations/Mailsystem/Data/client"
 import {getMailModuleConfig} from "@/integrations/Mailsystem/Data/config";
 import {createSupabaseMailModuleStore} from "@/integrations/Mailsystem/Data/supabase-store";
 import {configureTemplate} from "@/integrations/Mailsystem/Data/configuration";
-import type {MailTemplate} from "@/integrations/Mailsystem/Data/types";
 export const runtime="nodejs";
 
 const noCache={headers:{"cache-control":"no-store"}};
@@ -137,8 +136,8 @@ export async function PUT(req:Request){
   }
   if(body.action==="custom_template"){
    const key=String(body.templateKey||"");
-   if(!/^custom\.[a-z0-9][a-z0-9._-]{0,91}$/i.test(key)||events.some(event=>event.templateKey===key))throw reject("Use a unique custom template key.");
    const existing=await store.getTemplateByKey(key);
+   if((!existing&&!/^custom\.[a-z0-9][a-z0-9._-]{0,91}$/i.test(key))||events.some(event=>event.templateKey===key))throw reject("Use a unique custom template key.");
    if(existing&&!body.edit)throw reject("This template already exists.",409);
    const template=await configureTemplate(store,{...draft(body.template),id:existing?.id,template_key:key,active:body.active===true});
    return Response.json({ok:true,template},noCache);
@@ -162,9 +161,10 @@ export async function PUT(req:Request){
    if(!source){results.push({key:event.key,status:"needs_review"});continue;}
    const used=variablesUsed(source),allowed=new Set(event.variables.map(variable=>variable.name));
    const valid=used.every(variable=>allowed.has(variable))&&event.variables.filter(variable=>variable.sensitive).every(variable=>used.includes(variable.name));
-   if((body.active===true||event.active||body.template)&&!valid){results.push({key:event.key,status:"template_variables_need_review"});continue;}
+   if((body.active===true||trigger?.active||body.template)&&!valid){results.push({key:event.key,status:"template_variables_need_review"});continue;}
    const selectedSender=sender||event.sender;
-   const active=body.active===true?true:body.active===false?false:event.active;
+   const active=body.active===true?true:body.active===false?false:!!trigger?.active;
+   if(active&&(!connection.canSend||!integrationEnabled)){results.push({key:event.key,status:"needs_sender"});continue;}
    if(active&&!selectedSender){results.push({key:event.key,status:"needs_sender"});continue;}
    // Editing a template shared by events forks it to this event instead of changing another event's content.
    const shared=events.some(other=>other.key!==event.key&&other.templateKey===event.templateKey);
