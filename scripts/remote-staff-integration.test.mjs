@@ -203,3 +203,15 @@ test("directory sync transmits group and department codes and preserves non-acti
   assert.deepEqual(calls.at(-1).body.user_ids, ["user-1"]);
   assert.equal(calls.at(-1).body.complete_snapshot, true);
 });
+
+test("department mailbox rank derives only from valid department membership and assigned ranks",async()=>{
+ const {departmentMailGroups,staffDepartmentMailGroups}=await import("../src/integrations/Mailsystem/Data/department-mail-policy.mjs");
+ const deps=[{id:"a",slug:"general-support"},{id:"b",slug:"advanced-general-support"},{id:"c",slug:"technical-support"},{id:"d",slug:"sales-enquiries"}];
+ assert.equal(departmentMailGroups(deps).length,15);
+ assert.deepEqual(staffDepartmentMailGroups(["support","senior-support"],[{department_id:"a",position_rank:1},{department_id:"c",position_rank:3}],deps),["mail-dept-general-rank-1","mail-dept-technical-rank-3"]);
+ assert.deepEqual(staffDepartmentMailGroups(["support"],[{department_id:"b",position_rank:3}],deps),[]);
+ assert.deepEqual(staffDepartmentMailGroups(["support","senior-support"],[{department_id:"a",position_rank:null}],deps),["mail-dept-general-rank-1"]);
+ assert.deepEqual(staffDepartmentMailGroups(["senior-support"],[{department_id:"b",position_rank:3}],deps),["mail-dept-general-rank-3"]);
+ assert.deepEqual(staffDepartmentMailGroups(["senior-support"],[],deps),[]);
+ assert.deepEqual(staffDepartmentMailGroups(["support"],[{department_id:"d",position_rank:1}],deps),["mail-dept-sales-rank-1"]);
+});
