@@ -134,7 +134,7 @@ test("local detection retains saved routing without guessing remote senders",asy
 
 test("Mail Settings initial load is local and does not provision or run directory sync",()=>{
  const page=readFileSync(new URL("../src/integrations/Mailsystem/Pages/mail-settings/page.tsx",import.meta.url),"utf8");
- const start=page.indexOf('useEffect(()=>{void run("load"');
+ const start=page.indexOf('useEffect(()=>{let active=true;void run("load"');
  const end=page.indexOf("const syncAll",start);
  assert.ok(start>=0&&end>start);
  const mount=page.slice(start,end);

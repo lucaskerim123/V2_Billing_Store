@@ -50,7 +50,9 @@ export async function GET(req:Request){
 
 export async function POST(req:Request){
  try{
-  let {db,store,connection,events,provisioningDomains,departmentRows,integrationEnabled}=await discover(req);
+  const initial=await discover(req);
+  const {db,store,provisioningDomains,departmentRows,integrationEnabled}=initial;
+  let {connection,events}=initial;
   const body=await req.json().catch(()=>({}));
   const domain=typeof body.domain==="string"?body.domain:provisioningDomains.length===1?provisioningDomains[0]:"";
   const warnings:string[]=[];

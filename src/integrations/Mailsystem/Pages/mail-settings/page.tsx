@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback,useEffect,useMemo,useRef,useState} from "react";
+import {useCallback,useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase";
 import {MailAccessManager} from "../../Data/access-manager";
@@ -21,7 +21,6 @@ const isReview=(status:string)=>["needs_review","needs_sender","needs_template",
 
 export default function MailSettingsPage({integration}:Props){
  const supabase=useMemo(()=>createClient(),[]);
- const loadGeneration=useRef(0);
  const [snapshot,setSnapshot]=useState<Snapshot|null>(null);
  const [section,setSection]=useState<typeof sections[number][0]>("events");
  const [busy,setBusy]=useState("");
@@ -50,12 +49,9 @@ export default function MailSettingsPage({integration}:Props){
   return result;
  },[supabase]);
  const load=useCallback(async(localOnly=false)=>{
-  const generation=++loadGeneration.current;
   const result:Snapshot=await request("mail-discovery"+(localOnly?"?local=1":""));
-  if(generation===loadGeneration.current){
-   setSnapshot(result);
-   setDomain(old=>result.provisioningDomains.includes(old)?old:result.provisioningDomains.length===1?result.provisioningDomains[0]:"");
-  }
+  setSnapshot(result);
+  setDomain(old=>result.provisioningDomains.includes(old)?old:result.provisioningDomains.length===1?result.provisioningDomains[0]:"");
   return result;
  },[request]);
  const discover=useCallback(async(selectedDomain="")=>{
@@ -69,11 +65,16 @@ export default function MailSettingsPage({integration}:Props){
   catch(reason){setError(reason instanceof Error?reason.message:"Mail operation failed.");}
   finally{setBusy("");}
  },[]);
- useEffect(()=>{void run("load",async()=>{
+ useEffect(()=>{let active=true;void run("load",async()=>{
   // Opening settings is read-only: local state renders before checking the remote catalogue.
-  await load(true);
-  void load().catch(reason=>setError(reason instanceof Error?reason.message:"Mailbox connection check failed."));
- });},[load,run]);
+  const initial=await load(true);
+  void request("mail-discovery").then((result:Snapshot)=>{
+   if(!active)return;
+   // Do not replace a more recent snapshot saved by another settings action.
+   setSnapshot(old=>old===initial?result:old);
+   setDomain(old=>result.provisioningDomains.includes(old)?old:result.provisioningDomains.length===1?result.provisioningDomains[0]:"");
+  }).catch(reason=>{if(active)setError(reason instanceof Error?reason.message:"Mailbox connection check failed.");});
+ });return()=>{active=false};},[load,run,request]);
  const syncAll=useCallback(async()=>{
   const refreshed=await discover(domain);
   if(!refreshed.connection.connected||!refreshed.integrationEnabled)throw new Error("Event configuration saved. Connect and enable Mail System before synchronizing users.");
