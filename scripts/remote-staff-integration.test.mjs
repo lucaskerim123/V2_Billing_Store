@@ -28,11 +28,12 @@ test("remote actor assertions are short-lived RS256 assertions with manager-conf
 
 test("remote staff API exposes group sync, session lifecycle and delegated permission assignment", () => {
   assert.match(typesSource, /group_codes\?: string\[\]/);
+  assert.match(source, /syncRemoteStaff\(input: RemoteStaffSyncInput\)/);
+  assert.match(source, /body: JSON\.stringify\(input\)/);
   assert.match(moduleSource, /assignRemoteAdminPermissions/);
   assert.match(moduleSource, /refreshRemoteSession/);
   assert.match(moduleSource, /terminateRemoteStaff/);
 });
-
 
 test("remote staff sync sends group assignments without changing omitted or empty arrays", async () => {
   const requests = [];
@@ -90,7 +91,7 @@ const directoryRoute = readFileSync(new URL("../src/app/api/admin/integrations/[
 
 test("Integration Manager owns Mail System lifecycle, credentials and automatic remote trust setup", () => {
   assert.match(managerPage, /Mail System Core URL/);
-  assert.match(managerPage, /Save connection & set up trust/);
+  assert.match(managerPage, /Save connection/);
   assert.match(managerPage, /Install/);
   assert.match(managerPage, /Uninstall/);
   assert.match(connectionRoute, /generateKeyPairSync\("rsa"/);
@@ -117,17 +118,11 @@ test("Billing Store directory sync detects roles, departments, groups and permis
 
 const accessManager = readFileSync(new URL("../src/integrations/Mailsystem/Data/access-manager.tsx", import.meta.url), "utf8");
 
-test("Mail access manager keeps permission mappings and role options strongly typed", () => {
-  assert.match(accessManager, /new Map<string, string\[\]>\(/);
-  assert.match(accessManager, /new Map<string, Row>\(/);
+test("Billing Store access screen is read-only and does not write mailbox permissions", () => {
+  assert.match(accessManager, /Manage mailbox access and administrator permissions in Mail System/);
+  assert.doesNotMatch(accessManager, /onSave\(/);
+  assert.doesNotMatch(accessManager, /allowedMailboxIds|permissionRules|Save access and user mappings/);
 });
-
-test("Mail access manager types grouped mailbox rules and normalises mailbox identifiers", () => {
-  assert.match(accessManager, /const existing: Rule = grouped\.get\(key\)/);
-  assert.match(accessManager, /const mailboxId = String\(row\.mailbox_id \|\| ""\)/);
-  assert.match(accessManager, /existing\.mailbox_ids\.includes\(mailboxId\)/);
-});
-
 
 test("directory catalogue and staff sync use the same canonical profile role", () => {
   assert.match(directoryRoute, /const roleCode = .*member\.profile_role/);
@@ -141,4 +136,64 @@ test("directory sync repairs signing trust using the saved connection", () => {
   assert.match(directoryRoute, /register-key/);
   assert.match(directoryRoute, /createPublicKey/);
   assert.ok(directoryRoute.indexOf("register-key") < directoryRoute.indexOf("/remote-staff/directory"));
+});
+
+
+// Execute the actual directory route with fake database and Mail System boundaries.
+function directoryHarness(snapshot) {
+  const calls = [];
+  const departments = [{ id: "dep-1", slug: "help", name: "Help" }];
+  const db = {
+    rpc: async () => ({ data: snapshot, error: null }),
+    from(table) {
+      if (table === "app_integrations") return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { installed: true, enabled: true } }) }) }) };
+      if (table === "support_departments") return { select: () => ({ eq: async () => ({ data: departments }) }) };
+      if (table === "support_department_staff") return { select: async () => ({ data: [{ user_id: "user-1", department_id: "dep-1" }] }) };
+      throw new Error("Unexpected table: " + table);
+    },
+  };
+  const mockedModules = {
+    "@/lib/integrations/admin-context": {
+      requireIntegrationAdmin: async () => ({ db, access: {} }),
+      hasIntegrationPermission: () => true,
+      integrationErrorResponse: (error) => Response.json({ error: error.message }, { status: error.status || 500 }),
+    },
+    "@/integrations/Mailsystem/Data/config": {
+      getMailModuleConfig: async () => ({ baseUrl: "https://mail.example.test", apiKey: "fake-key" }),
+      getMailRemoteIdentityConfig: async () => ({ privateKey: "fake-private-key", keyId: "key-1", issuer: "billing", audience: "mail" }),
+    },
+    "node:crypto": { randomUUID: () => "event-1", createPublicKey: () => ({ export: () => ({ kty: "RSA" }) }) },
+  };
+  const exports = {};
+  const compiled = ts.transpileModule(directoryRoute, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  runInNewContext(compiled, {
+    exports, Response,
+    require: (name) => { if (!(name in mockedModules)) throw new Error("Unexpected module: " + name); return mockedModules[name]; },
+    fetch: async (url, options) => { calls.push({ path: new URL(url).pathname, body: JSON.parse(options.body) }); return Response.json({ ok: true }); },
+  });
+  return { calls, POST: exports.POST };
+}
+
+test("directory sync rejects an incomplete or invalid snapshot before contacting Mail System", async () => {
+  for (const snapshot of [null, { groups: [] }, { members: [], groups: null }, { members: [{ status: "active" }], groups: [] }, { members: [{ user_id: "user-1", status: "unknown" }], groups: [] }, { members: [{ user_id: "user-1", status: "active" }, { user_id: "user-1", status: "active" }], groups: [] }]) {
+    const { POST, calls } = directoryHarness(snapshot);
+    const response = await POST(new Request("https://billing.example.test"));
+    assert.equal(response.status, 503);
+    assert.equal(calls.length, 0);
+  }
+});
+
+test("directory sync transmits group and department codes and preserves non-active staff status", async () => {
+  const groups = [{ id: "group-1", slug: "support", name: "Support", permissions: { "support.view": true } }];
+  const { POST, calls } = directoryHarness({ groups, members: [{ user_id: "user-1", status: "locked", profile_role: "support", group_ids: ["group-1"] }] });
+  const response = await POST(new Request("https://billing.example.test"));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).ok, true);
+  const sync = calls.find((call) => call.path.endsWith("/sync"));
+  assert.deepEqual(sync.body.user.group_codes, ["support"]);
+  assert.deepEqual(sync.body.user.department_codes, ["help"]);
+  assert.deepEqual(sync.body.user.role_codes, ["support"]);
+  assert.equal(sync.body.user.status, "locked");
+  assert.deepEqual(calls.at(-1).body.user_ids, ["user-1"]);
+  assert.equal(calls.at(-1).body.complete_snapshot, true);
 });

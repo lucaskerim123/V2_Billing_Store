@@ -3,6 +3,7 @@ import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase";
 
+const titles:Record<number,string>={1:"Customer Service Representative",2:"Customer Service Officer",3:"Senior Customer Service Officer",4:"Customer Service Supervisor",5:"Customer Service Manager"};
 const workType=(value:string)=>({casual:"Casual",part_time:"Part-time",full_time:"Full-time",contractor:"Contractor",temporary:"Temporary"} as Record<string,string>)[value]||"Not set";
 export default function StaffMembers(){
  const sb=createClient();
@@ -29,7 +30,7 @@ export default function StaffMembers(){
    <div className="staffMemberRows">{filtered.length?filtered.map((m:any)=><article className="staffMemberRow" key={m.user_id}>
     <div className="staffIdentity"><b>{m.display_name||m.email||m.user_id}</b><span>{m.email||"No email"}</span><small>{m.customer_number||"Customer account"}</small></div>
     <div className="staffRoleSummary"><b>{(m.group_names||[]).join(" · ")||"No staff group"}</b><span>{(m.effective_permissions||[]).filter((x:string)=>x!=="all").length} permissions</span></div>
-    <div className="staffMetaSummary"><b>{m.title||"Employee"}</b><span>{workType(m.employment_type)}</span><span className={`staffStatusPill ${m.status}`}>{m.status==="active"?"Current employee":"Disabled"}</span></div>
+    <div className="staffMetaSummary"><b>{m.title||"Employee"}</b><span>{workType(m.employment_type)}</span>{(data.departments||[]).filter((d:any)=>(m.department_ids||[]).includes(d.id)).map((d:any)=><small key={d.id}>{d.name}{m.department_positions?.[d.id]?` · ${titles[Number(m.department_positions[d.id])]||"Assigned"}`:""}</small>)}<span className={`staffStatusPill ${m.status}`}>{m.status==="active"?"Current employee":"Disabled"}</span></div>
     <div className="staffMemberActions"><Link className="secondary" href={`/admin/customers/${m.user_id}`}>Open customer</Link></div>
    </article>):<div className="staffEmpty">No employees match this filter.</div>}</div>
   </section>

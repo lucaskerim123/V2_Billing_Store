@@ -1,7 +1,7 @@
 import { requireIntegrationAdmin, integrationErrorResponse, hasIntegrationPermission } from "@/lib/integrations/admin-context";
 import { getMailModuleConfig, getMailRemoteIdentityConfig } from "@/integrations/Mailsystem/Data/config";
 import { randomUUID, createPublicKey } from "node:crypto";
-import type { RemoteStaffSyncInput } from "@/integrations/Mailsystem/Data/remote-staff-types";
+import type { RemoteStaffStatus, RemoteStaffSyncInput } from "@/integrations/Mailsystem/Data/remote-staff-types";
 
 export const runtime = "nodejs";
 
@@ -27,9 +27,22 @@ export async function POST(req: Request) {
       throw Object.assign(new Error(snapshotError?.message || departmentError?.message || membershipError?.message || "Could not read Billing Store staff directory."), { status: 503 });
     }
 
-    const members = Array.isArray(snapshot?.members) ? snapshot.members : [];
-    const groups = Array.isArray(snapshot?.groups) ? snapshot.groups : [];
-    const departmentRows = Array.isArray(departments) ? departments : [];
+    // Never reconcile an incomplete snapshot as an empty, authoritative directory.
+    if (!Array.isArray(snapshot?.members) || !Array.isArray(snapshot?.groups) || !Array.isArray(departments) || !Array.isArray(memberships)) {
+      throw Object.assign(new Error("Billing Store staff directory snapshot is incomplete; Mail System was not changed."), { status: 503 });
+    }
+    const members = snapshot.members;
+    const groups = snapshot.groups;
+    const supportedStatuses = new Set<RemoteStaffStatus>(["pending", "active", "on_leave", "suspended", "locked", "disabled", "terminated"]);
+    const memberIds = new Set<string>();
+    for (const member of members) {
+      const userId = String(member?.user_id || member?.id || "").trim();
+      if (!userId || memberIds.has(userId) || !supportedStatuses.has(member?.status)) {
+        throw Object.assign(new Error("Billing Store staff directory contains an invalid or duplicate staff record; Mail System was not changed."), { status: 503 });
+      }
+      memberIds.add(userId);
+    }
+    const departmentRows = departments;
     const deptByUser = new Map<string, string[]>();
     for (const row of memberships || []) {
       const values = deptByUser.get(String(row.user_id)) || [];
@@ -69,8 +82,7 @@ export async function POST(req: Request) {
     const sourceRevision = Date.now();
     const outcomes: any[] = [];
     for (const member of members) {
-      const userId = String(member.user_id || member.id || "");
-      if (!userId) continue;
+      const userId = String(member.user_id || member.id).trim();
       const groupCodes = (Array.isArray(member.group_ids) ? member.group_ids : [])
         .map((id: unknown) => groupById.get(String(id)))
         .filter(Boolean)
@@ -80,10 +92,8 @@ export async function POST(req: Request) {
         .filter(Boolean)
         .map((item: any) => String(item.slug || item.id));
       const role = roleCode(member);
-      const status = member.status === "disabled" ? "disabled"
-        : member.status === "suspended" ? "suspended"
-        : member.status === "pending" ? "pending" : "active";
-      const payload = {
+      const status: RemoteStaffStatus = member.status;
+      const payload: RemoteStaffSyncInput = {
         event_id: "billing-directory-" + sourceRevision + "-" + userId,
         source_revision: sourceRevision,
         user: {
@@ -96,7 +106,7 @@ export async function POST(req: Request) {
           department_codes: departmentCodes,
           group_codes: groupCodes,
         },
-      } satisfies RemoteStaffSyncInput;
+      };
       const response = await fetch(config.baseUrl + "/api/integrations/remote-staff/sync", {
         method: "POST",
         headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json", "Idempotency-Key": payload.event_id },
@@ -114,7 +124,7 @@ export async function POST(req: Request) {
         headers: { Authorization: "Bearer " + config.apiKey, "Content-Type": "application/json" },
         body: JSON.stringify({
           roles: roleRows, departments: departmentDirectory, groups: groupDirectory,
-          complete_snapshot: true, user_ids: members.map((member: any) => String(member.user_id || member.id || "")).filter(Boolean),
+          complete_snapshot: true, user_ids: [...memberIds],
         }),
         cache: "no-store",
       });

@@ -102,6 +102,7 @@ export default function IntegrationManagerPage() {
       const response = await fetch("/api/admin/integrations/mailsystem/mail-directory", { method: "POST", headers: await headers() });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Directory synchronisation failed.");
+      if(data.ok===false){setMessage("Sync incomplete: "+(data.failures||[]).map((item:any)=>String(item.result||"Sync failed")).join("; "));return;}
       setMessage(`Directory detected: ${data.directory?.groups || 0} groups, ${data.directory?.departments || 0} departments, ${data.directory?.roles || 0} roles. Users: ${data.users?.synced || 0}/${data.users?.total || 0} synced; ${data.users?.failed || 0} failed.`);
     } catch (error: any) { setMessage(error?.message || "Directory synchronisation failed."); }
     finally { setBusy(""); }
@@ -141,16 +142,16 @@ export default function IntegrationManagerPage() {
           <p style={{ fontSize: 13, opacity: .75 }}>Enter the Core URL and External System API key once. Billing Store generates and registers the remote-login signing key automatically; the private key stays encrypted in Billing Store.</p>
           <label style={{ display: "block", marginBottom: 12 }}>Mail System Core URL<input style={field} value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="https://incendiamail.vercel.app" autoComplete="url" /></label>
           <label style={{ display: "block", marginBottom: 12 }}>External System API key<input style={field} type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={connection.apiKeyConfigured ? "Saved securely — enter a replacement only to rotate" : "Paste the API key created for this Billing Store External System"} autoComplete="new-password" /></label>
-          <p style={{ fontSize: 13 }}>Connection: {connected ? "Verified" : connection.configured ? "Saved, not currently verified" : "Not configured"} · Remote login trust: {connection.remoteIdentityConfigured ? "Configured" : "Will be registered when saved"}</p>
+          <p style={{ fontSize: 13 }}>Connection: {connected ? "Verified" : connection.configured ? "Saved, not currently verified" : "Not configured"}</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button disabled={!!busy || !baseUrl.trim() || (!apiKey.trim() && !connection.apiKeyConfigured)} onClick={() => void connectionAction("test")}>Test connection</button>
-            <button disabled={!canManage || !!busy || !baseUrl.trim() || (!apiKey.trim() && !connection.apiKeyConfigured)} onClick={() => void connectionAction("save")}>Save connection & set up trust</button>
-            {item.state.enabled && <button disabled={!canManage || !!busy} onClick={() => void syncDirectory()}>Sync Billing Store users & permissions</button>}
+            <button disabled={!canManage || !!busy || !baseUrl.trim() || (!apiKey.trim() && !connection.apiKeyConfigured)} onClick={() => void connectionAction("save")}>Save connection</button>
+            {item.state.enabled && <button disabled={!canManage || !!busy} onClick={() => void syncDirectory()}>Sync users</button>}
           </div>
         </section>}
       </section>;
     })}
     {!canManage && !loading && <p style={{ fontSize: 13, opacity: .7 }}>Integration changes require the integrations.manage permission.</p>}
-    <p style={{ fontSize: 12, opacity: .65, marginTop: 20 }}>Mail Settings is the integration-contributed page for templates, sender routing, triggers and mail behaviour. Core connection and trust configuration remain here.</p>
+    <p style={{ fontSize: 12, opacity: .65, marginTop: 20 }}>Mail Settings is the integration-contributed page for templates, sender routing, triggers and mail behaviour. Mailbox access and administrator permissions are managed in Mail System.</p>
   </main>;
 }
