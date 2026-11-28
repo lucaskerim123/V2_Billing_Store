@@ -141,3 +141,14 @@ test("Mail Settings initial load is local and does not provision or run director
  assert.match(mount,/await load\(true\)/);
  assert.doesNotMatch(mount,/await discover\(|mail-directory|await load\(\);/);
 });
+
+test("event detection is a local operation, separate from provisioning and directory sync",()=>{
+ const route=readFileSync(new URL("../src/app/api/admin/integrations/[integrationId]/mail-discovery/route.ts",import.meta.url),"utf8");
+ const post=route.slice(route.indexOf("export async function POST"),route.indexOf("function draft"));
+ assert.match(post,/const initial=await discover\(req,true\)/);
+ assert.doesNotMatch(post,/getMailModuleConfig|fetch\(|provisioning_domains|verifyMailSystemConnection/);
+ const page=readFileSync(new URL("../src/integrations/Mailsystem/Pages/mail-settings/page.tsx",import.meta.url),"utf8");
+ const sync=page.slice(page.indexOf("const syncAll"),page.indexOf("const saveConfiguration"));
+ assert.match(sync,/mail-directory/);
+ assert.doesNotMatch(sync,/discover\(|mail-discovery","POST|mail-mailboxes","POST/);
+});
