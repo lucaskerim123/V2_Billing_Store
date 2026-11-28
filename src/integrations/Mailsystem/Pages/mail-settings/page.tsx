@@ -109,7 +109,7 @@ export default function MailSettingsPage({integration}:Props){
     await request("mail-discovery","PUT",{action:"custom_template",templateKey:customKey,edit:customExisting,template:draft,active:templateActive});
     await load();setCustomExisting(true);setMessage("Custom template saved.");
    }else{
-    const rows=await saveConfiguration({eventKey:selected,template:draft,...(templateSender?{sender:templateSender}:{}),active:templateActive});
+    const rows=await saveConfiguration({eventKey:selected,template:draft,...(templateSender&&templateSender!==selectedEvent?.sender?{sender:templateSender}:{}),active:templateActive,enableModule:templateActive});
     if(rows.some(row=>row.status==="needs_sender"))setMessage("Template saved. Assign a mailbox before enabling delivery.");
    }
   });
@@ -146,6 +146,7 @@ export default function MailSettingsPage({integration}:Props){
     <div className="two"><label>Search events<input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search events…" /></label><label>Category<select value={category} onChange={event=>setCategory(event.target.value)}><option value="">All categories</option>{categories.map(item=><option key={item} value={item}>{title(item)}</option>)}</select></label></div>
     <div className="two"><label>Assign sender to {category?title(category):"all categories"}<select value={bulkSender} onChange={event=>setBulkSender(event.target.value)}><option value="">Select mailbox</option>{mailboxOptions}</select></label><div className="inlineActions"><button className="secondary" type="button" disabled={!!busy||!bulkSender} onClick={()=>void run("routing",()=>saveConfiguration({...(category?{category}:{all:true}),sender:bulkSender}))}>Apply sender</button><button type="button" disabled={!!busy||!snapshot.connection.canSend||!snapshot.integrationEnabled} onClick={()=>void run("enable",()=>saveConfiguration({...(category?{category}:{all:true}),active:true,enableModule:true}))}>Enable ready events</button><button className="secondary" type="button" disabled={!!busy} onClick={()=>void run("disable",()=>saveConfiguration({...(category?{category}:{all:true}),active:false}))}>Disable category</button></div></div>
    </section>
+   {selectedEvent&&editor(false)}
    <div className="settingsGroupStack">{categories.filter(item=>!category||item===category).map(item=>{
     const rows=displayed.filter(event=>event.category===item);
     return rows.length>0&&<details key={item} className="settingsGroupV3" open={category===item||item==="account"||undefined}>
@@ -156,8 +157,7 @@ export default function MailSettingsPage({integration}:Props){
      </div>)}</div>
     </details>;
    })}{!displayed.length&&<section className="panel">No events match the current filters.</section>}</div>
-   {selectedEvent&&editor(false)}
-  </>}
+     </>}
   {snapshot&&section==="mailboxes"&&<>
    <section className="panel"><div className="panelTitle"><div><h2>Automatic mailbox setup</h2><p className="muted">Create missing system and department mailboxes through Mail System. Existing assigned mailboxes are preserved.</p></div></div><div className="two"><label>Verified provisioning domain<select value={domain} onChange={event=>setDomain(event.target.value)}><option value="">Select domain</option>{snapshot.provisioningDomains.map(value=><option key={value}>{value}</option>)}</select></label><button type="button" disabled={!!busy||!domain||!snapshot.integrationEnabled} onClick={()=>void run("provision",async()=>{await discover(domain);setMessage("Mailbox discovery and provisioning processed.")})}>Provision system & department mailboxes</button></div>{!snapshot.provisioningDomains.length&&<p className="muted">No provisioning domain is authorized. Authorize a verified domain in Mail System once.</p>}</section>
    <section className="panel"><h2>Create mailbox</h2><form onSubmit={event=>{event.preventDefault();void run("create-mailbox",async()=>{const result=await request("mail-mailboxes","POST",{mailboxes:[newBox]});if(result.ok===false)throw new Error(result.results?.[0]?.error||"Mailbox provisioning rejected.");setNewBox({address:"",kind:"department",display_name:""});await discover(domain);setMessage("Mailbox provisioned.")})}}><div className="two"><label>Address<input type="email" required value={newBox.address} onChange={event=>setNewBox(old=>({...old,address:event.target.value}))}/></label><label>Display name<input value={newBox.display_name} onChange={event=>setNewBox(old=>({...old,display_name:event.target.value}))}/></label></div><div className="two"><label>Mailbox type<select value={newBox.kind} onChange={event=>setNewBox(old=>({...old,kind:event.target.value}))}>{kinds.map(kind=><option key={kind} value={kind}>{title(kind)}</option>)}</select></label><button disabled={!!busy||!snapshot.integrationEnabled||!snapshot.provisioningDomains.length}>Create mailbox</button></div></form></section>
