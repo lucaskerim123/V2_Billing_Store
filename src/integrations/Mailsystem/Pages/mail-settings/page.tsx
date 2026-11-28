@@ -16,6 +16,9 @@ export default function MailSettingsPage({ integration }: Props) {
   const [discovered, setDiscovered] = useState<{key:string;name:string;category:string;sender:string|null;status:string;active:boolean}[]>([]);
   const [mailboxes,setMailboxes]=useState<{id:string;address:string;kind?:string}[]>([]);
   const [category,setCategory]=useState("");
+  const [domains,setDomains]=useState<string[]>([]);
+  const [provisionDomain,setProvisionDomain]=useState("");
+  const [newMailbox,setNewMailbox]=useState({address:"",kind:"department",display_name:""});
   const [bulkSender,setBulkSender]=useState("");
   const [consoleRevision,setConsoleRevision]=useState(0);
   const [tab,setTab]=useState("events");
@@ -30,7 +33,7 @@ export default function MailSettingsPage({ integration }: Props) {
     if(!response.ok)throw new Error(typeof result.error==="string"?result.error:result.error?.message||"Mail operation failed.");
     return result;
   },[supabase]);
-  const refreshDiscovery = useCallback(async (apply = true) => {
+  const refreshDiscovery = useCallback(async (apply = true, domain = "") => {
     setDiscoveryBusy(true);
     try {
       const {data:{session}} = await supabase.auth.getSession();
@@ -40,10 +43,12 @@ export default function MailSettingsPage({ integration }: Props) {
       let response = await fetch(endpoint,{headers,cache:"no-store"});
       let result = await response.json();
       if(!response.ok) throw new Error(result.error || "Discovery failed.");
-      if(apply && result.connection?.connected && result.events?.some((event:{status:string})=>event.status==="ready_to_configure")){
-        response = await fetch(endpoint,{method:"POST",headers,cache:"no-store"});
+      let provisioningWarnings=0;
+      if(apply && result.connection?.connected){
+        response = await fetch(endpoint,{method:"POST",headers:{...headers,"Content-Type":"application/json"},body:JSON.stringify(domain?{domain}:{}),cache:"no-store"});
         const applied = await response.json();
         if(!response.ok) throw new Error(applied.error || "Automatic configuration failed.");
+        provisioningWarnings=(applied.provisioning?.results||[]).filter((item:{ok:boolean})=>!item.ok).length;
         response = await fetch(endpoint,{headers,cache:"no-store"});
         result = await response.json();
         if(!response.ok) throw new Error(result.error || "Refresh failed.");
@@ -51,8 +56,10 @@ export default function MailSettingsPage({ integration }: Props) {
       setDiscovered(result.events || []);
       setDirectory(result.directory || null);
       setMailboxes(result.connection?.senders||[]);
+      setDomains(result.provisioningDomains||[]);
+      setProvisionDomain(old=>result.provisioningDomains?.includes(old)?old:result.provisioningDomains?.length===1?result.provisioningDomains[0]:"");
       setConsoleRevision(old=>old+1);
-      setDiscoveryMessage(result.connection?.connected ? "Detected events and suggested routes. Imported mappings remain inactive until delivery is configured." : result.connection?.message || "Connect the Mail System first.");
+      setDiscoveryMessage(result.connection?.connected ? "Detected events and routes. "+(provisioningWarnings?provisioningWarnings+" mailbox requests need review. ":"")+"Use Enable ready events to activate delivery." : result.connection?.message || "Connect the Mail System first.");
     } catch(error) {
       setDiscoveryMessage(error instanceof Error ? error.message : "Mail discovery failed.");
     } finally {setDiscoveryBusy(false);}
@@ -80,6 +87,17 @@ export default function MailSettingsPage({ integration }: Props) {
     }catch(error){setDiscoveryMessage(error instanceof Error?error.message:"Configuration failed.");}
     finally{setDiscoveryBusy(false);}
   },[request,refreshDiscovery]);
+  const provisionMailbox=useCallback(async()=>{
+    setDiscoveryBusy(true);
+    try{
+      const result=await request("mail-mailboxes","POST",{mailboxes:[newMailbox]});
+      if(result.ok===false)throw new Error(result.results?.[0]?.error||"Provisioning rejected.");
+      setNewMailbox({address:"",kind:"department",display_name:""});
+      await refreshDiscovery();
+      setDiscoveryMessage("Mailbox provisioned successfully.");
+    }catch(error){setDiscoveryMessage(error instanceof Error?error.message:"Provisioning failed.");}
+    finally{setDiscoveryBusy(false);}
+  },[newMailbox,request,refreshDiscovery]);
   const loadAccess=useCallback(()=>request("mail-access"),[request]);
   const saveAccess=useCallback((body:unknown)=>request("mail-access","PUT",body),[request]);
 
@@ -112,6 +130,7 @@ export default function MailSettingsPage({ integration }: Props) {
       {[["events","Automated emails"],["mailboxes","Mailboxes"],["access","Users, groups & departments"],["templates","Templates & advanced settings"]].map(([id,label])=><button key={id} type="button" aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}
     </nav>
     <button type="button" disabled={discoveryBusy} onClick={()=>void syncAll().catch(()=>{})}>Sync now</button>
+    {tab!=="events"&&<p role="status">{discoveryMessage}</p>}
     {tab==="events"&&<section aria-label="Automatic configuration" style={{marginBottom:24}}>
       <h2>Automatic configuration</h2>
       <p role="status">{discoveryMessage}</p>
@@ -132,7 +151,7 @@ export default function MailSettingsPage({ integration }: Props) {
         </table>
       </details>}
     </section>}
-    {tab==="mailboxes"&&<section><h2>Assigned mailboxes</h2><p>Mail System provisions and hosts these mailboxes. Configure access and sender routing here.</p>{["system","department","personal","shared"].map(kind=><details key={kind} open><summary>{kind[0].toUpperCase()+kind.slice(1)} · {mailboxes.filter(box=>box.kind===kind).length}</summary>{mailboxes.filter(box=>box.kind===kind).map(box=><p key={box.id}>{box.address}</p>)}</details>)}</section>}
+    {tab==="mailboxes"&&<section><h2>Assigned mailboxes</h2><p>Mail System provisions and hosts these mailboxes. Configure access and sender routing here.</p><label>Provisioning domain<select value={provisionDomain} onChange={e=>setProvisionDomain(e.target.value)}><option value="">Select verified domain</option>{domains.map(domain=><option key={domain}>{domain}</option>)}</select></label><button type="button" disabled={!provisionDomain||discoveryBusy} onClick={()=>void refreshDiscovery(true,provisionDomain)}>Automatically create system and department mailboxes</button>{!domains.length&&<p>Authorize a verified provisioning domain in Mail System → Integrations once to allow automatic mailbox creation.</p>}<form onSubmit={e=>{e.preventDefault();void provisionMailbox();}} style={{display:"grid",gap:8,maxWidth:520}}><label>Mailbox address<input type="email" required value={newMailbox.address} onChange={e=>setNewMailbox(old=>({...old,address:e.target.value}))}/></label><label>Display name<input value={newMailbox.display_name} onChange={e=>setNewMailbox(old=>({...old,display_name:e.target.value}))}/></label><label>Type<select value={newMailbox.kind} onChange={e=>setNewMailbox(old=>({...old,kind:e.target.value}))}>{["system","department","personal","shared"].map(kind=><option key={kind} value={kind}>{kind}</option>)}</select></label><button disabled={!domains.length||discoveryBusy||!newMailbox.address}>Create mailbox</button></form>{["system","department","personal","shared"].map(kind=><details key={kind} open><summary>{kind[0].toUpperCase()+kind.slice(1)} · {mailboxes.filter(box=>box.kind===kind).length}</summary>{mailboxes.filter(box=>box.kind===kind).map(box=><p key={box.id}>{box.address}</p>)}</details>)}</section>}
     {tab==="access"&&<MailAccessManager onLoad={loadAccess} onSave={saveAccess} onSync={syncAll} canManage/>}
     {tab==="templates"&&<MailModuleConsole key={consoleRevision} store={store} onTestConnection={onTestConnection} canManage />}
   </main>;
