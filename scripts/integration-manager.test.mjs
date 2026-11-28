@@ -46,7 +46,7 @@ test("automatic mail discovery preserves existing mappings and only picks an una
  const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
  const events=[{key:"invoice.created",name:"Invoice created",category:"billing",variables:[]},{key:"account.password_reset",name:"Password reset",category:"account",variables:[{name:"reset_url",sensitive:true}]}];
  const senders=[{id:"a",address:"billing@orbitfs.cc"},{id:"b",address:"system@one.example"},{id:"c",address:"system@two.example"}];
- const result=planMailDiscovery({events,senders,triggers:[{event_key:"invoice.created",template_key:"custom",route_key:"custom"}],routes:[{route_key:"custom",sender_address:"billing@orbitfs.cc"}]});
+ const result=planMailDiscovery({events,senders,triggers:[{event_key:"invoice.created",template_key:"custom",route_key:"custom"}],routes:[{route_key:"custom",sender_address:"billing@orbitfs.cc"}],templates:[{template_key:"custom",display_name:"Custom",subject:"Invoice",body_text:"Invoice created",body_html:null,variables:[],active:false}]});
  assert.equal(result[0].status,"configured");
  assert.equal(result[0].sender,"billing@orbitfs.cc");
  assert.equal(result[1].sender,null);
@@ -109,4 +109,10 @@ test("mail discovery never reroutes an existing explicit sender or uses a person
  const existing=planMailDiscovery({...input,triggers:[{event_key:"invoice.created",template_key:"invoice.created",route_key:"manual",active:false}],routes:[{route_key:"manual",sender_address:"old@orbitfs.cc",active:false}]})[0];
  assert.equal(existing.sender,null);
  assert.equal(existing.status,"needs_sender");
+});
+
+test("missing saved template is not reported as configured",async()=>{
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const row=planMailDiscovery({events:[{key:"invoice.created",name:"Invoice",category:"billing",variables:[]}],senders:[{address:"billing@orbitfs.cc",kind:"department"}],triggers:[{event_key:"invoice.created",template_key:"custom",route_key:"custom",active:false}],routes:[{route_key:"custom",sender_address:"billing@orbitfs.cc",active:false}]})[0];
+ assert.equal(row.status,"needs_template");
 });

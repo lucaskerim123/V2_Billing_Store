@@ -109,7 +109,7 @@ export default function MailSettingsPage({integration}:Props){
     await request("mail-discovery","PUT",{action:"custom_template",templateKey:customKey,edit:customExisting,template:draft,active:templateActive});
     await load();setCustomExisting(true);setMessage("Custom template saved.");
    }else{
-    const rows=await saveConfiguration({eventKey:selected,template:draft,...(templateSender&&templateSender!==selectedEvent?.sender?{sender:templateSender}:{}),active:templateActive,enableModule:templateActive});
+    const rows=await saveConfiguration({eventKey:selected,template:draft,...(templateSender&&templateSender!==selectedEvent?.sender?{sender:templateSender}:{}),...(templateActive!==selectedEvent?.active?{active:templateActive}:{})});
     if(rows.some(row=>row.status==="needs_sender"))setMessage("Template saved. Assign a mailbox before enabling delivery.");
    }
   });
@@ -119,13 +119,13 @@ export default function MailSettingsPage({integration}:Props){
   {!custom&&<p className="muted">{selectedEvent?.description} · {selectedEvent?.key}</p>}
   <fieldset disabled={!!busy}>
    <div className="two"><label>Template name<input required value={draft.display_name} onChange={event=>setDraft(old=>({...old,display_name:event.target.value}))}/></label><label>Subject<input required maxLength={998} value={draft.subject} onChange={event=>setDraft(old=>({...old,subject:event.target.value}))}/></label></div>
-   {!custom&&<div className="two"><label>Sender mailbox<select value={templateSender} onChange={event=>setTemplateSender(event.target.value)}><option value="">Not assigned</option>{mailboxOptions}</select></label><label className="toggle"><input type="checkbox" checked={templateActive} disabled={!templateSender||!snapshot?.connection.canSend||!snapshot?.integrationEnabled} onChange={event=>setTemplateActive(event.target.checked)}/> Enable this event</label></div>}
+   {!custom&&<div className="two"><label>Sender mailbox<select value={templateSender} onChange={event=>setTemplateSender(event.target.value)}><option value="">Not assigned</option>{mailboxOptions}</select></label><label className="toggle"><input type="checkbox" checked={templateActive} disabled={!templateActive&&(!templateSender||!snapshot?.connection.canSend||!snapshot?.integrationEnabled)} onChange={event=>setTemplateActive(event.target.checked)}/> Enable this event</label></div>}
    {custom&&<label className="toggle"><input type="checkbox" checked={templateActive} onChange={event=>setTemplateActive(event.target.checked)}/> Template active</label>}
    <label>Plain text email<textarea rows={9} value={draft.body_text||""} onChange={event=>setDraft(old=>({...old,body_text:event.target.value}))}/></label>
    <details><summary>HTML content (optional)</summary><label>HTML email<textarea rows={7} value={draft.body_html||""} onChange={event=>setDraft(old=>({...old,body_html:event.target.value}))}/></label></details>
    {!custom&&<section><h3>Available event variables</h3><p className="muted">Select a variable to append it to the text. Required secure links and codes must remain in the template.</p><div className="inlineActions">{selectedEvent?.variables.map(variable=><button className="secondary" type="button" key={variable.name} onClick={()=>setDraft(old=>({...old,body_text:(old.body_text||"")+" {{"+variable.name+"}}"}))}>{variable.name}{variable.sensitive?" · required":""}</button>)}</div></section>}
   </fieldset>
-  <div className="inlineActions"><button type="submit" disabled={!!busy||!draft.display_name.trim()||!draft.subject.trim()||!(draft.body_text||draft.body_html)||(!custom&&templateActive&&!templateSender)}>{busy==="save-template"?"Saving…":"Save template"+(custom?"":" & event")}</button><button type="button" className="secondary" onClick={()=>setPreview(old=>!old)}>{preview?"Hide preview":"Preview"}</button></div>
+  <div className="inlineActions"><button type="submit" disabled={!!busy||!draft.display_name.trim()||!draft.subject.trim()||!(draft.body_text||draft.body_html)||(!custom&&templateActive&&!selectedEvent?.active&&!templateSender)}>{busy==="save-template"?"Saving…":"Save template"+(custom?"":" & event")}</button><button type="button" className="secondary" onClick={()=>setPreview(old=>!old)}>{preview?"Hide preview":"Preview"}</button></div>
   {preview&&<section className="panel"><h3>{draft.subject}</h3><p className="muted">Preview uses template placeholders, not live customer data.</p><pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{draft.body_text||draft.body_html}</pre></section>}
  </form>;
  return <main className="adminShell settingsEditorV3 settingsCompact">

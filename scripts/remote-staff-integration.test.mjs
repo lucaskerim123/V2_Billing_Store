@@ -100,7 +100,10 @@ test("Integration Manager owns Mail System lifecycle, credentials and automatic 
 });
 
 test("Mail Settings contains working templates and routing UI without core credentials", () => {
-  assert.match(mailSettingsPage, /MailModuleConsole/);
+  assert.match(mailSettingsPage, /Edit template/);
+  assert.match(mailSettingsPage, /saveConfiguration/);
+  assert.match(mailSettingsPage, /Sender mailbox/);
+  assert.doesNotMatch(mailSettingsPage, /MailModuleConsole/);
   assert.doesNotMatch(mailSettingsPage, /privateKey|apiKey|baseUrl/);
   assert.match(managerPage, /Open Mail Settings/);
 });

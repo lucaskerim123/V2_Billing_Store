@@ -164,8 +164,7 @@ export async function PUT(req:Request){
    if((body.active===true||trigger?.active||body.template)&&!valid){results.push({key:event.key,status:"template_variables_need_review"});continue;}
    const selectedSender=sender||event.sender;
    const active=body.active===true?true:body.active===false?false:!!trigger?.active;
-   if(active&&(!connection.canSend||!integrationEnabled)){results.push({key:event.key,status:"needs_sender"});continue;}
-   if(active&&!selectedSender){results.push({key:event.key,status:"needs_sender"});continue;}
+   if((body.active===true||sender)&&active&&(!connection.canSend||!integrationEnabled||!selectedSender)){results.push({key:event.key,status:"needs_sender"});continue;}
    // Editing a template shared by events forks it to this event instead of changing another event's content.
    const shared=events.some(other=>other.key!==event.key&&other.templateKey===event.templateKey);
    const key=body.template&&shared?"event."+event.key:event.templateKey;

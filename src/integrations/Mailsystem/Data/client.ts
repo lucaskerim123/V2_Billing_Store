@@ -1,6 +1,7 @@
 import { getMailModuleConfig, type MailModuleConfig } from "./config";
 
-export type Sender = { id: string; address: string };
+export type Sender = { id: string; address: string; kind?: string };
+export type MailboxCatalogue = { mailboxes: Sender[]; provisioning_domains: string[] };
 export type SendMessage = {
   to: string | string[]; subject: string; text?: string; html?: string;
   from_address?: string; reply_to?: string; cc?: string[]; bcc?: string[];
@@ -33,14 +34,22 @@ async function call<T>(path: string, init: RequestInit = {}, suppliedConfig?: Ma
   return data as T;
 }
 export async function getSenders(config?: MailModuleConfig) {
-  return call<{ sender: string | null; senders: Sender[] }>("/api/mail/senders", {}, config);
+  const catalogue = await getMailboxCatalogue(config);
+  const senders = catalogue.mailboxes;
+  const system = senders.filter(item => item.kind === "system");
+  return { sender: system.length === 1 ? system[0].address : null, senders };
+}
+export async function getMailboxCatalogue(config?: MailModuleConfig): Promise<MailboxCatalogue> {
+  const result = await call<MailboxCatalogue>("/api/integrations/mailboxes", {}, config);
+  if (!Array.isArray(result.mailboxes) || !Array.isArray(result.provisioning_domains)) throw new MailSystemApiError("Invalid scoped mailbox catalogue.", 503);
+  return result;
 }
 export async function verifyMailSystemConnection(config?: MailModuleConfig): Promise<MailConnectionResult> {
   try {
     const result = await getSenders(config);
     const senders = Array.isArray(result.senders) ? result.senders.filter(sender => sender && typeof sender.id === "string" && typeof sender.address === "string") : [];
     if (!senders.length) return { connected: true, canSend: false, status: "no_senders_assigned", message: "Connected to Mail System, but this External System has no active sender mailboxes assigned.", sender: null, senders: [] };
-    return { connected: true, canSend: true, status: "connected", message: "Connected and verified. " + senders.length + " permitted sender mailbox(es) available.", sender: result.sender || senders[0].address, senders };
+    return { connected: true, canSend: true, status: "connected", message: "Connected and verified. " + senders.length + " permitted sender mailbox(es) available.", sender: result.sender, senders };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Connection verification failed.";
     if (/MAIL_SYSTEM_URL|MAIL_SYSTEM_API_KEY|Mail System is not connected|Billing Store secure integration storage/.test(message)) return { connected: false, canSend: false, status: "configuration_missing", message, sender: null, senders: [] };
