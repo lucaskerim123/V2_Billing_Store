@@ -68,3 +68,43 @@ export async function POST(req:Request){
   return Response.json({configured:results,requiresReview:events.filter(event=>!event.existing&&event.status!=="ready_to_configure").map(event=>({key:event.key,status:event.status})),deliveryEnabled:false},{headers:{"cache-control":"no-store"}});
  }catch(error){return integrationErrorResponse(error,"Automatic mail configuration failed.");}
 }
+
+export async function PUT(req:Request){
+ try{
+  const {db,connection,events}=await discover(req);
+  if(!connection.connected)throw Object.assign(new Error(connection.message),{status:409});
+  const body=await req.json().catch(()=>null);
+  if(!body||typeof body!=="object")throw Object.assign(new Error("Configuration required."),{status:400});
+  const all=body.all===true,category=typeof body.category==="string"?body.category:"",eventKey=typeof body.eventKey==="string"?body.eventKey:"";
+  if(!all&&!category&&!eventKey)throw Object.assign(new Error("Select an event or category."),{status:400});
+  const selected=events.filter(event=>all||event.key===eventKey||event.category===category);
+  if(!selected.length)throw Object.assign(new Error("No matching events."),{status:404});
+  const sender=typeof body.sender==="string"?body.sender.trim().toLowerCase():null;
+  if(sender&&!connection.senders.some(mailbox=>mailbox.address.toLowerCase()===sender))throw Object.assign(new Error("Select a mailbox assigned to this integration."),{status:403});
+  const store=createSupabaseMailModuleStore(db),results:{key:string;status:string}[]=[];
+  for(const event of selected){
+   const selectedSender=sender||event.sender;
+   if(!selectedSender||!event.template){results.push({key:event.key,status:"needs_review"});continue;}
+   const key=event.templateKey,routeKey="auto."+event.key;
+   // Explicit overrides are event-specific, so a shared custom route is never silently edited.
+   const existing=await store.getTemplateByKey(key);
+   const source=event.template;
+   const active=body.active===true?true:body.active===false?false:event.active;
+   if(active){
+    const allowed=new Set(event.variables.map((variable:{name:string})=>variable.name));
+    const used=[source.subject,source.body_text||"",source.body_html||""].flatMap(part=>[...part.matchAll(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g)].map(match=>match[1]));
+    if(used.some(variable=>!allowed.has(variable))||event.variables.some((variable:{name:string;sensitive?:boolean})=>variable.sensitive&&!used.includes(variable.name))){results.push({key:event.key,status:"template_variables_need_review"});continue;}
+   }
+   if(!existing||active&&!existing.active)await store.saveTemplate({id:existing?.id,template_key:key,display_name:source.display_name,subject:source.subject,body_text:source.body_text,body_html:source.body_html,variables:source.variables,active:active||!!existing?.active});
+   const route=(await store.listRoutes()).find(item=>item.route_key===routeKey);
+   await store.saveRoute({id:route?.id,route_key:routeKey,sender_address:selectedSender,priority:0,conditions:{},active});
+   const trigger=await store.getTrigger(event.key);
+   await store.saveTrigger({id:trigger?.id,event_key:event.key,template_key:key,route_key:routeKey,recipient_mapping:trigger?.recipient_mapping||{source:"host_event"},active});
+   results.push({key:event.key,status:active?"enabled":"saved"});
+  }
+  if(body.enableModule===true&&results.some(item=>item.status==="enabled")){
+   const settings=await store.getSettings();await store.saveSettings({...settings,enabled:true});
+  }
+  return Response.json({ok:true,results},{headers:{"cache-control":"no-store"}});
+ }catch(error){return integrationErrorResponse(error,"Unable to configure email events.");}
+}
