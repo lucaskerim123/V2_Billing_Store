@@ -146,7 +146,7 @@ test("directory sync repairs signing trust using the saved connection", () => {
 
 
 // Execute the actual directory route with fake database and Mail System boundaries.
-function directoryHarness(snapshot, policy = {departmentMailGroups:()=>[],staffDepartmentMailGroups:()=>[]}) {
+function directoryHarness(snapshot, policy = {departmentMailGroups:()=>[],staffDepartmentMailGroups:()=>[]}, remoteFetch) {
   const calls = [];
   const departments = [{ id: "dep-1", slug: "help", name: "Help" }];
   const db = {
@@ -176,7 +176,7 @@ function directoryHarness(snapshot, policy = {departmentMailGroups:()=>[],staffD
   runInNewContext(compiled, {
     exports, Response, AbortSignal,
     require: (name) => { if (!(name in mockedModules)) throw new Error("Unexpected module: " + name); return mockedModules[name]; },
-    fetch: async (url, options) => { calls.push({ path: new URL(url).pathname, body: JSON.parse(options.body) }); return Response.json({ ok: true }); },
+    fetch: async (url, options) => { const call={ path: new URL(url).pathname, body: JSON.parse(options.body) }; calls.push(call); return remoteFetch?remoteFetch(call):Response.json({ ok: true }); },
   });
   return { calls, POST: exports.POST };
 }
@@ -215,4 +215,27 @@ test("department mailbox rank derives only from valid department membership and 
  assert.deepEqual(staffDepartmentMailGroups(["senior-support"],[{department_id:"b",position_rank:3}],deps),["mail-dept-general-rank-3"]);
  assert.deepEqual(staffDepartmentMailGroups(["senior-support"],[],deps),[]);
  assert.deepEqual(staffDepartmentMailGroups(["support"],[{department_id:"d",position_rank:1}],deps),["mail-dept-sales-rank-1"]);
+});
+
+test("directory synchronization reports pending and failed users without reconciling an incomplete snapshot",async()=>{
+ const members=["pending","timeout","success","review"].map(id=>({user_id:id,status:"active",profile_role:"support",group_ids:[]}));
+ const {POST,calls}=directoryHarness({groups:[],members},undefined,call=>{
+  if(!call.path.endsWith("/sync"))return Response.json({ok:true});
+  switch(call.body.user.external_user_id){
+   case "pending":return Response.json({status:"processing"},{status:202});
+   case "timeout":throw new Error("Network timeout");
+   case "review":return Response.json({ok:true,access:{state:"pending_review",pending_review:true}});
+   default:return Response.json({ok:true,access:{state:"applied"}});
+  }
+ });
+ const response=await POST(new Request("https://billing.example.test"));
+ const result=await response.json();
+ assert.equal(response.status,200);
+ assert.equal(result.ok,false);
+ assert.equal(result.users.synced,2);
+ assert.equal(result.users.failed,2);
+ assert.equal(result.users.pendingReview,1);
+ assert.ok(result.failures.some(item=>item.external_user_id==="timeout"));
+ assert.ok(result.failures.some(item=>item.external_user_id==="pending"));
+ assert.equal(calls.some(call=>call.body.complete_snapshot===true),false);
 });
