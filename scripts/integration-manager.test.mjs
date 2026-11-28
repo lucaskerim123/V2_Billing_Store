@@ -46,7 +46,7 @@ test("automatic mail discovery preserves existing mappings and only picks an una
  const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
  const events=[{key:"invoice.created",name:"Invoice created",category:"billing",variables:[]},{key:"account.password_reset",name:"Password reset",category:"account",variables:[{name:"reset_url",sensitive:true}]}];
  const senders=[{id:"a",address:"billing@orbitfs.cc"},{id:"b",address:"system@one.example"},{id:"c",address:"system@two.example"}];
- const result=planMailDiscovery({events,senders,triggers:[{event_key:"invoice.created",template_key:"custom",route_key:"custom"}],routes:[{route_key:"custom",sender_address:"billing@orbitfs.cc"}]});
+ const result=planMailDiscovery({events,senders,triggers:[{event_key:"invoice.created",template_key:"custom",route_key:"custom"}],routes:[{route_key:"custom",sender_address:"billing@orbitfs.cc"}],templates:[{template_key:"custom",display_name:"Custom",subject:"Invoice",body_text:"Invoice created",body_html:null,variables:[],active:false}]});
  assert.equal(result[0].status,"configured");
  assert.equal(result[0].sender,"billing@orbitfs.cc");
  assert.equal(result[1].sender,null);
@@ -67,4 +67,52 @@ test("automatic mail discovery never guesses a template or routes through an unr
  assert.equal(result[0].sender,null);
  assert.equal(result[0].template,null);
  assert.equal(result[0].status,"needs_sender");
+});
+
+test("clean mail setup produces a draft template and a safe route for every registered event",async()=>{
+ const {defaultBillingMailTemplates}=await import("../src/integrations/Mailsystem/Data/billing-defaults.mjs");
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const defaults=defaultBillingMailTemplates(BILLING_EMAIL_EVENTS);
+ const rows=planMailDiscovery({events:BILLING_EMAIL_EVENTS,defaultTemplates:defaults,senders:[{address:"system@orbitfs.cc",kind:"system"}]});
+ assert.equal(rows.length,BILLING_EMAIL_EVENTS.length);
+ for(const row of rows){
+  assert.ok(row.template?.subject,row.key);
+  assert.ok(row.template?.body_text,row.key);
+  assert.equal(row.template.active,false);
+  assert.equal(row.sender,"system@orbitfs.cc");
+  assert.equal(row.status,"ready_to_configure");
+  const used=[...row.template.body_text.matchAll(/{{\s*([a-zA-Z0-9_.-]+)\s*}}/g)].map(match=>match[1]);
+  assert.ok(used.every(key=>row.variables.some(v=>v.name===key)),row.key);
+  assert.ok(row.variables.filter(v=>v.sensitive).every(v=>used.includes(v.name)),row.key);
+ }
+});
+test("automatic discovery retains a template even before a mailbox is assigned and repairs an inactive unassigned trigger",async()=>{
+ const {defaultBillingMailTemplates}=await import("../src/integrations/Mailsystem/Data/billing-defaults.mjs");
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const events=BILLING_EMAIL_EVENTS.filter(event=>event.key==="invoice.created");
+ const defaults=defaultBillingMailTemplates(events);
+ const noMailbox=planMailDiscovery({events,defaultTemplates:defaults})[0];
+ assert.ok(noMailbox.template);
+ assert.equal(noMailbox.status,"needs_sender");
+ const repair=planMailDiscovery({events,defaultTemplates:defaults,templates:defaults,triggers:[{event_key:"invoice.created",template_key:"invoice.created",route_key:null,active:false}],senders:[{address:"billing@orbitfs.cc",kind:"department"}]})[0];
+ assert.equal(repair.sender,"billing@orbitfs.cc");
+ assert.equal(repair.status,"ready_to_configure");
+ assert.equal(repair.active,false);
+});
+test("mail discovery never reroutes an existing explicit sender or uses a personal mailbox automatically",async()=>{
+ const {defaultBillingMailTemplates}=await import("../src/integrations/Mailsystem/Data/billing-defaults.mjs");
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const events=BILLING_EMAIL_EVENTS.filter(event=>event.key==="invoice.created");
+ const defaults=defaultBillingMailTemplates(events);
+ const input={events,defaultTemplates:defaults,templates:defaults,senders:[{address:"system@orbitfs.cc",kind:"system"},{address:"billing@orbitfs.cc",kind:"personal"}]};
+ assert.equal(planMailDiscovery(input)[0].sender,"system@orbitfs.cc");
+ const existing=planMailDiscovery({...input,triggers:[{event_key:"invoice.created",template_key:"invoice.created",route_key:"manual",active:false}],routes:[{route_key:"manual",sender_address:"old@orbitfs.cc",active:false}]})[0];
+ assert.equal(existing.sender,null);
+ assert.equal(existing.status,"needs_sender");
+});
+
+test("missing saved template is not reported as configured",async()=>{
+ const {planMailDiscovery}=await import("../src/integrations/Mailsystem/Data/discovery.mjs");
+ const row=planMailDiscovery({events:[{key:"invoice.created",name:"Invoice",category:"billing",variables:[]}],senders:[{address:"billing@orbitfs.cc",kind:"department"}],triggers:[{event_key:"invoice.created",template_key:"custom",route_key:"custom",active:false}],routes:[{route_key:"custom",sender_address:"billing@orbitfs.cc",active:false}]})[0];
+ assert.equal(row.status,"needs_template");
 });
