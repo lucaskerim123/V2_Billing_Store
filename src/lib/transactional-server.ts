@@ -31,5 +31,5 @@ export async function sendAutomation(eventKey:string,to:string,vars:Record<strin
  // Keep the existing scheduler's delivery ledger consistent, without persisting sensitive template variables.
  const {error:logError}=await db.from("mail_delivery_log").insert({event_type:eventKey,related_type:relatedType||null,related_id:relatedId||null,template_key:trigger.template_key,recipient:to,sender:selection.sender,subject:"[Integration email]",status:"sent",sent_at:new Date().toISOString(),provider_id:"providerId" in result?result.providerId||null:null});
  if(logError)console.error("Billing mail delivery ledger failed",eventKey,logError.code);
- return {ok:true,skipped:false as const,eventKey,...result};
+ return {...result,ok:true,skipped:false as const,eventKey};
 }
