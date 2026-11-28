@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+
+const require = createRequire(import.meta.url);
 
 const source = readFileSync(new URL("../src/integrations/Mailsystem/Data/remote-staff.ts", import.meta.url), "utf8");
 const moduleSource = readFileSync(new URL("../src/integrations/Mailsystem/Data/module.ts", import.meta.url), "utf8");
@@ -30,6 +33,50 @@ test("remote staff API exposes group sync, session lifecycle and delegated permi
   assert.match(moduleSource, /assignRemoteAdminPermissions/);
   assert.match(moduleSource, /refreshRemoteSession/);
   assert.match(moduleSource, /terminateRemoteStaff/);
+});
+
+test("remote staff sync sends group assignments without changing omitted or empty arrays", async () => {
+  const requests = [];
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  });
+  const exports = {};
+  runInNewContext(compiled.outputText, {
+    exports,
+    require(id) {
+      if (id === "node:crypto") return require(id);
+      if (id === "./config") return {
+        getMailModuleConfig: async () => ({ baseUrl: "https://mail.example.test", apiKey: "test-key" }),
+      };
+      throw new Error("Unexpected dependency: " + id);
+    },
+    fetch: async (url, init) => {
+      requests.push({ url, init });
+      return { ok: true, json: async () => ({ ok: true }) };
+    },
+  });
+
+  for (const groups of [["support", "billing"], [], undefined]) {
+    const input = {
+      event_id: "event-" + requests.length,
+      source_revision: 1,
+      user: {
+        external_user_id: "staff-1",
+        status: "active",
+        role_codes: ["staff"],
+        department_codes: ["billing"],
+        ...(groups === undefined ? {} : { group_codes: groups }),
+      },
+    };
+    await exports.syncRemoteStaff(input);
+    const { url, init } = requests.at(-1);
+    assert.equal(url, "https://mail.example.test/api/integrations/remote-staff/sync");
+    assert.equal(init.method, "POST");
+    assert.equal(init.headers.Authorization, "Bearer test-key");
+    assert.equal(init.headers["Idempotency-Key"], input.event_id);
+    assert.deepEqual(JSON.parse(init.body), input);
+  }
+  assert.equal(requests.length, 3);
 });
 
 test("integration manifest advertises remote login and delegated permission features", () => {
